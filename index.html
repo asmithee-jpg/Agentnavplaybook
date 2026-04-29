@@ -1556,21 +1556,22 @@ body.call-mode .nba-bar { margin-top: 56px !important; }
 .call-mode-toggle {
   display: flex;
   align-items: center;
-  gap: 7px;
-  background: rgba(239,68,68,0.15);
-  border: 1px solid rgba(239,68,68,0.3);
-  border-radius: 7px;
-  padding: 7px 12px;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(239,68,68,0.12);
+  border: 1px solid rgba(239,68,68,0.25);
+  border-radius: 8px;
+  padding: 8px 12px;
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 11px;
   font-weight: 700;
   color: #fca5a5;
   cursor: pointer;
-  margin: 8px 10px 4px;
+  margin: 6px 10px 8px;
   transition: all 0.15s;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   width: calc(100% - 20px);
-  border: none;
+  text-align: center;
 }
 .call-mode-toggle:hover { background: rgba(239,68,68,0.25); color: #fff; }
 .call-mode-toggle.on { background: #ef4444; color: #fff; animation: pulse-red 2s infinite; }
@@ -1908,6 +1909,267 @@ body.dark-mode .battle-left h3 { color: #fafafa !important; }
 body.dark-mode .battle-right h4 { color: #fafafa !important; }
 body.dark-mode .win-list li { color: #a1a1aa !important; }
 body.dark-mode .lose-list li { color: #a1a1aa !important; }
+
+/* ══ PERSONA CARDS HIDDEN UNTIL SELECTED ════════════════════════════ */
+.persona-grid-wrap { display: none; }
+.persona-grid-wrap.visible { display: block; animation: slideUp 0.2s cubic-bezier(0.16,1,0.3,1); }
+.platform-section-wrap { display: none; }
+.platform-section-wrap.visible { display: block; animation: slideUp 0.25s cubic-bezier(0.16,1,0.3,1); }
+
+/* Persona selector buttons - show a hint */
+.persona-selector::after {
+  content: 'Select a segment to see details';
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.08em;
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 4px 0 2px;
+  order: 99;
+}
+.persona-selector.has-selection::after { display: none; }
+
+/* Selected card spotlight */
+.persona-card { opacity: 0.6; transition: opacity 0.2s, transform 0.2s, box-shadow 0.2s; }
+.persona-card.selected { opacity: 1; box-shadow: 0 0 0 2px var(--blue), var(--card-shadow-hover) !important; transform: translateY(-2px) !important; }
+.persona-grid-wrap.visible .persona-card { opacity: 1; }
+.persona-grid-wrap.visible .persona-card:not(.selected) { opacity: 0.75; }
+
+/* ══ PERSONA SINGLE CARD DISPLAY ════════════════════════════════════ */
+.persona-single-card { display: block; }
+
+.persona-card { display: none !important; }
+.persona-card.selected { display: flex !important; flex-direction: column; max-width: 420px; cursor: default; opacity: 1 !important; transform: none !important; }
+.persona-card.selected:hover { transform: none !important; }
+
+/* Platform section compact */
+.platform-section-wrap .module-grid {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.platform-section-wrap .module-card {
+  padding: 12px 14px;
+}
+.platform-section-wrap .module-card h3 { font-size: 12.5px; margin-bottom: 3px; }
+.platform-section-wrap .module-card p { font-size: 11.5px; line-height: 1.5; display: none; }
+.platform-section-wrap .module-tag { font-size: 8.5px; margin-bottom: 5px; }
+.platform-section-wrap h2.content-heading { font-size: 15px; margin-bottom: 2px; }
+.platform-section-wrap p.content-sub { font-size: 11.5px; margin-bottom: 14px; }
+.platform-section-wrap .divider { margin: 16px 0; }
+
+/* ══ HOME VIEW ═══════════════════════════════════════════════════════ */
+.home-section { min-height: 100vh; }
+
+.home-hero {
+  background: linear-gradient(135deg, #0f0f17 0%, #1e1b4b 60%, #0f0f17 100%);
+  padding: 40px 44px 36px;
+  position: relative;
+  overflow: hidden;
+}
+
+.home-hero::before {
+  content: '';
+  position: absolute;
+  top: -100px; right: -100px;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.home-hero-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(165,180,252,0.7);
+  margin-bottom: 14px;
+  font-weight: 500;
+}
+
+.home-hero h1 {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 32px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+  margin-bottom: 12px;
+}
+
+.home-hero h1 span {
+  background: linear-gradient(135deg, #818cf8, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.home-hero p {
+  font-size: 15px;
+  color: rgba(255,255,255,0.6);
+  max-width: 500px;
+  line-height: 1.65;
+  margin-bottom: 28px;
+}
+
+.home-quick-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.home-qa-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+}
+.home-qa-btn:hover { background: rgba(99,102,241,0.3); border-color: rgba(99,102,241,0.5); transform: translateY(-1px); }
+.home-qa-btn.primary { background: var(--blue); border-color: var(--blue); box-shadow: 0 4px 16px rgba(99,102,241,0.35); }
+.home-qa-btn.primary:hover { background: #4f46e5; }
+
+.home-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  margin-top: 0;
+}
+
+.home-stat {
+  padding: 20px 28px;
+  border-right: 1px solid rgba(255,255,255,0.07);
+}
+.home-stat:last-child { border-right: none; }
+.home-stat-num {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -1px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.home-stat-label {
+  font-size: 11.5px;
+  color: rgba(255,255,255,0.45);
+}
+
+.home-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 22px 36px 80px;
+}
+
+@media (max-width: 900px) { .home-grid { grid-template-columns: 1fr; padding: 20px; } }
+
+.home-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  cursor: pointer;
+  box-shadow: var(--card-shadow);
+  transition: all 0.18s;
+  position: relative;
+  overflow: hidden;
+}
+
+.home-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--blue);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.home-card.green::before { background: var(--green); }
+.home-card.amber::before { background: var(--amber); }
+.home-card.red::before { background: var(--red); }
+
+.home-card:hover { box-shadow: var(--card-shadow-hover); transform: translateY(-2px); }
+
+.home-card-icon { font-size: 22px; margin-bottom: 10px; }
+.home-card h3 {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  letter-spacing: -0.3px;
+}
+.home-card p { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px; }
+.home-card-arrow {
+  font-size: 11px;
+  color: var(--blue);
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.06em;
+}
+
+/* ══ CALL MODE FIX ═══════════════════════════════════════════════════ */
+/* Call mode top bar */
+body.call-mode .call-mode-bar { transform: translateY(0) !important; }
+
+/* Call mode sidebar - dim non-essential items */
+body.call-mode .nav-item:not([data-section="coldcall"]):not([data-section="objections"]):not([data-section="battlecards"]) { opacity: 0.45; }
+
+/* Dark mode home */
+body.dark-mode .home-hero { background: linear-gradient(135deg, #000000 0%, #0f0b2e 60%, #000000 100%); }
+body.dark-mode .home-card { background: #18181b; border-color: #27272a; }
+body.dark-mode .home-card h3 { color: #fafafa; }
+body.dark-mode .home-card p { color: #71717a; }
+
+/* ══ LAYOUT FIXES ════════════════════════════════════════════════════ */
+/* Ensure all sections properly show inside main */
+.home-section .home-hero { border-radius: 0; }
+
+/* Home grid tighter */
+.home-card { padding: 18px 20px; }
+.home-card-icon { font-size: 20px; margin-bottom: 8px; }
+.home-card h3 { font-size: 14px; margin-bottom: 3px; }
+.home-card p { font-size: 12px; margin-bottom: 10px; }
+
+/* Sidebar - tighter, no overlap */
+.sidebar { width: var(--sidebar-w); }
+.main { margin-left: var(--sidebar-w) !important; }
+
+/* Home stats bar tighter */
+.home-stat { padding: 16px 24px; }
+.home-stat-num { font-size: 22px; }
+.home-stat-label { font-size: 11px; }
+
+/* Quick action buttons tighter */
+.home-quick-actions { gap: 8px; }
+.home-qa-btn { padding: 9px 16px; font-size: 12px; }
+
+/* Fix the persona snapshot not showing hint text */
+.persona-selector::after { font-size: 10px; padding: 2px 0 1px; }
+
+/* Page header tighter */
+.page-header { padding: 16px 36px 14px !important; }
+.page-header h1 { font-size: 22px !important; margin-bottom: 3px !important; }
+.page-header p { font-size: 12px !important; }
+.content { padding: 18px 36px 80px !important; }
+.nba-bar { margin: 12px 36px 0 !important; }
+
+/* NBA bar less tall */
+.nba-bar { padding: 10px 16px !important; }
+.nba-label { font-size: 9px !important; }
+.nba-btn { padding: 5px 12px !important; font-size: 11.5px !important; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1926,6 +2188,7 @@ body.dark-mode .lose-list li { color: #a1a1aa !important; }
     </button>
     <button class="hamburger" onclick="toggleMobile()">☰</button>
   </div>
+    </div><!-- /platform -->
 </div>
 
 <!-- SIDEBAR -->
@@ -1941,31 +2204,36 @@ body.dark-mode .lose-list li { color: #a1a1aa !important; }
   <button class="call-mode-toggle" id="callModeToggle" onclick="toggleCallMode()">🔴 On A Call Right Now</button>
 
   <div class="nav-group">
+    <div class="nav-group-label">Overview</div>
+    <button class="nav-item active" data-section="home" onclick="showSection('home',this)"><span class="nav-icon">🏠</span>Home</button>
+  </div>
+
+  <div class="nav-group">
     <div class="nav-group-label">Who You're Selling To</div>
-    <button class="nav-item active" onclick="showSection('personas',this)"><span class="nav-icon">👤</span>Buyer Personas</button>
+    <button class="nav-item" data-section="personas" onclick="showSection('personas',this)"><span class="nav-icon">👤</span>Buyer Personas</button>
   </div>
 
   <div class="nav-group">
     <div class="nav-group-label">Before The Call</div>
-    <button class="nav-item" onclick="showSection('pitches',this)"><span class="nav-icon">⚡</span>Elevator Pitches</button>
-    <button class="nav-item" onclick="showSection('competition',this)"><span class="nav-icon">🎯</span>Know Your Competition</button>
-    <button class="nav-item" onclick="showSection('pricing',this)"><span class="nav-icon">💰</span>Pricing</button>
+    <button class="nav-item" data-section="pitches" onclick="showSection('pitches',this)"><span class="nav-icon">⚡</span>Elevator Pitches</button>
+    <button class="nav-item" data-section="competition" onclick="showSection('competition',this)"><span class="nav-icon">🎯</span>Know Your Competition</button>
+    <button class="nav-item" data-section="pricing" onclick="showSection('pricing',this)"><span class="nav-icon">💰</span>Pricing</button>
   </div>
 
   <div class="nav-group">
     <div class="nav-group-label">On The Call</div>
-    <button class="nav-item" onclick="showSection('coldcall',this)"><span class="nav-icon">📞</span>Cold Call</button>
-    <button class="nav-item" onclick="showSection('discovery',this)"><span class="nav-icon">🔍</span>Discovery Call</button>
-    <button class="nav-item" onclick="showSection('demo',this)"><span class="nav-icon">🖥️</span>Demo Call</button>
-    <button class="nav-item" onclick="showSection('closing',this)"><span class="nav-icon">🏆</span>Closing Call</button>
-    <button class="nav-item" onclick="showSection('onboarding',this)"><span class="nav-icon">🚀</span>Onboarding Call</button>
+    <button class="nav-item" data-section="coldcall" onclick="showSection('coldcall',this)"><span class="nav-icon">📞</span>Cold Call</button>
+    <button class="nav-item" data-section="discovery" onclick="showSection('discovery',this)"><span class="nav-icon">🔍</span>Discovery Call</button>
+    <button class="nav-item" data-section="demo" onclick="showSection('demo',this)"><span class="nav-icon">🖥️</span>Demo Call</button>
+    <button class="nav-item" data-section="closing" onclick="showSection('closing',this)"><span class="nav-icon">🏆</span>Closing Call</button>
+    <button class="nav-item" data-section="onboarding" onclick="showSection('onboarding',this)"><span class="nav-icon">🚀</span>Onboarding Call</button>
   </div>
 
   <div class="nav-group">
     <div class="nav-group-label">Reference</div>
-    <button class="nav-item" onclick="showSection('objections',this)"><span class="nav-icon">🛡️</span>Objection Handling</button>
-    <button class="nav-item" onclick="showSection('battlecards',this)"><span class="nav-icon">✕</span>Battle Cards</button>
-    <button class="nav-item" onclick="showSection('talktracks',this)"><span class="nav-icon">💬</span>Talk Tracks</button>
+    <button class="nav-item" data-section="objections" onclick="showSection('objections',this)"><span class="nav-icon">🛡️</span>Objection Handling</button>
+    <button class="nav-item" data-section="battlecards" onclick="showSection('battlecards',this)"><span class="nav-icon">✕</span>Battle Cards</button>
+    <button class="nav-item" data-section="talktracks" onclick="showSection('talktracks',this)"><span class="nav-icon">💬</span>Talk Tracks</button>
   </div>
 
   <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">
@@ -1980,8 +2248,92 @@ body.dark-mode .lose-list li { color: #a1a1aa !important; }
 <main class="main">
 <div class="call-mode-bar" id="callModeBar"><span>🔴 CALL MODE ACTIVE — Scripts only. No distractions.</span><button onclick="toggleCallMode()">Exit Call Mode</button></div>
 
+<div class="section home-section active" id="section-home">
+  <div class="home-hero">
+    <div class="home-hero-label">AgentNav Sales Playbook</div>
+    <h1>Close more deals.<br><span>Know every answer.</span></h1>
+    <p>Your complete playbook for selling AgentNav — scripts, battle cards, objection handling, live AI coaching, and HubSpot-connected deal intelligence.</p>
+    <div class="home-quick-actions">
+      <button class="home-qa-btn primary" onclick="showSection('coldcall', null)">📞 I'm On A Call Right Now</button>
+      <button class="home-qa-btn" onclick="openCoach()">🧠 Ask AI Coach</button>
+      <button class="home-qa-btn" onclick="showSection('pitches', null)">⚡ Elevator Pitches</button>
+      <button class="home-qa-btn" onclick="showSection('pricing', null)">💰 Build a Quote</button>
+    </div>
+  </div>
+
+  <div class="home-stats" style="background:linear-gradient(135deg,#0f0f17,#1e1b4b);">
+    <div class="home-stat">
+      <div class="home-stat-num">$79</div>
+      <div class="home-stat-label">Solo agent / month</div>
+    </div>
+    <div class="home-stat">
+      <div class="home-stat-num">$247</div>
+      <div class="home-stat-label">Small agency / month</div>
+    </div>
+    <div class="home-stat">
+      <div class="home-stat-num">$597</div>
+      <div class="home-stat-label">Large agency / month</div>
+    </div>
+    <div class="home-stat">
+      <div class="home-stat-num">7</div>
+      <div class="home-stat-label">Competitors covered</div>
+    </div>
+  </div>
+
+  <div class="home-grid">
+    <div class="home-card" onclick="showSection('coldcall', null)">
+      <div class="home-card-icon">📞</div>
+      <h3>Cold Call Guide</h3>
+      <p>Word-for-word scripts. 5 steps. Earn the conversation in under 2 minutes.</p>
+      <div class="home-card-arrow">OPEN GUIDE →</div>
+    </div>
+    <div class="home-card" onclick="showSection('pitches', null)">
+      <div class="home-card-icon">⚡</div>
+      <h3>Elevator Pitches</h3>
+      <p>5 situation-specific pitches. Copy and use in under 20 seconds.</p>
+      <div class="home-card-arrow">VIEW PITCHES →</div>
+    </div>
+    <div class="home-card green" onclick="showSection('competition', null)">
+      <div class="home-card-icon">🎯</div>
+      <h3>Know Your Competition</h3>
+      <p>EZLynx, HawkSoft, AgencyBloc and 4 more. Honest breakdowns of where we win.</p>
+      <div class="home-card-arrow">VIEW COMPETITORS →</div>
+    </div>
+    <div class="home-card green" onclick="showSection('objections', null)">
+      <div class="home-card-icon">🛡️</div>
+      <h3>Objection Handling</h3>
+      <p>8 real objections. Human responses. Copy and paste directly into calls.</p>
+      <div class="home-card-arrow">VIEW OBJECTIONS →</div>
+    </div>
+    <div class="home-card amber" onclick="showSection('battlecards', null)">
+      <div class="home-card-icon">✕</div>
+      <h3>Battle Cards</h3>
+      <p>Quick reference for when a competitor comes up. Read before the follow-up call.</p>
+      <div class="home-card-arrow">VIEW CARDS →</div>
+    </div>
+    <div class="home-card amber" onclick="showSection('pricing', null)">
+      <div class="home-card-icon">💰</div>
+      <h3>Pricing + Quote Builder</h3>
+      <p>All plans, custom enterprise calculator, and PDF quote generator.</p>
+      <div class="home-card-arrow">BUILD QUOTE →</div>
+    </div>
+    <div class="home-card red" onclick="showSection('discovery', null)">
+      <div class="home-card-icon">🔍</div>
+      <h3>Discovery Call</h3>
+      <p>Questions that uncover real pain. The call that writes the demo for you.</p>
+      <div class="home-card-arrow">VIEW GUIDE →</div>
+    </div>
+    <div class="home-card red" onclick="openCoach()">
+      <div class="home-card-icon">🧠</div>
+      <h3>AI Sales Coach</h3>
+      <p>Live deal coaching. Connect HubSpot. Get the exact script for right now.</p>
+      <div class="home-card-arrow">OPEN COACH →</div>
+    </div>
+  </div>
+</div>
+
 <!-- ── BUYER PERSONAS ──────────────────────────────────────────────────── -->
-<div class="section active" id="section-personas">
+<div class="section" id="section-personas">
   <div class="page-header">
     <div class="page-label">Who You're Selling To</div>
     <h1>Buyer Personas</h1>
@@ -2019,7 +2371,7 @@ body.dark-mode .lose-list li { color: #a1a1aa !important; }
       </div>
     </div>
 
-    <div class="persona-grid">
+    <div class="persona-grid-wrap" id="personaGridWrap"><div class="persona-single-card" id="personaSingleCard">
       <div class="persona-card blue" onclick="showSnapshot('solo',null)">
         <div class="persona-emoji">🦊</div>
         <h3>The Solo Agent</h3>
@@ -2066,6 +2418,7 @@ body.dark-mode .lose-list li { color: #a1a1aa !important; }
       </div>
     </div>
 
+    <div class="platform-section-wrap" id="platformSectionWrap">
     <div class="divider"></div>
     <h2 class="content-heading">The Platform They're Buying</h2>
     <p class="content-sub">AgentNav is the ultimate platform built for the professional health insurance broker.</p>
@@ -2103,6 +2456,7 @@ body.dark-mode .lose-list li { color: #a1a1aa !important; }
       </div>
     </div>
   </div>
+    </div><!-- /platform-section-wrap -->
 </div>
 
 <!-- ── ELEVATOR PITCHES ────────────────────────────────────────────────── -->
@@ -3471,12 +3825,21 @@ function toggleCallMode() {
   var toggle = document.getElementById('callModeToggle');
   var bar = document.getElementById('callModeBar');
   var isOn = body.classList.toggle('call-mode');
-  if (toggle) { toggle.classList.toggle('on', isOn); toggle.textContent = isOn ? '🟢 Exit Call Mode' : '🔴 I\'m On A Call Right Now'; }
-  if (bar) { bar.classList.toggle('active', isOn); }
+  if (toggle) {
+    toggle.classList.toggle('on', isOn);
+    toggle.textContent = isOn ? "Exit Call Mode" : "On A Call Right Now";
+  }
+  if (bar) bar.classList.toggle('active', isOn);
+  if (isOn) {
+    // Navigate to cold call guide
+    showSection('coldcall', null);
+    // Open AI coach after short delay
+    setTimeout(function() { openCoach(); }, 400);
+    showToast('Call Mode ON — Cold Call guide loaded. AI Coach is ready.');
+  } else {
+    showToast('Call Mode OFF');
+  }
 }
-
-
-// ── COPY + OPEN HUBSPOT ───────────────────────────────────────────────
 function copyAndOpenHubSpot(text, hsUrl) {
   if (!text) text = '';
   text = text.trim().replace(/^['"]/,'').replace(/['"]$/,'');
@@ -3524,7 +3887,7 @@ var personaData = {
   },
   large: {
     cares: 'Process, reporting, and replacing 3-4 systems',
-    pain: 'Piecing together tools that don't talk to each other',
+    pain: 'Piecing together tools that don\'t talk to each other',
     pitch: 'One platform. Full visibility. ACA + STM + Life + Ancillary.'
   },
   enterprise: {
@@ -3540,21 +3903,35 @@ function showSnapshot(type, btn) {
   document.getElementById('snapCares').textContent = data.cares;
   document.getElementById('snapPain').textContent = data.pain;
   document.getElementById('snapPitch').textContent = data.pitch;
+
   document.querySelectorAll('.persona-sel-btn').forEach(function(b) { b.classList.remove('active'); });
   document.querySelectorAll('.persona-card').forEach(function(c) { c.classList.remove('selected'); });
+
   if (btn) { btn.classList.add('active'); }
-  // Also highlight matching persona card
+
+  // Show persona grid + platform section on first selection
+  var grid = document.getElementById('personaGridWrap');
+  var platform = document.getElementById('platformSectionWrap');
+  if (grid) grid.classList.add('visible');
+  if (platform) platform.classList.add('visible');
+
+  // Mark selector as having selection
+  var selector = document.querySelector('.persona-selector');
+  if (selector) selector.classList.add('has-selection');
+
+  // Highlight matching card
   var cardMap = { solo: 'blue', small: 'green', large: 'amber', enterprise: 'purple' };
   var cls = cardMap[type];
   if (cls) {
     var card = document.querySelector('.persona-card.' + cls);
     if (card) card.classList.add('selected');
   }
-  // Sync persona-sel-btn tabs too
+
+  // Sync tabs
   var typeToIdx = { solo: 0, small: 1, large: 2, enterprise: 3 };
-  var idx = typeToIdx[type];
+  var idx2 = typeToIdx[type];
   var tabs = document.querySelectorAll('.persona-sel-btn');
-  if (tabs[idx]) tabs[idx].classList.add('active');
+  if (tabs[idx2]) tabs[idx2].classList.add('active');
 }
 
 // ── QUICK ACTION COPY ────────────────────────────────────────────────
