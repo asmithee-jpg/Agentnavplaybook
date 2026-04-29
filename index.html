@@ -2908,13 +2908,24 @@ Generate my complete game plan.`;
         messages: conversationHistory
       })
     });
-    const data = await response.json();
-    const text = data.content && data.content[0] ? data.content[0].text : 'Error generating response.';
+    const rawText = await response.text();
+    let data;
+    try { data = JSON.parse(rawText); } catch(e) {
+      output.innerHTML = '<p style="color:#dc2626;font-size:13px;padding:12px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca;">Server error: ' + rawText.slice(0,200) + '</p>';
+      document.getElementById('generateBtn').disabled = false;
+      return;
+    }
+    if (data.error) {
+      output.innerHTML = '<p style="color:#dc2626;font-size:13px;padding:12px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca;">API Error: ' + JSON.stringify(data.error) + '</p>';
+      document.getElementById('generateBtn').disabled = false;
+      return;
+    }
+    const text = data.content && data.content[0] ? data.content[0].text : 'No response from AI.';
     conversationHistory.push({ role: 'assistant', content: text });
     renderOutput(text);
     showFollowup();
   } catch (err) {
-    output.innerHTML = '<p style="color:#dc2626;font-size:13px;">Error connecting to AI. Please try again.</p>';
+    output.innerHTML = '<p style="color:#dc2626;font-size:13px;padding:12px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca;">Network error: ' + err.message + '</p>';
   }
   document.getElementById('generateBtn').disabled = false;
 }
@@ -3008,12 +3019,18 @@ async function sendFollowup() {
         messages: conversationHistory
       })
     });
-    const data = await response.json();
-    const text = data.content && data.content[0] ? data.content[0].text : 'Error.';
-    conversationHistory.push({ role: 'assistant', content: text });
-    document.getElementById(thinkId).innerHTML = '<div class="chat-msg-label">Coach</div><div class="chat-msg-bubble" style="white-space:pre-wrap;">' + text + '</div>';
+    const rawText2 = await response.text();
+    let data;
+    try { data = JSON.parse(rawText2); } catch(e) { data = {error: rawText2}; }
+    if (data.error) {
+      document.getElementById(thinkId).innerHTML = '<div class="chat-msg-label">Coach</div><div class="chat-msg-bubble" style="color:#dc2626;">Error: ' + JSON.stringify(data.error).slice(0,150) + '</div>';
+    } else {
+      const text = data.content && data.content[0] ? data.content[0].text : 'No response.';
+      conversationHistory.push({ role: 'assistant', content: text });
+      document.getElementById(thinkId).innerHTML = '<div class="chat-msg-label">Coach</div><div class="chat-msg-bubble" style="white-space:pre-wrap;">' + text + '</div>';
+    }
   } catch(err) {
-    document.getElementById(thinkId).innerHTML = '<div class="chat-msg-bubble" style="color:#dc2626;">Error. Try again.</div>';
+    document.getElementById(thinkId).innerHTML = '<div class="chat-msg-bubble" style="color:#dc2626;">Network error: ' + err.message + '</div>';
   }
   output.scrollTop = output.scrollHeight;
   document.getElementById('followupSendBtn').disabled = false;
