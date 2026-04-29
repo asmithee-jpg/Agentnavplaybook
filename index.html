@@ -1,0 +1,3040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentNav — Sales Playbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+:root {
+  --sidebar-w: 220px;
+  --sidebar-bg: #1a1a2e;
+  --sidebar-text: rgba(255,255,255,0.55);
+  --sidebar-text-active: #ffffff;
+  --sidebar-active-bg: rgba(255,255,255,0.12);
+  --sidebar-hover-bg: rgba(255,255,255,0.06);
+  --sidebar-border: rgba(255,255,255,0.08);
+  --sidebar-label: rgba(255,255,255,0.28);
+  --body-bg: #f0ede8;
+  --card-bg: #ffffff;
+  --card-border: #e5e2db;
+  --card-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  --card-shadow-hover: 0 6px 20px rgba(0,0,0,0.1);
+  --text-primary: #1a1a2e;
+  --text-secondary: #4a4a6a;
+  --text-muted: #8888a0;
+  --blue: #2563eb;
+  --blue-light: #eff6ff;
+  --blue-border: #bfdbfe;
+  --green: #16a34a;
+  --green-light: #f0fdf4;
+  --green-border: #bbf7d0;
+  --red: #dc2626;
+  --red-light: #fef2f2;
+  --red-border: #fecaca;
+  --amber: #d97706;
+  --divider: #e5e2db;
+  --dark-card: #1a1a2e;
+  --serif: 'Lora', Georgia, serif;
+  --sans: 'Inter', system-ui, sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+
+body {
+  font-family: var(--sans);
+  background: var(--body-bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── SIDEBAR ──────────────────────────────────────────────────────────── */
+.sidebar {
+  position: fixed;
+  left: 0; top: 0;
+  width: var(--sidebar-w);
+  height: 100vh;
+  background: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 3px;
+}
+
+.brand-icon {
+  width: 32px; height: 32px;
+  background: var(--blue);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.brand-name {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.2px;
+}
+
+.sidebar-subtitle {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sidebar-label);
+  padding-left: 42px;
+}
+
+.nav-group {
+  padding: 16px 10px 4px;
+}
+
+.nav-group-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sidebar-label);
+  padding: 0 8px;
+  margin-bottom: 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--sidebar-text);
+  cursor: pointer;
+  transition: all 0.12s;
+  text-decoration: none;
+  margin-bottom: 1px;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+
+.nav-item:hover { background: var(--sidebar-hover-bg); color: var(--sidebar-text-active); }
+.nav-item.active { background: var(--sidebar-active-bg); color: var(--sidebar-text-active); font-weight: 500; }
+
+.nav-icon { font-size: 13px; width: 18px; text-align: center; flex-shrink: 0; }
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 14px 18px;
+  border-top: 1px solid var(--sidebar-border);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--sidebar-label);
+}
+
+/* ── MAIN ─────────────────────────────────────────────────────────────── */
+.main { margin-left: var(--sidebar-w); min-height: 100vh; }
+
+.section { display: none; min-height: 100vh; animation: fadeIn 0.16s ease; }
+.section.active { display: block; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── PAGE HEADER ──────────────────────────────────────────────────────── */
+.page-header {
+  padding: 36px 48px 28px;
+  background: var(--body-bg);
+  border-bottom: 1px solid var(--divider);
+}
+
+.page-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-bottom: 8px;
+}
+
+.page-header h1 {
+  font-family: var(--serif);
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+  line-height: 1.15;
+}
+
+.page-header p {
+  font-size: 14.5px;
+  color: var(--text-secondary);
+  max-width: 640px;
+  line-height: 1.65;
+}
+
+/* ── CONTENT ──────────────────────────────────────────────────────────── */
+.content { padding: 32px 48px; }
+
+.divider { height: 1px; background: var(--divider); margin: 32px 0; }
+
+.content-heading {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.content-sub {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+/* ── DARK BANNER ──────────────────────────────────────────────────────── */
+.dark-banner {
+  background: var(--dark-card);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin-bottom: 24px;
+}
+
+.dark-banner h3 {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.dark-banner p {
+  font-size: 13.5px;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.65;
+}
+
+/* ── STEP CARDS ───────────────────────────────────────────────────────── */
+.step-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  box-shadow: var(--card-shadow);
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.step-num {
+  width: 28px; height: 28px;
+  background: var(--blue);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  flex-shrink: 0;
+  margin-right: 12px;
+}
+
+.step-title {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.step-time {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.step-body { padding: 18px 22px; }
+
+.step-body p { font-size: 13.5px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 12px; }
+.step-body p:last-child { margin-bottom: 0; }
+
+.quote-block {
+  border-left: 3px solid var(--blue);
+  background: #f8faff;
+  border-radius: 0 8px 8px 0;
+  padding: 14px 16px;
+  margin: 12px 0;
+}
+
+.quote-block p {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.7;
+  margin-bottom: 8px !important;
+}
+
+.quote-block .quote-tip {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: normal;
+  font-family: var(--sans);
+  margin-bottom: 0 !important;
+}
+
+.numbered-list { list-style: none; margin: 12px 0; }
+.numbered-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  border-bottom: 1px solid #f0ede8;
+}
+.numbered-list li:last-child { border-bottom: none; }
+.numbered-list li .li-num {
+  width: 22px; height: 22px;
+  background: var(--blue);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── MODULE GRID ──────────────────────────────────────────────────────── */
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+  margin-bottom: 36px;
+}
+
+.module-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--card-shadow);
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.module-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--blue);
+  border-radius: 12px 12px 0 0;
+}
+
+.module-card.green::before { background: var(--green); }
+.module-card:hover { box-shadow: var(--card-shadow-hover); transform: translateY(-2px); }
+
+.module-tag {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-bottom: 7px;
+}
+.module-card.green .module-tag { color: var(--green); }
+
+.module-card h3 { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+.module-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+/* ── DIFF BLOCKS ──────────────────────────────────────────────────────── */
+.diff-block {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-left: 3px solid var(--blue);
+  border-radius: 0 10px 10px 0;
+  padding: 16px 20px;
+  margin-bottom: 10px;
+  box-shadow: var(--card-shadow);
+}
+
+.diff-block h3 { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 5px; }
+.diff-block p { font-size: 13px; color: var(--text-secondary); line-height: 1.65; }
+
+/* ── BUYER PERSONA CARDS ──────────────────────────────────────────────── */
+.persona-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 36px;
+}
+
+@media (max-width: 900px) { .persona-grid { grid-template-columns: repeat(2,1fr); } }
+
+.persona-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 22px 20px;
+  box-shadow: var(--card-shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.persona-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  border-radius: 14px 14px 0 0;
+}
+
+.persona-card.blue::before { background: var(--blue); }
+.persona-card.green::before { background: var(--green); }
+.persona-card.amber::before { background: var(--amber); }
+.persona-card.purple::before { background: #7c3aed; }
+
+.persona-emoji {
+  width: 42px; height: 42px;
+  background: #f0ede8;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  margin-bottom: 14px;
+}
+
+.persona-card h3 { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px; }
+
+.persona-size {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.persona-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 14px; }
+
+.persona-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.persona-tag {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: #f0ede8;
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 3px 10px;
+}
+
+/* ── PRICING ──────────────────────────────────────────────────────────── */
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+@media (max-width: 800px) { .pricing-grid { grid-template-columns: 1fr; } }
+
+.pricing-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 26px 24px;
+  box-shadow: var(--card-shadow);
+}
+
+.pricing-card.featured {
+  border: 2px solid var(--blue);
+  box-shadow: 0 4px 20px rgba(37,99,235,0.12);
+}
+
+.pricing-tier {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.pricing-card h3 {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.pricing-price {
+  font-family: var(--serif);
+  font-size: 40px;
+  font-weight: 600;
+  color: var(--blue);
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.pricing-price span { font-size: 16px; font-weight: 400; color: var(--text-muted); font-family: var(--sans); }
+
+.pricing-per {
+  font-size: 12px;
+  color: var(--green);
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.pricing-list { list-style: none; margin-bottom: 0; }
+.pricing-list li {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 5px 0;
+  padding-left: 20px;
+  position: relative;
+  line-height: 1.5;
+}
+.pricing-list li::before {
+  content: '✓';
+  color: var(--green);
+  position: absolute;
+  left: 0;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* ── ELEVATOR PITCH CARDS ─────────────────────────────────────────────── */
+.pitch-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 22px 24px;
+  margin-bottom: 12px;
+  box-shadow: var(--card-shadow);
+}
+
+.pitch-situation {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-bottom: 12px;
+}
+
+.pitch-quote {
+  border-left: 3px solid var(--blue);
+  background: #f8faff;
+  border-radius: 0 8px 8px 0;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+
+.pitch-quote p {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14.5px;
+  color: var(--text-primary);
+  line-height: 1.7;
+}
+
+.pitch-tip {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ── COMPETITION ──────────────────────────────────────────────────────── */
+.comp-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.comp-tab {
+  padding: 7px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  transition: all 0.15s;
+  box-shadow: var(--card-shadow);
+}
+
+.comp-tab:hover { border-color: var(--blue); color: var(--blue); }
+.comp-tab.active { background: var(--dark-card); color: #fff; border-color: var(--dark-card); }
+
+.comp-panel { display: none; }
+.comp-panel.active { display: block; }
+
+.comp-dark-banner {
+  background: var(--dark-card);
+  border-radius: 12px;
+  padding: 22px 26px;
+  margin-bottom: 20px;
+}
+
+.comp-dark-banner h3 { font-family: var(--serif); font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 8px; }
+.comp-dark-banner p { font-size: 13.5px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+
+.comp-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 700px) { .comp-two-col { grid-template-columns: 1fr; } }
+
+.comp-col {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 20px 22px;
+  box-shadow: var(--card-shadow);
+}
+
+.comp-col h4 { font-size: 14.5px; font-weight: 600; color: var(--text-primary); margin-bottom: 14px; }
+
+.comp-quote {
+  border-left: 3px solid var(--blue);
+  background: #f0f4ff;
+  border-radius: 0 6px 6px 0;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.comp-quote p {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--blue);
+  line-height: 1.6;
+}
+
+.comp-strength-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.strength-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.strength-tag {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: #f0ede8;
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 3px 10px;
+}
+
+.win-list, .lose-list { list-style: none; }
+.win-list li, .lose-list li {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--divider);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.5;
+}
+.win-list li:last-child, .lose-list li:last-child { border-bottom: none; }
+.win-icon { color: var(--blue); flex-shrink: 0; font-weight: 600; margin-top: 1px; }
+.lose-icon { color: var(--red); flex-shrink: 0; font-weight: 600; margin-top: 1px; }
+
+.win-section-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.lose-section-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.walkaway-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 18px 22px;
+  box-shadow: var(--card-shadow);
+  margin-bottom: 10px;
+}
+
+.walkaway-card h4 { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+.walkaway-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+/* ── OBJECTION HANDLING ───────────────────────────────────────────────── */
+.obj-list { display: flex; flex-direction: column; gap: 0; }
+
+.obj-item {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 0;
+  overflow: hidden;
+  cursor: pointer;
+  border-bottom: none;
+}
+
+.obj-item:first-child { border-radius: 12px 12px 0 0; }
+.obj-item:last-child { border-radius: 0 0 12px 12px; border-bottom: 1px solid var(--card-border); }
+.obj-item:only-child { border-radius: 12px; border-bottom: 1px solid var(--card-border); }
+
+.obj-q {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid transparent;
+  transition: background 0.12s;
+}
+
+.obj-q:hover { background: #fafaf7; }
+.obj-item.open .obj-q { border-bottom-color: var(--divider); background: #fafaf7; }
+
+.obj-q-text {
+  font-size: 14px;
+  color: var(--text-primary);
+  font-family: var(--serif);
+  font-style: italic;
+}
+
+.obj-chevron { font-size: 11px; color: var(--text-muted); transition: transform 0.18s; flex-shrink: 0; }
+.obj-item.open .obj-chevron { transform: rotate(180deg); }
+
+.obj-a {
+  display: none;
+  padding: 16px 20px;
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.75;
+  background: var(--card-bg);
+}
+
+.obj-item.open .obj-a { display: block; }
+
+/* ── BATTLE CARDS ─────────────────────────────────────────────────────── */
+.battle-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.battle-tab {
+  padding: 7px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  transition: all 0.15s;
+  box-shadow: var(--card-shadow);
+}
+
+.battle-tab:hover { border-color: var(--blue); color: var(--blue); }
+.battle-tab.active { background: var(--dark-card); color: #fff; border-color: var(--dark-card); }
+
+.battle-panel { display: none; }
+.battle-panel.active { display: block; }
+
+.battle-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 700px) { .battle-two-col { grid-template-columns: 1fr; } }
+
+.battle-left, .battle-right {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 22px;
+  box-shadow: var(--card-shadow);
+}
+
+.battle-tier {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.tier-direct { color: var(--red); }
+.tier-adjacent { color: var(--amber); }
+.tier-indirect { color: var(--text-muted); }
+
+.battle-left h3 { font-size: 20px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+.battle-left .battle-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+
+.ack-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.ack-quote {
+  border-left: 3px solid var(--blue);
+  background: #f0f4ff;
+  border-radius: 0 6px 6px 0;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.ack-quote p {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--blue);
+  line-height: 1.65;
+}
+
+.weakness-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.weakness-text { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+.battle-right h4 { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 14px; }
+
+/* ── TALK TRACKS ──────────────────────────────────────────────────────── */
+.talk-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 22px 24px;
+  margin-bottom: 12px;
+  box-shadow: var(--card-shadow);
+}
+
+.talk-situation {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-bottom: 8px;
+  background: var(--blue-light);
+  border: 1px solid var(--blue-border);
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.talk-card h3 { font-family: var(--serif); font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: 10px; }
+.talk-card p { font-size: 13.5px; color: var(--text-secondary); line-height: 1.7; }
+
+/* ── MATRIX ───────────────────────────────────────────────────────────── */
+.matrix-wrap {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  overflow: hidden;
+  overflow-x: auto;
+  box-shadow: var(--card-shadow);
+}
+
+.matrix-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 680px; }
+
+.matrix-table th {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 12px 16px;
+  text-align: left;
+  background: #f8f6f2;
+  border-bottom: 1px solid var(--divider);
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.matrix-table th.us { color: var(--blue) !important; }
+
+.matrix-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid #f0ede8;
+  color: var(--text-muted);
+  vertical-align: middle;
+}
+
+.matrix-table tr:last-child td { border-bottom: none; }
+.matrix-table tr:hover td { background: #fafaf7; }
+.matrix-table td:first-child { color: var(--text-secondary); }
+.matrix-table td.us { font-weight: 500; }
+
+.chip {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.chip-yes { background: #dcfce7; color: #15803d; }
+.chip-no { background: #fee2e2; color: #dc2626; }
+.chip-partial { background: #fef3c7; color: #92400e; }
+
+/* ── MOBILE ───────────────────────────────────────────────────────────── */
+.mobile-header {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 52px;
+  background: var(--sidebar-bg);
+  border-bottom: 1px solid var(--sidebar-border);
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 200;
+}
+
+.hamburger { background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; }
+
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); transition: transform 0.25s; }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  .mobile-header { display: flex; }
+  .page-header, .content { padding: 24px 20px; }
+  .section { padding-top: 52px; }
+  .persona-grid { grid-template-columns: 1fr 1fr; }
+  .pricing-grid { grid-template-columns: 1fr; }
+}
+
+mark { background: rgba(37,99,235,0.12); color: var(--text-primary); border-radius: 2px; padding: 0 1px; }
+
+@media print {
+  .sidebar, .mobile-header { display: none !important; }
+  .main { margin-left: 0 !important; }
+  .section { display: block !important; page-break-after: always; }
+  .obj-a { display: block !important; }
+  .comp-panel, .battle-panel { display: block !important; }
+}
+
+/* ══════════════════════════════════════════════════════
+   COMPREHENSIVE MOBILE & RESPONSIVE STYLES
+   ══════════════════════════════════════════════════════ */
+
+/* Tablet: 901px – 1100px */
+@media (max-width: 1100px) {
+  .persona-grid { grid-template-columns: repeat(2, 1fr); }
+  .proof-grid { grid-template-columns: repeat(2, 1fr); }
+  .pricing-grid { grid-template-columns: 1fr 1fr; }
+  .page-header { padding: 28px 32px 22px; }
+  .content { padding: 24px 32px; }
+}
+
+/* Mobile: ≤ 900px — sidebar collapses, mobile header shows */
+@media (max-width: 900px) {
+  :root { --sidebar-w: 0px; }
+
+  body { overflow-x: hidden; }
+
+  .sidebar {
+    width: 280px;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.16,1,0.3,1);
+    z-index: 300;
+    box-shadow: 4px 0 30px rgba(0,0,0,0.25);
+  }
+  .sidebar.open { transform: translateX(0); }
+
+  /* Dim overlay when sidebar open */
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 299;
+  }
+  .sidebar-overlay.open { display: block; }
+
+  .main { margin-left: 0; padding-top: 52px; }
+  .mobile-header { display: flex; }
+
+  .section { min-height: calc(100vh - 52px); }
+
+  .page-header { padding: 22px 18px 18px; }
+  .page-header h1 { font-size: 26px; }
+  .page-header p { font-size: 13.5px; }
+  .content { padding: 18px 18px 80px; }
+
+  /* Cards go full width */
+  .persona-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .module-grid { grid-template-columns: 1fr; gap: 10px; }
+  .pricing-grid { grid-template-columns: 1fr; gap: 14px; }
+  .comp-two-col { grid-template-columns: 1fr; }
+  .battle-two-col { grid-template-columns: 1fr; }
+  .icp-grid { grid-template-columns: 1fr 1fr; }
+
+  /* Tabs scroll horizontally */
+  .comp-tabs, .battle-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .comp-tabs::-webkit-scrollbar,
+  .battle-tabs::-webkit-scrollbar { display: none; }
+  .comp-tab, .battle-tab { flex-shrink: 0; }
+
+  /* Step cards */
+  .step-header { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .step-time { font-size: 10px; }
+
+  /* Matrix scrolls */
+  .matrix-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Coach FAB position — above bottom on mobile */
+  .coach-fab {
+    bottom: 20px;
+    right: 16px;
+    padding: 11px 16px;
+    font-size: 12px;
+  }
+
+  /* Coach panel full screen on mobile */
+  .coach-panel { width: 100vw; border-radius: 0; }
+}
+
+/* Small mobile: ≤ 480px */
+@media (max-width: 480px) {
+  .persona-grid { grid-template-columns: 1fr; }
+  .icp-grid { grid-template-columns: 1fr; }
+  .page-header h1 { font-size: 22px; }
+  .pricing-card { padding: 20px 16px; }
+  .pricing-price { font-size: 34px; }
+  .talk-card, .pitch-card, .step-card { padding: 16px 14px; }
+  .output-block { padding: 12px 12px; }
+  .coach-body { padding: 16px 14px; }
+  .followup-area { padding: 12px 14px; }
+}
+
+/* Touch-friendly tap targets */
+@media (max-width: 900px) {
+  .nav-item { padding: 10px 12px; min-height: 44px; }
+  .comp-tab, .battle-tab { padding: 9px 18px; min-height: 40px; }
+  .ms-option { padding: 8px 14px; min-height: 38px; }
+  .generate-btn { min-height: 52px; font-size: 15px; }
+  .followup-input { min-height: 44px; font-size: 16px; } /* prevents iOS zoom */
+  .form-select { min-height: 44px; font-size: 16px; } /* prevents iOS zoom */
+  .form-input { min-height: 44px; font-size: 16px; } /* prevents iOS zoom */
+  .obj-q { padding: 18px 16px; }
+  .followup-send { min-width: 44px; min-height: 44px; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR OVERLAY -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMobile()"></div>
+
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+  <span style="color:#fff;font-weight:700;font-size:16px;letter-spacing:-0.3px;">AgentNav</span>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <button onclick="openCoach()" style="background:rgba(37,99,235,0.8);border:none;color:#fff;border-radius:20px;padding:6px 12px;font-size:11px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;display:flex;align-items:center;gap:5px;">
+      <span style="width:6px;height:6px;background:#4ade80;border-radius:50%;display:inline-block;"></span>AI Coach
+    </button>
+    <button class="hamburger" onclick="toggleMobile()">☰</button>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-brand">
+      <span class="brand-name">AgentNav</span>
+    </div>
+    <div class="sidebar-subtitle">Sales Playbook</div>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Who You're Selling To</div>
+    <button class="nav-item active" onclick="showSection('personas',this)"><span class="nav-icon">👤</span>Buyer Personas</button>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Before The Call</div>
+    <button class="nav-item" onclick="showSection('pitches',this)"><span class="nav-icon">⚡</span>Elevator Pitches</button>
+    <button class="nav-item" onclick="showSection('competition',this)"><span class="nav-icon">🎯</span>Know Your Competition</button>
+    <button class="nav-item" onclick="showSection('pricing',this)"><span class="nav-icon">💰</span>Pricing</button>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">On The Call</div>
+    <button class="nav-item" onclick="showSection('coldcall',this)"><span class="nav-icon">📞</span>Cold Call</button>
+    <button class="nav-item" onclick="showSection('discovery',this)"><span class="nav-icon">🔍</span>Discovery Call</button>
+    <button class="nav-item" onclick="showSection('demo',this)"><span class="nav-icon">🖥️</span>Demo Call</button>
+    <button class="nav-item" onclick="showSection('closing',this)"><span class="nav-icon">🏆</span>Closing Call</button>
+    <button class="nav-item" onclick="showSection('onboarding',this)"><span class="nav-icon">🚀</span>Onboarding Call</button>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Reference</div>
+    <button class="nav-item" onclick="showSection('objections',this)"><span class="nav-icon">🛡️</span>Objection Handling</button>
+    <button class="nav-item" onclick="showSection('battlecards',this)"><span class="nav-icon">✕</span>Battle Cards</button>
+    <button class="nav-item" onclick="showSection('talktracks',this)"><span class="nav-icon">💬</span>Talk Tracks</button>
+  </div>
+
+  <div class="sidebar-footer">
+    AgentNav Internal — 2026
+  </div>
+</nav>
+
+<main class="main">
+
+<!-- ── BUYER PERSONAS ──────────────────────────────────────────────────── -->
+<div class="section active" id="section-personas">
+  <div class="page-header">
+    <div class="page-label">Who You're Selling To</div>
+    <h1>Buyer Personas</h1>
+    <p>Four types of people buy AgentNav. Each one has a different reason for needing us, a different fear about switching, and a different version of success. Click any card to go deeper.</p>
+  </div>
+  <div class="content">
+    <div class="persona-grid">
+      <div class="persona-card blue">
+        <div class="persona-emoji">🦊</div>
+        <h3>The Solo Agent</h3>
+        <div class="persona-size">1 Agent, Going Independent</div>
+        <p>Just left a captive agency or FMO. Building their book from scratch. Smart, scrappy, and tired of tools that cost more than they make.</p>
+        <div class="persona-tags">
+          <span class="persona-tag">ACA focused</span>
+          <span class="persona-tag">Cost sensitive</span>
+          <span class="persona-tag">Tech curious</span>
+        </div>
+      </div>
+      <div class="persona-card green">
+        <div class="persona-emoji">👥</div>
+        <h3>The Small Agency</h3>
+        <div class="persona-size">2 To 8 Agents</div>
+        <p>Growing fast but starting to feel the friction. Agents are texting clients from personal phones. No one can see what anyone else is doing. OE is chaos.</p>
+        <div class="persona-tags">
+          <span class="persona-tag">Health and ACA</span>
+          <span class="persona-tag">Team coordination</span>
+          <span class="persona-tag">Retention focused</span>
+        </div>
+      </div>
+      <div class="persona-card amber">
+        <div class="persona-emoji">🏢</div>
+        <h3>The Large Agency</h3>
+        <div class="persona-size">9 To 20 Agents</div>
+        <p>Running a real operation. They've outgrown their current tools and are piecing together three or four systems to do what AgentNav does natively.</p>
+        <div class="persona-tags">
+          <span class="persona-tag">Multi-line</span>
+          <span class="persona-tag">Process driven</span>
+          <span class="persona-tag">Reporting needs</span>
+        </div>
+      </div>
+      <div class="persona-card purple">
+        <div class="persona-emoji">🏛️</div>
+        <h3>The Enterprise</h3>
+        <div class="persona-size">21 Or More Agents</div>
+        <p>Managing a large book across multiple producers. Needs visibility, standardization, and a platform that scales without the price tag of Salesforce.</p>
+        <div class="persona-tags">
+          <span class="persona-tag">Multi-location</span>
+          <span class="persona-tag">Custom needs</span>
+          <span class="persona-tag">Compliance aware</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <h2 class="content-heading">The Platform They're Buying</h2>
+    <p class="content-sub">AgentNav is the ultimate platform built for the professional health insurance broker.</p>
+
+    <div class="module-grid">
+      <div class="module-card">
+        <div class="module-tag">Quoting & Enrollment</div>
+        <h3>End-to-end multi-product quoting</h3>
+        <p>ACA, STM, Life, Ancillary, and Indemnity products — all quoted and enrolled in one engine. Side-by-side proposals, HealthSherpa and EDE sync.</p>
+      </div>
+      <div class="module-card">
+        <div class="module-tag">CRM & Automation</div>
+        <h3>Seamless broker management hub</h3>
+        <p>Contacts, tasks, marketing, analytics, SMS, and client presentations — all in one place. Household-level records built around how health brokers work.</p>
+      </div>
+      <div class="module-card green">
+        <div class="module-tag">AI Powered</div>
+        <h3>AI Autopilot for maximum efficiency</h3>
+        <p>AI-driven automation for Open Enrollment, renewals, and compliance. Auto-generated outreach, smart response tracking, and AI-powered SMS.</p>
+      </div>
+      <div class="module-card">
+        <div class="module-tag">Reconciliation</div>
+        <h3>No-hassle book-of-business reconciliation</h3>
+        <p>One-click carrier verification and organized sales and policy logs. Status tracking from Active to Cancelled with commission visibility.</p>
+      </div>
+      <div class="module-card">
+        <div class="module-tag">Compliance</div>
+        <h3>Required compliance forms & secure uploads</h3>
+        <p>CMS-required compliance forms including Open Enrollment documentation, plus secure client document uploads. Stay audit-ready automatically.</p>
+      </div>
+      <div class="module-card">
+        <div class="module-tag">Integrations</div>
+        <h3>Marketplace & Medicare integration</h3>
+        <p>Native HealthSherpa and EDE platform integration for ACA marketplace enrollment. All client activity synced automatically. No manual imports.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ELEVATOR PITCHES ────────────────────────────────────────────────── -->
+<div class="section" id="section-pitches">
+  <div class="page-header">
+    <div class="page-label">Before The Call</div>
+    <h1>Elevator Pitches</h1>
+    <p>These are not scripts. They're starting points. Use the one that fits the conversation, then make it yours.</p>
+  </div>
+  <div class="content">
+    <div class="pitch-card">
+      <div class="pitch-situation">When Someone Asks What AgentNav Is</div>
+      <div class="pitch-quote">
+        <p>AgentNav is everything a professional health insurance broker needs in one place. CRM, quoting for ACA, STM, Life, Ancillary, and Indemnity products, SMS, scheduling, policy management, marketing campaigns, and a tool called Renewal Autopilot that runs your entire Open Enrollment season without you doing it manually. It's $79 a month for a solo agent.</p>
+      </div>
+      <p class="pitch-tip">Use this when you have 20 seconds. Stop there and let them ask the next question.</p>
+    </div>
+
+    <div class="pitch-card">
+      <div class="pitch-situation">When Talking To A Solo Agent Who Uses Multiple Tools</div>
+      <div class="pitch-quote">
+        <p>Most agents I talk to are running four or five different tools and none of them really talk to each other. Their quoting tool doesn't know about their CRM, their CRM doesn't connect to their SMS, and then OE comes and they're manually reaching out to 200 clients one by one. AgentNav connects all of that. One login, one client record, one place where everything lives from first quote to re-enrollment next year.</p>
+      </div>
+      <p class="pitch-tip">Pause after "one by one." That usually lands.</p>
+    </div>
+
+    <div class="pitch-card">
+      <div class="pitch-situation">When Talking To A Small Agency Owner</div>
+      <div class="pitch-quote">
+        <p>The thing I hear most from small agency owners is that OE season nearly breaks them every year. They're chasing clients, their agents are texting from personal phones, and there's no way to know which clients haven't responded yet. AgentNav's Renewal Autopilot takes that whole process and automates it. It sends the outreach, tracks who responds, generates updated quotes automatically, and gives you a board where every client has a clear next action. Your agents stop being the bottleneck.</p>
+      </div>
+      <p class="pitch-tip">Emphasize the board visual. It's something people can picture.</p>
+    </div>
+
+    <div class="pitch-card">
+      <div class="pitch-situation">When Comparing To EZLynx</div>
+      <div class="pitch-quote">
+        <p>EZLynx is great for P&C agents. If that's your world, they're worth looking at. But if you're selling ACA, STM, Life, Ancillary, and Indemnity products, EZLynx wasn't really built for you. It doesn't have ACA quoting, it doesn't have Renewal Autopilot, and you'll pay $150 or more per user for a platform that's missing half the tools health brokers actually need daily.</p>
+      </div>
+      <p class="pitch-tip">Don't trash them. Respect the tool, then explain the fit problem.</p>
+    </div>
+
+    <div class="pitch-card">
+      <div class="pitch-situation">When Price Comes Up</div>
+      <div class="pitch-quote">
+        <p>I get it — $79 a month sounds almost too good. Most agents are spending more than that on just their texting app alone. AgentNav replaces your CRM, quoting tool, SMS platform, enrollment tracker, and renewal workflow. If you're paying for any of those separately right now, you're probably spending more and still not getting what AgentNav gives you in one place.</p>
+      </div>
+      <p class="pitch-tip">Let the math do the work. Don't over-explain.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── KNOW YOUR COMPETITION ───────────────────────────────────────────── -->
+<div class="section" id="section-competition">
+  <div class="page-header">
+    <div class="page-label">Before The Call</div>
+    <h1>Know Your Competition</h1>
+    <p>Seven competitors you'll come up against. Each one has a real strength worth acknowledging. The goal is not to trash the competition. It's to know where AgentNav fits better.</p>
+  </div>
+  <div class="content">
+    <div class="comp-tabs">
+      <button class="comp-tab active" onclick="showComp('ezlynx',this)">EZLynx</button>
+      <button class="comp-tab" onclick="showComp('hawksoft',this)">HawkSoft</button>
+      <button class="comp-tab" onclick="showComp('agencybloc',this)">AgencyBloc</button>
+      <button class="comp-tab" onclick="showComp('agentcrm',this)">Agent CRM</button>
+      <button class="comp-tab" onclick="showComp('lucie',this)">Lucie Health</button>
+      <button class="comp-tab" onclick="showComp('agencyzoom',this)">AgencyZoom</button>
+      <button class="comp-tab" onclick="showComp('nowcerts',this)">NowCerts</button>
+    </div>
+
+    <div class="comp-panel active" id="comp-ezlynx">
+      <div class="comp-dark-banner">
+        <h3>The honest truth about EZLynx</h3>
+        <p>EZLynx is the most recognized name in agency management software. 330 plus carriers, 20 years in the market, built for P&C agents. Respect what they've built. But it wasn't designed for health and ACA work, and you'll pay $150 or more per user for a platform that doesn't have half the tools ACA agents actually need.</p>
+      </div>
+      <div class="comp-two-col">
+        <div class="comp-col">
+          <h4>What they'll say about themselves</h4>
+          <div class="comp-quote"><p>"We're the industry's number one comparative rater with 330 plus carriers, a full AMS, built-in AI, and 20 years in the market. Everyone knows EZLynx."</p></div>
+          <div class="comp-strength-label">Their Genuine Strengths</div>
+          <div class="strength-tags">
+            <span class="strength-tag">330+ P&C carriers</span>
+            <span class="strength-tag">Brand recognition</span>
+            <span class="strength-tag">Enterprise scale</span>
+            <span class="strength-tag">ACORD forms</span>
+          </div>
+        </div>
+        <div class="comp-col">
+          <h4>Where AgentNav wins</h4>
+          <div class="win-section-label">You Win When</div>
+          <ul class="win-list">
+            <li><span class="win-icon">→</span>Built for ACA agents from day one. ACA, STM, Life, Ancillary, Indemnity quoting, and HealthSherpa/EDE enrollment are native. EZLynx has none of these.</li>
+            <li><span class="win-icon">→</span>Renewal Autopilot is a full Open Enrollment management system. EZLynx has a retention report.</li>
+            <li><span class="win-icon">→</span>SMS is built in at no extra charge. EZLynx routes you to third-party integrations.</li>
+            <li><span class="win-icon">→</span>Scheduling syncs to Google Calendar directly from the client record.</li>
+            <li><span class="win-icon">→</span>The price: $79 a month for a solo agent versus $150 plus at EZLynx.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="walkaway-card" style="margin-top:14px;">
+        <h4>When to walk away</h4>
+        <p>If the agency is primarily P&C with commercial lines, EZLynx is genuinely the better tool. Don't fight that fight. Focus on health-first brokers where you win every time.</p>
+      </div>
+    </div>
+
+    <div class="comp-panel" id="comp-hawksoft">
+      <div class="comp-dark-banner">
+        <h3>The honest truth about HawkSoft</h3>
+        <p>HawkSoft is deeply loved by independent P&C agencies. 18-year average customer retention. It's a desktop-first platform that health brokers often inherit, not choose. If someone is on HawkSoft and sells primarily health and ACA, they're working around a tool, not with one.</p>
+      </div>
+      <div class="comp-two-col">
+        <div class="comp-col">
+          <h4>What they'll say about themselves</h4>
+          <div class="comp-quote"><p>"Our customers stay with us for almost two decades on average. We're built for the independent agent and we know this business."</p></div>
+          <div class="comp-strength-label">Their Genuine Strengths</div>
+          <div class="strength-tags">
+            <span class="strength-tag">18yr avg retention</span>
+            <span class="strength-tag">Independent agent focus</span>
+            <span class="strength-tag">QuickBooks integration</span>
+          </div>
+        </div>
+        <div class="comp-col">
+          <h4>Where AgentNav wins</h4>
+          <div class="win-section-label">You Win When</div>
+          <ul class="win-list">
+            <li><span class="win-icon">→</span>Fully cloud-native — any device, anywhere. HawkSoft requires desktop installation.</li>
+            <li><span class="win-icon">→</span>ACA, STM, Life, Ancillary, and Indemnity quoting built in. HawkSoft is P&C at heart.</li>
+            <li><span class="win-icon">→</span>Renewal Autopilot — no equivalent exists in HawkSoft.</li>
+            <li><span class="win-icon">→</span>Built-in SMS messaging with dedicated agent number included.</li>
+            <li><span class="win-icon">→</span>HealthSherpa and EDE enrollment sync — no manual entry.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-panel" id="comp-agencybloc">
+      <div class="comp-dark-banner">
+        <h3>The honest truth about AgencyBloc</h3>
+        <p>AgencyBloc is a legitimate competitor. It was designed for health and life agencies — so the audience overlap is real. Their strength is compliance and group benefits. Their weakness is that Renewal Autopilot doesn't exist there, and the workflow for individual ACA is manual compared to ours.</p>
+      </div>
+      <div class="comp-two-col">
+        <div class="comp-col">
+          <h4>What they'll say about themselves</h4>
+          <div class="comp-quote"><p>"We're the number one agency management platform built specifically for health and life insurance agencies. SOC 2 certified with 6,500 plus agencies on the platform."</p></div>
+          <div class="comp-strength-label">Their Genuine Strengths</div>
+          <div class="strength-tags">
+            <span class="strength-tag">SOC 2 Type II</span>
+            <span class="strength-tag">Group benefits</span>
+            <span class="strength-tag">Commission reconciliation</span>
+            <span class="strength-tag">6,500+ agencies</span>
+          </div>
+        </div>
+        <div class="comp-col">
+          <h4>Where AgentNav wins</h4>
+          <div class="win-section-label">You Win When</div>
+          <ul class="win-list">
+            <li><span class="win-icon">→</span>Renewal Autopilot is purpose-built for OEP — AgencyBloc has no equivalent.</li>
+            <li><span class="win-icon">→</span>Full product quoting: ACA, STM, Life, Ancillary, and Indemnity in one engine.</li>
+            <li><span class="win-icon">→</span>Native HealthSherpa and EDE sync cuts manual entry dramatically.</li>
+            <li><span class="win-icon">→</span>AI-powered SMS outreach built into the messaging module.</li>
+            <li><span class="win-icon">→</span>Simpler, faster onboarding — agents productive same day.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-panel" id="comp-agentcrm">
+      <div class="comp-dark-banner">
+        <h3>The honest truth about Agent CRM</h3>
+        <p>Agent CRM is a marketing and sales CRM for insurance agents. It's good at funnels, landing pages, and outbound campaigns. It is not a quoting tool, not an enrollment tool, and not a policy manager. Agents who use it still need three other platforms to run their health book.</p>
+      </div>
+      <div class="comp-two-col">
+        <div class="comp-col">
+          <h4>What they'll say about themselves</h4>
+          <div class="comp-quote"><p>"We're the all-in-one CRM built for insurance agents with power dialer, automated follow-up, and marketing funnels that actually convert."</p></div>
+          <div class="comp-strength-label">Their Genuine Strengths</div>
+          <div class="strength-tags">
+            <span class="strength-tag">Power dialer</span>
+            <span class="strength-tag">Marketing automation</span>
+            <span class="strength-tag">Landing pages</span>
+            <span class="strength-tag">~$97/mo starting</span>
+          </div>
+        </div>
+        <div class="comp-col">
+          <h4>Where AgentNav wins</h4>
+          <div class="win-section-label">You Win When</div>
+          <ul class="win-list">
+            <li><span class="win-icon">→</span>Native quoting for ACA, STM, Life, Ancillary, and Indemnity — Agent CRM has no quoting engine at all.</li>
+            <li><span class="win-icon">→</span>Policy management and one-click carrier verification built in.</li>
+            <li><span class="win-icon">→</span>HealthSherpa and EDE enrollment sync — no manual entry.</li>
+            <li><span class="win-icon">→</span>Renewal Autopilot vs. basic renewal reminders.</li>
+            <li><span class="win-icon">→</span>Compliance forms and secure document uploads included.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-panel" id="comp-lucie">
+      <div class="comp-dark-banner">
+        <h3>The honest truth about Lucie Health</h3>
+        <p>Lucie Health is an enrollment tool, not a full platform. It helps agents get clients enrolled on the marketplace. That's its purpose and it does it reasonably well. But it's not a CRM, not a quoting engine, and not a retention or renewal tool. Agents who use Lucie still need everything else.</p>
+      </div>
+      <div class="comp-two-col">
+        <div class="comp-col">
+          <h4>What they'll say about themselves</h4>
+          <div class="comp-quote"><p>"We make ACA enrollment simple and fast. Agents can get clients enrolled in minutes with our streamlined marketplace connection."</p></div>
+          <div class="comp-strength-label">Their Genuine Strengths</div>
+          <div class="strength-tags">
+            <span class="strength-tag">Simple enrollment UX</span>
+            <span class="strength-tag">Marketplace connection</span>
+            <span class="strength-tag">Fast onboarding</span>
+          </div>
+        </div>
+        <div class="comp-col">
+          <h4>Where AgentNav wins</h4>
+          <div class="win-section-label">You Win When</div>
+          <ul class="win-list">
+            <li><span class="win-icon">→</span>Full CRM, quoting for all product lines, policy tracking, and SMS — not just enrollment.</li>
+            <li><span class="win-icon">→</span>Renewal Autopilot manages the entire OEP cycle, not just enrollment.</li>
+            <li><span class="win-icon">→</span>Compliance forms, secure uploads, and book reconciliation included.</li>
+            <li><span class="win-icon">→</span>One platform instead of four — AgentNav replaces Lucie plus everything else they're still using.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-panel" id="comp-agencyzoom">
+      <div class="comp-dark-banner">
+        <h3>The honest truth about AgencyZoom</h3>
+        <p>AgencyZoom is a sales pipeline and CRM tool popular with captive and independent agents who sell multiple lines. It's a solid sales management tool but it was not built around the health and ACA workflow, and it lacks the quoting, enrollment, and OEP automation that health-first agents need.</p>
+      </div>
+      <div class="comp-two-col">
+        <div class="comp-col">
+          <h4>What they'll say about themselves</h4>
+          <div class="comp-quote"><p>"We're the modern sales management platform for insurance agencies. Pipeline, automation, and performance dashboards in one place."</p></div>
+          <div class="comp-strength-label">Their Genuine Strengths</div>
+          <div class="strength-tags">
+            <span class="strength-tag">Sales pipeline</span>
+            <span class="strength-tag">Multi-line support</span>
+            <span class="strength-tag">Performance dashboards</span>
+          </div>
+        </div>
+        <div class="comp-col">
+          <h4>Where AgentNav wins</h4>
+          <div class="win-section-label">You Win When</div>
+          <ul class="win-list">
+            <li><span class="win-icon">→</span>ACA, STM, Life, Ancillary, and Indemnity quoting and enrollment built natively.</li>
+            <li><span class="win-icon">→</span>HealthSherpa and EDE integration — AgencyZoom has no enrollment sync.</li>
+            <li><span class="win-icon">→</span>Renewal Autopilot manages OEP end-to-end — no equivalent exists.</li>
+            <li><span class="win-icon">→</span>Compliance forms and secure document uploads included.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-panel" id="comp-nowcerts">
+      <div class="comp-dark-banner">
+        <h3>The honest truth about NowCerts</h3>
+        <p>NowCerts is a cloud-based AMS built for independent agencies. It handles policy management and client records well. It skews toward P&C and lacks the health-specific workflows, quoting engine, and OEP automation that health brokers need. Pricing is per-policy, which gets expensive as the book grows.</p>
+      </div>
+      <div class="comp-two-col">
+        <div class="comp-col">
+          <h4>What they'll say about themselves</h4>
+          <div class="comp-quote"><p>"NowCerts is the modern cloud AMS that grows with your agency. Policy management, certificates, and automation — all in one place."</p></div>
+          <div class="comp-strength-label">Their Genuine Strengths</div>
+          <div class="strength-tags">
+            <span class="strength-tag">Cloud-native AMS</span>
+            <span class="strength-tag">Certificate generation</span>
+            <span class="strength-tag">Per-policy pricing</span>
+          </div>
+        </div>
+        <div class="comp-col">
+          <h4>Where AgentNav wins</h4>
+          <div class="win-section-label">You Win When</div>
+          <ul class="win-list">
+            <li><span class="win-icon">→</span>Health-native quoting for ACA, STM, Life, Ancillary, and Indemnity — NowCerts has no quoting engine.</li>
+            <li><span class="win-icon">→</span>HealthSherpa and EDE enrollment sync built in.</li>
+            <li><span class="win-icon">→</span>Renewal Autopilot manages full OEP cycle.</li>
+            <li><span class="win-icon">→</span>Flat monthly pricing vs. per-policy fees that grow with the book.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── PRICING ─────────────────────────────────────────────────────────── -->
+<div class="section" id="section-pricing">
+  <div class="page-header">
+    <div class="page-label">Before The Call</div>
+    <h1>Pricing</h1>
+    <p>Simple and transparent. No modules to unlock, no features held back, no annual contract required. What you see is what you get.</p>
+  </div>
+  <div class="content">
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <div class="pricing-tier">Single Agent</div>
+        <h3>Independent Agent</h3>
+        <div class="pricing-price">$79<span>/month</span></div>
+        <div class="pricing-per">Everything included, 1 seat</div>
+        <ul class="pricing-list">
+          <li>Full CRM with Rx profile, household, and FPL tracking</li>
+          <li>ACA, STM, Life, Ancillary, and Indemnity quoting</li>
+          <li>Sales Log and Policy Tracker with carrier verification</li>
+          <li>Renewal Autopilot for the full OE workflow</li>
+          <li>SMS messaging with your own dedicated number</li>
+          <li>Appointment scheduling with Google Calendar sync</li>
+          <li>Marketing campaigns by line of business</li>
+          <li>Add an assistant for $25 per month</li>
+        </ul>
+      </div>
+      <div class="pricing-card featured">
+        <div class="pricing-tier">Most Popular — 4 Agents + 1 Assistant</div>
+        <h3>Small Agency</h3>
+        <div class="pricing-price">$247<span>/month</span></div>
+        <div class="pricing-per">About $49.40 per person per month</div>
+        <ul class="pricing-list">
+          <li>Everything in the Individual plan</li>
+          <li>White label agency branding across the platform</li>
+          <li>Role-based permissions for agents and assistants</li>
+          <li>Additional agents at $60 per month each</li>
+          <li>Additional assistants at $15 per month each</li>
+        </ul>
+      </div>
+      <div class="pricing-card">
+        <div class="pricing-tier">10 Agents + 2 Assistants</div>
+        <h3>Large Agency</h3>
+        <div class="pricing-price">$597<span>/month</span></div>
+        <div class="pricing-per">About $49.75 per person per month</div>
+        <ul class="pricing-list">
+          <li>Everything in the Small Agency plan</li>
+          <li>Priority support when it matters most</li>
+          <li>Dedicated onboarding to get your team up fast</li>
+          <li>Additional agents at $55 per month each</li>
+          <li>Additional assistants at $10 per month each</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <h2 class="content-heading">How that compares to everyone else</h2>
+    <p class="content-sub">What agents typically pay when they're running multiple tools separately.</p>
+
+    <div class="matrix-wrap">
+      <table class="matrix-table">
+        <thead>
+          <tr>
+            <th>Platform</th>
+            <th class="us">AgentNav</th>
+            <th>EZLynx</th>
+            <th>AgencyBloc</th>
+            <th>Agent CRM</th>
+            <th>HawkSoft</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Starting price / agent</td><td class="us"><span class="chip chip-yes">$79/mo</span></td><td><span class="chip chip-no">$150+/mo</span></td><td><span class="chip chip-partial">$100+/mo</span></td><td><span class="chip chip-partial">$97/mo</span></td><td><span class="chip chip-no">$90+/mo</span></td></tr>
+          <tr><td>ACA, STM, Life, Ancillary & Indemnity quoting</td><td class="us"><span class="chip chip-yes">Yes</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-partial">Partial</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-no">No</span></td></tr>
+          <tr><td>HealthSherpa / EDE enrollment sync</td><td class="us"><span class="chip chip-yes">Yes</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-no">No</span></td></tr>
+          <tr><td>Renewal Autopilot (OEP automation)</td><td class="us"><span class="chip chip-yes">Yes</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-no">No</span></td></tr>
+          <tr><td>Built-in SMS with dedicated number</td><td class="us"><span class="chip chip-yes">Yes</span></td><td><span class="chip chip-no">Add-on</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-partial">Add-on</span></td><td><span class="chip chip-no">No</span></td></tr>
+          <tr><td>Compliance forms & secure uploads</td><td class="us"><span class="chip chip-yes">Yes</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-partial">Partial</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-no">No</span></td></tr>
+          <tr><td>Book-of-business reconciliation</td><td class="us"><span class="chip chip-yes">Yes</span></td><td><span class="chip chip-partial">Partial</span></td><td><span class="chip chip-yes">Yes</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-partial">Partial</span></td></tr>
+          <tr><td>AI-powered SMS outreach</td><td class="us"><span class="chip chip-yes">Yes</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-partial">Basic</span></td><td><span class="chip chip-no">No</span></td></tr>
+          <tr><td>Google Calendar scheduling</td><td class="us"><span class="chip chip-yes">Yes</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-partial">Partial</span></td><td><span class="chip chip-no">No</span></td></tr>
+          <tr><td>Cloud-native (no install)</td><td class="us"><span class="chip chip-yes">Yes</span></td><td><span class="chip chip-yes">Yes</span></td><td><span class="chip chip-yes">Yes</span></td><td><span class="chip chip-yes">Yes</span></td><td><span class="chip chip-partial">Hybrid</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:12px;">Yes = native feature · Partial = limited or via third-party · No = not available</p>
+  </div>
+</div>
+
+<!-- ── COLD CALL ────────────────────────────────────────────────────────── -->
+<div class="section" id="section-coldcall">
+  <div class="page-header">
+    <div class="page-label">On The Call</div>
+    <h1>Cold Call Guide</h1>
+    <p>You have about 8 seconds before someone decides to keep listening or hang up. The goal of a cold call is one thing: earn a conversation, not make a sale.</p>
+  </div>
+  <div class="content">
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">1</div>
+          <span class="step-title">The opening — earn 30 more seconds</span>
+        </div>
+        <span class="step-time">0:00 to 0:15</span>
+      </div>
+      <div class="step-body">
+        <p>Use their name, say who you are, and get to the point. No one wants small talk from a cold caller.</p>
+        <div class="quote-block">
+          <p>"Hey [Name], this is [Your name] from AgentNav. I'll be quick. We built a platform for health insurance brokers — quoting for ACA, STM, Life, Ancillary, and Indemnity, a full CRM, SMS, and a tool that runs your entire Open Enrollment season without you doing it manually. Does that sound like something worth two minutes?"</p>
+          <p class="quote-tip">The question at the end matters. It gives them control and respects their time.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">2</div>
+          <span class="step-title">If they say sure, tell me more</span>
+        </div>
+        <span class="step-time">0:15 to 1:30</span>
+      </div>
+      <div class="step-body">
+        <p>Ask before you talk. The best thing you can do after they give you a minute is use it to learn about them.</p>
+        <div class="quote-block">
+          <p>"Really quick before I pitch you anything. How are you currently managing renewals when OE hits? Like specifically, what does that process look like for your book?"</p>
+          <p class="quote-tip">This is your most important question on a cold call. Their answer tells you exactly which pain point to hit.</p>
+        </div>
+        <p>Listen for the words: manually, spreadsheet, calling everyone myself, some clients fall through, overwhelmed. Any of these is your entry point.</p>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">3</div>
+          <span class="step-title">Connect their pain to one specific thing AgentNav does</span>
+        </div>
+        <span class="step-time">1:30 to 2:30</span>
+      </div>
+      <div class="step-body">
+        <p>Don't list features. Respond to what they just told you.</p>
+        <div class="quote-block">
+          <p>"That's exactly what Renewal Autopilot is built for. It sends the outreach to your clients automatically, tracks who responds, generates updated quotes for ACA, STM, Life, and Ancillary products, and gives you a board where every client has a status. You're not chasing 200 people in November. You're just reviewing what the system surfaced for you."</p>
+          <p class="quote-tip">One feature. One pain. One connection. Don't add more.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">4</div>
+          <span class="step-title">Ask for the meeting</span>
+        </div>
+        <span class="step-time">2:30 to 3:00</span>
+      </div>
+      <div class="step-body">
+        <p>Don't ask if they want to learn more. Ask for a specific time.</p>
+        <div class="quote-block">
+          <p>"I'd love to show you how this looks for a book your size. Do you have 20 minutes this week or next — Thursday afternoon or Friday morning?"</p>
+          <p class="quote-tip">Two specific options. Not "are you free sometime?" Give them a choice, not an open invitation to say no.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">5</div>
+          <span class="step-title">If they say no or not now</span>
+        </div>
+        <span class="step-time">Any point</span>
+      </div>
+      <div class="step-body">
+        <div class="quote-block">
+          <p>"Totally fair. When does OE stress usually start hitting for your team? I'll follow up right before that so the timing actually makes sense."</p>
+          <p class="quote-tip">Never argue. Plant a seed and get permission to come back at the right moment.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── DISCOVERY CALL ──────────────────────────────────────────────────── -->
+<div class="section" id="section-discovery">
+  <div class="page-header">
+    <div class="page-label">On The Call</div>
+    <h1>Discovery Call Guide</h1>
+    <p>Discovery is the most important call in the sales process. If you do this right, the demo writes itself and the close is easy. The goal is to understand their world before you say anything about ours.</p>
+  </div>
+  <div class="content">
+    <div class="dark-banner">
+      <h3>The golden rule of discovery</h3>
+      <p>You should be talking about 30 percent of the time. They should be talking 70 percent. If you're the one doing most of the talking, you've already lost the call.</p>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">1</div>
+          <span class="step-title">Set the agenda and earn trust early</span>
+        </div>
+        <span class="step-time">0:00 to 3:00</span>
+      </div>
+      <div class="step-body">
+        <div class="quote-block">
+          <p>"Thanks for making time. Here's what I was hoping to do today. I want to spend most of this call learning about how you're set up right now, what's working and what isn't. Then if I think AgentNav could actually help, I'll be honest about that. And if it's not a fit I'll tell you that too. Does that work for you?"</p>
+          <p class="quote-tip">This sets expectations, positions you as a consultant not a salesperson, and makes them comfortable being honest with you.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">2</div>
+          <span class="step-title">Understand their current setup</span>
+        </div>
+        <span class="step-time">3:00 to 12:00</span>
+      </div>
+      <div class="step-body">
+        <p>Work through these questions naturally. Don't read them like a checklist.</p>
+        <ul class="numbered-list">
+          <li><div class="li-num">1</div>How big is your agency right now, and is it just you or do you have a team?</li>
+          <li><div class="li-num">2</div>What lines of business are you mostly working in? Is it mostly ACA or do you also do STM, Life, Ancillary, Indemnity, or Medicare?</li>
+          <li><div class="li-num">3</div>Walk me through what your tech stack looks like today. What tools are you using?</li>
+          <li><div class="li-num">4</div>When a new lead comes in, what happens? Where does it go?</li>
+          <li><div class="li-num">5</div>How do you handle quoting right now? Are you using a comparative rater or going carrier by carrier?</li>
+          <li><div class="li-num">6</div>What does a typical client conversation look like from your side? How do you track what was said?</li>
+          <li><div class="li-num">7</div>How do you manage renewals? Walk me through what OE looks like for your team.</li>
+          <li><div class="li-num">8</div>What tools are you using for SMS or client communication?</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">3</div>
+          <span class="step-title">Find the real pain</span>
+        </div>
+        <span class="step-time">12:00 to 20:00</span>
+      </div>
+      <div class="step-body">
+        <p>Once you've heard their setup, go deeper on what's breaking. These are the follow-up questions that uncover real buying motivation.</p>
+        <ul class="numbered-list">
+          <li><div class="li-num">1</div>What's the most frustrating part of your current setup right now?</li>
+          <li><div class="li-num">2</div>Last OE — how many clients did you lose track of or lose entirely?</li>
+          <li><div class="li-num">3</div>If you could change one thing about how your team works today, what would it be?</li>
+          <li><div class="li-num">4</div>What would make next OE feel different from last year?</li>
+        </ul>
+        <div class="quote-block">
+          <p>"It sounds like the thing that's really costing you time right now is [their exact words]. Is that fair to say? Because that's actually one of the specific things AgentNav was built to fix."</p>
+          <p class="quote-tip">Use their exact words back to them. Don't paraphrase. It shows you listened.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">4</div>
+          <span class="step-title">Set up the demo</span>
+        </div>
+        <span class="step-time">20:00 to 25:00</span>
+      </div>
+      <div class="step-body">
+        <div class="quote-block">
+          <p>"Based on what you told me, I want to show you three specific things in the demo — the client record because it sounds like tracking conversations is a problem, Renewal Autopilot because OE is clearly where the pain is, and the quoting flow because going carrier by carrier is eating your time. Does that sound like the right focus?"</p>
+          <p class="quote-tip">Name exactly what you'll show and why. This makes the demo feel tailored, not canned.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── DEMO CALL ────────────────────────────────────────────────────────── -->
+<div class="section" id="section-demo">
+  <div class="page-header">
+    <div class="page-label">On The Call</div>
+    <h1>Demo Call Guide</h1>
+    <p>A good demo is not a feature tour. It's a story. The client is the main character. AgentNav is what makes their story go better.</p>
+  </div>
+  <div class="content">
+    <div class="dark-banner">
+      <h3>Before you start sharing your screen</h3>
+      <p>Spend the first three minutes confirming what you learned in discovery. "Last time we talked you mentioned X was the biggest frustration. Is that still the right thing to focus on today?" This shows you listened and keeps the demo focused on what actually matters to them.</p>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">1</div>
+          <span class="step-title">Start with the client record, not the home screen</span>
+        </div>
+        <span class="step-time">0:00 to 8:00</span>
+      </div>
+      <div class="step-body">
+        <p>Open a client profile and walk through it like you're looking at a real person. The Rx and medical profile, household members, the FPL, the activity log, the task list. Show them this is not a contact database. It's a complete picture of a human being.</p>
+        <div class="quote-block">
+          <p>"This is what your client looks like inside AgentNav. Every piece of information you need before a call is right here. Medical profile, income, family members, what was said last time, what needs to happen next. You never have to dig through emails or notes apps before picking up the phone."</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">2</div>
+          <span class="step-title">Show the quoting flow as a continuous story</span>
+        </div>
+        <span class="step-time">8:00 to 18:00</span>
+      </div>
+      <div class="step-body">
+        <p>Don't just show the quoting tool. Show how the client data flows in automatically so they never re-enter anything. Build an A, B, C proposal. Show the side-by-side comparison. Show supplemental coverage — STM, Life, Ancillary, Indemnity — getting layered in.</p>
+        <div class="quote-block">
+          <p>"Everything you entered in the client profile came with us. No re-entry. Now I'm building three options side by side. Bronze, Silver, and Gold. I can add dental on Option B and a life plan on Option C. When I share this proposal, the client sees exactly what you want them to see."</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">3</div>
+          <span class="step-title">Show Renewal Autopilot like it's the main event</span>
+        </div>
+        <span class="step-time">18:00 to 30:00</span>
+      </div>
+      <div class="step-body">
+        <p>This is where most demos win or lose. Don't rush past it. Take your time and let them see the full board.</p>
+        <div class="quote-block">
+          <p>"This is Renewal Autopilot. Every one of your renewal clients sits on this board with a status. Not Started. Outreach Sent. Responded. Meeting Scheduled. Re-Enrolled. The system sends the outreach automatically. It tracks who responds. It pulls updated quotes. You're not chasing 200 people in November. You're just reviewing what landed in your queue."</p>
+        </div>
+        <p>Let them react. Ask: "How does your team handle this today?" Get them talking about the gap before you move on.</p>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">4</div>
+          <span class="step-title">For small agencies — show team visibility</span>
+        </div>
+        <span class="step-time">30:00 to 38:00</span>
+      </div>
+      <div class="step-body">
+        <p>If they have more than one agent, show the team view. This is often where the demo closes itself.</p>
+        <div class="quote-block">
+          <p>"Right now you have no idea what your agents are doing without asking them. Here, you can see every agent's pipeline, what they've quoted, what's pending enrollment, and which clients haven't been touched. You don't have to manage by asking. You manage by looking."</p>
+        </div>
+        <p>Note: For a solo agent running a combined demo and closing call, skip team visibility and go straight to the close.</p>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">5</div>
+          <span class="step-title">End the demo with a question, not a pitch</span>
+        </div>
+        <span class="step-time">Last 5 min</span>
+      </div>
+      <div class="step-body">
+        <div class="quote-block">
+          <p>"That's the core of what AgentNav does. Based on what you told me earlier about [their specific pain], does this feel like it solves that? What did you see today that felt most relevant to your situation?"</p>
+          <p class="quote-tip">Get them talking. Their answer tells you exactly how to close.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CLOSING CALL ────────────────────────────────────────────────────── -->
+<div class="section" id="section-closing">
+  <div class="page-header">
+    <div class="page-label">On The Call</div>
+    <h1>Closing Call Guide</h1>
+    <p>If you've done discovery and demo well, the closing call should feel like a natural next step, not a pressure moment. Most closes happen before the closing call starts.</p>
+  </div>
+  <div class="content">
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">1</div>
+          <span class="step-title">Start by confirming where they are</span>
+        </div>
+        <span class="step-time">0:00 to 5:00</span>
+      </div>
+      <div class="step-body">
+        <div class="quote-block">
+          <p>"Since we last spoke, I put together the right plan for your team. Before I walk you through it, I just want to check: has anything changed on your end? Still seeing the same challenges you mentioned with OE and the renewal workflow?"</p>
+          <p class="quote-tip">If they say yes, you're on track. If something has changed, you want to know before you pitch.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">2</div>
+          <span class="step-title">Present a recommendation, not a menu</span>
+        </div>
+        <span class="step-time">5:00 to 12:00</span>
+      </div>
+      <div class="step-body">
+        <p>Don't show three plans and let them pick. Tell them which one is right for them and why, based on what they told you.</p>
+        <div class="quote-block">
+          <p>"Based on what you shared, you have four agents and an assistant doing most of the client communication. That's exactly what the Small Agency plan at $247 a month is built for. It's about $49 per person, everyone gets their own SMS line and full access, and you get white label branding so the whole thing looks like your agency. That's the one I'd recommend."</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">3</div>
+          <span class="step-title">Ask directly and then go quiet</span>
+        </div>
+        <span class="step-time">12:00 to 14:00</span>
+      </div>
+      <div class="step-body">
+        <div class="quote-block">
+          <p>"Does that sound like the right fit for where you are right now?"</p>
+          <p class="quote-tip">Ask the question. Then stop talking. Don't fill the silence. Let them respond. The first person to speak after that question usually loses.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">4</div>
+          <span class="step-title">For solo agents — combine demo and close in one call</span>
+        </div>
+        <span class="step-time">Solo agent flow</span>
+      </div>
+      <div class="step-body">
+        <p>Solo agents make decisions faster and don't need consensus. After the demo, move directly to the close in the same call. Don't schedule a separate closing call.</p>
+        <div class="quote-block">
+          <p>"You've seen the platform and you know what it does. For a solo agent your size, it's $79 a month, everything included. I can get you set up today and we can do your onboarding call this week while what you saw is still fresh. Want to get started?"</p>
+          <p class="quote-tip">Solo agents who say "let me think about it" rarely come back. Create gentle urgency by offering to get started immediately.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">5</div>
+          <span class="step-title">Handle the last objection and lock it down</span>
+        </div>
+        <span class="step-time">14:00 to close</span>
+      </div>
+      <div class="step-body">
+        <p>There will almost always be one more thing. Address it directly.</p>
+        <div class="quote-block">
+          <p>"That's fair. Here's what I'd suggest — let's get you started on a month-to-month basis. No annual contract, no risk. If it's not working after 30 days, you're out. But based on everything you told me, I think you'll know it's right within the first week."</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ONBOARDING CALL ─────────────────────────────────────────────────── -->
+<div class="section" id="section-onboarding">
+  <div class="page-header">
+    <div class="page-label">On The Call</div>
+    <h1>Onboarding Call Guide</h1>
+    <p>The onboarding call is when someone goes from "I bought this" to "I believe in this." First impressions of the platform stick. Make them count.</p>
+  </div>
+  <div class="content">
+    <div class="dark-banner">
+      <h3>The goal of onboarding</h3>
+      <p>Get the new user to one real win in the first 20 minutes. Not a tour of every feature. One thing that makes them say "this is actually going to save me time." For most agents, that's either the client profile or the Renewal Autopilot board.</p>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">1</div>
+          <span class="step-title">Celebrate the decision and set the agenda</span>
+        </div>
+        <span class="step-time">0:00 to 3:00</span>
+      </div>
+      <div class="step-body">
+        <div class="quote-block">
+          <p>"Welcome to AgentNav. I'm really glad you're here. Today we're going to focus on getting you set up in a way that makes sense for your book, not just clicking through every screen. What I want is for you to end this call feeling like you could use it on your own tomorrow. Sound good?"</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">2</div>
+          <span class="step-title">Import their data together</span>
+        </div>
+        <span class="step-time">3:00 to 15:00</span>
+      </div>
+      <div class="step-body">
+        <p>Don't tell them how to do the policy import. Do it with them. Have them screen share and walk through it together. When they see their real clients show up in the platform, the product becomes real.</p>
+        <div class="quote-block">
+          <p>"Let's get your clients in here right now. If you have a spreadsheet or can export from wherever you're working today, we'll walk through the import together. Nothing makes the platform feel more real than seeing your actual book in it."</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">3</div>
+          <span class="step-title">Configure their SMS line and calendar</span>
+        </div>
+        <span class="step-time">15:00 to 25:00</span>
+      </div>
+      <div class="step-body">
+        <p>Get their dedicated SMS number assigned. Connect their Google Calendar. These two things make the platform feel like it belongs to them, not like borrowed software.</p>
+        <div class="quote-block">
+          <p>"You now have a dedicated SMS number inside AgentNav. Every text you send from here is logged to the client record automatically. Your clients will save this number. It becomes your professional line."</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">4</div>
+          <span class="step-title">Run Renewal Autopilot setup together</span>
+        </div>
+        <span class="step-time">25:00 to 40:00</span>
+      </div>
+      <div class="step-body">
+        <p>Walk through the Autopilot board. Show them how to activate it for their renewal clients. Let them turn on the first client themselves.</p>
+        <div class="quote-block">
+          <p>"Pick one client from your book — someone you know is up for renewal this year. Turn on Autopilot for them right now. The system will send the outreach, track the response, and pull an updated quote automatically. You just watched the OE workflow start for real."</p>
+          <p class="quote-tip">Letting them do it themselves is the difference between a tutorial and a transformation.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header">
+        <div style="display:flex;align-items:center;flex:1;">
+          <div class="step-num">5</div>
+          <span class="step-title">End with next steps, not homework</span>
+        </div>
+        <span class="step-time">40:00 to 45:00</span>
+      </div>
+      <div class="step-body">
+        <div class="quote-block">
+          <p>"Before we hang up, I want you to do one thing this week: add five more clients to Autopilot. Not all of them — just five. That's it. And if anything comes up, here's how to reach me directly."</p>
+          <p class="quote-tip">One small action beats a long to-do list. They'll come back with momentum instead of overwhelm.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── OBJECTION HANDLING ──────────────────────────────────────────────── -->
+<div class="section" id="section-objections">
+  <div class="page-header">
+    <div class="page-label">Reference</div>
+    <h1>Objection Handling</h1>
+    <p>These are real things people say. The responses here are meant to feel human, not like a corporate rebuttal. Read them, internalize them, then say them your own way.</p>
+  </div>
+  <div class="content">
+    <div class="obj-list">
+      <div class="obj-item" onclick="toggleObj(this)">
+        <div class="obj-q"><span class="obj-q-text">"EZLynx has 330 carriers. How can you compete with that?"</span><span class="obj-chevron">▼</span></div>
+        <div class="obj-a">330 P&C carriers. Zero ACA quoting, zero HealthSherpa sync, zero Renewal Autopilot. Those 330 carriers are for auto and home — not for what you do. If your book is ACA, STM, Life, Ancillary, and Indemnity, the carriers that matter are the ones we support natively, and we actually built the OEP workflow around them.</div>
+      </div>
+      <div class="obj-item" onclick="toggleObj(this)">
+        <div class="obj-q"><span class="obj-q-text">"We already use HawkSoft and our team is used to it."</span><span class="obj-chevron">▼</span></div>
+        <div class="obj-a">HawkSoft is a solid P&C platform. I'm not going to tell you it's bad. But if your primary business is health and ACA, you're using a tool that wasn't designed for your workflow. HawkSoft doesn't have ACA quoting, doesn't have HealthSherpa sync, and doesn't have Renewal Autopilot. Your team being "used to it" means they've gotten used to working around it — not with it.</div>
+      </div>
+      <div class="obj-item" onclick="toggleObj(this)">
+        <div class="obj-q"><span class="obj-q-text">"We use Lucie Health for enrollment. Isn't that enough?"</span><span class="obj-chevron">▼</span></div>
+        <div class="obj-a">Lucie handles enrollment well. But it's just enrollment. You still need a CRM, a quoting tool for STM, Life, Ancillary, and Indemnity, a policy tracker, an SMS platform, and a renewal workflow. AgentNav does all of those things in one place. Lucie is one piece of a puzzle — AgentNav is the whole picture.</div>
+      </div>
+      <div class="obj-item" onclick="toggleObj(this)">
+        <div class="obj-q"><span class="obj-q-text">"$79 a month seems low. What's the catch?"</span><span class="obj-chevron">▼</span></div>
+        <div class="obj-a">No catch. No modules to unlock, no features behind a paywall, no annual contract. We built AgentNav to replace the three or four tools most agents are paying for separately. At $79 for a solo agent, you're replacing your CRM, quoting tool, SMS platform, enrollment tracker, and renewal workflow. Most agents save money on day one.</div>
+      </div>
+      <div class="obj-item" onclick="toggleObj(this)">
+        <div class="obj-q"><span class="obj-q-text">"I'm worried about migrating all my data."</span><span class="obj-chevron">▼</span></div>
+        <div class="obj-a">That's a legitimate concern and it's one we deal with every week. Most migrations take less than a day. If you can export from wherever you are now — spreadsheet, old CRM, doesn't matter — we'll walk through the import together on your onboarding call. Your clients will be in the platform the same day you sign up.</div>
+      </div>
+      <div class="obj-item" onclick="toggleObj(this)">
+        <div class="obj-q"><span class="obj-q-text">"Agent CRM is cheaper and has better marketing."</span><span class="obj-chevron">▼</span></div>
+        <div class="obj-a">Agent CRM is a solid marketing tool. But it has no quoting engine, no enrollment workflow, no HealthSherpa sync, and no Renewal Autopilot. You'd still need three other platforms on top of it. AgentNav costs slightly more because it does what Agent CRM plus those three other platforms do — in one place.</div>
+      </div>
+      <div class="obj-item" onclick="toggleObj(this)">
+        <div class="obj-q"><span class="obj-q-text">"I'm not ready to switch right before Open Enrollment."</span><span class="obj-chevron">▼</span></div>
+        <div class="obj-a">I hear this a lot. And I get it — bad timing to learn something new when OE is coming. But here's what actually happens: agents who switch before OE go into enrollment with Renewal Autopilot already configured. Agents who wait go through another brutal November manually. Onboarding takes one day. The benefit starts on day two.</div>
+      </div>
+      <div class="obj-item" onclick="toggleObj(this)">
+        <div class="obj-q"><span class="obj-q-text">"We're a small agency. Do we really need all this?"</span><span class="obj-chevron">▼</span></div>
+        <div class="obj-a">Small agencies benefit the most — you don't have the staff to absorb the admin work. AgentNav is built so a two-person agency can manage their entire book, run OEP, handle compliance, and quote ACA, STM, Life, Ancillary, and Indemnity products without an assistant. It's infrastructure for growth, not overhead for a big agency.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── BATTLE CARDS ────────────────────────────────────────────────────── -->
+<div class="section" id="section-battlecards">
+  <div class="page-header">
+    <div class="page-label">Reference</div>
+    <h1>Battle Cards</h1>
+    <p>Quick reference cards for when a competitor comes up in a deal. Read the card before the follow-up call, not during it.</p>
+  </div>
+  <div class="content">
+    <div class="battle-tabs">
+      <button class="battle-tab active" onclick="showBattle('ezlynx',this)">EZLynx</button>
+      <button class="battle-tab" onclick="showBattle('hawksoft',this)">HawkSoft</button>
+      <button class="battle-tab" onclick="showBattle('agencybloc',this)">AgencyBloc</button>
+      <button class="battle-tab" onclick="showBattle('agentcrm',this)">Agent CRM</button>
+      <button class="battle-tab" onclick="showBattle('lucie',this)">Lucie Health</button>
+      <button class="battle-tab" onclick="showBattle('agencyzoom',this)">AgencyZoom</button>
+      <button class="battle-tab" onclick="showBattle('nowcerts',this)">NowCerts</button>
+    </div>
+
+    <div class="battle-panel active" id="battle-ezlynx">
+      <div class="battle-two-col">
+        <div class="battle-left">
+          <div class="battle-tier tier-direct">Tier 1 — Direct threat</div>
+          <h3>EZLynx</h3>
+          <div class="battle-desc">All-in-one AMS with the industry's most recognized comparative rater. 330 plus carriers, 20 years in market, enterprise P&C focus.</div>
+          <div class="ack-label">Acknowledge First</div>
+          <div class="ack-quote"><p>"EZLynx really has built the best P&C rater in the industry. That's their strength and it's real."</p></div>
+          <div class="weakness-label">Their True Weakness</div>
+          <div class="weakness-text">Built for P&C. ACA agents pay for 300 carriers they never use, plus extra for SMS and scheduling they need every day.</div>
+        </div>
+        <div class="battle-right">
+          <h4>Win and lose scenarios</h4>
+          <div class="win-section-label">You Win When</div>
+          <ul class="win-list" style="margin-bottom:16px;">
+            <li><span class="win-icon">✓</span>Agent is primarily ACA or health focused</li>
+            <li><span class="win-icon">✓</span>Price is a real concern at $150 plus per user</li>
+            <li><span class="win-icon">✓</span>SMS, scheduling, and Renewal Autopilot are priorities</li>
+            <li><span class="win-icon">✓</span>They want ACA-native tools, not P&C tools adapted for health</li>
+          </ul>
+          <div class="lose-section-label">You Lose When</div>
+          <ul class="lose-list">
+            <li><span class="lose-icon">✕</span>Agency is primarily P&C with commercial lines</li>
+            <li><span class="lose-icon">✕</span>Needs 300 plus real-time carrier rate comparisons</li>
+            <li><span class="lose-icon">✕</span>IT buyer wants brand name safety</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="battle-panel" id="battle-hawksoft">
+      <div class="battle-two-col">
+        <div class="battle-left">
+          <div class="battle-tier tier-adjacent">Tier 2 — Adjacent</div>
+          <h3>HawkSoft</h3>
+          <div class="battle-desc">Independent agency AMS, desktop-primary, deeply loved by P&C shops. Average customer stays 18 years.</div>
+          <div class="ack-label">Acknowledge First</div>
+          <div class="ack-quote"><p>"HawkSoft's retention numbers are remarkable. When agents love a tool that much, it usually means the tool is genuinely good for what it was built for."</p></div>
+          <div class="weakness-label">Their True Weakness</div>
+          <div class="weakness-text">Desktop-first, P&C-built, and no cloud-native OEP workflow. Health brokers use it because they inherited it, not because they chose it.</div>
+        </div>
+        <div class="battle-right">
+          <h4>Win and lose scenarios</h4>
+          <div class="win-section-label">You Win When</div>
+          <ul class="win-list" style="margin-bottom:16px;">
+            <li><span class="win-icon">✓</span>Agent sells primarily health, ACA, STM, Life, Ancillary, or Indemnity</li>
+            <li><span class="win-icon">✓</span>Team needs cloud-native access on any device</li>
+            <li><span class="win-icon">✓</span>OEP is painful and renewal tracking is manual</li>
+            <li><span class="win-icon">✓</span>They're tired of working around a tool built for someone else</li>
+          </ul>
+          <div class="lose-section-label">You Lose When</div>
+          <ul class="lose-list">
+            <li><span class="lose-icon">✕</span>Strong P&C book with commercial lines</li>
+            <li><span class="lose-icon">✕</span>Deep HawkSoft customization already in place</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="battle-panel" id="battle-agencybloc">
+      <div class="battle-two-col">
+        <div class="battle-left">
+          <div class="battle-tier tier-direct">Tier 1 — Direct threat</div>
+          <h3>AgencyBloc</h3>
+          <div class="battle-desc">AMS built for health and life agencies. SOC 2 certified, 6,500 plus agencies, strong on group benefits and compliance.</div>
+          <div class="ack-label">Acknowledge First</div>
+          <div class="ack-quote"><p>"AgencyBloc is a real platform built for health agencies. If compliance and group benefits are your whole world, they're worth a look."</p></div>
+          <div class="weakness-label">Their True Weakness</div>
+          <div class="weakness-text">No Renewal Autopilot. No ACA, STM, Life, Ancillary, Indemnity quoting engine. OEP workflow is still largely manual. Onboarding takes weeks, not hours.</div>
+        </div>
+        <div class="battle-right">
+          <h4>Win and lose scenarios</h4>
+          <div class="win-section-label">You Win When</div>
+          <ul class="win-list" style="margin-bottom:16px;">
+            <li><span class="win-icon">✓</span>Individual ACA is the core business</li>
+            <li><span class="win-icon">✓</span>OEP automation is a priority</li>
+            <li><span class="win-icon">✓</span>They want to be operational in a day, not a month</li>
+            <li><span class="win-icon">✓</span>Price sensitivity — AgencyBloc runs higher</li>
+          </ul>
+          <div class="lose-section-label">You Lose When</div>
+          <ul class="lose-list">
+            <li><span class="lose-icon">✕</span>Group benefits is the primary business</li>
+            <li><span class="lose-icon">✕</span>SOC 2 certification is a hard requirement</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="battle-panel" id="battle-agentcrm">
+      <div class="battle-two-col">
+        <div class="battle-left">
+          <div class="battle-tier tier-adjacent">Tier 2 — Adjacent</div>
+          <h3>Agent CRM</h3>
+          <div class="battle-desc">Sales and marketing CRM for insurance agents. Strong on funnels, power dialer, and outbound campaigns. No quoting or enrollment.</div>
+          <div class="ack-label">Acknowledge First</div>
+          <div class="ack-quote"><p>"Agent CRM has genuinely good marketing automation. If outbound lead generation is your whole focus, they've built something solid for that."</p></div>
+          <div class="weakness-label">Their True Weakness</div>
+          <div class="weakness-text">No quoting engine, no enrollment, no HealthSherpa sync, no Renewal Autopilot. It's a marketing tool, not a health broker platform.</div>
+        </div>
+        <div class="battle-right">
+          <h4>Win and lose scenarios</h4>
+          <div class="win-section-label">You Win When</div>
+          <ul class="win-list" style="margin-bottom:16px;">
+            <li><span class="win-icon">✓</span>Agent needs quoting, enrollment, and policy management</li>
+            <li><span class="win-icon">✓</span>OEP automation matters</li>
+            <li><span class="win-icon">✓</span>They're tired of piecing together four platforms</li>
+            <li><span class="win-icon">✓</span>Compliance forms and secure uploads are a priority</li>
+          </ul>
+          <div class="lose-section-label">You Lose When</div>
+          <ul class="lose-list">
+            <li><span class="lose-icon">✕</span>Pure outbound lead gen agency — they just need a dialer and funnel</li>
+            <li><span class="lose-icon">✕</span>Heavy Zapier automation already built on Agent CRM</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="battle-panel" id="battle-lucie">
+      <div class="battle-two-col">
+        <div class="battle-left">
+          <div class="battle-tier tier-indirect">Tier 3 — Indirect</div>
+          <h3>Lucie Health</h3>
+          <div class="battle-desc">ACA enrollment tool. Streamlined marketplace connection, simple UX. Not a CRM, not a quoting engine, not a retention platform.</div>
+          <div class="ack-label">Acknowledge First</div>
+          <div class="ack-quote"><p>"Lucie makes ACA enrollment fast and clean. For agents who just need to get clients enrolled, it works."</p></div>
+          <div class="weakness-label">Their True Weakness</div>
+          <div class="weakness-text">It's one piece of the puzzle. Agents using Lucie still need a CRM, quoting tool, policy tracker, SMS platform, and renewal workflow.</div>
+        </div>
+        <div class="battle-right">
+          <h4>Win and lose scenarios</h4>
+          <div class="win-section-label">You Win When</div>
+          <ul class="win-list" style="margin-bottom:16px;">
+            <li><span class="win-icon">✓</span>Agent is tired of managing five separate tools</li>
+            <li><span class="win-icon">✓</span>Renewal and retention are as important as enrollment</li>
+            <li><span class="win-icon">✓</span>Quoting across ACA, STM, Life, Ancillary, Indemnity is needed</li>
+          </ul>
+          <div class="lose-section-label">You Lose When</div>
+          <ul class="lose-list">
+            <li><span class="lose-icon">✕</span>They literally only need enrollment and have everything else covered</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="battle-panel" id="battle-agencyzoom">
+      <div class="battle-two-col">
+        <div class="battle-left">
+          <div class="battle-tier tier-adjacent">Tier 2 — Adjacent</div>
+          <h3>AgencyZoom</h3>
+          <div class="battle-desc">Sales pipeline and CRM for multi-line agencies. Performance dashboards, pipeline visibility, automation workflows.</div>
+          <div class="ack-label">Acknowledge First</div>
+          <div class="ack-quote"><p>"AgencyZoom gives managers real visibility into their team's pipeline. That's a genuine strength for multi-line agencies."</p></div>
+          <div class="weakness-label">Their True Weakness</div>
+          <div class="weakness-text">No ACA quoting, no enrollment sync, no Renewal Autopilot. A sales management tool, not a health broker platform.</div>
+        </div>
+        <div class="battle-right">
+          <h4>Win and lose scenarios</h4>
+          <div class="win-section-label">You Win When</div>
+          <ul class="win-list" style="margin-bottom:16px;">
+            <li><span class="win-icon">✓</span>Health is the primary line of business</li>
+            <li><span class="win-icon">✓</span>OEP and renewal workflow are the main pain</li>
+            <li><span class="win-icon">✓</span>Quoting and enrollment need to be in the same place</li>
+          </ul>
+          <div class="lose-section-label">You Lose When</div>
+          <ul class="lose-list">
+            <li><span class="lose-icon">✕</span>Multi-line P&C and life heavy agency that mainly needs pipeline management</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="battle-panel" id="battle-nowcerts">
+      <div class="battle-two-col">
+        <div class="battle-left">
+          <div class="battle-tier tier-indirect">Tier 3 — Indirect</div>
+          <h3>NowCerts</h3>
+          <div class="battle-desc">Cloud AMS for independent agencies. Policy management, certificates, per-policy pricing model.</div>
+          <div class="ack-label">Acknowledge First</div>
+          <div class="ack-quote"><p>"NowCerts is a clean cloud AMS that handles policy management well for multi-line independent shops."</p></div>
+          <div class="weakness-label">Their True Weakness</div>
+          <div class="weakness-text">No quoting engine, no health-native workflow, no Renewal Autopilot. Per-policy pricing gets expensive fast as the book grows.</div>
+        </div>
+        <div class="battle-right">
+          <h4>Win and lose scenarios</h4>
+          <div class="win-section-label">You Win When</div>
+          <ul class="win-list" style="margin-bottom:16px;">
+            <li><span class="win-icon">✓</span>Health-focused book where per-policy pricing is becoming painful</li>
+            <li><span class="win-icon">✓</span>Needs quoting for ACA, STM, Life, Ancillary, Indemnity</li>
+            <li><span class="win-icon">✓</span>OEP automation and Renewal Autopilot are priorities</li>
+          </ul>
+          <div class="lose-section-label">You Lose When</div>
+          <ul class="lose-list">
+            <li><span class="lose-icon">✕</span>Multi-line P&C agency that mainly needs policy management and certificates</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── TALK TRACKS ─────────────────────────────────────────────────────── -->
+<div class="section" id="section-talktracks">
+  <div class="page-header">
+    <div class="page-label">Reference</div>
+    <h1>Talk Tracks</h1>
+    <p>These are meant to be starting points, not scripts. Read them until they feel natural, then put them away and say it your own way.</p>
+  </div>
+  <div class="content">
+    <div class="talk-card">
+      <div class="talk-situation">When They Ask What AgentNav Does</div>
+      <h3>The short version</h3>
+      <p>AgentNav is everything a health insurance broker needs in one place. Most agents are running four or five different tools that don't talk to each other. We put the CRM, quoting for ACA, STM, Life, Ancillary, and Indemnity products, SMS, scheduling, policy management, marketing campaigns, and the entire Open Enrollment workflow into one platform. It starts at $79 a month for a solo agent and scales to teams from there.</p>
+    </div>
+
+    <div class="talk-card">
+      <div class="talk-situation">After A Competitor Comparison</div>
+      <h3>The positioning statement</h3>
+      <p>Most of the platforms out there were either built for P&C agents and adapted for health, or built for group benefits and not really designed for individual ACA. AgentNav was built from the ground up for agents selling ACA health plans — and the full suite of ancillary products around them. That means things like the medical and Rx profile in the client record, the FPL tracking, the side-by-side ACA, STM, Life, and Indemnity proposal builder, and the Renewal Autopilot that manages Open Enrollment automatically. Those aren't add-ons. They're the product.</p>
+    </div>
+
+    <div class="talk-card">
+      <div class="talk-situation">When Renewal Autopilot Comes Up</div>
+      <h3>The OE workflow pitch</h3>
+      <p>Renewal Autopilot is the thing I'd want you to walk away remembering. It's a board where every single one of your renewal clients sits with a clear status. Not Started, Follow-Up Needed, Meeting Scheduled, Re-Enrollment, Completed. For each client with Autopilot turned on, the system handles the outreach automatically. It sends the campaign, waits for the client to fill out their preferences form, and then generates a new quote based on what they come back with. You review and approve. You're not chasing 200 people in November. You're just reviewing what the system surfaced for you.</p>
+    </div>
+
+    <div class="talk-card">
+      <div class="talk-situation">When Price Comes Up vs. A Cheaper Tool</div>
+      <h3>The real cost question</h3>
+      <p>What does your current stack cost? Add up your CRM, your quoting tool, your texting app, your enrollment platform, and whatever you're using for policy tracking. Most agents are at $200 to $400 a month when they add it all up — and still don't have everything integrated. AgentNav replaces all of it for $79 a month for a solo agent. But forget the price comparison for a second. How many clients did you lose in the last OEP because someone fell through a crack? That's the real cost number that matters.</p>
+    </div>
+
+    <div class="talk-card">
+      <div class="talk-situation">When They Say "We're Happy With What We Have"</div>
+      <h3>The comfort trap</h3>
+      <p>I hear that a lot. And usually it's true — until November hits. What does your OEP process look like today? Walk me through it. [Let them answer.] Okay — how many hours does that take, and how many clients fall through? Most agents who say they're happy with what they have are still spending three or four weeks manually working renewals every year. If you could cut that to a few days with Renewal Autopilot already configured, would that be worth 20 minutes of your time?</p>
+    </div>
+
+    <div class="talk-card">
+      <div class="talk-situation">When They Ask About Team Features</div>
+      <h3>The agency visibility pitch</h3>
+      <p>Right now, the only way you know what your agents are doing is by asking them. AgentNav changes that. You can see every agent's pipeline, what they've quoted, what's pending enrollment, who hasn't followed up in a week, and which clients are sitting in the renewal queue with no action. You don't manage by asking. You manage by looking. And every agent has their own SMS number, their own client records, their own Renewal Autopilot board — but you see all of it from the top.</p>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+function showSection(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('section-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (window.innerWidth < 900) {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('open');
+  }
+  window.scrollTo(0, 0);
+}
+
+function toggleMobile() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+
+function toggleObj(el) {
+  el.classList.toggle('open');
+}
+
+function showComp(id, btn) {
+  document.querySelectorAll('.comp-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.comp-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('comp-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+function showBattle(id, btn) {
+  document.querySelectorAll('.battle-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.battle-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('battle-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+</script>
+<!-- ── AI SALES COACH ─────────────────────────────────────────────────── -->
+<style>
+.coach-fab {
+  position: fixed;
+  bottom: 28px; right: 28px;
+  z-index: 1000;
+  background: #1a1a2e;
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  padding: 13px 20px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.06);
+  transition: transform 0.2s, box-shadow 0.2s;
+  letter-spacing: -0.1px;
+}
+.coach-fab:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+.coach-fab-dot { width: 8px; height: 8px; background: #4ade80; border-radius: 50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+.coach-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 1001;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.22s;
+}
+.coach-overlay.open { opacity: 1; pointer-events: all; }
+
+.coach-panel {
+  position: fixed;
+  top: 0; right: 0;
+  width: 480px; max-width: 100vw;
+  height: 100vh;
+  background: #ffffff;
+  z-index: 1002;
+  display: flex; flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.26s cubic-bezier(0.16,1,0.3,1);
+  box-shadow: -4px 0 40px rgba(0,0,0,0.15);
+}
+.coach-panel.open { transform: translateX(0); }
+
+.coach-header {
+  background: #1a1a2e;
+  padding: 20px 22px 18px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.coach-header-left { display: flex; align-items: center; gap: 10px; }
+.coach-header-icon {
+  width: 32px; height: 32px;
+  background: #2563eb;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+}
+.coach-header h3 { font-family: 'Inter',sans-serif; font-size: 14px; font-weight: 700; color: #fff; letter-spacing: -0.2px; }
+.coach-header p { font-size: 11px; color: rgba(255,255,255,0.45); font-family: 'DM Mono',monospace; letter-spacing: 0.04em; }
+.coach-close {
+  background: rgba(255,255,255,0.08); border: none; color: rgba(255,255,255,0.6);
+  width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center; transition: background 0.15s;
+}
+.coach-close:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+.coach-mode-bar {
+  background: #f8f6f2; border-bottom: 1px solid #e5e2db;
+  padding: 10px 22px; display: flex; gap: 6px; flex-shrink: 0;
+}
+.mode-btn {
+  padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
+  border: 1px solid #e5e2db; background: #fff; color: #4a4a6a;
+  cursor: pointer; font-family: 'Inter',sans-serif; transition: all 0.15s;
+}
+.mode-btn.active { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+
+.coach-body { flex: 1; overflow-y: auto; padding: 20px 22px; }
+
+.form-group { margin-bottom: 16px; }
+.form-label {
+  font-family: 'DM Mono',monospace; font-size: 9px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: #8888a0; margin-bottom: 6px; display: block; font-weight: 500;
+}
+.form-select, .form-input {
+  width: 100%; border: 1px solid #e5e2db; border-radius: 8px;
+  padding: 9px 12px; font-family: 'Inter',sans-serif; font-size: 13px;
+  color: #1a1a2e; background: #fff; outline: none; transition: border-color 0.15s; appearance: none;
+}
+.form-select:focus, .form-input:focus { border-color: #2563eb; }
+
+.multi-select { display: flex; flex-wrap: wrap; gap: 6px; }
+.ms-option {
+  padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 400;
+  border: 1px solid #e5e2db; background: #fff; color: #4a4a6a;
+  cursor: pointer; font-family: 'Inter',sans-serif; transition: all 0.15s; user-select: none;
+}
+.ms-option.selected { background: #eff6ff; border-color: #2563eb; color: #2563eb; font-weight: 500; }
+
+.generate-btn {
+  width: 100%; background: #2563eb; color: #fff; border: none; border-radius: 10px;
+  padding: 13px; font-family: 'Inter',sans-serif; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: background 0.15s, transform 0.15s; margin-top: 4px; letter-spacing: -0.1px;
+}
+.generate-btn:hover { background: #1d4ed8; transform: translateY(-1px); }
+.generate-btn:disabled { background: #93c5fd; cursor: not-allowed; transform: none; }
+
+.output-block {
+  background: #f8f6f2; border: 1px solid #e5e2db; border-radius: 10px;
+  padding: 14px 16px; margin-bottom: 10px;
+}
+.output-block-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.output-block-label {
+  font-family: 'DM Mono',monospace; font-size: 9px; letter-spacing: 0.14em;
+  text-transform: uppercase; font-weight: 600; display: flex; align-items: center; gap: 5px;
+}
+.label-positioning { color: #2563eb; }
+.label-thinking { color: #7c3aed; }
+.label-say { color: #16a34a; }
+.label-demo { color: #d97706; }
+.label-avoid { color: #dc2626; }
+.label-close { color: #1a1a2e; }
+
+.copy-btn {
+  font-family: 'DM Mono',monospace; font-size: 9px; letter-spacing: 0.08em;
+  padding: 3px 8px; border-radius: 4px; border: 1px solid #e5e2db;
+  background: #fff; color: #8888a0; cursor: pointer; transition: all 0.15s;
+}
+.copy-btn:hover { border-color: #2563eb; color: #2563eb; }
+.copy-btn.copied { background: #dcfce7; border-color: #16a34a; color: #16a34a; }
+
+.output-text { font-size: 13px; color: #4a4a6a; line-height: 1.7; white-space: pre-wrap; }
+
+.script-block {
+  background: #fff; border-left: 3px solid #2563eb;
+  border-radius: 0 7px 7px 0; padding: 11px 13px; margin-top: 8px;
+}
+.script-text {
+  font-family: 'Lora',Georgia,serif; font-style: italic; font-size: 13px;
+  color: #1a1a2e; line-height: 1.7; white-space: pre-wrap;
+}
+
+.loading-state { text-align: center; padding: 40px 20px; }
+.loading-spinner {
+  width: 32px; height: 32px; border: 3px solid #e5e2db; border-top-color: #2563eb;
+  border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 14px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-state p { font-size: 13px; color: #8888a0; }
+
+.followup-area {
+  border-top: 1px solid #e5e2db; padding: 14px 22px;
+  flex-shrink: 0; background: #fafaf7;
+}
+.followup-label {
+  font-family: 'DM Mono',monospace; font-size: 9px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: #8888a0; margin-bottom: 8px;
+}
+.followup-suggestions { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.followup-chip {
+  font-size: 11.5px; padding: 5px 10px; border-radius: 20px;
+  border: 1px solid #e5e2db; background: #fff; color: #4a4a6a;
+  cursor: pointer; font-family: 'Inter',sans-serif; transition: all 0.15s; line-height: 1.3;
+}
+.followup-chip:hover { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
+.followup-input-row { display: flex; gap: 8px; }
+.followup-input {
+  flex: 1; border: 1px solid #e5e2db; border-radius: 8px;
+  padding: 9px 12px; font-family: 'Inter',sans-serif; font-size: 13px;
+  color: #1a1a2e; background: #fff; outline: none;
+}
+.followup-input:focus { border-color: #2563eb; }
+.followup-send {
+  background: #1a1a2e; color: #fff; border: none; border-radius: 8px;
+  padding: 0 14px; font-size: 14px; cursor: pointer; transition: background 0.15s;
+}
+.followup-send:hover { background: #2563eb; }
+.followup-send:disabled { background: #ccc; cursor: not-allowed; }
+
+.back-btn {
+  display: flex; align-items: center; gap: 6px; background: none; border: none;
+  font-family: 'Inter',sans-serif; font-size: 12px; color: #8888a0;
+  cursor: pointer; padding: 0; margin-bottom: 16px; transition: color 0.15s;
+}
+.back-btn:hover { color: #2563eb; }
+
+.chat-msg { margin-bottom: 12px; }
+.chat-msg-label {
+  font-family: 'DM Mono',monospace; font-size: 9px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: #8888a0; margin-bottom: 4px;
+}
+.chat-msg-bubble {
+  background: #f0f4ff; border-radius: 8px; padding: 10px 13px;
+  font-size: 13px; color: #1a1a2e; line-height: 1.65; white-space: pre-wrap;
+}
+.chat-msg-bubble.user { background: #1a1a2e; color: #fff; }
+
+@media (max-width: 520px) {
+  .coach-panel { width: 100vw; }
+  .coach-fab { bottom: 16px; right: 16px; }
+}
+</style>
+
+<!-- FLOATING BUTTON -->
+<button class="coach-fab" onclick="openCoach()">
+  <div class="coach-fab-dot"></div>
+  Ask AgentNav Coach
+</button>
+
+<!-- OVERLAY -->
+<div class="coach-overlay" id="coachOverlay" onclick="closeCoach()"></div>
+
+<!-- PANEL -->
+<div class="coach-panel" id="coachPanel">
+  <div class="coach-header">
+    <div class="coach-header-left">
+      <div class="coach-header-icon">🧠</div>
+      <div>
+        <h3>AgentNav Sales Coach</h3>
+        <p>AI-POWERED · DEAL SPECIFIC</p>
+      </div>
+    </div>
+    <button class="coach-close" onclick="closeCoach()">✕</button>
+  </div>
+
+  <div class="coach-mode-bar">
+    <button class="mode-btn active" id="modeQuick" onclick="setMode('quick')">⚡ Quick Mode</button>
+    <button class="mode-btn" id="modeDeep" onclick="setMode('deep')">🧠 Deep Strategy</button>
+  </div>
+
+  <div class="coach-body" id="coachBody">
+    <div class="coach-setup" id="coachSetup">
+      <p style="font-size:13px;color:#8888a0;margin-bottom:18px;line-height:1.6;">Set up your deal in 15 seconds. Get an exact game plan — what to say, what to show, what to avoid.</p>
+
+      <div class="form-group">
+        <label class="form-label">Segment</label>
+        <select class="form-select" id="f-segment">
+          <option value="">Select a segment…</option>
+          <option value="solo">Solo Agent (1 agent, going independent)</option>
+          <option value="small">Small Agency (2–8 agents)</option>
+          <option value="large">Large Agency (9–20 agents)</option>
+          <option value="enterprise">Enterprise (21+ agents)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Their Current Setup</label>
+        <div class="multi-select" id="f-setup">
+          <div class="ms-option" onclick="toggleMS(this)">CRM already</div>
+          <div class="ms-option" onclick="toggleMS(this)">Manual texting</div>
+          <div class="ms-option" onclick="toggleMS(this)">Multiple quoting tools</div>
+          <div class="ms-option" onclick="toggleMS(this)">Spreadsheets only</div>
+          <div class="ms-option" onclick="toggleMS(this)">No real system</div>
+          <div class="ms-option" onclick="toggleMS(this)">Uses EZLynx</div>
+          <div class="ms-option" onclick="toggleMS(this)">Uses HawkSoft</div>
+          <div class="ms-option" onclick="toggleMS(this)">Uses AgencyBloc</div>
+          <div class="ms-option" onclick="toggleMS(this)">Uses Agent CRM</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Main Concern</label>
+        <select class="form-select" id="f-concern">
+          <option value="">Select their main concern…</option>
+          <option value="already_crm">Already have a CRM</option>
+          <option value="too_expensive">Too expensive</option>
+          <option value="switching_risk">Worried about switching</option>
+          <option value="too_complicated">Looks too complicated</option>
+          <option value="timing">Bad timing / not now</option>
+          <option value="not_enough_leads">Not enough leads</option>
+          <option value="happy">Happy with current setup</option>
+          <option value="just_looking">Just looking</option>
+          <option value="no_concern">No major concern yet</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Deal Stage</label>
+        <select class="form-select" id="f-stage">
+          <option value="">Select deal stage…</option>
+          <option value="cold_call">Cold call / first contact</option>
+          <option value="discovery">Discovery call</option>
+          <option value="demo">Demo call</option>
+          <option value="closing">Closing / follow-up</option>
+          <option value="objection">Handling an objection</option>
+          <option value="ghosted">They went quiet / ghosted</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Anything else? (optional)</label>
+        <input class="form-input" id="f-extra" type="text" placeholder="e.g. 5-agent team, OE is 3 months away…">
+      </div>
+
+      <button class="generate-btn" onclick="generateGamePlan()" id="generateBtn">
+        Generate Game Plan →
+      </button>
+    </div>
+
+    <div id="coachOutput"></div>
+  </div>
+
+  <div class="followup-area" id="followupArea" style="display:none;">
+    <div class="followup-label">Ask a follow-up</div>
+    <div class="followup-suggestions" id="followupSuggestions"></div>
+    <div class="followup-input-row">
+      <input class="followup-input" id="followupInput" placeholder="Ask anything about this deal…" onkeydown="if(event.key==='Enter')sendFollowup()">
+      <button class="followup-send" onclick="sendFollowup()" id="followupSendBtn">↑</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let coachMode = 'quick';
+let dealContext = {};
+let conversationHistory = [];
+
+function openCoach() {
+  document.getElementById('coachPanel').classList.add('open');
+  document.getElementById('coachOverlay').classList.add('open');
+}
+
+function closeCoach() {
+  document.getElementById('coachPanel').classList.remove('open');
+  document.getElementById('coachOverlay').classList.remove('open');
+}
+
+function setMode(mode) {
+  coachMode = mode;
+  document.getElementById('modeQuick').classList.toggle('active', mode === 'quick');
+  document.getElementById('modeDeep').classList.toggle('active', mode === 'deep');
+}
+
+function toggleMS(el) { el.classList.toggle('selected'); }
+
+function getSelectedMS() {
+  return Array.from(document.querySelectorAll('#f-setup .ms-option.selected')).map(el => el.textContent);
+}
+
+function buildSystemPrompt() {
+  return `You are the AgentNav Sales Coach — an elite, opinionated AI sales advisor embedded inside the AgentNav sales playbook. You give reps specific, directive, situational coaching. Never generic advice.
+
+ABOUT AGENTNAV:
+AgentNav is the ultimate platform built for the professional health insurance broker. It includes:
+- End-to-end quoting and enrollment: ACA, STM, Life, Ancillary, and Indemnity products
+- Full CRM with contacts, tasks, marketing, analytics, SMS, and client presentations
+- AI Autopilot for Open Enrollment, renewals, and compliance automation
+- Renewal Autopilot — the only OEP workflow that automates outreach, tracks responses, and one-click re-enrolls clients
+- Book-of-business reconciliation with organized sales and policy logs
+- Compliance forms including OE documentation and secure client document uploads
+- HealthSherpa and EDE marketplace integration
+- Dedicated SMS number per agent, Google Calendar sync
+- Built-in marketing campaigns by line of business
+
+PRICING:
+- Solo Agent: $79/month, everything included, 1 seat, add assistant for $25/mo
+- Small Agency: $247/month, 4 agents + 1 assistant, about $49/person, white label branding
+- Large Agency: $597/month, 10 agents + 2 assistants, about $49.75/person
+- Additional agents: $55-60/mo each depending on plan
+
+COMPETITORS:
+- EZLynx: P&C rater, 330+ carriers, no ACA quoting, no Renewal Autopilot, $150+/user
+- HawkSoft: Desktop-first P&C AMS, no cloud OEP workflow
+- AgencyBloc: Health/life AMS, group benefits strong, no Renewal Autopilot, no quoting engine
+- Agent CRM: Marketing/funnel tool, no quoting, no enrollment, no HealthSherpa
+- Lucie Health: Enrollment-only tool, not a full platform
+- AgencyZoom: Sales pipeline CRM, no quoting, no OEP automation
+- NowCerts: P&C AMS, per-policy pricing, no quoting
+
+BUYER SEGMENTS:
+- Solo Agent: Just left captive/FMO, cost-sensitive, wants to replace 4-5 tools, one-call close possible
+- Small Agency (2-8): OEP chaos, agents texting from personal phones, no team visibility
+- Large Agency (9-20): Outgrown tools, piecing together 3-4 systems, needs process and reporting
+- Enterprise (21+): Multi-location, needs visibility, standardization, compliance, custom setup
+
+CALL FLOWS BY SEGMENT:
+- Solo Agent: Cold Call then Combined Discovery+Demo+Close in one call then Onboarding
+- Small Agency: Cold Call then Discovery then Demo+Close same call then Onboarding
+- Large Agency: Cold Call then Discovery then Demo then Closing Call then Onboarding
+- Enterprise: Cold Call then Discovery then Demo then multiple closing calls then Onboarding
+
+OBJECTION HANDLING:
+- Already have a CRM: CRM stores data, AgentNav converts it. They still need quoting, enrollment, SMS, OEP workflow on top.
+- Too expensive: Stack compare what they pay for CRM + quoting + SMS + tracker separately.
+- Worried about switching: Migration takes one day. Onboarding call same day they sign up.
+- Happy with current setup: Ask about their OEP process. Every agent loses clients in November.
+- Bad timing before OEP: Agents who switch before OEP go in with Autopilot configured. Waiting means another brutal November.
+- EZLynx has more carriers: 330 P&C carriers. Zero ACA quoting, zero OEP automation, $150+ per user.
+
+YOUR RESPONSE FORMAT - always use this exact structure:
+
+For QUICK MODE:
+🎯 POSITIONING
+[1-2 sentences on the exact angle to take]
+
+🧠 WHAT THEY'RE THINKING
+[1-2 sentences on their mindset and what is really holding them back]
+
+💬 SAY THIS
+[Exact word-for-word script, 2-4 sentences, real words a rep can say verbatim]
+
+🎬 DEMO FOCUS
+Show: [specific feature]
+Show: [specific feature]
+Skip: [what to avoid]
+
+⚠️ WATCH OUT
+[1-2 things that could kill this deal]
+
+🔥 CLOSING ANGLE
+[One tight closing line or approach]
+
+For DEEP MODE, expand each section with full detail, psychology, multi-step strategy, and longer scripts.
+
+RULES:
+- Be directive. Say do this not you might consider.
+- Give exact words, not suggestions.
+- Be specific to their segment and situation.
+- Never be generic.
+- Scripts should feel human, not corporate.
+- Always end with something immediately actionable.`;
+}
+
+async function generateGamePlan() {
+  const segment = document.getElementById('f-segment').value;
+  const concern = document.getElementById('f-concern').value;
+  const stage = document.getElementById('f-stage').value;
+  const setup = getSelectedMS();
+  const extra = document.getElementById('f-extra').value;
+
+  if (!segment || !stage) { alert('Please select a segment and deal stage.'); return; }
+
+  dealContext = { segment, concern, stage, setup, extra, mode: coachMode };
+
+  const segMap = { solo: 'Solo Agent (1 agent, going independent)', small: 'Small Agency (2-8 agents)', large: 'Large Agency (9-20 agents)', enterprise: 'Enterprise (21+ agents)' };
+  const concernMap = { already_crm: 'Already has a CRM', too_expensive: 'Thinks it is too expensive', switching_risk: 'Worried about switching systems', too_complicated: 'Thinks it looks too complicated', timing: 'Bad timing / not now', not_enough_leads: 'Not enough leads', happy: 'Says they are happy with current setup', just_looking: 'Just looking, not urgent', no_concern: 'No major concern yet' };
+  const stageMap = { cold_call: 'Cold call / first contact', discovery: 'Discovery call', demo: 'Demo call', closing: 'Closing / follow-up', objection: 'Handling a specific objection', ghosted: 'They went quiet / ghosted' };
+
+  const userMsg = `Deal setup:
+Segment: ${segMap[segment] || segment}
+Current setup: ${setup.length > 0 ? setup.join(', ') : 'Unknown'}
+Main concern: ${concernMap[concern] || 'Not specified'}
+Deal stage: ${stageMap[stage] || stage}
+Additional context: ${extra || 'None'}
+Mode: ${coachMode === 'deep' ? 'Deep Strategy - full breakdown' : 'Quick Mode - fast and scannable'}
+
+Generate my complete game plan.`;
+
+  conversationHistory = [{ role: 'user', content: userMsg }];
+
+  document.getElementById('coachSetup').style.display = 'none';
+  const output = document.getElementById('coachOutput');
+  output.style.display = 'block';
+  output.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><p>Analyzing your deal…</p></div>';
+  document.getElementById('generateBtn').disabled = true;
+
+  try {
+    const response = await fetch('/.netlify/functions/coach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1200,
+        system: buildSystemPrompt(),
+        messages: conversationHistory
+      })
+    });
+    const data = await response.json();
+    const text = data.content && data.content[0] ? data.content[0].text : 'Error generating response.';
+    conversationHistory.push({ role: 'assistant', content: text });
+    renderOutput(text);
+    showFollowup();
+  } catch (err) {
+    output.innerHTML = '<p style="color:#dc2626;font-size:13px;">Error connecting to AI. Please try again.</p>';
+  }
+  document.getElementById('generateBtn').disabled = false;
+}
+
+function renderOutput(text) {
+  const output = document.getElementById('coachOutput');
+  const sections = [
+    { key: '🎯 POSITIONING', label: '🎯 Positioning', cls: 'label-positioning' },
+    { key: '🧠 WHAT THEY\'RE THINKING', label: '🧠 What They\'re Thinking', cls: 'label-thinking' },
+    { key: '💬 SAY THIS', label: '💬 Say This', cls: 'label-say', isScript: true },
+    { key: '🎬 DEMO FOCUS', label: '🎬 Demo Focus', cls: 'label-demo' },
+    { key: '⚠️ WATCH OUT', label: '⚠️ Watch Out', cls: 'label-avoid' },
+    { key: '🔥 CLOSING ANGLE', label: '🔥 Closing Angle', cls: 'label-close' }
+  ];
+
+  let html = '<button class="back-btn" onclick="resetCoach()">← New deal setup</button>';
+  const found = [];
+
+  for (let i = 0; i < sections.length; i++) {
+    const s = sections[i];
+    const idx = text.indexOf(s.key);
+    if (idx === -1) continue;
+    let nextIdx = text.length;
+    for (let j = i + 1; j < sections.length; j++) {
+      const ni = text.indexOf(sections[j].key, idx + s.key.length);
+      if (ni !== -1 && ni < nextIdx) nextIdx = ni;
+    }
+    found.push({ ...s, content: text.slice(idx + s.key.length, nextIdx).trim() });
+  }
+
+  if (found.length === 0) {
+    html += '<div class="output-block"><div class="output-text">' + text + '</div></div>';
+  } else {
+    for (const s of found) {
+      const safeContent = s.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      html += '<div class="output-block"><div class="output-block-header"><span class="output-block-label ' + s.cls + '">' + s.label + '</span><button class="copy-btn" onclick="copyText(this, ' + JSON.stringify(s.content) + ')">Copy</button></div>';
+      if (s.isScript) {
+        html += '<div class="script-block"><div class="script-text">' + safeContent + '</div></div>';
+      } else {
+        html += '<div class="output-text">' + safeContent + '</div>';
+      }
+      html += '</div>';
+    }
+  }
+
+  output.innerHTML = html;
+}
+
+function showFollowup() {
+  document.getElementById('followupArea').style.display = 'block';
+  const chipMap = {
+    cold_call: ['"They said they\'re too busy"', '"Give me the follow-up text"', '"They asked about price"'],
+    discovery: ['"They already have EZLynx"', '"How do I ask about OEP pain?"', '"They seem skeptical"'],
+    demo: ['"They said it looks complicated"', '"They loved Renewal Autopilot"', '"What to show next?"'],
+    closing: ['"Write a follow-up email"', '"They want to think about it"', '"How do I create urgency?"'],
+    objection: ['"Give me a stronger reframe"', '"They pushed back again"', '"What\'s my pivot?"'],
+    ghosted: ['"Write a re-engagement text"', '"Write a breakup email"', '"How long to wait?"']
+  };
+  const chips = chipMap[dealContext.stage] || ['"Give me the exact script"', '"What should I demo first?"', '"How do I close this?"'];
+  document.getElementById('followupSuggestions').innerHTML = chips.map(c =>
+    '<div class="followup-chip" onclick="fillFollowup(' + JSON.stringify(c) + ')">' + c + '</div>'
+  ).join('');
+}
+
+function fillFollowup(text) {
+  document.getElementById('followupInput').value = text.replace(/^"|"$/g,'');
+  document.getElementById('followupInput').focus();
+}
+
+async function sendFollowup() {
+  const input = document.getElementById('followupInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  document.getElementById('followupSendBtn').disabled = true;
+  conversationHistory.push({ role: 'user', content: msg });
+
+  const output = document.getElementById('coachOutput');
+  const thinkId = 'think_' + Date.now();
+  output.innerHTML += '<div class="chat-msg"><div class="chat-msg-label">You</div><div class="chat-msg-bubble user">' + msg + '</div></div><div class="chat-msg" id="' + thinkId + '"><div class="chat-msg-label">Coach</div><div class="chat-msg-bubble"><div class="loading-spinner" style="width:20px;height:20px;border-width:2px;margin:0;"></div></div></div>';
+  output.scrollTop = output.scrollHeight;
+
+  try {
+    const response = await fetch('/.netlify/functions/coach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: buildSystemPrompt(),
+        messages: conversationHistory
+      })
+    });
+    const data = await response.json();
+    const text = data.content && data.content[0] ? data.content[0].text : 'Error.';
+    conversationHistory.push({ role: 'assistant', content: text });
+    document.getElementById(thinkId).innerHTML = '<div class="chat-msg-label">Coach</div><div class="chat-msg-bubble" style="white-space:pre-wrap;">' + text + '</div>';
+  } catch(err) {
+    document.getElementById(thinkId).innerHTML = '<div class="chat-msg-bubble" style="color:#dc2626;">Error. Try again.</div>';
+  }
+  output.scrollTop = output.scrollHeight;
+  document.getElementById('followupSendBtn').disabled = false;
+}
+
+function resetCoach() {
+  document.getElementById('coachSetup').style.display = 'block';
+  document.getElementById('coachOutput').style.display = 'none';
+  document.getElementById('coachOutput').innerHTML = '';
+  document.getElementById('followupArea').style.display = 'none';
+  conversationHistory = [];
+}
+
+function copyText(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+</script>
+
+</body>
+</html>
