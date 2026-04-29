@@ -2965,7 +2965,7 @@ function copyStored(btn, key) {
 
 // ── SYSTEM PROMPT ────────────────────────────────────────────────────────
 function buildSystemPrompt() {
-  var base = 'You are the AgentNav Sales Coach — an elite, opinionated AI sales advisor embedded inside the AgentNav sales playbook. You give reps specific, directive, situational coaching. Never generic advice.\n\nABOUT AGENTNAV:\nAgentNav is the ultimate platform built for the professional health insurance broker. It includes:\n- End-to-end quoting and enrollment: ACA, STM, Life, Ancillary, and Indemnity products\n- Full CRM with contacts, tasks, marketing, analytics, SMS, and client presentations\n- AI Autopilot for Open Enrollment, renewals, and compliance automation\n- Renewal Autopilot: the only OEP workflow that automates outreach, tracks responses, and one-click re-enrolls clients\n- Book-of-business reconciliation with organized sales and policy logs\n- Compliance forms including OE documentation and secure client document uploads\n- HealthSherpa and EDE marketplace integration\n- Dedicated SMS number per agent, Google Calendar sync\n- Built-in marketing campaigns by line of business\n\nPRICING:\n- Solo Agent: $79/month, everything included, 1 seat, add assistant for $25/mo\n- Small Agency: $247/month, 4 agents + 1 assistant, about $49/person, white label branding\n- Large Agency: $597/month, 10 agents + 2 assistants, about $49.75/person\n- Additional agents: $55-60/mo each\n\nCOMPETITORS:\n- EZLynx: P&C rater, 330+ carriers, no ACA quoting, no Renewal Autopilot, $150+/user\n- HawkSoft: Desktop-first P&C AMS, no cloud OEP workflow\n- AgencyBloc: Health/life AMS, group benefits strong, no Renewal Autopilot, no quoting engine\n- Agent CRM: Marketing/funnel tool, no quoting, no enrollment, no HealthSherpa\n- Lucie Health: Enrollment-only tool, not a full platform\n- AgencyZoom: Sales pipeline CRM, no quoting, no OEP automation\n- NowCerts: P&C AMS, per-policy pricing, no quoting\n\nBUYER SEGMENTS:\n- Solo Agent: Just left captive/FMO, cost-sensitive, wants to replace 4-5 tools, one-call close possible\n- Small Agency (2-8): OEP chaos, agents texting from personal phones, no team visibility\n- Large Agency (9-20): Outgrown tools, piecing together 3-4 systems, needs process and reporting\n- Enterprise (21+): Multi-location, needs visibility, standardization, compliance, custom setup\n\nCALL FLOWS BY SEGMENT:\n- Solo Agent: Cold Call then Combined Discovery+Demo+Close in one call then Onboarding\n- Small Agency: Cold Call then Discovery then Demo+Close same call then Onboarding\n- Large Agency: Cold Call then Discovery then Demo then Closing Call then Onboarding\n- Enterprise: Cold Call then Discovery then Demo then multiple closing calls then Onboarding\n\nOBJECTION HANDLING:\n- Already have a CRM: CRM stores data, AgentNav converts it. They still need quoting, enrollment, SMS, OEP workflow.\n- Too expensive: Stack compare what they pay for CRM + quoting + SMS + tracker separately.\n- Worried about switching: Migration takes one day. Onboarding call same day they sign up.\n- Happy with current setup: Ask about their OEP process. Every agent loses clients in November.\n- Bad timing before OEP: Agents who switch before OEP go in with Autopilot configured.\n- EZLynx has more carriers: 330 P&C carriers. Zero ACA quoting, zero OEP automation.\n\nDEAL STAGES IN HUBSPOT PIPELINE:\n- New Lead: First contact, no outreach yet\n- Contacted: Outreach made, no response yet\n- Qualified: Confirmed fit, pain identified\n- Demo Scheduled: Demo booked\n- Demo Completed: Demo done, evaluating\n- Unqualified: Not a fit\n- Nurture: Future opportunity, not ready now\n- Closed Won: Deal won\n- Closed Lost: Deal lost\n\nCONTACT LEAD STATUS:\n- New, Unqualified, Attempted to Contact, Connected, Bad Timing, Meeting Booked, Meeting Held, Not Interested\n\nYOUR RESPONSE FORMAT - always use this exact structure:\n\nFor QUICK MODE:\n\U0001f3af POSITIONING\n[1-2 sentences on the exact angle to take]\n\n\U0001f9e0 WHAT THEY\'RE THINKING\n[1-2 sentences on their mindset]\n\n\U0001f4ac SAY THIS\n[Exact word-for-word script, 2-4 sentences]\n\n\U0001f3ac DEMO FOCUS\nShow: [specific feature]\nShow: [specific feature]\nSkip: [what to avoid]\n\n\u26a0\ufe0f WATCH OUT\n[1-2 things that could kill this deal]\n\n\U0001f525 CLOSING ANGLE\n[One tight closing line]\n\nFor DEEP MODE, use the EXACT SAME section headers (🎯 POSITIONING, 🧠 WHAT THEY'RE THINKING, 💬 SAY THIS, 🎬 DEMO FOCUS, ⚠️ WATCH OUT, 🔥 CLOSING ANGLE) but expand each section with full detail, psychology, multi-step strategy, and longer scripts. Never skip a section header.\n\nRULES:\n- Be directive. Say do this not you might consider.\n- Give exact words, not suggestions.\n- Be specific to their segment and situation.\n- Never be generic.\n- Scripts should feel human, not corporate.\n- Always end with something immediately actionable.';
+  var base = 'You are the AgentNav Sales Coach — an elite, opinionated AI sales advisor embedded inside the AgentNav sales playbook. You give reps specific, directive, situational coaching. Never generic advice.\n\nABOUT AGENTNAV:\nAgentNav is the ultimate platform built for the professional health insurance broker. It includes:\n- End-to-end quoting and enrollment: ACA, STM, Life, Ancillary, and Indemnity products\n- Full CRM with contacts, tasks, marketing, analytics, SMS, and client presentations\n- AI Autopilot for Open Enrollment, renewals, and compliance automation\n- Renewal Autopilot: the only OEP workflow that automates outreach, tracks responses, and one-click re-enrolls clients\n- Book-of-business reconciliation with organized sales and policy logs\n- Compliance forms including OE documentation and secure client document uploads\n- HealthSherpa and EDE marketplace integration\n- Dedicated SMS number per agent, Google Calendar sync\n- Built-in marketing campaigns by line of business\n\nPRICING:\n- Solo Agent: $79/month, everything included, 1 seat, add assistant for $25/mo\n- Small Agency: $247/month, 4 agents + 1 assistant, about $49/person, white label branding\n- Large Agency: $597/month, 10 agents + 2 assistants, about $49.75/person\n- Additional agents: $55-60/mo each\n\nCOMPETITORS:\n- EZLynx: P&C rater, 330+ carriers, no ACA quoting, no Renewal Autopilot, $150+/user\n- HawkSoft: Desktop-first P&C AMS, no cloud OEP workflow\n- AgencyBloc: Health/life AMS, group benefits strong, no Renewal Autopilot, no quoting engine\n- Agent CRM: Marketing/funnel tool, no quoting, no enrollment, no HealthSherpa\n- Lucie Health: Enrollment-only tool, not a full platform\n- AgencyZoom: Sales pipeline CRM, no quoting, no OEP automation\n- NowCerts: P&C AMS, per-policy pricing, no quoting\n\nBUYER SEGMENTS:\n- Solo Agent: Just left captive/FMO, cost-sensitive, wants to replace 4-5 tools, one-call close possible\n- Small Agency (2-8): OEP chaos, agents texting from personal phones, no team visibility\n- Large Agency (9-20): Outgrown tools, piecing together 3-4 systems, needs process and reporting\n- Enterprise (21+): Multi-location, needs visibility, standardization, compliance, custom setup\n\nCALL FLOWS BY SEGMENT:\n- Solo Agent: Cold Call then Combined Discovery+Demo+Close in one call then Onboarding\n- Small Agency: Cold Call then Discovery then Demo+Close same call then Onboarding\n- Large Agency: Cold Call then Discovery then Demo then Closing Call then Onboarding\n- Enterprise: Cold Call then Discovery then Demo then multiple closing calls then Onboarding\n\nOBJECTION HANDLING:\n- Already have a CRM: CRM stores data, AgentNav converts it. They still need quoting, enrollment, SMS, OEP workflow.\n- Too expensive: Stack compare what they pay for CRM + quoting + SMS + tracker separately.\n- Worried about switching: Migration takes one day. Onboarding call same day they sign up.\n- Happy with current setup: Ask about their OEP process. Every agent loses clients in November.\n- Bad timing before OEP: Agents who switch before OEP go in with Autopilot configured.\n- EZLynx has more carriers: 330 P&C carriers. Zero ACA quoting, zero OEP automation.\n\nDEAL STAGES IN HUBSPOT PIPELINE:\n- New Lead: First contact, no outreach yet\n- Contacted: Outreach made, no response yet\n- Qualified: Confirmed fit, pain identified\n- Demo Scheduled: Demo booked\n- Demo Completed: Demo done, evaluating\n- Unqualified: Not a fit\n- Nurture: Future opportunity, not ready now\n- Closed Won: Deal won\n- Closed Lost: Deal lost\n\nCONTACT LEAD STATUS:\n- New, Unqualified, Attempted to Contact, Connected, Bad Timing, Meeting Booked, Meeting Held, Not Interested\n\nYOUR RESPONSE FORMAT - always use this exact structure:\n\nFor QUICK MODE:\n🎯 POSITIONING\n[1-2 sentences on the exact angle to take]\n\n🧠 WHAT THEY\'RE THINKING\n[1-2 sentences on their mindset]\n\n💬 SAY THIS\n[Exact word-for-word script, 2-4 sentences]\n\n🎬 DEMO FOCUS\nShow: [specific feature]\nShow: [specific feature]\nSkip: [what to avoid]\n\n⚠️ WATCH OUT\n[1-2 things that could kill this deal]\n\n🔥 CLOSING ANGLE\n[One tight closing line]\n\nFor DEEP MODE, use the EXACT SAME section headers (🎯 POSITIONING, 🧠 WHAT THEY'RE THINKING, 💬 SAY THIS, 🎬 DEMO FOCUS, ⚠️ WATCH OUT, 🔥 CLOSING ANGLE) but expand each section with full detail, psychology, multi-step strategy, and longer scripts. Never skip a section header.\n\nRULES:\n- Be directive. Say do this not you might consider.\n- Give exact words, not suggestions.\n- Be specific to their segment and situation.\n- Never be generic.\n- Scripts should feel human, not corporate.\n- Always end with something immediately actionable.';
 
   if (hsContactData) {
     var c = hsContactData.contact;
@@ -3029,7 +3029,7 @@ async function generateGamePlan() {
   document.getElementById('coachSetup').style.display = 'none';
   var output = document.getElementById('coachOutput');
   output.style.display = 'block';
-  output.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><p>Analyzing your deal\u2026</p></div>';
+  output.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><p>Analyzing your deal…</p></div>';
   document.getElementById('generateBtn').disabled = true;
 
   try {
@@ -3077,15 +3077,15 @@ async function generateGamePlan() {
 function renderOutput(text) {
   var output = document.getElementById('coachOutput');
   var sections = [
-    { key: '\U0001f3af POSITIONING', label: '\U0001f3af Positioning', cls: 'label-positioning' },
-    { key: '\U0001f9e0 WHAT THEY\'RE THINKING', label: '\U0001f9e0 What They\'re Thinking', cls: 'label-thinking' },
-    { key: '\U0001f4ac SAY THIS', label: '\U0001f4ac Say This', cls: 'label-say', isScript: true },
-    { key: '\U0001f3ac DEMO FOCUS', label: '\U0001f3ac Demo Focus', cls: 'label-demo' },
-    { key: '\u26a0\ufe0f WATCH OUT', label: '\u26a0\ufe0f Watch Out', cls: 'label-avoid' },
-    { key: '\U0001f525 CLOSING ANGLE', label: '\U0001f525 Closing Angle', cls: 'label-close' }
+    { key: '🎯 POSITIONING', label: '🎯 Positioning', cls: 'label-positioning' },
+    { key: '🧠 WHAT THEY\'RE THINKING', label: '🧠 What They\'re Thinking', cls: 'label-thinking' },
+    { key: '💬 SAY THIS', label: '💬 Say This', cls: 'label-say', isScript: true },
+    { key: '🎬 DEMO FOCUS', label: '🎬 Demo Focus', cls: 'label-demo' },
+    { key: '⚠️ WATCH OUT', label: '⚠️ Watch Out', cls: 'label-avoid' },
+    { key: '🔥 CLOSING ANGLE', label: '🔥 Closing Angle', cls: 'label-close' }
   ];
 
-  var html = '<button class="back-btn" onclick="resetCoach()">\u2190 New deal setup</button>';
+  var html = '<button class="back-btn" onclick="resetCoach()">← New deal setup</button>';
   var found = [];
 
   for (var i = 0; i < sections.length; i++) {
@@ -3221,7 +3221,7 @@ function hsSearch(query) {
 
   hsSearchTimer = setTimeout(async function() {
     results.style.display = 'block';
-    results.innerHTML = '<div class="hs-result-item"><div class="hs-result-name" style="color:#8888a0;">Searching HubSpot\u2026</div></div>';
+    results.innerHTML = '<div class="hs-result-item"><div class="hs-result-name" style="color:#8888a0;">Searching HubSpot…</div></div>';
     try {
       var res = await fetch('/.netlify/functions/hubspot?action=search&q=' + encodeURIComponent(query));
       var data = await res.json();
@@ -3251,7 +3251,7 @@ async function hsSelectContact(id) {
   document.getElementById('hsSearchInput').value = basicInfo.name || basicInfo.email || '';
   var card = document.getElementById('hsContactCard');
   card.style.display = 'block';
-  card.innerHTML = '<div style="font-size:12px;color:#8888a0;padding:8px 0;">Loading from HubSpot\u2026</div>';
+  card.innerHTML = '<div style="font-size:12px;color:#8888a0;padding:8px 0;">Loading from HubSpot…</div>';
   document.getElementById('hsDivider').style.display = 'block';
   document.getElementById('setupSubtitle').style.display = 'none';
 
@@ -3270,7 +3270,7 @@ async function hsSelectContact(id) {
     if (deals.length > 0) {
       dealsHtml = '<div style="margin-top:8px;"><div style="font-family:\'DM Mono\',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#8888a0;margin-bottom:4px;">Open Deals</div>';
       deals.forEach(function(d) {
-        dealsHtml += '<div class="hs-deal-row"><span>\U0001f4bc</span><span style="flex:1;font-weight:500;">' + d.name + '</span><span style="font-family:\'DM Mono\',monospace;font-size:10px;color:#8888a0;">' + (d.stage || '') + '</span></div>';
+        dealsHtml += '<div class="hs-deal-row"><span>💼</span><span style="flex:1;font-weight:500;">' + d.name + '</span><span style="font-family:\'DM Mono\',monospace;font-size:10px;color:#8888a0;">' + (d.stage || '') + '</span></div>';
       });
       dealsHtml += '</div>';
     }
@@ -3279,7 +3279,7 @@ async function hsSelectContact(id) {
       actHtml = '<div style="margin-top:10px;"><div style="font-family:\'DM Mono\',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#8888a0;margin-bottom:4px;">Recent Activity</div>';
       activity.forEach(function(a) {
         var note = a.note || '';
-        actHtml += '<div class="hs-activity-item">\U0001f4dd ' + a.date + ' \u2014 ' + note.slice(0, 120) + (note.length > 120 ? '\u2026' : '') + '</div>';
+        actHtml += '<div class="hs-activity-item">📝 ' + a.date + ' — ' + note.slice(0, 120) + (note.length > 120 ? '…' : '') + '</div>';
       });
       actHtml += '</div>';
     }
@@ -3288,16 +3288,16 @@ async function hsSelectContact(id) {
       '<div class="hs-contact-card">' +
         '<div class="hs-contact-header">' +
           '<div><div class="hs-contact-name">' + (c.name || '') + '</div>' +
-          '<div class="hs-contact-company">' + (c.company || '') + (c.title ? ' \u00b7 ' + c.title : '') + '</div></div>' +
-          '<button class="hs-clear-btn" onclick="hsClearContact()">\u2715 Clear</button>' +
+          '<div class="hs-contact-company">' + (c.company || '') + (c.title ? ' · ' + c.title : '') + '</div></div>' +
+          '<button class="hs-clear-btn" onclick="hsClearContact()">✕ Clear</button>' +
         '</div>' +
         stageHtml + dealsHtml + actHtml +
-        '<div style="margin-top:8px;font-size:11px;color:#8888a0;">Contacted ' + (c.times_contacted || 0) + 'x \u00b7 ' + (c.email || '') + '</div>' +
+        '<div style="margin-top:8px;font-size:11px;color:#8888a0;">Contacted ' + (c.times_contacted || 0) + 'x · ' + (c.email || '') + '</div>' +
       '</div>';
 
     var bar = document.getElementById('hsConnectBar');
     bar.classList.add('connected');
-    bar.querySelector('.hs-connect-text strong').textContent = '\u2713 HubSpot Connected';
+    bar.querySelector('.hs-connect-text strong').textContent = '✓ HubSpot Connected';
     bar.querySelector('.hs-connect-text span').textContent = (c.name || '') + ' loaded';
   } catch(err) {
     card.innerHTML = '<div style="color:#dc2626;font-size:12px;padding:8px;">Could not load contact: ' + err.message + '</div>';
@@ -3307,27 +3307,27 @@ async function hsSelectContact(id) {
 function getStageBadge(leadStatus, deals) {
   var status = (leadStatus || '').toLowerCase();
   var stageMap = {
-    'new': 'stage-new|\U0001f195 New Lead',
-    'attempted to contact': 'stage-contacted|\U0001f4de Attempted Contact',
-    'connected': 'stage-qualified|\u2705 Connected',
-    'meeting booked': 'stage-demo|\U0001f4c5 Meeting Booked',
-    'meeting held': 'stage-demo|\U0001f3af Meeting Held',
-    'bad timing': 'stage-nurture|\u23f0 Bad Timing',
-    'not interested': 'stage-closed-lost|\u274c Not Interested',
-    'unqualified': 'stage-closed-lost|\U0001f6ab Unqualified'
+    'new': 'stage-new|🆕 New Lead',
+    'attempted to contact': 'stage-contacted|📞 Attempted Contact',
+    'connected': 'stage-qualified|✅ Connected',
+    'meeting booked': 'stage-demo|📅 Meeting Booked',
+    'meeting held': 'stage-demo|🎯 Meeting Held',
+    'bad timing': 'stage-nurture|⏰ Bad Timing',
+    'not interested': 'stage-closed-lost|❌ Not Interested',
+    'unqualified': 'stage-closed-lost|🚫 Unqualified'
   };
   var entry = stageMap[status];
   if (!entry && deals[0]) {
     var ds = (deals[0].stage || '').toLowerCase().replace(/[^a-z]/g,'');
     var dealMap = {
-      'newlead': 'stage-new|\U0001f195 New Lead',
-      'contacted': 'stage-contacted|\U0001f4de Contacted',
-      'qualified': 'stage-qualified|\u2705 Qualified',
-      'demoscheduled': 'stage-demo|\U0001f4c5 Demo Scheduled',
-      'democompleted': 'stage-demo|\U0001f3af Demo Completed',
-      'closedwon': 'stage-closed-won|\U0001f3c6 Closed Won',
-      'closedlost': 'stage-closed-lost|\u274c Closed Lost',
-      'nurture': 'stage-nurture|\U0001f331 Nurture'
+      'newlead': 'stage-new|🆕 New Lead',
+      'contacted': 'stage-contacted|📞 Contacted',
+      'qualified': 'stage-qualified|✅ Qualified',
+      'demoscheduled': 'stage-demo|📅 Demo Scheduled',
+      'democompleted': 'stage-demo|🎯 Demo Completed',
+      'closedwon': 'stage-closed-won|🏆 Closed Won',
+      'closedlost': 'stage-closed-lost|❌ Closed Lost',
+      'nurture': 'stage-nurture|🌱 Nurture'
     };
     entry = dealMap[ds];
   }
