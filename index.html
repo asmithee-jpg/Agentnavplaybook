@@ -2921,7 +2921,12 @@ function showBattle(id, btn) {
 let coachMode = 'quick';
 let dealContext = {};
 let conversationHistory = [];
+let _copyStore = {};
+let _hsContacts = {};
+let hsContactData = null;
+let hsSearchTimer = null;
 
+// ── PANEL CONTROLS ───────────────────────────────────────────────────────
 function openCoach() {
   document.getElementById('coachPanel').classList.add('open');
   document.getElementById('coachOverlay').classList.add('open');
@@ -2941,128 +2946,94 @@ function setMode(mode) {
 function toggleMS(el) { el.classList.toggle('selected'); }
 
 function getSelectedMS() {
-  return Array.from(document.querySelectorAll('#f-setup .ms-option.selected')).map(el => el.textContent);
+  return Array.from(document.querySelectorAll('#f-setup .ms-option.selected')).map(function(el) { return el.textContent; });
 }
 
+// ── COPY ─────────────────────────────────────────────────────────────────
+function copyText(btn, text) {
+  navigator.clipboard.writeText(text).then(function() {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function copyStored(btn, key) {
+  var text = _copyStore[key] || '';
+  copyText(btn, text);
+}
+
+// ── SYSTEM PROMPT ────────────────────────────────────────────────────────
 function buildSystemPrompt() {
-  return `You are the AgentNav Sales Coach — an elite, opinionated AI sales advisor embedded inside the AgentNav sales playbook. You give reps specific, directive, situational coaching. Never generic advice.
+  var base = 'You are the AgentNav Sales Coach — an elite, opinionated AI sales advisor embedded inside the AgentNav sales playbook. You give reps specific, directive, situational coaching. Never generic advice.\n\nABOUT AGENTNAV:\nAgentNav is the ultimate platform built for the professional health insurance broker. It includes:\n- End-to-end quoting and enrollment: ACA, STM, Life, Ancillary, and Indemnity products\n- Full CRM with contacts, tasks, marketing, analytics, SMS, and client presentations\n- AI Autopilot for Open Enrollment, renewals, and compliance automation\n- Renewal Autopilot: the only OEP workflow that automates outreach, tracks responses, and one-click re-enrolls clients\n- Book-of-business reconciliation with organized sales and policy logs\n- Compliance forms including OE documentation and secure client document uploads\n- HealthSherpa and EDE marketplace integration\n- Dedicated SMS number per agent, Google Calendar sync\n- Built-in marketing campaigns by line of business\n\nPRICING:\n- Solo Agent: $79/month, everything included, 1 seat, add assistant for $25/mo\n- Small Agency: $247/month, 4 agents + 1 assistant, about $49/person, white label branding\n- Large Agency: $597/month, 10 agents + 2 assistants, about $49.75/person\n- Additional agents: $55-60/mo each\n\nCOMPETITORS:\n- EZLynx: P&C rater, 330+ carriers, no ACA quoting, no Renewal Autopilot, $150+/user\n- HawkSoft: Desktop-first P&C AMS, no cloud OEP workflow\n- AgencyBloc: Health/life AMS, group benefits strong, no Renewal Autopilot, no quoting engine\n- Agent CRM: Marketing/funnel tool, no quoting, no enrollment, no HealthSherpa\n- Lucie Health: Enrollment-only tool, not a full platform\n- AgencyZoom: Sales pipeline CRM, no quoting, no OEP automation\n- NowCerts: P&C AMS, per-policy pricing, no quoting\n\nBUYER SEGMENTS:\n- Solo Agent: Just left captive/FMO, cost-sensitive, wants to replace 4-5 tools, one-call close possible\n- Small Agency (2-8): OEP chaos, agents texting from personal phones, no team visibility\n- Large Agency (9-20): Outgrown tools, piecing together 3-4 systems, needs process and reporting\n- Enterprise (21+): Multi-location, needs visibility, standardization, compliance, custom setup\n\nCALL FLOWS BY SEGMENT:\n- Solo Agent: Cold Call then Combined Discovery+Demo+Close in one call then Onboarding\n- Small Agency: Cold Call then Discovery then Demo+Close same call then Onboarding\n- Large Agency: Cold Call then Discovery then Demo then Closing Call then Onboarding\n- Enterprise: Cold Call then Discovery then Demo then multiple closing calls then Onboarding\n\nOBJECTION HANDLING:\n- Already have a CRM: CRM stores data, AgentNav converts it. They still need quoting, enrollment, SMS, OEP workflow.\n- Too expensive: Stack compare what they pay for CRM + quoting + SMS + tracker separately.\n- Worried about switching: Migration takes one day. Onboarding call same day they sign up.\n- Happy with current setup: Ask about their OEP process. Every agent loses clients in November.\n- Bad timing before OEP: Agents who switch before OEP go in with Autopilot configured.\n- EZLynx has more carriers: 330 P&C carriers. Zero ACA quoting, zero OEP automation.\n\nDEAL STAGES IN HUBSPOT PIPELINE:\n- New Lead: First contact, no outreach yet\n- Contacted: Outreach made, no response yet\n- Qualified: Confirmed fit, pain identified\n- Demo Scheduled: Demo booked\n- Demo Completed: Demo done, evaluating\n- Unqualified: Not a fit\n- Nurture: Future opportunity, not ready now\n- Closed Won: Deal won\n- Closed Lost: Deal lost\n\nCONTACT LEAD STATUS:\n- New, Unqualified, Attempted to Contact, Connected, Bad Timing, Meeting Booked, Meeting Held, Not Interested\n\nYOUR RESPONSE FORMAT - always use this exact structure:\n\nFor QUICK MODE:\n\U0001f3af POSITIONING\n[1-2 sentences on the exact angle to take]\n\n\U0001f9e0 WHAT THEY\'RE THINKING\n[1-2 sentences on their mindset]\n\n\U0001f4ac SAY THIS\n[Exact word-for-word script, 2-4 sentences]\n\n\U0001f3ac DEMO FOCUS\nShow: [specific feature]\nShow: [specific feature]\nSkip: [what to avoid]\n\n\u26a0\ufe0f WATCH OUT\n[1-2 things that could kill this deal]\n\n\U0001f525 CLOSING ANGLE\n[One tight closing line]\n\nFor DEEP MODE, expand each section with full detail, psychology, multi-step strategy, and longer scripts.\n\nRULES:\n- Be directive. Say do this not you might consider.\n- Give exact words, not suggestions.\n- Be specific to their segment and situation.\n- Never be generic.\n- Scripts should feel human, not corporate.\n- Always end with something immediately actionable.';
 
-ABOUT AGENTNAV:
-AgentNav is the ultimate platform built for the professional health insurance broker. It includes:
-- End-to-end quoting and enrollment: ACA, STM, Life, Ancillary, and Indemnity products
-- Full CRM with contacts, tasks, marketing, analytics, SMS, and client presentations
-- AI Autopilot for Open Enrollment, renewals, and compliance automation
-- Renewal Autopilot — the only OEP workflow that automates outreach, tracks responses, and one-click re-enrolls clients
-- Book-of-business reconciliation with organized sales and policy logs
-- Compliance forms including OE documentation and secure client document uploads
-- HealthSherpa and EDE marketplace integration
-- Dedicated SMS number per agent, Google Calendar sync
-- Built-in marketing campaigns by line of business
+  if (hsContactData) {
+    var c = hsContactData.contact;
+    var deals = hsContactData.deals || [];
+    var activity = hsContactData.recentActivity || [];
+    var deal = deals[0];
+    base += '\n\nLIVE HUBSPOT DATA FOR THIS DEAL:\nContact Name: ' + c.name +
+      '\nCompany: ' + (c.company || 'Unknown') +
+      '\nTitle: ' + (c.title || 'Unknown') +
+      '\nEmail: ' + (c.email || '') +
+      '\nLead Status: ' + (c.lead_status || 'Unknown') +
+      '\nTimes Contacted: ' + (c.times_contacted || 0) +
+      '\nLast Contacted: ' + (c.last_contacted || 'Unknown');
+    if (deal) {
+      base += '\n\nActive Deal: ' + deal.name +
+        '\nDeal Stage: ' + deal.stage +
+        '\nDeal Amount: ' + (deal.amount ? '$' + deal.amount : 'Not set') +
+        '\nNext Step: ' + (deal.next_step || 'None logged');
+    }
+    if (activity.length > 0) {
+      base += '\n\nRecent Activity:';
+      activity.forEach(function(a) { base += '\n- ' + a.date + ': ' + a.note; });
+    }
+    base += '\n\nIMPORTANT: Address ' + c.name + ' by name in your scripts. Reference their company ' + (c.company || '') + ' specifically. Use the deal stage to calibrate exactly what stage they are in the pipeline.';
+  }
 
-PRICING:
-- Solo Agent: $79/month, everything included, 1 seat, add assistant for $25/mo
-- Small Agency: $247/month, 4 agents + 1 assistant, about $49/person, white label branding
-- Large Agency: $597/month, 10 agents + 2 assistants, about $49.75/person
-- Additional agents: $55-60/mo each depending on plan
-
-COMPETITORS:
-- EZLynx: P&C rater, 330+ carriers, no ACA quoting, no Renewal Autopilot, $150+/user
-- HawkSoft: Desktop-first P&C AMS, no cloud OEP workflow
-- AgencyBloc: Health/life AMS, group benefits strong, no Renewal Autopilot, no quoting engine
-- Agent CRM: Marketing/funnel tool, no quoting, no enrollment, no HealthSherpa
-- Lucie Health: Enrollment-only tool, not a full platform
-- AgencyZoom: Sales pipeline CRM, no quoting, no OEP automation
-- NowCerts: P&C AMS, per-policy pricing, no quoting
-
-BUYER SEGMENTS:
-- Solo Agent: Just left captive/FMO, cost-sensitive, wants to replace 4-5 tools, one-call close possible
-- Small Agency (2-8): OEP chaos, agents texting from personal phones, no team visibility
-- Large Agency (9-20): Outgrown tools, piecing together 3-4 systems, needs process and reporting
-- Enterprise (21+): Multi-location, needs visibility, standardization, compliance, custom setup
-
-CALL FLOWS BY SEGMENT:
-- Solo Agent: Cold Call then Combined Discovery+Demo+Close in one call then Onboarding
-- Small Agency: Cold Call then Discovery then Demo+Close same call then Onboarding
-- Large Agency: Cold Call then Discovery then Demo then Closing Call then Onboarding
-- Enterprise: Cold Call then Discovery then Demo then multiple closing calls then Onboarding
-
-OBJECTION HANDLING:
-- Already have a CRM: CRM stores data, AgentNav converts it. They still need quoting, enrollment, SMS, OEP workflow on top.
-- Too expensive: Stack compare what they pay for CRM + quoting + SMS + tracker separately.
-- Worried about switching: Migration takes one day. Onboarding call same day they sign up.
-- Happy with current setup: Ask about their OEP process. Every agent loses clients in November.
-- Bad timing before OEP: Agents who switch before OEP go in with Autopilot configured. Waiting means another brutal November.
-- EZLynx has more carriers: 330 P&C carriers. Zero ACA quoting, zero OEP automation, $150+ per user.
-
-YOUR RESPONSE FORMAT - always use this exact structure:
-
-For QUICK MODE:
-🎯 POSITIONING
-[1-2 sentences on the exact angle to take]
-
-🧠 WHAT THEY'RE THINKING
-[1-2 sentences on their mindset and what is really holding them back]
-
-💬 SAY THIS
-[Exact word-for-word script, 2-4 sentences, real words a rep can say verbatim]
-
-🎬 DEMO FOCUS
-Show: [specific feature]
-Show: [specific feature]
-Skip: [what to avoid]
-
-⚠️ WATCH OUT
-[1-2 things that could kill this deal]
-
-🔥 CLOSING ANGLE
-[One tight closing line or approach]
-
-For DEEP MODE, expand each section with full detail, psychology, multi-step strategy, and longer scripts.
-
-RULES:
-- Be directive. Say do this not you might consider.
-- Give exact words, not suggestions.
-- Be specific to their segment and situation.
-- Never be generic.
-- Scripts should feel human, not corporate.
-- Always end with something immediately actionable.`;
+  return base;
 }
 
+// ── GENERATE GAME PLAN ───────────────────────────────────────────────────
 async function generateGamePlan() {
-  const segment = document.getElementById('f-segment').value;
-  const concern = document.getElementById('f-concern').value;
-  const stage = document.getElementById('f-stage').value;
-  const setup = getSelectedMS();
-  const extra = document.getElementById('f-extra').value;
+  var segment = document.getElementById('f-segment').value;
+  var concern = document.getElementById('f-concern').value;
+  var stage = document.getElementById('f-stage').value;
+  var setup = getSelectedMS();
+  var extra = document.getElementById('f-extra').value;
 
   if (!segment || !stage) { alert('Please select a segment and deal stage.'); return; }
 
-  dealContext = { segment, concern, stage, setup, extra, mode: coachMode };
+  dealContext = { segment: segment, concern: concern, stage: stage, setup: setup, extra: extra };
 
-  const segMap = { solo: 'Solo Agent (1 agent, going independent)', small: 'Small Agency (2-8 agents)', large: 'Large Agency (9-20 agents)', enterprise: 'Enterprise (21+ agents)' };
-  const concernMap = { already_crm: 'Already has a CRM', too_expensive: 'Thinks it is too expensive', switching_risk: 'Worried about switching systems', too_complicated: 'Thinks it looks too complicated', timing: 'Bad timing / not now', not_enough_leads: 'Not enough leads', happy: 'Says they are happy with current setup', just_looking: 'Just looking, not urgent', no_concern: 'No major concern yet' };
-  const stageMap = { cold_call: 'Cold call / first contact', discovery: 'Discovery call', demo: 'Demo call', closing: 'Closing / follow-up', objection: 'Handling a specific objection', ghosted: 'They went quiet / ghosted' };
+  var segMap = { solo: 'Solo Agent (1 agent, going independent)', small: 'Small Agency (2-8 agents)', large: 'Large Agency (9-20 agents)', enterprise: 'Enterprise (21+ agents)' };
+  var concernMap = { already_crm: 'Already has a CRM', too_expensive: 'Thinks it is too expensive', switching_risk: 'Worried about switching systems', too_complicated: 'Thinks it looks too complicated', timing: 'Bad timing / not now', not_enough_leads: 'Not enough leads', happy: 'Happy with current setup', just_looking: 'Just looking', no_concern: 'No major concern yet' };
+  var stageMap = { cold_call: 'Cold call / first contact', discovery: 'Discovery call', demo: 'Demo call', closing: 'Closing / follow-up', objection: 'Handling a specific objection', ghosted: 'They went quiet / ghosted' };
 
-  const userMsg = `Deal setup:
-Segment: ${segMap[segment] || segment}
-Current setup: ${setup.length > 0 ? setup.join(', ') : 'Unknown'}
-Main concern: ${concernMap[concern] || 'Not specified'}
-Deal stage: ${stageMap[stage] || stage}
-Additional context: ${extra || 'None'}
-Mode: ${coachMode === 'deep' ? 'Deep Strategy - full breakdown' : 'Quick Mode - fast and scannable'}
+  var userMsg = 'Deal setup:\nSegment: ' + (segMap[segment] || segment) +
+    '\nCurrent setup: ' + (setup.length > 0 ? setup.join(', ') : 'Unknown') +
+    '\nMain concern: ' + (concernMap[concern] || 'Not specified') +
+    '\nDeal stage: ' + (stageMap[stage] || stage) +
+    '\nAdditional context: ' + (extra || 'None') +
+    '\nMode: ' + (coachMode === 'deep' ? 'Deep Strategy - full breakdown' : 'Quick Mode - fast and scannable') +
+    '\n\nGenerate my complete game plan.';
 
-Generate my complete game plan.`;
+  if (hsContactData) {
+    var c = hsContactData.contact;
+    userMsg += '\n\nHubSpot Contact loaded: ' + c.name + ' at ' + (c.company || 'unknown company') + ', Stage: ' + (c.lead_status || 'unknown');
+  }
 
   conversationHistory = [{ role: 'user', content: userMsg }];
 
   document.getElementById('coachSetup').style.display = 'none';
-  const output = document.getElementById('coachOutput');
+  var output = document.getElementById('coachOutput');
   output.style.display = 'block';
-  output.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><p>Analyzing your deal…</p></div>';
+  output.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><p>Analyzing your deal\u2026</p></div>';
   document.getElementById('generateBtn').disabled = true;
 
   try {
-    const response = await fetch('/.netlify/functions/coach', {
+    var response = await fetch('/.netlify/functions/coach', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -3072,62 +3043,66 @@ Generate my complete game plan.`;
         messages: conversationHistory
       })
     });
-    const rawText = await response.text();
-    let data;
+    var rawText = await response.text();
+    var data;
     try { data = JSON.parse(rawText); } catch(e) {
-      output.innerHTML = '<p style="color:#dc2626;font-size:13px;padding:12px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca;">Server error: ' + rawText.slice(0,200) + '</p>';
+      output.innerHTML = '<p style="color:#dc2626;font-size:13px;padding:12px;background:#fef2f2;border-radius:8px;">Server error: ' + rawText.slice(0, 200) + '</p>';
       document.getElementById('generateBtn').disabled = false;
       return;
     }
     if (data.error) {
-      output.innerHTML = '<p style="color:#dc2626;font-size:13px;padding:12px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca;">API Error: ' + JSON.stringify(data.error) + '</p>';
+      output.innerHTML = '<p style="color:#dc2626;font-size:13px;padding:12px;background:#fef2f2;border-radius:8px;">API Error: ' + JSON.stringify(data.error) + '</p>';
       document.getElementById('generateBtn').disabled = false;
       return;
     }
-    const text = data.content && data.content[0] ? data.content[0].text : 'No response from AI.';
+    var text = data.content && data.content[0] ? data.content[0].text : 'No response from AI.';
     conversationHistory.push({ role: 'assistant', content: text });
     renderOutput(text);
     showFollowup();
-  } catch (err) {
-    output.innerHTML = '<p style="color:#dc2626;font-size:13px;padding:12px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca;">Network error: ' + err.message + '</p>';
+  } catch(err) {
+    output.innerHTML = '<p style="color:#dc2626;font-size:13px;padding:12px;background:#fef2f2;border-radius:8px;">Network error: ' + err.message + '</p>';
   }
   document.getElementById('generateBtn').disabled = false;
 }
 
+// ── RENDER OUTPUT ────────────────────────────────────────────────────────
 function renderOutput(text) {
-  const output = document.getElementById('coachOutput');
-  const sections = [
-    { key: '🎯 POSITIONING', label: '🎯 Positioning', cls: 'label-positioning' },
-    { key: '🧠 WHAT THEY\'RE THINKING', label: '🧠 What They\'re Thinking', cls: 'label-thinking' },
-    { key: '💬 SAY THIS', label: '💬 Say This', cls: 'label-say', isScript: true },
-    { key: '🎬 DEMO FOCUS', label: '🎬 Demo Focus', cls: 'label-demo' },
-    { key: '⚠️ WATCH OUT', label: '⚠️ Watch Out', cls: 'label-avoid' },
-    { key: '🔥 CLOSING ANGLE', label: '🔥 Closing Angle', cls: 'label-close' }
+  var output = document.getElementById('coachOutput');
+  var sections = [
+    { key: '\U0001f3af POSITIONING', label: '\U0001f3af Positioning', cls: 'label-positioning' },
+    { key: '\U0001f9e0 WHAT THEY\'RE THINKING', label: '\U0001f9e0 What They\'re Thinking', cls: 'label-thinking' },
+    { key: '\U0001f4ac SAY THIS', label: '\U0001f4ac Say This', cls: 'label-say', isScript: true },
+    { key: '\U0001f3ac DEMO FOCUS', label: '\U0001f3ac Demo Focus', cls: 'label-demo' },
+    { key: '\u26a0\ufe0f WATCH OUT', label: '\u26a0\ufe0f Watch Out', cls: 'label-avoid' },
+    { key: '\U0001f525 CLOSING ANGLE', label: '\U0001f525 Closing Angle', cls: 'label-close' }
   ];
 
-  let html = '<button class="back-btn" onclick="resetCoach()">← New deal setup</button>';
-  const found = [];
+  var html = '<button class="back-btn" onclick="resetCoach()">\u2190 New deal setup</button>';
+  var found = [];
 
-  for (let i = 0; i < sections.length; i++) {
-    const s = sections[i];
-    const idx = text.indexOf(s.key);
+  for (var i = 0; i < sections.length; i++) {
+    var s = sections[i];
+    var idx = text.indexOf(s.key);
     if (idx === -1) continue;
-    let nextIdx = text.length;
-    for (let j = i + 1; j < sections.length; j++) {
-      const ni = text.indexOf(sections[j].key, idx + s.key.length);
+    var nextIdx = text.length;
+    for (var j = i + 1; j < sections.length; j++) {
+      var ni = text.indexOf(sections[j].key, idx + s.key.length);
       if (ni !== -1 && ni < nextIdx) nextIdx = ni;
     }
-    found.push({ ...s, content: text.slice(idx + s.key.length, nextIdx).trim() });
+    found.push({ label: s.label, cls: s.cls, isScript: s.isScript, content: text.slice(idx + s.key.length, nextIdx).trim() });
   }
 
   if (found.length === 0) {
-    html += '<div class="output-block"><div class="output-text">' + text + '</div></div>';
+    html += '<div class="output-block"><div class="output-text">' + text.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div></div>';
   } else {
-    for (const s of found) {
-      const safeContent = s.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      const ck = 'cp' + i + String(Date.now()); window._copyStore = window._copyStore || {}; window._copyStore[ck] = s.content;
-      html += '<div class="output-block"><div class="output-block-header"><span class="output-block-label ' + s.cls + '">' + s.label + '</span><button class="copy-btn" onclick="copyStored(this,\''+ck+'\')">' + 'Copy</button></div>';
-      if (s.isScript) {
+    for (var k = 0; k < found.length; k++) {
+      var sec = found[k];
+      var ck = 'cp_' + k + '_' + Date.now();
+      _copyStore[ck] = sec.content;
+      var safeContent = sec.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      html += '<div class="output-block"><div class="output-block-header"><span class="output-block-label ' + sec.cls + '">' + sec.label + '</span>';
+      html += '<button class="copy-btn" data-ck="' + ck + '" onclick="copyStored(this, this.dataset.ck)">Copy</button></div>';
+      if (sec.isScript) {
         html += '<div class="script-block"><div class="script-text">' + safeContent + '</div></div>';
       } else {
         html += '<div class="output-text">' + safeContent + '</div>';
@@ -3139,9 +3114,10 @@ function renderOutput(text) {
   output.innerHTML = html;
 }
 
+// ── FOLLOWUP ─────────────────────────────────────────────────────────────
 function showFollowup() {
   document.getElementById('followupArea').style.display = 'block';
-  const chipMap = {
+  var chipMap = {
     cold_call: ['"They said they\'re too busy"', '"Give me the follow-up text"', '"They asked about price"'],
     discovery: ['"They already have EZLynx"', '"How do I ask about OEP pain?"', '"They seem skeptical"'],
     demo: ['"They said it looks complicated"', '"They loved Renewal Autopilot"', '"What to show next?"'],
@@ -3149,33 +3125,49 @@ function showFollowup() {
     objection: ['"Give me a stronger reframe"', '"They pushed back again"', '"What\'s my pivot?"'],
     ghosted: ['"Write a re-engagement text"', '"Write a breakup email"', '"How long to wait?"']
   };
-  const chips = chipMap[dealContext.stage] || ['"Give me the exact script"', '"What should I demo first?"', '"How do I close this?"'];
-  document.getElementById('followupSuggestions').innerHTML = chips.map(c =>
-    '<div class="followup-chip" data-val=\"' + c.replace(/"/g,'&quot;') + '\" onclick="fillFollowup(this.dataset.val)">' + c + '</div>'
-  ).join('');
+  var chips = chipMap[dealContext.stage] || ['"Give me the exact script"', '"What should I demo first?"', '"How do I close this?"'];
+  var sugEl = document.getElementById('followupSuggestions');
+  sugEl.innerHTML = '';
+  chips.forEach(function(c) {
+    var btn = document.createElement('div');
+    btn.className = 'followup-chip';
+    btn.textContent = c;
+    btn.onclick = function() { fillFollowup(this.textContent); };
+    sugEl.appendChild(btn);
+  });
 }
 
 function fillFollowup(text) {
   if (typeof text !== 'string') text = String(text);
-  document.getElementById('followupInput').value = text.replace(/^"|"$/g,'');
+  text = text.trim().replace(/^["']|["']$/g, '');
+  document.getElementById('followupInput').value = text;
   document.getElementById('followupInput').focus();
 }
 
 async function sendFollowup() {
-  const input = document.getElementById('followupInput');
-  const msg = input.value.trim();
+  var input = document.getElementById('followupInput');
+  var msg = input.value.trim();
   if (!msg) return;
   input.value = '';
   document.getElementById('followupSendBtn').disabled = true;
   conversationHistory.push({ role: 'user', content: msg });
 
-  const output = document.getElementById('coachOutput');
-  const thinkId = 'think_' + Date.now();
-  output.innerHTML += '<div class="chat-msg"><div class="chat-msg-label">You</div><div class="chat-msg-bubble user">' + msg + '</div></div><div class="chat-msg" id="' + thinkId + '"><div class="chat-msg-label">Coach</div><div class="chat-msg-bubble"><div class="loading-spinner" style="width:20px;height:20px;border-width:2px;margin:0;"></div></div></div>';
+  var output = document.getElementById('coachOutput');
+  var thinkId = 'think_' + Date.now();
+  var userDiv = document.createElement('div');
+  userDiv.className = 'chat-msg';
+  userDiv.innerHTML = '<div class="chat-msg-label">You</div><div class="chat-msg-bubble user">' + msg.replace(/</g,'&lt;') + '</div>';
+  output.appendChild(userDiv);
+
+  var thinkDiv = document.createElement('div');
+  thinkDiv.className = 'chat-msg';
+  thinkDiv.id = thinkId;
+  thinkDiv.innerHTML = '<div class="chat-msg-label">Coach</div><div class="chat-msg-bubble"><div class="loading-spinner" style="width:20px;height:20px;border-width:2px;margin:0;"></div></div>';
+  output.appendChild(thinkDiv);
   output.scrollTop = output.scrollHeight;
 
   try {
-    const response = await fetch('/.netlify/functions/coach', {
+    var response = await fetch('/.netlify/functions/coach', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -3185,16 +3177,12 @@ async function sendFollowup() {
         messages: conversationHistory
       })
     });
-    const rawText2 = await response.text();
-    let data;
-    try { data = JSON.parse(rawText2); } catch(e) { data = {error: rawText2}; }
-    if (data.error) {
-      document.getElementById(thinkId).innerHTML = '<div class="chat-msg-label">Coach</div><div class="chat-msg-bubble" style="color:#dc2626;">Error: ' + JSON.stringify(data.error).slice(0,150) + '</div>';
-    } else {
-      const text = data.content && data.content[0] ? data.content[0].text : 'No response.';
-      conversationHistory.push({ role: 'assistant', content: text });
-      document.getElementById(thinkId).innerHTML = '<div class="chat-msg-label">Coach</div><div class="chat-msg-bubble" style="white-space:pre-wrap;">' + text + '</div>';
-    }
+    var rawText = await response.text();
+    var data;
+    try { data = JSON.parse(rawText); } catch(e) { data = { error: rawText }; }
+    var text = data.content && data.content[0] ? data.content[0].text : (data.error ? 'Error: ' + JSON.stringify(data.error) : 'No response.');
+    conversationHistory.push({ role: 'assistant', content: text });
+    document.getElementById(thinkId).innerHTML = '<div class="chat-msg-label">Coach</div><div class="chat-msg-bubble" style="white-space:pre-wrap;">' + text.replace(/</g,'&lt;') + '</div>';
   } catch(err) {
     document.getElementById(thinkId).innerHTML = '<div class="chat-msg-bubble" style="color:#dc2626;">Network error: ' + err.message + '</div>';
   }
@@ -3204,56 +3192,39 @@ async function sendFollowup() {
 
 function resetCoach() {
   document.getElementById('coachSetup').style.display = 'block';
-  document.getElementById('coachOutput').style.display = 'none';
-  document.getElementById('coachOutput').innerHTML = '';
+  var output = document.getElementById('coachOutput');
+  output.style.display = 'none';
+  output.innerHTML = '';
   document.getElementById('followupArea').style.display = 'none';
   conversationHistory = [];
 }
 
-function copyText(btn, text) {
-  navigator.clipboard.writeText(text).then(() => {
-    btn.textContent = 'Copied!';
-    btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
-  });
-}
-function copyStored(btn, key) {
-  const text = (window._copyStore || {})[key] || '';
-  copyText(btn, text);
-}
-
-// ── HUBSPOT INTEGRATION ──────────────────────────────────────────────
-let hsContactData = null;
-let hsSearchTimer = null;
-
-async function hsSearch(query) {
+// ── HUBSPOT ──────────────────────────────────────────────────────────────
+function hsSearch(query) {
   clearTimeout(hsSearchTimer);
-  const results = document.getElementById('hsSearchResults');
+  var results = document.getElementById('hsSearchResults');
   if (!query || query.length < 2) { results.style.display = 'none'; return; }
-  
-  hsSearchTimer = setTimeout(async () => {
+
+  hsSearchTimer = setTimeout(async function() {
     results.style.display = 'block';
-    results.innerHTML = '<div class="hs-result-item"><div class="hs-result-name" style="color:#8888a0;">Searching HubSpot…</div></div>';
-    
+    results.innerHTML = '<div class="hs-result-item"><div class="hs-result-name" style="color:#8888a0;">Searching HubSpot\u2026</div></div>';
     try {
-      const res = await fetch('/.netlify/functions/hubspot?action=search&q=' + encodeURIComponent(query));
-      const data = await res.json();
-      
+      var res = await fetch('/.netlify/functions/hubspot?action=search&q=' + encodeURIComponent(query));
+      var data = await res.json();
       if (!data.contacts || data.contacts.length === 0) {
         results.innerHTML = '<div class="hs-result-item"><div class="hs-result-name" style="color:#8888a0;">No contacts found</div></div>';
         return;
       }
-      
-      // Store contacts for later lookup
-      window._hsContacts = {};
-      data.contacts.forEach(c => { window._hsContacts[c.id] = c; });
-      
-      results.innerHTML = data.contacts.map(c => `
-        <div class="hs-result-item" onclick="hsSelectContact('${c.id}')">
-          <div class="hs-result-name">${c.name || 'Unknown'}</div>
-          <div class="hs-result-meta">${c.company ? c.company + ' · ' : ''}${c.email || ''} ${c.lead_status ? '· ' + c.lead_status : ''}</div>
-        </div>
-      `).join('');
+      _hsContacts = {};
+      data.contacts.forEach(function(c) { _hsContacts[c.id] = c; });
+      results.innerHTML = '';
+      data.contacts.forEach(function(c) {
+        var item = document.createElement('div');
+        item.className = 'hs-result-item';
+        item.innerHTML = '<div class="hs-result-name">' + (c.name || 'Unknown') + '</div><div class="hs-result-meta">' + (c.company ? c.company + ' · ' : '') + (c.email || '') + (c.lead_status ? ' · ' + c.lead_status : '') + '</div>';
+        item.onclick = function() { hsSelectContact(c.id); };
+        results.appendChild(item);
+      });
     } catch(err) {
       results.innerHTML = '<div class="hs-result-item"><div class="hs-result-name" style="color:#dc2626;">Could not reach HubSpot</div></div>';
     }
@@ -3261,122 +3232,101 @@ async function hsSearch(query) {
 }
 
 async function hsSelectContact(id) {
-  const basicInfo = (window._hsContacts || {})[id] || {};
+  var basicInfo = _hsContacts[id] || {};
   document.getElementById('hsSearchResults').style.display = 'none';
   document.getElementById('hsSearchInput').value = basicInfo.name || basicInfo.email || '';
-  
-  const card = document.getElementById('hsContactCard');
+  var card = document.getElementById('hsContactCard');
   card.style.display = 'block';
-  card.innerHTML = '<div style="font-size:12px;color:#8888a0;padding:8px 0;">Loading contact from HubSpot…</div>';
+  card.innerHTML = '<div style="font-size:12px;color:#8888a0;padding:8px 0;">Loading from HubSpot\u2026</div>';
   document.getElementById('hsDivider').style.display = 'block';
   document.getElementById('setupSubtitle').style.display = 'none';
 
   try {
-    const res = await fetch('/.netlify/functions/hubspot?action=contact&id=' + id);
-    const data = await res.json();
+    var res = await fetch('/.netlify/functions/hubspot?action=contact&id=' + id);
+    var data = await res.json();
     hsContactData = data;
-    
-    const c = data.contact;
-    const deals = data.deals || [];
-    const activity = data.recentActivity || [];
-    
-    // Auto-fill form fields based on HubSpot data
+    var c = data.contact;
+    var deals = data.deals || [];
+    var activity = data.recentActivity || [];
+
     autoFillFromHubspot(c, deals);
-    
-    // Render contact card
-    const stageBadge = getStageBadge(c.lead_status, deals);
-    
-    card.innerHTML = `
-      <div class="hs-contact-card">
-        <div class="hs-contact-header">
-          <div>
-            <div class="hs-contact-name">${c.name}</div>
-            <div class="hs-contact-company">${c.company || ''}${c.title ? ' · ' + c.title : ''}</div>
-          </div>
-          <button class="hs-clear-btn" onclick="hsClearContact()">✕ Clear</button>
-        </div>
-        ${stageBadge}
-        ${deals.length > 0 ? `
-          <div style="margin-top:8px;">
-            <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#8888a0;margin-bottom:4px;">Open Deals</div>
-            ${deals.map(d => `
-              <div class="hs-deal-row">
-                <span>💼</span>
-                <span style="flex:1;font-weight:500;">${d.name}</span>
-                <span style="font-family:'DM Mono',monospace;font-size:10px;color:#8888a0;">${formatStage(d.stage)}</span>
-              </div>
-            `).join('')}
-          </div>
-        ` : ''}
-        ${activity.length > 0 ? `
-          <div style="margin-top:10px;">
-            <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#8888a0;margin-bottom:4px;">Recent Activity</div>
-            ${activity.map(a => `<div class="hs-activity-item">📝 ${a.date} — ${a.note.slice(0,120)}${a.note.length > 120 ? '…' : ''}</div>`).join('')}
-          </div>
-        ` : ''}
-        <div style="margin-top:8px;font-size:11px;color:#8888a0;">Contacted ${c.times_contacted || 0}x · ${c.email || ''}</div>
-      </div>
-    `;
 
-    // Update connect bar
-    document.getElementById('hsConnectBar').classList.add('connected');
-    document.getElementById('hsConnectBar').querySelector('.hs-connect-text strong').textContent = '✓ HubSpot Connected';
-    document.getElementById('hsConnectBar').querySelector('span').textContent = c.name + ' loaded';
+    var stageHtml = getStageBadge(c.lead_status, deals);
+    var dealsHtml = '';
+    if (deals.length > 0) {
+      dealsHtml = '<div style="margin-top:8px;"><div style="font-family:\'DM Mono\',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#8888a0;margin-bottom:4px;">Open Deals</div>';
+      deals.forEach(function(d) {
+        dealsHtml += '<div class="hs-deal-row"><span>\U0001f4bc</span><span style="flex:1;font-weight:500;">' + d.name + '</span><span style="font-family:\'DM Mono\',monospace;font-size:10px;color:#8888a0;">' + (d.stage || '') + '</span></div>';
+      });
+      dealsHtml += '</div>';
+    }
+    var actHtml = '';
+    if (activity.length > 0) {
+      actHtml = '<div style="margin-top:10px;"><div style="font-family:\'DM Mono\',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#8888a0;margin-bottom:4px;">Recent Activity</div>';
+      activity.forEach(function(a) {
+        var note = a.note || '';
+        actHtml += '<div class="hs-activity-item">\U0001f4dd ' + a.date + ' \u2014 ' + note.slice(0, 120) + (note.length > 120 ? '\u2026' : '') + '</div>';
+      });
+      actHtml += '</div>';
+    }
 
+    card.innerHTML =
+      '<div class="hs-contact-card">' +
+        '<div class="hs-contact-header">' +
+          '<div><div class="hs-contact-name">' + (c.name || '') + '</div>' +
+          '<div class="hs-contact-company">' + (c.company || '') + (c.title ? ' \u00b7 ' + c.title : '') + '</div></div>' +
+          '<button class="hs-clear-btn" onclick="hsClearContact()">\u2715 Clear</button>' +
+        '</div>' +
+        stageHtml + dealsHtml + actHtml +
+        '<div style="margin-top:8px;font-size:11px;color:#8888a0;">Contacted ' + (c.times_contacted || 0) + 'x \u00b7 ' + (c.email || '') + '</div>' +
+      '</div>';
+
+    var bar = document.getElementById('hsConnectBar');
+    bar.classList.add('connected');
+    bar.querySelector('.hs-connect-text strong').textContent = '\u2713 HubSpot Connected';
+    bar.querySelector('.hs-connect-text span').textContent = (c.name || '') + ' loaded';
   } catch(err) {
     card.innerHTML = '<div style="color:#dc2626;font-size:12px;padding:8px;">Could not load contact: ' + err.message + '</div>';
   }
 }
 
 function getStageBadge(leadStatus, deals) {
-  const status = (leadStatus || '').toLowerCase();
-  const dealStage = deals[0]?.stage || '';
-  
-  const stageMap = {
-    'new': { cls: 'stage-new', label: '🆕 New Lead' },
-    'attempted to contact': { cls: 'stage-contacted', label: '📞 Attempted Contact' },
-    'connected': { cls: 'stage-qualified', label: '✅ Connected' },
-    'meeting booked': { cls: 'stage-demo', label: '📅 Meeting Booked' },
-    'meeting held': { cls: 'stage-demo', label: '🎯 Meeting Held' },
-    'bad timing': { cls: 'stage-nurture', label: '⏰ Bad Timing' },
-    'not interested': { cls: 'stage-closed-lost', label: '❌ Not Interested' },
-    'unqualified': { cls: 'stage-closed-lost', label: '🚫 Unqualified' },
+  var status = (leadStatus || '').toLowerCase();
+  var stageMap = {
+    'new': 'stage-new|\U0001f195 New Lead',
+    'attempted to contact': 'stage-contacted|\U0001f4de Attempted Contact',
+    'connected': 'stage-qualified|\u2705 Connected',
+    'meeting booked': 'stage-demo|\U0001f4c5 Meeting Booked',
+    'meeting held': 'stage-demo|\U0001f3af Meeting Held',
+    'bad timing': 'stage-nurture|\u23f0 Bad Timing',
+    'not interested': 'stage-closed-lost|\u274c Not Interested',
+    'unqualified': 'stage-closed-lost|\U0001f6ab Unqualified'
   };
-  
-  const dealStageMap = {
-    'newlead': { cls: 'stage-new', label: '🆕 New Lead' },
-    'contacted': { cls: 'stage-contacted', label: '📞 Contacted' },
-    'qualified': { cls: 'stage-qualified', label: '✅ Qualified' },
-    'demoscheduled': { cls: 'stage-demo', label: '📅 Demo Scheduled' },
-    'democompleted': { cls: 'stage-demo', label: '🎯 Demo Completed' },
-    'closedwon': { cls: 'stage-closed-won', label: '🏆 Closed Won' },
-    'closedlost': { cls: 'stage-closed-lost', label: '❌ Closed Lost' },
-    'nurture': { cls: 'stage-nurture', label: '🌱 Nurture' },
-    'unqualified': { cls: 'stage-closed-lost', label: '🚫 Unqualified' },
-  };
-
-  const s = stageMap[status] || dealStageMap[dealStage.replace(/[^a-z]/g,'').toLowerCase()] || { cls: 'stage-default', label: leadStatus || dealStage || 'Unknown Stage' };
-  return `<span class="hs-stage-badge ${s.cls}">${s.label}</span>`;
-}
-
-function formatStage(stage) {
-  const map = {
-    'newlead': 'New Lead', 'contacted': 'Contacted', 'qualified': 'Qualified',
-    'demoscheduled': 'Demo Scheduled', 'democompleted': 'Demo Completed',
-    'closedwon': 'Closed Won', 'closedlost': 'Closed Lost', 'nurture': 'Nurture'
-  };
-  const key = (stage || '').replace(/[^a-z]/gi,'').toLowerCase();
-  return map[key] || stage || '';
+  var entry = stageMap[status];
+  if (!entry && deals[0]) {
+    var ds = (deals[0].stage || '').toLowerCase().replace(/[^a-z]/g,'');
+    var dealMap = {
+      'newlead': 'stage-new|\U0001f195 New Lead',
+      'contacted': 'stage-contacted|\U0001f4de Contacted',
+      'qualified': 'stage-qualified|\u2705 Qualified',
+      'demoscheduled': 'stage-demo|\U0001f4c5 Demo Scheduled',
+      'democompleted': 'stage-demo|\U0001f3af Demo Completed',
+      'closedwon': 'stage-closed-won|\U0001f3c6 Closed Won',
+      'closedlost': 'stage-closed-lost|\u274c Closed Lost',
+      'nurture': 'stage-nurture|\U0001f331 Nurture'
+    };
+    entry = dealMap[ds];
+  }
+  if (!entry) entry = 'stage-default|' + (leadStatus || 'Unknown');
+  var parts = entry.split('|');
+  return '<span class="hs-stage-badge ' + parts[0] + '">' + parts[1] + '</span>';
 }
 
 function autoFillFromHubspot(contact, deals) {
-  const deal = deals[0];
-  const stage = deal?.stage || '';
-  const leadStatus = contact.lead_status || '';
-  
-  // Auto-select segment (can't know for sure, but use company size hint)
-  // Auto-select deal stage
-  const stageToSelect = {
+  var deal = deals[0];
+  var stage = deal ? (deal.stage || '').toLowerCase().replace(/[^a-z]/g,'') : '';
+  var leadStatus = (contact.lead_status || '').toLowerCase();
+  var stageToSelect = {
     'newlead': 'cold_call', 'new': 'cold_call',
     'contacted': 'cold_call', 'attempted to contact': 'cold_call',
     'connected': 'discovery', 'qualified': 'discovery',
@@ -3385,13 +3335,10 @@ function autoFillFromHubspot(contact, deals) {
     'nurture': 'ghosted', 'bad timing': 'ghosted',
     'not interested': 'objection', 'unqualified': 'objection'
   };
-  
-  const stageKey = (stage.replace(/[^a-z]/gi,'').toLowerCase()) || leadStatus.toLowerCase();
-  const selectedStage = stageToSelect[stageKey] || stageToSelect[leadStatus.toLowerCase()] || '';
-  
+  var selectedStage = stageToSelect[stage] || stageToSelect[leadStatus] || '';
   if (selectedStage) {
-    const stageEl = document.getElementById('f-stage');
-    if (stageEl) stageEl.value = selectedStage;
+    var el = document.getElementById('f-stage');
+    if (el) el.value = selectedStage;
   }
 }
 
@@ -3401,51 +3348,17 @@ function hsClearContact() {
   document.getElementById('hsDivider').style.display = 'none';
   document.getElementById('setupSubtitle').style.display = 'block';
   document.getElementById('hsSearchInput').value = '';
-  document.getElementById('hsConnectBar').classList.remove('connected');
-  document.getElementById('hsConnectBar').querySelector('.hs-connect-text strong').textContent = 'Search HubSpot Contact';
-  document.getElementById('hsConnectBar').querySelector('span').textContent = 'Pull real deal data for personalized coaching';
+  var bar = document.getElementById('hsConnectBar');
+  bar.classList.remove('connected');
+  bar.querySelector('.hs-connect-text strong').textContent = 'Search HubSpot Contact';
+  bar.querySelector('.hs-connect-text span').textContent = 'Pull real deal data for personalized coaching';
 }
 
-// Override buildSystemPrompt to inject HubSpot data
-const _origBuildSystemPrompt = buildSystemPrompt;
-buildSystemPrompt = function() {
-  let base = _origBuildSystemPrompt();
-  if (hsContactData) {
-    const c = hsContactData.contact;
-    const deals = hsContactData.deals || [];
-    const activity = hsContactData.recentActivity || [];
-    const deal = deals[0];
-    
-    base += `
-
-LIVE HUBSPOT DATA FOR THIS DEAL — USE THIS TO PERSONALIZE EVERYTHING:
-Contact Name: ${c.name}
-Company: ${c.company || 'Unknown'}
-Title: ${c.title || 'Unknown'}
-Email: ${c.email || ''}
-Lead Status: ${c.lead_status || 'Unknown'}
-Times Contacted: ${c.times_contacted || 0}
-Last Contacted: ${c.last_contacted || 'Unknown'}
-
-${deal ? `Active Deal: ${deal.name}
-Deal Stage: ${formatStage(deal.stage)}
-Deal Amount: ${deal.amount ? '$' + deal.amount : 'Not set'}
-Next Step in HubSpot: ${deal.next_step || 'None logged'}` : 'No active deals found'}
-
-${activity.length > 0 ? `Recent Activity:
-${activity.map(a => `- ${a.date}: ${a.note}`).join('
-')}` : 'No recent activity logged'}
-
-IMPORTANT: Address ${c.name} by name in your scripts. Reference their company ${c.company || ''} specifically. Use the deal stage "${deal ? formatStage(deal.stage) : c.lead_status}" to calibrate exactly what stage they are in your pipeline coaching. If there are recent call notes, reference what was discussed and build on it.`;
-  }
-  return base;
-};
-
-// Close search results when clicking outside
+// Close search results on outside click
 document.addEventListener('click', function(e) {
-  const results = document.getElementById('hsSearchResults');
-  const input = document.getElementById('hsSearchInput');
-  if (results && !results.contains(e.target) && e.target !== input) {
+  var results = document.getElementById('hsSearchResults');
+  var input = document.getElementById('hsSearchInput');
+  if (results && input && !results.contains(e.target) && e.target !== input) {
     results.style.display = 'none';
   }
 });
