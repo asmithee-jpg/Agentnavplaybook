@@ -2642,6 +2642,151 @@ function showBattle(id, btn) {
   .coach-panel { width: 100vw; }
   .coach-fab { bottom: 16px; right: 16px; }
 }
+
+/* ── HUBSPOT SEARCH ──────────────────────────────────────────────── */
+.hs-connect-bar {
+  background: linear-gradient(135deg, #FF7A59, #FF5C35);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hs-connect-bar.connected {
+  background: linear-gradient(135deg, #00BDA5, #00A38D);
+}
+.hs-logo { font-size: 16px; }
+.hs-connect-text { flex: 1; }
+.hs-connect-text strong { font-size: 12px; font-weight: 700; color: #fff; display: block; }
+.hs-connect-text span { font-size: 11px; color: rgba(255,255,255,0.8); }
+
+.hs-search-wrap { margin-bottom: 14px; position: relative; }
+.hs-search-input {
+  width: 100%;
+  border: 1.5px solid #e5e2db;
+  border-radius: 8px;
+  padding: 10px 14px 10px 36px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: #1a1a2e;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.hs-search-input:focus { border-color: #FF7A59; }
+.hs-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: #8888a0;
+}
+.hs-search-results {
+  background: #fff;
+  border: 1px solid #e5e2db;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  margin-top: 4px;
+}
+.hs-result-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0ede8;
+  transition: background 0.12s;
+}
+.hs-result-item:last-child { border-bottom: none; }
+.hs-result-item:hover { background: #f8f6f2; }
+.hs-result-name { font-size: 13px; font-weight: 500; color: #1a1a2e; }
+.hs-result-meta { font-size: 11px; color: #8888a0; margin-top: 1px; }
+
+.hs-contact-card {
+  background: #f8f6f2;
+  border: 1px solid #e5e2db;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.hs-contact-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+.hs-contact-name { font-size: 14px; font-weight: 700; color: #1a1a2e; }
+.hs-contact-company { font-size: 12px; color: #8888a0; }
+.hs-clear-btn {
+  background: none;
+  border: 1px solid #e5e2db;
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-size: 10px;
+  color: #8888a0;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+}
+.hs-clear-btn:hover { color: #dc2626; border-color: #dc2626; }
+
+.hs-stage-badge {
+  display: inline-block;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.stage-new { background: #eff6ff; color: #2563eb; }
+.stage-contacted { background: #f0fdf4; color: #16a34a; }
+.stage-qualified { background: #fefce8; color: #ca8a04; }
+.stage-demo { background: #fdf4ff; color: #9333ea; }
+.stage-closed-won { background: #dcfce7; color: #15803d; }
+.stage-closed-lost { background: #fef2f2; color: #dc2626; }
+.stage-nurture { background: #fff7ed; color: #ea580c; }
+.stage-default { background: #f8f6f2; color: #8888a0; }
+
+.hs-deal-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f0ede8;
+  font-size: 12px;
+  color: #4a4a6a;
+}
+.hs-deal-row:last-child { border-bottom: none; }
+
+.hs-activity-item {
+  font-size: 11.5px;
+  color: #8888a0;
+  padding: 4px 0;
+  border-bottom: 1px solid #f0ede8;
+  line-height: 1.5;
+}
+.hs-activity-item:last-child { border-bottom: none; }
+
+.hs-divider {
+  height: 1px;
+  background: #e5e2db;
+  margin: 12px 0;
+}
+
+.hs-generate-btn {
+  width: 100%;
+  background: #FF7A59;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 13px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-top: 4px;
+}
+.hs-generate-btn:hover { background: #FF5C35; }
+.hs-generate-btn:disabled { background: #ffb8a6; cursor: not-allowed; }
+
 </style>
 
 <!-- FLOATING BUTTON -->
@@ -2673,7 +2818,26 @@ function showBattle(id, btn) {
 
   <div class="coach-body" id="coachBody">
     <div class="coach-setup" id="coachSetup">
-      <p style="font-size:13px;color:#8888a0;margin-bottom:18px;line-height:1.6;">Set up your deal in 15 seconds. Get an exact game plan — what to say, what to show, what to avoid.</p>
+      <!-- HubSpot Search -->
+      <div class="hs-connect-bar" id="hsConnectBar">
+        <span class="hs-logo">🔗</span>
+        <div class="hs-connect-text">
+          <strong>Search HubSpot Contact</strong>
+          <span>Pull real deal data for personalized coaching</span>
+        </div>
+      </div>
+
+      <div class="hs-search-wrap" id="hsSearchWrap">
+        <span class="hs-search-icon">🔍</span>
+        <input class="hs-search-input" id="hsSearchInput" type="text" placeholder="Search by name, email, or company…" oninput="hsSearch(this.value)" autocomplete="off">
+        <div class="hs-search-results" id="hsSearchResults" style="display:none;"></div>
+      </div>
+
+      <div id="hsContactCard" style="display:none;"></div>
+
+      <div class="hs-divider" id="hsDivider" style="display:none;"></div>
+
+      <p style="font-size:12px;color:#8888a0;margin-bottom:14px;line-height:1.6;" id="setupSubtitle">Or fill in manually to generate a game plan.</p>
 
       <div class="form-group">
         <label class="form-label">Segment</label>
@@ -2961,7 +3125,8 @@ function renderOutput(text) {
   } else {
     for (const s of found) {
       const safeContent = s.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      html += '<div class="output-block"><div class="output-block-header"><span class="output-block-label ' + s.cls + '">' + s.label + '</span><button class="copy-btn" onclick="copyText(this, ' + JSON.stringify(s.content) + ')">Copy</button></div>';
+      const ck = 'cp' + i + String(Date.now()); window._copyStore = window._copyStore || {}; window._copyStore[ck] = s.content;
+      html += '<div class="output-block"><div class="output-block-header"><span class="output-block-label ' + s.cls + '">' + s.label + '</span><button class="copy-btn" onclick="copyStored(this,\''+ck+'\')">' + 'Copy</button></div>';
       if (s.isScript) {
         html += '<div class="script-block"><div class="script-text">' + safeContent + '</div></div>';
       } else {
@@ -2986,11 +3151,12 @@ function showFollowup() {
   };
   const chips = chipMap[dealContext.stage] || ['"Give me the exact script"', '"What should I demo first?"', '"How do I close this?"'];
   document.getElementById('followupSuggestions').innerHTML = chips.map(c =>
-    '<div class="followup-chip" onclick="fillFollowup(' + JSON.stringify(c) + ')">' + c + '</div>'
+    '<div class="followup-chip" data-val=\"' + c.replace(/"/g,'&quot;') + '\" onclick="fillFollowup(this.dataset.val)">' + c + '</div>'
   ).join('');
 }
 
 function fillFollowup(text) {
+  if (typeof text !== 'string') text = String(text);
   document.getElementById('followupInput').value = text.replace(/^"|"$/g,'');
   document.getElementById('followupInput').focus();
 }
@@ -3051,6 +3217,239 @@ function copyText(btn, text) {
     setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
   });
 }
+function copyStored(btn, key) {
+  const text = (window._copyStore || {})[key] || '';
+  copyText(btn, text);
+}
+
+// ── HUBSPOT INTEGRATION ──────────────────────────────────────────────
+let hsContactData = null;
+let hsSearchTimer = null;
+
+async function hsSearch(query) {
+  clearTimeout(hsSearchTimer);
+  const results = document.getElementById('hsSearchResults');
+  if (!query || query.length < 2) { results.style.display = 'none'; return; }
+  
+  hsSearchTimer = setTimeout(async () => {
+    results.style.display = 'block';
+    results.innerHTML = '<div class="hs-result-item"><div class="hs-result-name" style="color:#8888a0;">Searching HubSpot…</div></div>';
+    
+    try {
+      const res = await fetch('/.netlify/functions/hubspot?action=search&q=' + encodeURIComponent(query));
+      const data = await res.json();
+      
+      if (!data.contacts || data.contacts.length === 0) {
+        results.innerHTML = '<div class="hs-result-item"><div class="hs-result-name" style="color:#8888a0;">No contacts found</div></div>';
+        return;
+      }
+      
+      // Store contacts for later lookup
+      window._hsContacts = {};
+      data.contacts.forEach(c => { window._hsContacts[c.id] = c; });
+      
+      results.innerHTML = data.contacts.map(c => `
+        <div class="hs-result-item" onclick="hsSelectContact('${c.id}')">
+          <div class="hs-result-name">${c.name || 'Unknown'}</div>
+          <div class="hs-result-meta">${c.company ? c.company + ' · ' : ''}${c.email || ''} ${c.lead_status ? '· ' + c.lead_status : ''}</div>
+        </div>
+      `).join('');
+    } catch(err) {
+      results.innerHTML = '<div class="hs-result-item"><div class="hs-result-name" style="color:#dc2626;">Could not reach HubSpot</div></div>';
+    }
+  }, 350);
+}
+
+async function hsSelectContact(id) {
+  const basicInfo = (window._hsContacts || {})[id] || {};
+  document.getElementById('hsSearchResults').style.display = 'none';
+  document.getElementById('hsSearchInput').value = basicInfo.name || basicInfo.email || '';
+  
+  const card = document.getElementById('hsContactCard');
+  card.style.display = 'block';
+  card.innerHTML = '<div style="font-size:12px;color:#8888a0;padding:8px 0;">Loading contact from HubSpot…</div>';
+  document.getElementById('hsDivider').style.display = 'block';
+  document.getElementById('setupSubtitle').style.display = 'none';
+
+  try {
+    const res = await fetch('/.netlify/functions/hubspot?action=contact&id=' + id);
+    const data = await res.json();
+    hsContactData = data;
+    
+    const c = data.contact;
+    const deals = data.deals || [];
+    const activity = data.recentActivity || [];
+    
+    // Auto-fill form fields based on HubSpot data
+    autoFillFromHubspot(c, deals);
+    
+    // Render contact card
+    const stageBadge = getStageBadge(c.lead_status, deals);
+    
+    card.innerHTML = `
+      <div class="hs-contact-card">
+        <div class="hs-contact-header">
+          <div>
+            <div class="hs-contact-name">${c.name}</div>
+            <div class="hs-contact-company">${c.company || ''}${c.title ? ' · ' + c.title : ''}</div>
+          </div>
+          <button class="hs-clear-btn" onclick="hsClearContact()">✕ Clear</button>
+        </div>
+        ${stageBadge}
+        ${deals.length > 0 ? `
+          <div style="margin-top:8px;">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#8888a0;margin-bottom:4px;">Open Deals</div>
+            ${deals.map(d => `
+              <div class="hs-deal-row">
+                <span>💼</span>
+                <span style="flex:1;font-weight:500;">${d.name}</span>
+                <span style="font-family:'DM Mono',monospace;font-size:10px;color:#8888a0;">${formatStage(d.stage)}</span>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+        ${activity.length > 0 ? `
+          <div style="margin-top:10px;">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#8888a0;margin-bottom:4px;">Recent Activity</div>
+            ${activity.map(a => `<div class="hs-activity-item">📝 ${a.date} — ${a.note.slice(0,120)}${a.note.length > 120 ? '…' : ''}</div>`).join('')}
+          </div>
+        ` : ''}
+        <div style="margin-top:8px;font-size:11px;color:#8888a0;">Contacted ${c.times_contacted || 0}x · ${c.email || ''}</div>
+      </div>
+    `;
+
+    // Update connect bar
+    document.getElementById('hsConnectBar').classList.add('connected');
+    document.getElementById('hsConnectBar').querySelector('.hs-connect-text strong').textContent = '✓ HubSpot Connected';
+    document.getElementById('hsConnectBar').querySelector('span').textContent = c.name + ' loaded';
+
+  } catch(err) {
+    card.innerHTML = '<div style="color:#dc2626;font-size:12px;padding:8px;">Could not load contact: ' + err.message + '</div>';
+  }
+}
+
+function getStageBadge(leadStatus, deals) {
+  const status = (leadStatus || '').toLowerCase();
+  const dealStage = deals[0]?.stage || '';
+  
+  const stageMap = {
+    'new': { cls: 'stage-new', label: '🆕 New Lead' },
+    'attempted to contact': { cls: 'stage-contacted', label: '📞 Attempted Contact' },
+    'connected': { cls: 'stage-qualified', label: '✅ Connected' },
+    'meeting booked': { cls: 'stage-demo', label: '📅 Meeting Booked' },
+    'meeting held': { cls: 'stage-demo', label: '🎯 Meeting Held' },
+    'bad timing': { cls: 'stage-nurture', label: '⏰ Bad Timing' },
+    'not interested': { cls: 'stage-closed-lost', label: '❌ Not Interested' },
+    'unqualified': { cls: 'stage-closed-lost', label: '🚫 Unqualified' },
+  };
+  
+  const dealStageMap = {
+    'newlead': { cls: 'stage-new', label: '🆕 New Lead' },
+    'contacted': { cls: 'stage-contacted', label: '📞 Contacted' },
+    'qualified': { cls: 'stage-qualified', label: '✅ Qualified' },
+    'demoscheduled': { cls: 'stage-demo', label: '📅 Demo Scheduled' },
+    'democompleted': { cls: 'stage-demo', label: '🎯 Demo Completed' },
+    'closedwon': { cls: 'stage-closed-won', label: '🏆 Closed Won' },
+    'closedlost': { cls: 'stage-closed-lost', label: '❌ Closed Lost' },
+    'nurture': { cls: 'stage-nurture', label: '🌱 Nurture' },
+    'unqualified': { cls: 'stage-closed-lost', label: '🚫 Unqualified' },
+  };
+
+  const s = stageMap[status] || dealStageMap[dealStage.replace(/[^a-z]/g,'').toLowerCase()] || { cls: 'stage-default', label: leadStatus || dealStage || 'Unknown Stage' };
+  return `<span class="hs-stage-badge ${s.cls}">${s.label}</span>`;
+}
+
+function formatStage(stage) {
+  const map = {
+    'newlead': 'New Lead', 'contacted': 'Contacted', 'qualified': 'Qualified',
+    'demoscheduled': 'Demo Scheduled', 'democompleted': 'Demo Completed',
+    'closedwon': 'Closed Won', 'closedlost': 'Closed Lost', 'nurture': 'Nurture'
+  };
+  const key = (stage || '').replace(/[^a-z]/gi,'').toLowerCase();
+  return map[key] || stage || '';
+}
+
+function autoFillFromHubspot(contact, deals) {
+  const deal = deals[0];
+  const stage = deal?.stage || '';
+  const leadStatus = contact.lead_status || '';
+  
+  // Auto-select segment (can't know for sure, but use company size hint)
+  // Auto-select deal stage
+  const stageToSelect = {
+    'newlead': 'cold_call', 'new': 'cold_call',
+    'contacted': 'cold_call', 'attempted to contact': 'cold_call',
+    'connected': 'discovery', 'qualified': 'discovery',
+    'meeting booked': 'discovery', 'demoscheduled': 'demo',
+    'meeting held': 'closing', 'democompleted': 'closing',
+    'nurture': 'ghosted', 'bad timing': 'ghosted',
+    'not interested': 'objection', 'unqualified': 'objection'
+  };
+  
+  const stageKey = (stage.replace(/[^a-z]/gi,'').toLowerCase()) || leadStatus.toLowerCase();
+  const selectedStage = stageToSelect[stageKey] || stageToSelect[leadStatus.toLowerCase()] || '';
+  
+  if (selectedStage) {
+    const stageEl = document.getElementById('f-stage');
+    if (stageEl) stageEl.value = selectedStage;
+  }
+}
+
+function hsClearContact() {
+  hsContactData = null;
+  document.getElementById('hsContactCard').style.display = 'none';
+  document.getElementById('hsDivider').style.display = 'none';
+  document.getElementById('setupSubtitle').style.display = 'block';
+  document.getElementById('hsSearchInput').value = '';
+  document.getElementById('hsConnectBar').classList.remove('connected');
+  document.getElementById('hsConnectBar').querySelector('.hs-connect-text strong').textContent = 'Search HubSpot Contact';
+  document.getElementById('hsConnectBar').querySelector('span').textContent = 'Pull real deal data for personalized coaching';
+}
+
+// Override buildSystemPrompt to inject HubSpot data
+const _origBuildSystemPrompt = buildSystemPrompt;
+buildSystemPrompt = function() {
+  let base = _origBuildSystemPrompt();
+  if (hsContactData) {
+    const c = hsContactData.contact;
+    const deals = hsContactData.deals || [];
+    const activity = hsContactData.recentActivity || [];
+    const deal = deals[0];
+    
+    base += `
+
+LIVE HUBSPOT DATA FOR THIS DEAL — USE THIS TO PERSONALIZE EVERYTHING:
+Contact Name: ${c.name}
+Company: ${c.company || 'Unknown'}
+Title: ${c.title || 'Unknown'}
+Email: ${c.email || ''}
+Lead Status: ${c.lead_status || 'Unknown'}
+Times Contacted: ${c.times_contacted || 0}
+Last Contacted: ${c.last_contacted || 'Unknown'}
+
+${deal ? `Active Deal: ${deal.name}
+Deal Stage: ${formatStage(deal.stage)}
+Deal Amount: ${deal.amount ? '$' + deal.amount : 'Not set'}
+Next Step in HubSpot: ${deal.next_step || 'None logged'}` : 'No active deals found'}
+
+${activity.length > 0 ? `Recent Activity:
+${activity.map(a => `- ${a.date}: ${a.note}`).join('
+')}` : 'No recent activity logged'}
+
+IMPORTANT: Address ${c.name} by name in your scripts. Reference their company ${c.company || ''} specifically. Use the deal stage "${deal ? formatStage(deal.stage) : c.lead_status}" to calibrate exactly what stage they are in your pipeline coaching. If there are recent call notes, reference what was discussed and build on it.`;
+  }
+  return base;
+};
+
+// Close search results when clicking outside
+document.addEventListener('click', function(e) {
+  const results = document.getElementById('hsSearchResults');
+  const input = document.getElementById('hsSearchInput');
+  if (results && !results.contains(e.target) && e.target !== input) {
+    results.style.display = 'none';
+  }
+});
+
 </script>
 
 </body>
