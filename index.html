@@ -1018,7 +1018,7 @@ mark { background: rgba(37,99,235,0.12); color: var(--text-primary); border-radi
   .main { margin-left: 0; padding-top: 52px; }
   .mobile-header { display: flex; }
 
-  .section { min-height: calc(100vh - 52px); }
+  /* section min-height handled by default rule */
 
   .page-header { padding: 22px 18px 18px; }
   .page-header h1 { font-size: 26px; }
@@ -1868,7 +1868,7 @@ body.dark-mode .page-header { background: #18181b !important; border-color: #272
 body.dark-mode .page-header h1 { color: #fafafa !important; }
 body.dark-mode .page-header p { color: #a1a1aa !important; }
 body.dark-mode .page-label { color: #818cf8 !important; }
-body.dark-mode .section { background: #09090b !important; }
+/* dark section bg removed - handled by body.dark-mode .main */
 body.dark-mode .module-card { background: #18181b !important; border-color: #27272a !important; }
 body.dark-mode .module-card h3 { color: #fafafa !important; }
 body.dark-mode .module-card p { color: #a1a1aa !important; }
@@ -2217,6 +2217,11 @@ body.dark-mode .home-card p { color: #71717a; }
 .user-name { font-size: 12px; font-weight: 600; color: var(--text-1); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .user-logout { font-size: 11px; color: var(--text-3); cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: all 0.12s; }
 .user-logout:hover { color: var(--red); background: var(--red-dim); }
+
+/* ══ SECTION DISPLAY FIX - MUST BE LAST ══════════════════════════════ */
+.section { display: none !important; }
+.section.active { display: block !important; }
+.section.home-section.active { display: block !important; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -4468,6 +4473,33 @@ function showBattle(id, btn) {
 
   <div class="coach-body" id="coachBody">
     <div class="coach-setup" id="coachSetup">
+
+      <!-- CALL TYPE SELECTOR - shown when in call mode -->
+      <div id="callTypeSelector" style="margin-bottom:16px;">
+        <div style="font-family:var(--mono,'DM Mono',monospace);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:#a1a1aa;margin-bottom:8px;font-weight:600;">What type of call is this?</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <button onclick="setCallType('coldcall')" class="call-type-btn active" id="ct-coldcall" style="padding:9px 12px;border-radius:8px;border:1.5px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.15);font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12px;font-weight:700;color:#818cf8;cursor:pointer;text-align:left;transition:all 0.15s;">
+            📞 First Cold Call<br><span style="font-size:10px;font-weight:400;color:#71717a;">First time reaching out</span>
+          </button>
+          <button onclick="setCallType('followup')" class="call-type-btn" id="ct-followup" style="padding:9px 12px;border-radius:8px;border:1.5px solid #e4e4e7;background:#fff;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12px;font-weight:700;color:#09090b;cursor:pointer;text-align:left;transition:all 0.15s;">
+            🔄 Follow-Up Call<br><span style="font-size:10px;font-weight:400;color:#71717a;">They've heard from us before</span>
+          </button>
+          <button onclick="setCallType('demo')" class="call-type-btn" id="ct-demo" style="padding:9px 12px;border-radius:8px;border:1.5px solid #e4e4e7;background:#fff;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12px;font-weight:700;color:#09090b;cursor:pointer;text-align:left;transition:all 0.15s;">
+            🖥️ Demo Call<br><span style="font-size:10px;font-weight:400;color:#71717a;">Showing the product live</span>
+          </button>
+          <button onclick="setCallType('postdemo')" class="call-type-btn" id="ct-postdemo" style="padding:9px 12px;border-radius:8px;border:1.5px solid #e4e4e7;background:#fff;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12px;font-weight:700;color:#09090b;cursor:pointer;text-align:left;transition:all 0.15s;">
+            📋 Post-Demo Follow-Up<br><span style="font-size:10px;font-weight:400;color:#71717a;">After the demo, pushing to close</span>
+          </button>
+          <button onclick="setCallType('closing')" class="call-type-btn" id="ct-closing" style="padding:9px 12px;border-radius:8px;border:1.5px solid #e4e4e7;background:#fff;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12px;font-weight:700;color:#09090b;cursor:pointer;text-align:left;transition:all 0.15s;">
+            🏆 Closing Call<br><span style="font-size:10px;font-weight:400;color:#71717a;">Ready to ask for the deal</span>
+          </button>
+          <button onclick="setCallType('objection')" class="call-type-btn" id="ct-objection" style="padding:9px 12px;border-radius:8px;border:1.5px solid #e4e4e7;background:#fff;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12px;font-weight:700;color:#09090b;cursor:pointer;text-align:left;transition:all 0.15s;">
+            🛡️ Objection Call<br><span style="font-size:10px;font-weight:400;color:#71717a;">They're pushing back</span>
+          </button>
+        </div>
+        <div style="height:1px;background:#e4e4e7;margin:14px 0;"></div>
+      </div>
+
       <!-- HubSpot Search -->
       <div class="hs-connect-bar" id="hsConnectBar">
         <span class="hs-logo">🔗</span>
@@ -6120,6 +6152,56 @@ function saveRecap() {
     }
   });
 }
+
+
+// ── CALL TYPE SELECTOR ────────────────────────────────────────────────
+var _selectedCallType = 'coldcall';
+var _callTypeStageMap = {
+  coldcall: 'cold_call',
+  followup: 'cold_call',
+  demo: 'demo',
+  postdemo: 'closing',
+  closing: 'closing',
+  objection: 'objection'
+};
+var _callTypeLabels = {
+  coldcall: 'First Cold Call',
+  followup: 'Follow-Up Call',
+  demo: 'Demo Call',
+  postdemo: 'Post-Demo Follow-Up',
+  closing: 'Closing Call',
+  objection: 'Handling an Objection'
+};
+
+function setCallType(type) {
+  _selectedCallType = type;
+  // Update button styles
+  document.querySelectorAll('.call-type-btn').forEach(function(btn) {
+    btn.style.border = '1.5px solid #e4e4e7';
+    btn.style.background = '#fff';
+    btn.style.color = '#09090b';
+  });
+  var active = document.getElementById('ct-' + type);
+  if (active) {
+    active.style.border = '1.5px solid rgba(99,102,241,0.4)';
+    active.style.background = 'rgba(99,102,241,0.15)';
+    active.style.color = '#818cf8';
+  }
+  // Auto-set the deal stage dropdown
+  var stageEl = document.getElementById('f-stage');
+  if (stageEl && _callTypeStageMap[type]) {
+    stageEl.value = _callTypeStageMap[type];
+  }
+}
+
+// Override openCoach to show call type selector
+var _origOpenCoach = openCoach;
+openCoach = function() {
+  _origOpenCoach();
+  // Show call type selector
+  var selector = document.getElementById('callTypeSelector');
+  if (selector) selector.style.display = 'block';
+};
 
 </script>
 </body>
