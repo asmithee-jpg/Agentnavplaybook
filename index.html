@@ -2873,207 +2873,172 @@ body.dark-mode .home-card p { color: #71717a; }
 <div class="section" id="section-pricing">
   <div class="page-header">
     <div class="page-label">Before The Call</div>
-    <h1>Pricing</h1>
-    <p>Simple and transparent. No modules to unlock, no features held back, no annual contract required. What you see is what you get.</p>
+    <h1>Pricing & Quote Builder</h1>
+    <p>Enter prospect details and team size to generate a branded PDF quote instantly.</p>
   </div>
-
-  <div class="nba-bar">
-    <span class="nba-label">⚡ Sales Tips</span>
-    <div class="nba-actions">
-      <button class="nba-btn primary" onclick="qaCopy('No annual contract, no hidden fees, no features locked behind tiers. $79/month covers everything for a solo agent — quoting, CRM, SMS, Renewal Autopilot, all of it.')">📋 Copy Price Objection Answer</button>
-      <button class="nba-btn" onclick="openCoach()">🧠 Help Me Close This Deal</button>
-    </div>
-  </div>
-
-  <div class="content">
+  <div class="content" style="max-width:1100px;">
 
     <!-- PLAN CARDS -->
-    <div class="pricing-grid" style="margin-bottom:32px;">
-
-      <!-- SOLO -->
-      <div class="pricing-card" id="plan-solo">
-        <div class="pricing-tier">Single Agent</div>
-        <h3>Independent Agent</h3>
-        <div class="pricing-price">$79<span>/month</span></div>
-        <div class="pricing-per" style="color:var(--green);">Everything included · 1 seat · No contract</div>
-        <div style="height:1px;background:var(--divider);margin:14px 0;"></div>
-        <ul class="pricing-list">
-          <li>CRM with Rx profile, household & FPL tracking</li>
-          <li>ACA, STM, Life, Ancillary & Indemnity quoting</li>
-          <li>Sales Log & Policy Tracker with carrier verification</li>
-          <li>Renewal Autopilot — full OEP workflow</li>
-          <li>SMS messaging with dedicated number</li>
-          <li>Google Calendar sync</li>
-          <li>Add assistant for $25/month</li>
-        </ul>
-        <div style="margin-top:16px;">
-          <button class="qa-btn" style="width:100%;justify-content:center;padding:10px;" onclick="openQuoteModalWithPlan('solo')">📋 Copy Pricing Pitch</button>
-        </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;">
+      <div onclick="setQuotePlan('solo')" style="background:#fff;border:1px solid #e4e4e7;border-top:3px solid #6366f1;border-radius:10px;padding:14px 16px;text-align:center;cursor:pointer;">
+        <div style="font-size:10px;font-weight:600;color:#6366f1;margin-bottom:4px;font-family:monospace;letter-spacing:0.1em;">SOLO AGENT</div>
+        <div style="font-size:26px;font-weight:800;color:#09090b;letter-spacing:-1px;">$79</div>
+        <div style="font-size:11px;color:#71717a;">/month · 1 seat</div>
       </div>
-
-      <!-- SMALL AGENCY -->
-      <div class="pricing-card featured" id="plan-small">
-        <div class="pricing-tier">Most Popular · 4 Agents + 1 Assistant</div>
-        <h3>Small Agency</h3>
-        <div class="pricing-price">$247<span>/month</span></div>
-        <div class="pricing-per" style="color:var(--green);">~$49.40 per person · White label included</div>
-        <div style="height:1px;background:var(--divider);margin:14px 0;"></div>
-        <ul class="pricing-list">
-          <li>4 agent users + 1 assistant user</li>
-          <li>White-label agency branding across platform</li>
-          <li>Role-based permissions</li>
-          <li>CRM, Quoting, Sales Logs, Policy Tracker</li>
-          <li>Renewal Autopilot for full OEP workflow</li>
-          <li>SMS messaging with dedicated numbers</li>
-          <li>Google Calendar sync</li>
-          <li style="color:var(--blue);font-weight:600;">Additional agents $60/mo · Assistants $15/mo</li>
-        </ul>
-        <div style="margin-top:16px;">
-          <button class="qa-btn" style="width:100%;justify-content:center;padding:10px;" onclick="qaCopy('Small Agency plan is $247/month for 4 agents and 1 assistant — about $49 per person. Includes white-label branding, role-based permissions, and everything in the solo plan. Additional agents are $60/month each.')">📋 Copy Pricing Pitch</button>
-        </div>
+      <div onclick="setQuotePlan('small')" style="background:#fff;border:2px solid #6366f1;border-top:3px solid #6366f1;border-radius:10px;padding:14px 16px;text-align:center;cursor:pointer;box-shadow:0 0 0 3px rgba(99,102,241,0.1);">
+        <div style="font-size:10px;font-weight:600;color:#6366f1;margin-bottom:4px;font-family:monospace;letter-spacing:0.1em;">SMALL AGENCY ★</div>
+        <div style="font-size:26px;font-weight:800;color:#09090b;letter-spacing:-1px;">$247</div>
+        <div style="font-size:11px;color:#71717a;">/month · 4 agents</div>
       </div>
-
-      <!-- LARGE AGENCY -->
-      <div class="pricing-card" id="plan-large">
-        <div class="pricing-tier">10 Agents + 2 Assistants</div>
-        <h3>Large Agency</h3>
-        <div class="pricing-price">$597<span>/month</span></div>
-        <div class="pricing-per" style="color:var(--green);">~$49.75 per person · White label included</div>
-        <div style="height:1px;background:var(--divider);margin:14px 0;"></div>
-        <ul class="pricing-list">
-          <li>10 agent users + 2 assistant users</li>
-          <li>White-label agency branding across platform</li>
-          <li>Role-based permissions</li>
-          <li>Performance tracking & reporting</li>
-          <li>CRM, Quoting, Sales Logs, Policy Tracker</li>
-          <li>Renewal Autopilot for full OEP workflow</li>
-          <li>SMS messaging with dedicated numbers</li>
-          <li>Google Calendar sync</li>
-          <li style="color:var(--blue);font-weight:600;">Additional agents $55/mo · Assistants $10/mo</li>
-        </ul>
-        <div style="margin-top:16px;">
-          <button class="qa-btn" style="width:100%;justify-content:center;padding:10px;" onclick="qaCopy('Large Agency plan is $597/month for 10 agents and 2 assistants — about $50 per person. White-label branding, performance tracking, role-based permissions, and everything in the smaller plans. Additional agents are $55/month each.')">📋 Copy Pricing Pitch</button>
-        </div>
+      <div onclick="setQuotePlan('large')" style="background:#fff;border:1px solid #e4e4e7;border-top:3px solid #6366f1;border-radius:10px;padding:14px 16px;text-align:center;cursor:pointer;">
+        <div style="font-size:10px;font-weight:600;color:#6366f1;margin-bottom:4px;font-family:monospace;letter-spacing:0.1em;">LARGE AGENCY</div>
+        <div style="font-size:26px;font-weight:800;color:#09090b;letter-spacing:-1px;">$597</div>
+        <div style="font-size:11px;color:#71717a;">/month · 10 agents</div>
       </div>
-
+      <div onclick="setQuotePlan('enterprise')" style="background:#0c0c14;border:1px solid #27272a;border-top:3px solid #6366f1;border-radius:10px;padding:14px 16px;text-align:center;cursor:pointer;">
+        <div style="font-size:10px;font-weight:600;color:#818cf8;margin-bottom:4px;font-family:monospace;letter-spacing:0.1em;">ENTERPRISE</div>
+        <div style="font-size:26px;font-weight:800;color:#fff;letter-spacing:-1px;">Custom</div>
+        <div style="font-size:11px;color:#71717a;">20+ agents</div>
+      </div>
     </div>
 
-    <!-- ENTERPRISE / CUSTOM CALCULATOR -->
-    <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--card-shadow);margin-bottom:32px;">
-      <div style="background:linear-gradient(135deg,#0f0f17,#1e1b4b);padding:24px 28px;">
-        <div style="font-family:var(--mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(165,180,252,0.8);margin-bottom:6px;">Enterprise / Custom</div>
-        <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;margin-bottom:4px;">Build Your Custom Quote</div>
-        <div style="font-size:13px;color:rgba(255,255,255,0.6);">20+ agents · White label · Performance tracking · Priority support · Dedicated onboarding</div>
-      </div>
-      <div style="padding:24px 28px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
-          <div>
-            <label style="font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:8px;font-weight:500;">Number of Agents</label>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button onclick="adjustAgents(-5)" style="width:36px;height:36px;border-radius:8px;border:1px solid var(--card-border);background:var(--body-bg);font-size:16px;font-weight:700;cursor:pointer;color:var(--text-primary);">−</button>
-              <input type="number" id="agentCount" value="20" min="20" max="500" step="5" oninput="calcPrice()" style="width:80px;text-align:center;border:1px solid var(--card-border);border-radius:8px;padding:8px;font-size:16px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;color:var(--text-primary);">
-              <button onclick="adjustAgents(5)" style="width:36px;height:36px;border-radius:8px;border:1px solid var(--card-border);background:var(--body-bg);font-size:16px;font-weight:700;cursor:pointer;color:var(--text-primary);">+</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+
+      <!-- LEFT: CONTACT FORM -->
+      <div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+        <div style="padding:14px 20px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;">
+          <div style="font-size:9.5px;font-weight:600;color:#71717a;font-family:monospace;letter-spacing:0.12em;text-transform:uppercase;">Prospect Details</div>
+        </div>
+        <div style="padding:18px 20px;display:flex;flex-direction:column;gap:11px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div>
+              <label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">First Name</label>
+              <input id="qb-fname" type="text" placeholder="Mike" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:9px 11px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;font-family:system-ui;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
             </div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Minimum 20 agents for enterprise</div>
-          </div>
-          <div>
-            <label style="font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:8px;font-weight:500;">Number of Assistants</label>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button onclick="adjustAssistants(-1)" style="width:36px;height:36px;border-radius:8px;border:1px solid var(--card-border);background:var(--body-bg);font-size:16px;font-weight:700;cursor:pointer;color:var(--text-primary);">−</button>
-              <input type="number" id="assistantCount" value="4" min="4" max="100" step="1" oninput="calcPrice()" style="width:80px;text-align:center;border:1px solid var(--card-border);border-radius:8px;padding:8px;font-size:16px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;color:var(--text-primary);">
-              <button onclick="adjustAssistants(1)" style="width:36px;height:36px;border-radius:8px;border:1px solid var(--card-border);background:var(--body-bg);font-size:16px;font-weight:700;cursor:pointer;color:var(--text-primary);">+</button>
+            <div>
+              <label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Last Name</label>
+              <input id="qb-lname" type="text" placeholder="Torres" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:9px 11px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;font-family:system-ui;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
             </div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Auto-calculated: 1 per 5 agents</div>
           </div>
-        </div>
-
-        <!-- Price display -->
-        <div style="background:var(--body-bg);border-radius:10px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:20px;">
           <div>
-            <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;">Monthly Price</div>
-            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:40px;font-weight:800;color:var(--blue);letter-spacing:-2px;line-height:1;" id="calcPrice">$897</div>
-            <div style="font-size:12px;color:var(--green);font-weight:600;margin-top:3px;" id="calcPerPerson">~$37 per person/month</div>
+            <label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Agency Name</label>
+            <input id="qb-agency" type="text" placeholder="Sunrise Health Agency" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:9px 11px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;font-family:system-ui;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
           </div>
-          <div style="text-align:right;">
-            <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;">Annual Savings (10%)</div>
-            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:24px;font-weight:800;color:var(--green);letter-spacing:-1px;" id="calcAnnual">$9,683/yr</div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:3px;" id="calcSavings">Save $1,076 vs monthly</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div>
+              <label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Email</label>
+              <input id="qb-email" type="email" placeholder="mike@agency.com" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:9px 11px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;font-family:system-ui;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
+            </div>
+            <div>
+              <label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Phone</label>
+              <input id="qb-phone" type="tel" placeholder="(555) 000-0000" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:9px 11px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;font-family:system-ui;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
+            </div>
+          </div>
+          <div style="border-top:1px solid #e4e4e7;padding-top:12px;">
+            <div style="font-size:9px;font-weight:600;color:#71717a;margin-bottom:10px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Team Size</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+              <div>
+                <label style="font-size:9px;color:#71717a;display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Agents</label>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <button onclick="adjustQBAgents(-1)" style="width:30px;height:30px;border:1px solid #e4e4e7;border-radius:6px;background:#f8f8fa;font-size:16px;cursor:pointer;font-family:system-ui;">-</button>
+                  <input id="qb-agents" type="number" value="1" min="1" max="500" oninput="updateQuotePreview2()" style="width:55px;text-align:center;border:1.5px solid #e4e4e7;border-radius:7px;padding:6px;font-size:15px;font-weight:700;color:#09090b;">
+                  <button onclick="adjustQBAgents(1)" style="width:30px;height:30px;border:1px solid #e4e4e7;border-radius:6px;background:#f8f8fa;font-size:16px;cursor:pointer;font-family:system-ui;">+</button>
+                </div>
+              </div>
+              <div>
+                <label style="font-size:9px;color:#71717a;display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Assistants</label>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <button onclick="adjustQBAssistants(-1)" style="width:30px;height:30px;border:1px solid #e4e4e7;border-radius:6px;background:#f8f8fa;font-size:16px;cursor:pointer;font-family:system-ui;">-</button>
+                  <input id="qb-assistants" type="number" value="0" min="0" max="100" oninput="updateQuotePreview2()" style="width:55px;text-align:center;border:1.5px solid #e4e4e7;border-radius:7px;padding:6px;font-size:15px;font-weight:700;color:#09090b;">
+                  <button onclick="adjustQBAssistants(1)" style="width:30px;height:30px;border:1px solid #e4e4e7;border-radius:6px;background:#f8f8fa;font-size:16px;cursor:pointer;font-family:system-ui;">+</button>
+                </div>
+              </div>
+            </div>
+            <div id="qb-plan-display" style="background:#eef2ff;border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <div style="font-size:13px;font-weight:700;color:#6366f1;" id="qb-plan-name">Independent Agent</div>
+                <div style="font-size:11px;color:#71717a;" id="qb-plan-desc">1 agent, all features</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:22px;font-weight:800;color:#6366f1;letter-spacing:-1px;" id="qb-price-display">$79</div>
+                <div style="font-size:11px;color:#71717a;">/month</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Your Name (Rep)</label>
+            <input id="qb-repname" type="text" placeholder="Your name" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:9px 11px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;font-family:system-ui;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
+          </div>
+          <div>
+            <label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Notes (optional)</label>
+            <input id="qb-notes" type="text" placeholder="e.g. Includes dedicated onboarding" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:9px 11px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;font-family:system-ui;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
+          </div>
+          <button onclick="generateQuotePDF2()" style="width:100%;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:9px;padding:13px;font-size:14px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 4px 16px rgba(99,102,241,0.3);font-family:system-ui;">
+            Download PDF Quote
+          </button>
+        </div>
+      </div>
+
+      <!-- RIGHT: INCLUDED + ENTERPRISE -->
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+          <div style="padding:13px 18px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;">
+            <div style="font-size:9.5px;font-weight:600;color:#71717a;font-family:monospace;letter-spacing:0.12em;text-transform:uppercase;">Every Plan Includes</div>
+          </div>
+          <div style="padding:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:7px;">
+            <div style="font-size:12.5px;color:#52525b;display:flex;gap:6px;"><span style="color:#10b981;font-weight:700;">&#10003;</span>ACA, STM, Life, Ancillary &amp; Indemnity</div>
+            <div style="font-size:12.5px;color:#52525b;display:flex;gap:6px;"><span style="color:#10b981;font-weight:700;">&#10003;</span>Full CRM &amp; household tracking</div>
+            <div style="font-size:12.5px;color:#52525b;display:flex;gap:6px;"><span style="color:#10b981;font-weight:700;">&#10003;</span>Renewal Autopilot OEP workflow</div>
+            <div style="font-size:12.5px;color:#52525b;display:flex;gap:6px;"><span style="color:#10b981;font-weight:700;">&#10003;</span>SMS with dedicated number</div>
+            <div style="font-size:12.5px;color:#52525b;display:flex;gap:6px;"><span style="color:#10b981;font-weight:700;">&#10003;</span>HealthSherpa &amp; EDE integration</div>
+            <div style="font-size:12.5px;color:#52525b;display:flex;gap:6px;"><span style="color:#10b981;font-weight:700;">&#10003;</span>Google Calendar sync</div>
+            <div style="font-size:12.5px;color:#52525b;display:flex;gap:6px;"><span style="color:#10b981;font-weight:700;">&#10003;</span>Policy tracker &amp; reconciliation</div>
+            <div style="font-size:12.5px;color:#52525b;display:flex;gap:6px;"><span style="color:#10b981;font-weight:700;">&#10003;</span>No annual contract</div>
           </div>
         </div>
 
-        <!-- Breakdown -->
-        <div style="border:1px solid var(--divider);border-radius:8px;overflow:hidden;margin-bottom:20px;">
-          <div style="padding:10px 16px;border-bottom:1px solid var(--divider);display:flex;justify-content:space-between;font-size:13px;">
-            <span style="color:var(--text-secondary);">Base plan (10 agents + 2 assistants)</span>
-            <span style="font-weight:600;color:var(--text-primary);">$597</span>
+        <div style="background:#0c0c14;border:1px solid rgba(255,255,255,0.07);border-radius:12px;overflow:hidden;">
+          <div style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <div style="font-size:9.5px;font-weight:600;color:rgba(165,180,252,0.7);font-family:monospace;letter-spacing:0.12em;text-transform:uppercase;">Enterprise Calculator (20+ agents)</div>
           </div>
-          <div style="padding:10px 16px;border-bottom:1px solid var(--divider);display:flex;justify-content:space-between;font-size:13px;" id="breakdownAgents">
-            <span style="color:var(--text-secondary);">Additional agents (10 × $30/mo)</span>
-            <span style="font-weight:600;color:var(--text-primary);">$300</span>
+          <div style="padding:16px 18px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+              <div>
+                <label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Agents</label>
+                <div style="display:flex;align-items:center;gap:5px;">
+                  <button onclick="adjustAgents(-10)" style="width:28px;height:28px;border:1px solid rgba(255,255,255,0.1);border-radius:5px;background:rgba(255,255,255,0.05);color:#fff;cursor:pointer;">-</button>
+                  <input id="agentCount" type="number" value="20" min="20" max="500" oninput="calcPrice()" style="width:55px;text-align:center;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:5px;font-size:13px;font-weight:700;color:#fff;background:rgba(255,255,255,0.05);">
+                  <button onclick="adjustAgents(10)" style="width:28px;height:28px;border:1px solid rgba(255,255,255,0.1);border-radius:5px;background:rgba(255,255,255,0.05);color:#fff;cursor:pointer;">+</button>
+                </div>
+              </div>
+              <div>
+                <label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Assistants</label>
+                <div style="display:flex;align-items:center;gap:5px;">
+                  <button onclick="adjustAssistants(-1)" style="width:28px;height:28px;border:1px solid rgba(255,255,255,0.1);border-radius:5px;background:rgba(255,255,255,0.05);color:#fff;cursor:pointer;">-</button>
+                  <input id="assistantCount" type="number" value="4" min="4" max="100" oninput="calcPrice()" style="width:55px;text-align:center;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:5px;font-size:13px;font-weight:700;color:#fff;background:rgba(255,255,255,0.05);">
+                  <button onclick="adjustAssistants(1)" style="width:28px;height:28px;border:1px solid rgba(255,255,255,0.1);border-radius:5px;background:rgba(255,255,255,0.05);color:#fff;cursor:pointer;">+</button>
+                </div>
+              </div>
+            </div>
+            <div style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.25);border-radius:8px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <div>
+                <div style="font-size:11px;color:rgba(165,180,252,0.7);margin-bottom:2px;" id="calcPerPerson">~$30/person/month</div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.35);" id="calcSavings">Save $0 annually</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:26px;font-weight:800;color:#818cf8;letter-spacing:-1px;" id="calcPrice">$897</div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.35);" id="calcAnnual">$9,683/yr (10% off)</div>
+              </div>
+            </div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:10px;" id="breakdownAgents">Base $597 + extras</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:12px;" id="breakdownAssistants"></div>
+            <button onclick="useEnterpriseQuote()" style="width:100%;background:#6366f1;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:system-ui;">Use This Price in Quote Above</button>
           </div>
-          <div style="padding:10px 16px;display:flex;justify-content:space-between;font-size:13px;" id="breakdownAssistants">
-            <span style="color:var(--text-secondary);">Additional assistants (2 × $10/mo)</span>
-            <span style="font-weight:600;color:var(--text-primary);">$20</span>
-          </div>
-        </div>
-
-        <!-- What's included -->
-        <div style="margin-bottom:20px;">
-          <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;font-weight:500;">Everything Included</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-            <div style="font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;"><span style="color:var(--green);font-weight:700;">✓</span> White-label agency branding</div>
-            <div style="font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;"><span style="color:var(--green);font-weight:700;">✓</span> Role-based permissions</div>
-            <div style="font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;"><span style="color:var(--green);font-weight:700;">✓</span> Performance tracking</div>
-            <div style="font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;"><span style="color:var(--green);font-weight:700;">✓</span> Priority support</div>
-            <div style="font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;"><span style="color:var(--green);font-weight:700;">✓</span> Dedicated onboarding</div>
-            <div style="font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;"><span style="color:var(--green);font-weight:700;">✓</span> CRM + Quoting + All tools</div>
-            <div style="font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;"><span style="color:var(--green);font-weight:700;">✓</span> Renewal Autopilot</div>
-            <div style="font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;"><span style="color:var(--green);font-weight:700;">✓</span> SMS + Google Calendar</div>
-          </div>
-        </div>
-
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="qa-btn" style="flex:1;justify-content:center;padding:12px;font-size:13px;font-weight:700;" id="copyQuoteBtn" onclick="copyCustomQuote()">📋 Copy Quote</button>
-          <button class="qa-btn" style="flex:1;justify-content:center;padding:12px;font-size:13px;font-weight:700;border-color:var(--blue);color:var(--blue);background:var(--blue-light);" onclick="openQuoteModal()">📄 Generate PDF Quote</button>
-          <button class="qa-btn" style="flex:1;justify-content:center;padding:12px;font-size:13px;font-weight:700;border-color:var(--blue);color:var(--blue);" onclick="openCoach()">🧠 Help Me Close This</button>
         </div>
       </div>
     </div>
-
-    <!-- COMPARE TABLE -->
-    <div class="divider"></div>
-    <h2 class="content-heading" style="margin-bottom:4px;">How That Compares To Everyone Else</h2>
-    <p class="content-sub">What agents typically pay running multiple tools separately.</p>
-
-    <div class="matrix-wrap">
-      <table class="matrix-table">
-        <thead>
-          <tr>
-            <th>Platform</th>
-            <th class="us">AgentNav</th>
-            <th>EZLynx</th>
-            <th>AgencyBloc</th>
-            <th>Agent CRM</th>
-            <th>HawkSoft</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td>Starting price / agent</td><td class="us"><span class="chip chip-yes">$79/mo</span></td><td><span class="chip chip-no">$150+/mo</span></td><td><span class="chip chip-partial">$100+/mo</span></td><td><span class="chip chip-partial">$97/mo</span></td><td><span class="chip chip-no">$90+/mo</span></td></tr>
-          <tr><td>ACA, STM, Life, Ancillary & Indemnity quoting</td><td class="us"><span class="chip chip-yes">Yes</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-partial">Partial</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-no">No</span></td></tr>
-          <tr><td>HealthSherpa / EDE enrollment sync</td><td class="us"><span class="chip chip-yes">Yes</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-no">No</span></td></tr>
-          <tr><td>Renewal Autopilot (OEP automation)</td><td class="us"><span class="chip chip-yes">Yes</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-no">No</span></td></tr>
-          <tr><td>Built-in SMS with dedicated number</td><td class="us"><span class="chip chip-yes">Yes</span></td><td><span class="chip chip-no">Add-on</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-partial">Add-on</span></td><td><span class="chip chip-no">No</span></td></tr>
-          <tr><td>White-label branding</td><td class="us"><span class="chip chip-yes">Yes</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-partial">Partial</span></td><td><span class="chip chip-no">No</span></td><td><span class="chip chip-no">No</span></td></tr>
-          <tr><td>Annual contract required</td><td class="us"><span class="chip chip-yes">No</span></td><td><span class="chip chip-no">Yes</span></td><td><span class="chip chip-no">Yes</span></td><td><span class="chip chip-partial">Optional</span></td><td><span class="chip chip-no">Yes</span></td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">Yes = native · Partial = limited/third-party · No = not available</p>
-
   </div>
 </div>
-
-<!-- ── COLD CALL ────────────────────────────────────────────────────────── -->
 <div class="section" id="section-coldcall">
   <div class="page-header">
     <div class="page-label">On The Call</div>
@@ -4907,7 +4872,7 @@ async function generateGamePlan() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5',
         max_tokens: coachMode === 'deep' ? 2000 : 1200,
         system: buildSystemPrompt(),
         messages: conversationHistory
@@ -5049,7 +5014,7 @@ async function sendFollowup() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5',
         max_tokens: 800,
         system: buildSystemPrompt(),
         messages: conversationHistory
@@ -5726,7 +5691,7 @@ async function generateDemoRecap() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5',
         max_tokens: 1200,
         system: 'You are an elite B2B sales coach. You give specific, directive, actionable coaching based on real deal data. You extract exact prospect language and use it in your recommendations. You never give generic advice.',
         messages: [{ role: 'user', content: prompt }]
@@ -6268,6 +6233,96 @@ function setCallType(type) {
 }
 
 // Call type selector is now integrated directly into openCoach()
+
+
+// ── QUOTE BUILDER ──────────────────────────────────────────────
+function getQuoteCalc2(agents, assistants) {
+  agents = parseInt(agents) || 1;
+  assistants = parseInt(assistants) || 0;
+  var monthly, planName, planDesc;
+  if (agents === 1) { monthly = 79 + assistants*25; planName = 'Independent Agent'; planDesc = '1 agent, all features included'; }
+  else if (agents <= 4) { monthly = 247 + Math.max(0,agents-4)*60 + Math.max(0,assistants-1)*15; planName = 'Small Agency'; planDesc = agents+' agents + '+assistants+' assistant'+(assistants!==1?'s':''); }
+  else if (agents <= 10) { monthly = 597 + Math.max(0,agents-10)*55 + Math.max(0,assistants-2)*10; planName = 'Large Agency'; planDesc = agents+' agents + '+assistants+' assistant'+(assistants!==1?'s':''); }
+  else { var ex=Math.max(0,agents-10); var t1=Math.min(ex,40),t2=Math.min(Math.max(ex-40,0),50),t3=Math.min(Math.max(ex-90,0),100),t4=Math.max(ex-190,0); monthly=597+t1*30+t2*27+t3*24+t4*22+Math.max(0,assistants-2)*10; planName='Enterprise'; planDesc=agents+' agents + '+assistants+' assistants'; }
+  return { planName:planName, planDesc:planDesc, monthly:monthly, annual:Math.round(monthly*12*0.9), perPerson:Math.round(monthly/Math.max(1,agents+assistants)) };
+}
+
+function updateQuotePreview2() {
+  var agents = parseInt(document.getElementById('qb-agents').value)||1;
+  var assistants = parseInt(document.getElementById('qb-assistants').value)||0;
+  var q = getQuoteCalc2(agents, assistants);
+  var n=document.getElementById('qb-plan-name'), d=document.getElementById('qb-plan-desc'), p=document.getElementById('qb-price-display');
+  if(n) n.textContent=q.planName; if(d) d.textContent=q.planDesc; if(p) p.textContent='$'+q.monthly.toLocaleString();
+}
+
+function adjustQBAgents(delta) { var el=document.getElementById('qb-agents'); if(!el) return; el.value=Math.max(1,Math.min(500,(parseInt(el.value)||1)+delta)); updateQuotePreview2(); }
+function adjustQBAssistants(delta) { var el=document.getElementById('qb-assistants'); if(!el) return; el.value=Math.max(0,(parseInt(el.value)||0)+delta); updateQuotePreview2(); }
+
+function setQuotePlan(plan) {
+  var plans={solo:[1,0],small:[4,1],large:[10,2],enterprise:[20,4]};
+  var v=plans[plan]||[1,0];
+  var a=document.getElementById('qb-agents'),b=document.getElementById('qb-assistants');
+  if(a) a.value=v[0]; if(b) b.value=v[1];
+  updateQuotePreview2();
+}
+
+function useEnterpriseQuote() {
+  var agents=document.getElementById('agentCount').value;
+  var assts=document.getElementById('assistantCount').value;
+  var a=document.getElementById('qb-agents'),b=document.getElementById('qb-assistants');
+  if(a) a.value=agents; if(b) b.value=assts;
+  updateQuotePreview2();
+  showToast('Enterprise price applied!');
+}
+
+function generateQuotePDF2() {
+  var fname=document.getElementById('qb-fname').value.trim();
+  var lname=document.getElementById('qb-lname').value.trim();
+  var agency=document.getElementById('qb-agency').value.trim();
+  var email=document.getElementById('qb-email').value.trim();
+  var phone=document.getElementById('qb-phone').value.trim();
+  var repName=document.getElementById('qb-repname').value.trim()||'AgentNav Sales';
+  var notes=document.getElementById('qb-notes').value.trim();
+  var agents=parseInt(document.getElementById('qb-agents').value)||1;
+  var assistants=parseInt(document.getElementById('qb-assistants').value)||0;
+  var prospect=((fname+' '+lname).trim()||agency)||'Valued Prospect';
+  var q=getQuoteCalc2(agents,assistants);
+  if(!window.jspdf){showToast('PDF loading, try again');return;}
+  var doc=new window.jspdf.jsPDF({unit:'mm',format:'letter'});
+  var W=215.9;
+  doc.setFillColor(12,12,20);doc.rect(0,0,W,38,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(18);doc.setTextColor(255,255,255);doc.text('AgentNav Sales Coach',18,22);
+  doc.setFontSize(8);doc.setTextColor(165,180,252);doc.text('SALES PROPOSAL',18,30);
+  var today=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  doc.text(today,W-18,22,{align:'right'});doc.text('Valid 30 days',W-18,29,{align:'right'});
+  var y=50;
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(120,120,140);doc.text('PREPARED FOR',18,y);y+=7;
+  doc.setFont('helvetica','bold');doc.setFontSize(20);doc.setTextColor(9,9,11);doc.text(prospect,18,y);y+=7;
+  if(agency&&agency!==prospect){doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(82,82,91);doc.text(agency,18,y);y+=5;}
+  if(email){doc.setFontSize(9);doc.setTextColor(120,120,140);doc.text(email,18,y);y+=4;}
+  if(phone){doc.setFontSize(9);doc.setTextColor(120,120,140);doc.text(phone,18,y);y+=4;}
+  y+=6;
+  doc.setFillColor(238,242,255);doc.roundedRect(18,y,W-36,30,4,4,'F');
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(99,102,241);doc.text('RECOMMENDED PLAN',26,y+7);
+  doc.setFont('helvetica','bold');doc.setFontSize(16);doc.setTextColor(9,9,11);doc.text(q.planName,26,y+16);
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(82,82,91);doc.text(q.planDesc,26,y+23);
+  doc.setFont('helvetica','bold');doc.setFontSize(26);doc.setTextColor(99,102,241);doc.text('$'+q.monthly.toLocaleString(),W-20,y+18,{align:'right'});
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(82,82,91);doc.text('/month',W-20,y+25,{align:'right'});
+  y+=38;
+  var rows=[['Monthly','$'+q.monthly.toLocaleString()+'/mo'],['Annual (10% off)','$'+q.annual.toLocaleString()+'/yr'],['Per Person','$'+q.perPerson+'/person'],['Contract','Month-to-month, cancel anytime']];
+  rows.forEach(function(row,i){if(i%2===0){doc.setFillColor(248,248,250);doc.rect(18,y-3,W-36,9,'F');}doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(82,82,91);doc.text(row[0],22,y+2);doc.setFont('helvetica','bold');doc.setTextColor(9,9,11);doc.text(row[1],W-22,y+2,{align:'right'});y+=9;});
+  y+=6;
+  doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(9,9,11);doc.text("What's Included",18,y);y+=7;
+  ['ACA,STM,Life,Ancillary&Indemnity quoting','Full CRM with household tracking','Renewal Autopilot OEP automation','SMS with dedicated agent number','HealthSherpa & EDE integration','Policy tracker & reconciliation','Google Calendar sync','No annual contract required'].forEach(function(f,i){var col=i%2,row=Math.floor(i/2),fx=18+col*(W-36)/2,fy=y+row*8;doc.setFillColor(16,185,129);doc.circle(fx+2,fy-0.5,1,'F');doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(82,82,91);doc.text(f.length>44?f.slice(0,44)+'...':f,fx+6,fy);});
+  y+=Math.ceil(8/2)*8+8;
+  if(notes){doc.setFillColor(255,251,235);doc.roundedRect(18,y,W-36,13,3,3,'F');doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(120,80,0);doc.text('NOTE: ',22,y+6);doc.setFont('helvetica','normal');doc.setTextColor(82,60,0);doc.text(notes,36,y+6);y+=18;}
+  doc.setFillColor(248,248,250);doc.rect(0,279.4-20,W,20,'F');
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(140,140,160);
+  doc.text('Prepared by: '+repName,18,279.4-11);doc.text('agentnav.com',18,279.4-5);
+  doc.setFont('helvetica','bold');doc.setTextColor(99,102,241);doc.text('AgentNav Sales Coach',W-18,279.4-8,{align:'right'});
+  doc.save('AgentNav-Quote-'+prospect.replace(/[^a-z0-9]/gi,'-')+'.pdf');
+  showToast('PDF downloaded!');
+}
 
 </script>
 </body>
