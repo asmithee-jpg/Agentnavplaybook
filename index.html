@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AgentNav — Sales Playbook</title>
+<title>AgentNav Sales Coach</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -2244,9 +2244,9 @@ body.dark-mode .home-card p { color: #71717a; }
 <nav class="sidebar" id="sidebar">
   <div class="sidebar-header">
     <div class="sidebar-brand">
-      <span class="brand-name">AgentNav</span>
+      <span class="brand-name">AgentNav Sales Coach</span>
     </div>
-    <div class="sidebar-subtitle">Sales Playbook</div>
+    <div class="sidebar-subtitle">AI-Powered · Deal Specific</div>
   </div>
 
   <button class="call-mode-toggle" id="callModeToggle" onclick="toggleCallMode()">🔴 On A Call Right Now</button>
@@ -5812,7 +5812,7 @@ showSection = function(id, btn) {
 <div class="auth-modal-overlay" id="authModal">
   <div class="auth-modal">
     <div class="auth-modal-header">
-      <h2 id="authModalTitle">Sign in to AgentNav</h2>
+      <h2 id="authModalTitle">Sign in to AgentNav Sales Coach</h2>
       <p id="authModalSub">Access your sales playbook and save demo recaps</p>
     </div>
     <div class="auth-modal-body">
@@ -5846,7 +5846,13 @@ var _authMode = 'signin'; // or 'signup'
 
 function getSupabase() {
   if (!_supabase && window.supabase && SUPABASE_ANON_KEY !== 'REPLACE_WITH_ANON_KEY') {
-    _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      }
+    });
   }
   return _supabase;
 }
@@ -5855,6 +5861,26 @@ function getSupabase() {
 document.addEventListener('DOMContentLoaded', function() {
   var sb = getSupabase();
   if (!sb) return;
+
+  // Handle email confirmation redirect (access_token in URL hash)
+  var hash = window.location.hash;
+  if (hash && hash.includes('access_token')) {
+    // Supabase will auto-detect and set the session
+    setTimeout(function() {
+      sb.auth.getSession().then(function(result) {
+        if (result.data && result.data.session) {
+          _currentUser = result.data.session.user;
+          onUserLoggedIn(_currentUser);
+          // Clean up the URL
+          window.history.replaceState({}, document.title, window.location.pathname);
+          showToast('Email confirmed! Welcome to AgentNav Sales Coach.');
+        } else {
+          openAuthModal();
+        }
+      });
+    }, 500);
+    return;
+  }
 
   // Check existing session
   sb.auth.getSession().then(function(result) {
@@ -5894,7 +5920,7 @@ function authSkip() {
 
 function authToggleMode() {
   _authMode = _authMode === 'signin' ? 'signup' : 'signin';
-  document.getElementById('authModalTitle').textContent = _authMode === 'signin' ? 'Sign in to AgentNav' : 'Create your account';
+  document.getElementById('authModalTitle').textContent = _authMode === 'signin' ? 'Sign in to AgentNav Sales Coach' : 'Create your account';
   document.getElementById('authModalSub').textContent = _authMode === 'signin' ? 'Access your sales playbook and saved recaps' : 'Start saving demo recaps and coaching notes';
   document.getElementById('authSubmitBtn').textContent = _authMode === 'signin' ? 'Sign In' : 'Create Account';
   document.getElementById('authToggleText').textContent = _authMode === 'signin' ? "Don't have an account?" : 'Already have an account?';
