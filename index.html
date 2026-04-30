@@ -2170,9 +2170,57 @@ body.dark-mode .home-card p { color: #71717a; }
 .nba-bar { padding: 10px 16px !important; }
 .nba-label { font-size: 9px !important; }
 .nba-btn { padding: 5px 12px !important; font-size: 11.5px !important; }
+
+/* ══ SUPABASE AUTH ═══════════════════════════════════════════════════ */
+.auth-modal-overlay {
+  position: fixed; inset: 0; background: rgba(9,9,11,0.8);
+  z-index: 3000; display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+.auth-modal-overlay.open { opacity: 1; pointer-events: all; }
+.auth-modal {
+  background: #fff; border-radius: 16px; width: 400px; max-width: 95vw;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.3); overflow: hidden;
+  transform: translateY(12px); transition: transform 0.25s cubic-bezier(0.16,1,0.3,1);
+}
+.auth-modal-overlay.open .auth-modal { transform: translateY(0); }
+.auth-modal-header { background: #0c0c14; padding: 28px 28px 20px; }
+.auth-modal-header h2 { font-family: 'Plus Jakarta Sans',system-ui,sans-serif; font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -0.5px; margin-bottom: 4px; }
+.auth-modal-header p { font-size: 12.5px; color: rgba(255,255,255,0.45); margin: 0; }
+.auth-modal-body { padding: 22px 28px 24px; background: #fff; }
+.auth-field { margin-bottom: 14px; }
+.auth-field label { font-family: 'DM Mono',monospace; font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: #71717a; display: block; margin-bottom: 5px; }
+.auth-field input { width: 100%; border: 1.5px solid #e4e4e7; border-radius: 8px; padding: 10px 13px; font-family: 'Plus Jakarta Sans',system-ui,sans-serif; font-size: 13.5px; color: #09090b; background: #fff; outline: none; transition: border-color 0.15s; box-sizing: border-box; }
+.auth-field input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+.auth-submit-btn { width: 100%; background: linear-gradient(135deg,#6366f1,#8b5cf6); border: none; border-radius: 9px; padding: 13px; font-family: 'Plus Jakarta Sans',system-ui,sans-serif; font-size: 14px; font-weight: 700; color: #fff; cursor: pointer; box-shadow: 0 4px 16px rgba(99,102,241,0.3); transition: all 0.15s; margin-top: 6px; }
+.auth-submit-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(99,102,241,0.4); }
+.auth-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.auth-error { font-size: 12px; color: #ef4444; margin-top: 10px; text-align: center; background: #fef2f2; padding: 8px 12px; border-radius: 7px; }
+.auth-toggle { text-align: center; margin-top: 12px; font-size: 13px; color: #71717a; }
+.auth-toggle a { color: #6366f1; cursor: pointer; font-weight: 600; }
+.auth-skip-btn { width: 100%; background: none; border: 1px solid #e4e4e7; border-radius: 8px; padding: 9px; font-family: 'Plus Jakarta Sans',system-ui,sans-serif; font-size: 12.5px; color: #71717a; cursor: pointer; margin-top: 10px; transition: all 0.15s; }
+.auth-skip-btn:hover { background: #f4f4f5; color: #09090b; }
+
+/* User bar in header */
+.user-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 8px 4px 4px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 20px; font-size: 12px;
+}
+.user-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue), var(--purple));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff;
+}
+.user-name { font-size: 12px; font-weight: 600; color: var(--text-1); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-logout { font-size: 11px; color: var(--text-3); cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: all 0.12s; }
+.user-logout:hover { color: var(--red); background: var(--red-dim); }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -2234,6 +2282,7 @@ body.dark-mode .home-card p { color: #71717a; }
     <button class="nav-item" data-section="objections" onclick="showSection('objections',this)"><span class="nav-icon">🛡️</span>Objection Handling</button>
     <button class="nav-item" data-section="battlecards" onclick="showSection('battlecards',this)"><span class="nav-icon">✕</span>Battle Cards</button>
     <button class="nav-item" data-section="talktracks" onclick="showSection('talktracks',this)"><span class="nav-icon">💬</span>Talk Tracks</button>
+    <button class="nav-item" data-section="demorecap" onclick="showSection('demorecap',this)"><span class="nav-icon">📝</span>Demo Recap</button>
   </div>
 
   <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">
@@ -2249,90 +2298,123 @@ body.dark-mode .home-card p { color: #71717a; }
 <div class="call-mode-bar" id="callModeBar"><span>🔴 CALL MODE ACTIVE — Scripts only. No distractions.</span><button onclick="toggleCallMode()">Exit Call Mode</button></div>
 
 <div class="section home-section active" id="section-home">
-  <div class="home-hero">
-    <div class="home-hero-label">AgentNav Sales Playbook</div>
-    <h1>Close more deals.<br><span>Know every answer.</span></h1>
-    <p>Your complete playbook for selling AgentNav — scripts, battle cards, objection handling, live AI coaching, and HubSpot-connected deal intelligence.</p>
-    <div class="home-quick-actions">
-      <button class="home-qa-btn primary" onclick="showSection('coldcall', null)">📞 I'm On A Call Right Now</button>
-      <button class="home-qa-btn" onclick="openCoach()">🧠 Ask AI Coach</button>
-      <button class="home-qa-btn" onclick="showSection('pitches', null)">⚡ Elevator Pitches</button>
-      <button class="home-qa-btn" onclick="showSection('pricing', null)">💰 Build a Quote</button>
+
+  <!-- APP HEADER - HubSpot style -->
+  <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:0 32px;display:flex;align-items:center;height:52px;gap:0;">
+    <div style="display:flex;align-items:center;gap:6px;padding-right:24px;border-right:1px solid var(--border);margin-right:24px;">
+      <div style="width:7px;height:7px;background:var(--blue);border-radius:50%;"></div>
+      <span style="font-family:var(--mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-3);font-weight:500;">Sales Playbook</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:2px;flex:1;">
+      <button onclick="showSection('home',this)" style="padding:6px 14px;border-radius:6px;font-family:var(--font);font-size:13px;font-weight:600;color:var(--blue);background:var(--blue-dim);border:none;cursor:pointer;">Overview</button>
+      <button onclick="showSection('coldcall',null)" style="padding:6px 14px;border-radius:6px;font-family:var(--font);font-size:13px;font-weight:500;color:var(--text-2);background:none;border:none;cursor:pointer;transition:all 0.12s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'">Cold Call</button>
+      <button onclick="showSection('objections',null)" style="padding:6px 14px;border-radius:6px;font-family:var(--font);font-size:13px;font-weight:500;color:var(--text-2);background:none;border:none;cursor:pointer;transition:all 0.12s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'">Objections</button>
+      <button onclick="showSection('competition',null)" style="padding:6px 14px;border-radius:6px;font-family:var(--font);font-size:13px;font-weight:500;color:var(--text-2);background:none;border:none;cursor:pointer;transition:all 0.12s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'">Competition</button>
+      <button onclick="showSection('pricing',null)" style="padding:6px 14px;border-radius:6px;font-family:var(--font);font-size:13px;font-weight:500;color:var(--text-2);background:none;border:none;cursor:pointer;transition:all 0.12s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'">Pricing</button>
+      <button onclick="showSection('demorecap',null)" style="padding:6px 14px;border-radius:6px;font-family:var(--font);font-size:13px;font-weight:500;color:var(--text-2);background:none;border:none;cursor:pointer;transition:all 0.12s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'">Demo Recap</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button onclick="toggleCallMode()" id="callModeTopBtn" style="display:flex;align-items:center;gap:6px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:7px;padding:6px 12px;font-family:var(--font);font-size:12px;font-weight:700;color:#ef4444;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'"><span style="width:7px;height:7px;background:#ef4444;border-radius:50%;display:inline-block;animation:pulse-red 2s infinite;"></span>On A Call</button>
+      <button onclick="openCoach()" style="display:flex;align-items:center;gap:6px;background:var(--blue);border:none;border-radius:7px;padding:6px 14px;font-family:var(--font);font-size:12px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(99,102,241,0.3);">&#129504; AI Coach</button>
     </div>
   </div>
 
-  <div class="home-stats" style="background:linear-gradient(135deg,#0f0f17,#1e1b4b);">
-    <div class="home-stat">
-      <div class="home-stat-num">$79</div>
-      <div class="home-stat-label">Solo agent / month</div>
+  <!-- STAT BAR -->
+  <div style="background:var(--sb-bg);display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid rgba(255,255,255,0.05);">
+    <div style="padding:14px 24px;border-right:1px solid rgba(255,255,255,0.05);">
+      <div style="font-family:var(--font);font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.8px;line-height:1;">$79<span style="font-size:12px;font-weight:400;color:rgba(255,255,255,0.4);margin-left:3px;">/mo</span></div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;">Solo agent</div>
     </div>
-    <div class="home-stat">
-      <div class="home-stat-num">$247</div>
-      <div class="home-stat-label">Small agency / month</div>
+    <div style="padding:14px 24px;border-right:1px solid rgba(255,255,255,0.05);">
+      <div style="font-family:var(--font);font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.8px;line-height:1;">$247<span style="font-size:12px;font-weight:400;color:rgba(255,255,255,0.4);margin-left:3px;">/mo</span></div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;">Small agency (4 agents)</div>
     </div>
-    <div class="home-stat">
-      <div class="home-stat-num">$597</div>
-      <div class="home-stat-label">Large agency / month</div>
+    <div style="padding:14px 24px;border-right:1px solid rgba(255,255,255,0.05);">
+      <div style="font-family:var(--font);font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.8px;line-height:1;">$597<span style="font-size:12px;font-weight:400;color:rgba(255,255,255,0.4);margin-left:3px;">/mo</span></div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;">Large agency (10 agents)</div>
     </div>
-    <div class="home-stat">
-      <div class="home-stat-num">7</div>
-      <div class="home-stat-label">Competitors covered</div>
+    <div style="padding:14px 24px;">
+      <div style="font-family:var(--font);font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.8px;line-height:1;">7</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;">Competitors covered</div>
     </div>
   </div>
 
-  <div class="home-grid">
-    <div class="home-card" onclick="showSection('coldcall', null)">
-      <div class="home-card-icon">📞</div>
-      <h3>Cold Call Guide</h3>
-      <p>Word-for-word scripts. 5 steps. Earn the conversation in under 2 minutes.</p>
-      <div class="home-card-arrow">OPEN GUIDE →</div>
+  <!-- MAIN GRID -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);">
+
+    <!-- LEFT: CALL SCRIPTS + PRICING -->
+    <div style="background:var(--surface);">
+
+      <div style="padding:20px 28px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div>
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--blue);margin-bottom:3px;font-weight:600;">On The Call</div>
+            <h2 style="font-family:var(--font);font-size:15px;font-weight:800;color:var(--text-1);">Call Scripts</h2>
+          </div>
+          <button onclick="showSection('coldcall',null)" style="font-family:var(--mono);font-size:9px;color:var(--blue);font-weight:700;background:var(--blue-dim);border:1px solid var(--blue-border);border-radius:6px;padding:4px 10px;cursor:pointer;letter-spacing:0.08em;">VIEW ALL</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <div onclick="showSection('coldcall',null)" style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'"><span>&#128222;</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text-1);">Cold Call</div><div style="font-size:11px;color:var(--text-3);">5 steps · Earn 30 more seconds</div></div><span style="font-family:var(--mono);font-size:9px;color:var(--blue);font-weight:700;">&#8594;</span></div>
+          <div onclick="showSection('discovery',null)" style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'"><span>&#128269;</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text-1);">Discovery Call</div><div style="font-size:11px;color:var(--text-3);">Questions that write the demo for you</div></div><span style="font-family:var(--mono);font-size:9px;color:var(--blue);font-weight:700;">&#8594;</span></div>
+          <div onclick="showSection('demo',null)" style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'"><span>&#128421;</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text-1);">Demo Call</div><div style="font-size:11px;color:var(--text-3);">What to show · What to skip</div></div><span style="font-family:var(--mono);font-size:9px;color:var(--blue);font-weight:700;">&#8594;</span></div>
+          <div onclick="showSection('closing',null)" style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'"><span>&#127942;</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text-1);">Closing Call</div><div style="font-size:11px;color:var(--text-3);">Push for decision · Handle final objections</div></div><span style="font-family:var(--mono);font-size:9px;color:var(--blue);font-weight:700;">&#8594;</span></div>
+        </div>
+      </div>
+
+      <div style="padding:20px 28px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div>
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--amber);margin-bottom:3px;font-weight:600;">Pricing</div>
+            <h2 style="font-family:var(--font);font-size:15px;font-weight:800;color:var(--text-1);">Quick Reference</h2>
+          </div>
+          <button onclick="showSection('pricing',null)" style="font-family:var(--mono);font-size:9px;color:var(--amber);font-weight:700;background:var(--amber-dim);border:1px solid rgba(245,158,11,0.25);border-radius:6px;padding:4px 10px;cursor:pointer;letter-spacing:0.08em;">BUILD QUOTE</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;"><span style="font-size:13px;font-weight:600;color:var(--text-1);">Solo Agent</span><div><span style="font-family:var(--font);font-size:16px;font-weight:800;color:var(--blue);">$79</span><span style="font-size:11px;color:var(--text-3);">/mo &middot; 1 seat &middot; all features</span></div></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;"><span style="font-size:13px;font-weight:600;color:var(--text-1);">Small Agency</span><div><span style="font-family:var(--font);font-size:16px;font-weight:800;color:var(--blue);">$247</span><span style="font-size:11px;color:var(--text-3);">/mo &middot; 4 agents + 1 asst</span></div></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;"><span style="font-size:13px;font-weight:600;color:var(--text-1);">Large Agency</span><div><span style="font-family:var(--font);font-size:16px;font-weight:800;color:var(--blue);">$597</span><span style="font-size:11px;color:var(--text-3);">/mo &middot; 10 agents + 2 asst</span></div></div>
+          <div onclick="showSection('pricing',null)" style="display:flex;justify-content:space-between;align-items:center;padding:9px 13px;background:var(--blue-dim);border:1px solid var(--blue-border);border-radius:8px;cursor:pointer;"><span style="font-size:13px;font-weight:700;color:var(--blue);">Enterprise / Custom</span><span style="font-family:var(--mono);font-size:9px;color:var(--blue);font-weight:700;">BUILD &#8594;</span></div>
+        </div>
+      </div>
+
     </div>
-    <div class="home-card" onclick="showSection('pitches', null)">
-      <div class="home-card-icon">⚡</div>
-      <h3>Elevator Pitches</h3>
-      <p>5 situation-specific pitches. Copy and use in under 20 seconds.</p>
-      <div class="home-card-arrow">VIEW PITCHES →</div>
-    </div>
-    <div class="home-card green" onclick="showSection('competition', null)">
-      <div class="home-card-icon">🎯</div>
-      <h3>Know Your Competition</h3>
-      <p>EZLynx, HawkSoft, AgencyBloc and 4 more. Honest breakdowns of where we win.</p>
-      <div class="home-card-arrow">VIEW COMPETITORS →</div>
-    </div>
-    <div class="home-card green" onclick="showSection('objections', null)">
-      <div class="home-card-icon">🛡️</div>
-      <h3>Objection Handling</h3>
-      <p>8 real objections. Human responses. Copy and paste directly into calls.</p>
-      <div class="home-card-arrow">VIEW OBJECTIONS →</div>
-    </div>
-    <div class="home-card amber" onclick="showSection('battlecards', null)">
-      <div class="home-card-icon">✕</div>
-      <h3>Battle Cards</h3>
-      <p>Quick reference for when a competitor comes up. Read before the follow-up call.</p>
-      <div class="home-card-arrow">VIEW CARDS →</div>
-    </div>
-    <div class="home-card amber" onclick="showSection('pricing', null)">
-      <div class="home-card-icon">💰</div>
-      <h3>Pricing + Quote Builder</h3>
-      <p>All plans, custom enterprise calculator, and PDF quote generator.</p>
-      <div class="home-card-arrow">BUILD QUOTE →</div>
-    </div>
-    <div class="home-card red" onclick="showSection('discovery', null)">
-      <div class="home-card-icon">🔍</div>
-      <h3>Discovery Call</h3>
-      <p>Questions that uncover real pain. The call that writes the demo for you.</p>
-      <div class="home-card-arrow">VIEW GUIDE →</div>
-    </div>
-    <div class="home-card red" onclick="openCoach()">
-      <div class="home-card-icon">🧠</div>
-      <h3>AI Sales Coach</h3>
-      <p>Live deal coaching. Connect HubSpot. Get the exact script for right now.</p>
-      <div class="home-card-arrow">OPEN COACH →</div>
+
+    <!-- RIGHT: REFERENCE + AI COACH -->
+    <div style="background:var(--surface);">
+
+      <div style="padding:20px 28px;border-bottom:1px solid var(--border);">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--green);margin-bottom:3px;font-weight:600;">Reference</div>
+        <h2 style="font-family:var(--font);font-size:15px;font-weight:800;color:var(--text-1);margin-bottom:12px;">Handle Any Situation</h2>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <div onclick="showSection('objections',null)" style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'"><span>&#128737;</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text-1);">Objection Handling</div><div style="font-size:11px;color:var(--text-3);">8 objections &middot; Word-for-word responses</div></div><span style="font-family:var(--mono);font-size:9px;color:var(--green);font-weight:700;">&#8594;</span></div>
+          <div onclick="showSection('battlecards',null)" style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'"><span>&#9876;</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text-1);">Battle Cards</div><div style="font-size:11px;color:var(--text-3);">EZLynx, HawkSoft, AgencyBloc + 4 more</div></div><span style="font-family:var(--mono);font-size:9px;color:var(--green);font-weight:700;">&#8594;</span></div>
+          <div onclick="showSection('competition',null)" style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'"><span>&#127919;</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text-1);">Know Your Competition</div><div style="font-size:11px;color:var(--text-3);">Deep dives &middot; Where we win and where we lose</div></div><span style="font-family:var(--mono);font-size:9px;color:var(--green);font-weight:700;">&#8594;</span></div>
+          <div onclick="showSection('pitches',null)" style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'"><span>&#9889;</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text-1);">Elevator Pitches</div><div style="font-size:11px;color:var(--text-3);">5 situation scripts &middot; Copy instantly</div></div><span style="font-family:var(--mono);font-size:9px;color:var(--green);font-weight:700;">&#8594;</span></div>
+          <div onclick="showSection('personas',null)" style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'"><span>&#128100;</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text-1);">Buyer Personas</div><div style="font-size:11px;color:var(--text-3);">Solo, Small, Large, Enterprise snapshots</div></div><span style="font-family:var(--mono);font-size:9px;color:var(--green);font-weight:700;">&#8594;</span></div>
+        </div>
+      </div>
+
+      <!-- AI COACH PREVIEW -->
+      <div style="padding:20px 28px;">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(165,180,252,0.8);margin-bottom:3px;font-weight:600;">AI-Powered</div>
+        <h2 style="font-family:var(--font);font-size:15px;font-weight:800;color:var(--text-1);margin-bottom:6px;">AI Sales Coach</h2>
+        <p style="font-size:12px;color:var(--text-3);line-height:1.6;margin-bottom:12px;">Tell the coach who you are talking to. Get the exact script, demo focus, and closing angle in seconds.</p>
+        <div style="background:var(--sb-bg);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:14px 16px;margin-bottom:12px;">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(165,180,252,0.6);margin-bottom:8px;">Example output</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;gap:7px;align-items:flex-start;"><span style="font-family:var(--mono);font-size:8px;background:rgba(16,185,129,0.15);color:#10b981;padding:2px 6px;border-radius:3px;font-weight:700;white-space:nowrap;margin-top:1px;">SAY</span><span style="font-size:11.5px;color:rgba(255,255,255,0.8);line-height:1.5;">"Are you running OEP on a spreadsheet or do you have something automated?"</span></div>
+            <div style="display:flex;gap:7px;align-items:flex-start;"><span style="font-family:var(--mono);font-size:8px;background:rgba(99,102,241,0.15);color:#818cf8;padding:2px 6px;border-radius:3px;font-weight:700;white-space:nowrap;margin-top:1px;">PUSH</span><span style="font-size:11.5px;color:rgba(255,255,255,0.8);line-height:1.5;">Renewal Autopilot. They have zero equivalent. Ask about their October nightmare.</span></div>
+            <div style="display:flex;gap:7px;align-items:flex-start;"><span style="font-family:var(--mono);font-size:8px;background:rgba(245,158,11,0.15);color:#f59e0b;padding:2px 6px;border-radius:3px;font-weight:700;white-space:nowrap;margin-top:1px;">CLOSE</span><span style="font-size:11.5px;color:rgba(255,255,255,0.8);line-height:1.5;">"Want to see the OEP board live? 4 minutes and you will see exactly how it works."</span></div>
+          </div>
+        </div>
+        <button onclick="openCoach()" style="width:100%;background:linear-gradient(135deg,var(--blue),var(--purple));border:none;border-radius:9px;padding:12px;font-family:var(--font);font-size:13px;font-weight:700;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 16px rgba(99,102,241,0.35);transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">&#129504; Open AI Coach</button>
+      </div>
+
     </div>
   </div>
+
 </div>
 
-<!-- ── BUYER PERSONAS ──────────────────────────────────────────────────── -->
 <div class="section" id="section-personas">
   <div class="page-header">
     <div class="page-label">Who You're Selling To</div>
@@ -5044,6 +5126,152 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 </script>
+<!-- ── DEMO RECAP ──────────────────────────────────────────────────── -->
+<div class="section" id="section-demorecap">
+  <div class="page-header">
+    <div class="page-label">Post-Demo</div>
+    <h1>Demo Recap</h1>
+    <p>Complete this immediately after a demo. The AI extracts key themes, prospect language, and tells you exactly what to do next.</p>
+  </div>
+
+  <div class="nba-bar">
+    <span class="nba-label">&#9889; Quick Tip</span>
+    <div class="nba-actions">
+      <button class="nba-btn primary" onclick="openCoach()">&#129504; Ask Coach What To Do Next</button>
+      <button class="nba-btn" onclick="qaCopy(document.getElementById('recap-summary-text').textContent)">&#128203; Copy Summary</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+
+      <!-- LEFT: INPUT FORM -->
+      <div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);margin-bottom:12px;">
+          <div style="padding:14px 18px;border-bottom:1px solid var(--border);background:var(--bg);">
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--blue);font-weight:600;">Demo Details</div>
+          </div>
+          <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px;">
+            <div>
+              <label style="font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:5px;">Prospect Name / Company</label>
+              <input id="recap-prospect" type="text" placeholder="e.g. Mike Torres — Sunrise Health Agency" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--font);font-size:13px;color:var(--text-1);background:var(--surface);outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div>
+                <label style="font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:5px;">Segment</label>
+                <select id="recap-segment" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--font);font-size:13px;color:var(--text-1);background:var(--surface);outline:none;">
+                  <option value="">Select segment</option>
+                  <option value="solo">Solo Agent</option>
+                  <option value="small">Small Agency (2-8)</option>
+                  <option value="large">Large Agency (9-20)</option>
+                  <option value="enterprise">Enterprise (21+)</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:5px;">Demo Outcome</label>
+                <select id="recap-outcome" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--font);font-size:13px;color:var(--text-1);background:var(--surface);outline:none;">
+                  <option value="">Select outcome</option>
+                  <option value="strong">Strong interest — ready to close</option>
+                  <option value="warm">Warm — needs follow-up</option>
+                  <option value="cold">Cold — more convincing needed</option>
+                  <option value="lost">Not moving forward</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label style="font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:5px;">What They Said (their words, not yours)</label>
+              <textarea id="recap-prospect-words" rows="4" placeholder="Paste or type exactly what the prospect said during the demo. Their exact phrases, concerns, and reactions work best. Example: &#10;&#10;'We really struggle with OEP every year, it just gets out of hand...'&#10;'I like that it has SMS built in, we currently use three different tools...'&#10;'The price seems high compared to what we pay now...'" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--font);font-size:13px;color:var(--text-1);background:var(--surface);outline:none;resize:vertical;transition:border-color 0.15s;line-height:1.6;" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+            </div>
+            <div>
+              <label style="font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:5px;">What You Showed / Covered</label>
+              <textarea id="recap-covered" rows="3" placeholder="What features did you demo? What questions came up? What did you skip?" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--font);font-size:13px;color:var(--text-1);background:var(--surface);outline:none;resize:vertical;transition:border-color 0.15s;line-height:1.6;" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+            </div>
+            <div>
+              <label style="font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:5px;">Objections or Hesitations</label>
+              <textarea id="recap-objections" rows="2" placeholder="What pushed back? What were they unsure about?" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--font);font-size:13px;color:var(--text-1);background:var(--surface);outline:none;resize:vertical;transition:border-color 0.15s;line-height:1.6;" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+            </div>
+            <button onclick="generateDemoRecap()" id="recap-btn" style="width:100%;background:linear-gradient(135deg,var(--blue),var(--purple));border:none;border-radius:9px;padding:13px;font-family:var(--font);font-size:14px;font-weight:700;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px rgba(99,102,241,0.3);transition:all 0.15s;">
+              &#129504; Generate Recap + Extract Keywords
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: AI OUTPUT -->
+      <div id="recap-output-panel">
+        <!-- Empty state -->
+        <div id="recap-empty-state" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:40px 28px;text-align:center;box-shadow:var(--shadow-sm);">
+          <div style="font-size:32px;margin-bottom:12px;">&#128203;</div>
+          <div style="font-family:var(--font);font-size:15px;font-weight:700;color:var(--text-1);margin-bottom:6px;">Fill in the demo details</div>
+          <div style="font-size:13px;color:var(--text-3);line-height:1.6;max-width:280px;margin:0 auto;">The AI will generate a summary, extract keywords from the prospect's language, and tell you exactly what to do next.</div>
+        </div>
+
+        <!-- Output (hidden until generated) -->
+        <div id="recap-output" style="display:none;flex-direction:column;gap:10px;">
+
+          <!-- Summary -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);">
+            <div style="padding:12px 18px;border-bottom:1px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:space-between;">
+              <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-3);font-weight:600;">Demo Summary</div>
+              <button class="qa-btn" onclick="qaCopy(document.getElementById('recap-summary-text').textContent)">&#128203; Copy</button>
+            </div>
+            <div id="recap-summary-text" style="padding:16px 18px;font-size:13.5px;color:var(--text-1);line-height:1.75;"></div>
+          </div>
+
+          <!-- Keywords -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);">
+            <div style="padding:12px 18px;border-bottom:1px solid var(--border);background:var(--bg);">
+              <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--blue);font-weight:600;">Keywords — Prospect's Own Words</div>
+            </div>
+            <div id="recap-keywords" style="padding:14px 18px;display:flex;flex-wrap:wrap;gap:7px;"></div>
+          </div>
+
+          <!-- Next Steps -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);">
+            <div style="padding:12px 18px;border-bottom:1px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:space-between;">
+              <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--green);font-weight:600;">Next Best Actions</div>
+              <button class="qa-btn" onclick="qaCopy(document.getElementById('recap-nextsteps-text').textContent)">&#128203; Copy</button>
+            </div>
+            <div id="recap-nextsteps-text" style="padding:16px 18px;font-size:13.5px;color:var(--text-1);line-height:1.75;"></div>
+          </div>
+
+          <!-- Follow-up Email -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);">
+            <div style="padding:12px 18px;border-bottom:1px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:space-between;">
+              <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);font-weight:600;">Follow-Up Email Draft</div>
+              <div style="display:flex;gap:6px;">
+                <button class="qa-btn" onclick="qaCopy(document.getElementById('recap-email-text').textContent)">&#128203; Copy</button>
+                <button class="qa-btn-hs" onclick="copyAndOpenHubSpot(document.getElementById('recap-email-text').textContent)">&#128279; Log to HubSpot</button>
+              </div>
+            </div>
+            <div id="recap-email-text" style="padding:16px 18px;font-size:13.5px;color:var(--text-1);line-height:1.75;white-space:pre-wrap;font-family:var(--font);"></div>
+          </div>
+
+          <!-- Save button (for future Supabase) -->
+          <div style="background:var(--blue-dim);border:1px solid var(--blue-border);border-radius:var(--radius);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--blue);margin-bottom:2px;">Save this recap</div>
+              <div style="font-size:11.5px;color:var(--text-3);">Connect Supabase to save and search past recaps by rep, date, or keyword.</div>
+            </div>
+            <button onclick="saveRecap()" style="background:var(--blue);border:none;border-radius:8px;padding:8px 18px;font-family:var(--font);font-size:12.5px;font-weight:700;color:#fff;cursor:pointer;">Save Recap</button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- PAST RECAPS (populated from localStorage for now) -->
+    <div id="past-recaps-section" style="margin-top:24px;display:none;">
+      <div class="divider"></div>
+      <h2 class="content-heading" style="margin-bottom:4px;">Past Recaps</h2>
+      <p class="content-sub">Saved on this device. Connect Supabase to sync across your team.</p>
+      <div id="past-recaps-list" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"></div>
+    </div>
+
+  </div>
+</div>
+
 
 <!-- QUOTE MODAL -->
 <div class="quote-modal-overlay" id="quoteModal">
@@ -5309,7 +5537,7 @@ function generateQuotePDF() {
     var features = [
       'ACA, STM, Life, Ancillary & Indemnity quoting and enrollment',
       'Full CRM with Rx profiles, household tracking, and FPL data',
-      'Renewal Autopilot — automated OEP workflow end-to-end',
+      'Renewal Autopilot - automated OEP workflow end-to-end',
       'Sales Log and Policy Tracker with carrier verification',
       'SMS messaging with dedicated agent number',
       'Google Calendar sync and appointment scheduling',
@@ -5373,6 +5601,500 @@ function generateQuotePDF() {
   btn.textContent = 'Download Quote as PDF';
   btn.disabled = false;
 }
+
+// ── DEMO RECAP ────────────────────────────────────────────────────────
+async function generateDemoRecap() {
+  var prospect = document.getElementById('recap-prospect').value.trim();
+  var segment = document.getElementById('recap-segment').value;
+  var outcome = document.getElementById('recap-outcome').value;
+  var prospectWords = document.getElementById('recap-prospect-words').value.trim();
+  var covered = document.getElementById('recap-covered').value.trim();
+  var objections = document.getElementById('recap-objections').value.trim();
+
+  if (!prospect || !prospectWords) {
+    showToast('Add prospect name and what they said first');
+    return;
+  }
+
+  var btn = document.getElementById('recap-btn');
+  btn.textContent = 'Analyzing demo...';
+  btn.disabled = true;
+
+  var segmentMap = { solo: 'Solo Agent', small: 'Small Agency (2-8 agents)', large: 'Large Agency (9-20 agents)', enterprise: 'Enterprise (21+ agents)' };
+  var outcomeMap = { strong: 'Strong interest - ready to close', warm: 'Warm - needs follow-up', cold: 'Cold - more convincing needed', lost: 'Not moving forward' };
+
+  var promptParts = [
+    'You are an elite sales coach reviewing a demo recap for AgentNav, a health insurance broker platform.',
+    'PROSPECT: ' + prospect,
+    'SEGMENT: ' + (segmentMap[segment] || 'Unknown'),
+    'DEMO OUTCOME: ' + (outcomeMap[outcome] || 'Unknown'),
+    'WHAT THE PROSPECT SAID (their exact words):',
+    prospectWords,
+    'WHAT WAS COVERED IN THE DEMO:',
+    covered || 'Not specified',
+    'OBJECTIONS / HESITATIONS:',
+    objections || 'None noted',
+    'Please provide your analysis in EXACTLY this format:',
+    'DEMO SUMMARY',
+    '[2-3 sentences. What happened. Who they are, what resonated, where they are in the decision.]',
+    'KEYWORDS',
+    '[Extract 6-12 keywords from the PROSPECT OWN WORDS. Comma-separated. Use their exact words.]',
+    'NEXT BEST ACTIONS',
+    '[3-5 specific actions for the rep in the next 24 hours. Include exact language to use.]',
+    'FOLLOW-UP EMAIL',
+    '[Write a complete follow-up email. Subject line first, then body. Under 150 words. Reference their specific words.]',
+    'Be direct, specific, and use the prospect actual language whenever possible.'
+  ];
+  var prompt = promptParts.join('\n\n');
+
+  try {
+    var response = await fetch('/.netlify/functions/coach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1200,
+        system: 'You are an elite B2B sales coach. You give specific, directive, actionable coaching based on real deal data. You extract exact prospect language and use it in your recommendations. You never give generic advice.',
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    var data = await response.json();
+    var text = data.content && data.content[0] ? data.content[0].text : '';
+
+    if (!text) {
+      showToast('No response from AI - try again');
+      btn.textContent = 'Generate Recap + Extract Keywords';
+      btn.disabled = false;
+      return;
+    }
+
+    // Parse sections
+    function extractSection(txt, header) {
+      var idx = txt.indexOf(header);
+      if (idx === -1) return '';
+      var start = idx + header.length;
+      var nextHeaders = ['DEMO SUMMARY', 'KEYWORDS', 'NEXT BEST ACTIONS', 'FOLLOW-UP EMAIL'];
+      var end = txt.length;
+      for (var i = 0; i < nextHeaders.length; i++) {
+        var ni = txt.indexOf(nextHeaders[i], start);
+        if (ni !== -1 && ni < end && ni > idx) end = ni;
+      }
+      return txt.slice(start, end).trim();
+    }
+
+    var summary = extractSection(text, 'DEMO SUMMARY');
+    var keywordsRaw = extractSection(text, 'KEYWORDS');
+    var nextSteps = extractSection(text, 'NEXT BEST ACTIONS');
+    var email = extractSection(text, 'FOLLOW-UP EMAIL');
+
+    // Render summary
+    document.getElementById('recap-summary-text').textContent = summary;
+
+    // Render keywords as pills
+    var kwEl = document.getElementById('recap-keywords');
+    kwEl.innerHTML = '';
+    var keywords = keywordsRaw.split(',').map(function(k) { return k.trim(); }).filter(function(k) { return k.length > 0; });
+    var colors = ['rgba(99,102,241,0.12)', 'rgba(16,185,129,0.12)', 'rgba(245,158,11,0.12)', 'rgba(239,68,68,0.1)', 'rgba(139,92,246,0.12)'];
+    var textColors = ['#6366f1', '#10b981', '#d97706', '#ef4444', '#8b5cf6'];
+    keywords.forEach(function(kw, i) {
+      var pill = document.createElement('span');
+      pill.style.cssText = 'display:inline-block;background:' + colors[i % colors.length] + ';color:' + textColors[i % textColors.length] + ';border-radius:20px;padding:4px 12px;font-size:12.5px;font-weight:600;font-family:var(--font);cursor:pointer;transition:opacity 0.15s;';
+      pill.textContent = kw;
+      pill.title = 'Click to copy';
+      pill.onclick = function() { qaCopy(kw); };
+      kwEl.appendChild(pill);
+    });
+
+    // Render next steps
+    document.getElementById('recap-nextsteps-text').textContent = nextSteps;
+
+    // Render email
+    document.getElementById('recap-email-text').textContent = email;
+
+    // Show output
+    document.getElementById('recap-empty-state').style.display = 'none';
+    var outEl = document.getElementById('recap-output');
+    outEl.style.display = 'flex';
+
+    // Save to localStorage
+    var recap = {
+      id: Date.now(),
+      prospect: prospect,
+      segment: segment,
+      outcome: outcome,
+      summary: summary,
+      keywords: keywords,
+      nextSteps: nextSteps,
+      email: email,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    };
+    var saved = JSON.parse(localStorage.getItem('agentnav-recaps') || '[]');
+    saved.unshift(recap);
+    if (saved.length > 50) saved = saved.slice(0, 50);
+    localStorage.setItem('agentnav-recaps', JSON.stringify(saved));
+    loadPastRecaps();
+    showToast('Recap generated and saved!');
+
+  } catch(err) {
+    showToast('Error: ' + err.message);
+  }
+
+  btn.textContent = 'Generate Recap + Extract Keywords';
+  btn.disabled = false;
+}
+
+function saveRecap() {
+  showToast('Saved to this device. Connect Supabase to sync with your team.');
+}
+
+function loadPastRecaps() {
+  var saved = JSON.parse(localStorage.getItem('agentnav-recaps') || '[]');
+  if (saved.length === 0) return;
+
+  var section = document.getElementById('past-recaps-section');
+  var list = document.getElementById('past-recaps-list');
+  if (!section || !list) return;
+
+  section.style.display = 'block';
+  list.innerHTML = '';
+
+  saved.forEach(function(r) {
+    var row = document.createElement('div');
+    row.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color 0.15s;';
+    row.onmouseover = function() { this.style.borderColor = 'var(--blue)'; };
+    row.onmouseout = function() { this.style.borderColor = 'var(--border)'; };
+
+    var outcomeColors = { strong: '#10b981', warm: '#f59e0b', cold: '#6366f1', lost: '#ef4444' };
+    var outcomeLabels = { strong: 'Strong', warm: 'Warm', cold: 'Cold', lost: 'Lost' };
+
+    row.innerHTML = '<div style="width:8px;height:8px;border-radius:50%;background:' + (outcomeColors[r.outcome] || '#a1a1aa') + ';flex-shrink:0;"></div>' +
+      '<div style="flex:1;">' +
+        '<div style="font-size:13.5px;font-weight:700;color:var(--text-1);">' + (r.prospect || 'Unknown') + '</div>' +
+        '<div style="font-size:11.5px;color:var(--text-3);margin-top:2px;">' + r.date + ' &middot; ' + (outcomeLabels[r.outcome] || '') + '</div>' +
+      '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:4px;max-width:300px;">' +
+        (r.keywords || []).slice(0, 4).map(function(k) {
+          return '<span style="font-size:10.5px;color:var(--blue);background:var(--blue-dim);border-radius:12px;padding:2px 8px;font-weight:600;">' + k + '</span>';
+        }).join('') +
+      '</div>';
+
+    row.onclick = function() {
+      document.getElementById('recap-prospect').value = r.prospect || '';
+      document.getElementById('recap-summary-text').textContent = r.summary || '';
+      document.getElementById('recap-nextsteps-text').textContent = r.nextSteps || '';
+      document.getElementById('recap-email-text').textContent = r.email || '';
+      var kwEl = document.getElementById('recap-keywords');
+      kwEl.innerHTML = '';
+      (r.keywords || []).forEach(function(kw) {
+        var pill = document.createElement('span');
+        pill.style.cssText = 'display:inline-block;background:var(--blue-dim);color:var(--blue);border-radius:20px;padding:4px 12px;font-size:12.5px;font-weight:600;font-family:var(--font);';
+        pill.textContent = kw;
+        kwEl.appendChild(pill);
+      });
+      document.getElementById('recap-empty-state').style.display = 'none';
+      document.getElementById('recap-output').style.display = 'flex';
+      window.scrollTo(0, 0);
+    };
+    list.appendChild(row);
+  });
+}
+
+// Load recaps on section show
+var origShowSection = showSection;
+showSection = function(id, btn) {
+  origShowSection(id, btn);
+  if (id === 'demorecap') loadPastRecaps();
+};
+
+</script>
+<!-- ── AUTH MODAL ─────────────────────────────────────────────────── -->
+<div class="auth-modal-overlay" id="authModal">
+  <div class="auth-modal">
+    <div class="auth-modal-header">
+      <h2 id="authModalTitle">Sign in to AgentNav</h2>
+      <p id="authModalSub">Access your sales playbook and save demo recaps</p>
+    </div>
+    <div class="auth-modal-body">
+      <div class="auth-field">
+        <label>Work Email</label>
+        <input type="email" id="authEmail" placeholder="you@company.com" autocomplete="email" onkeydown="if(event.key==='Enter')authSubmit()">
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')authSubmit()">
+      </div>
+      <div id="authError" class="auth-error" style="display:none;"></div>
+      <button class="auth-submit-btn" id="authSubmitBtn" onclick="authSubmit()">Sign In</button>
+      <div class="auth-toggle">
+        <span id="authToggleText">Don't have an account?</span>
+        <a onclick="authToggleMode()"> Sign up</a>
+      </div>
+      <button class="auth-skip-btn" onclick="authSkip()">Continue without signing in</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── SUPABASE CONFIG ───────────────────────────────────────────────────
+var SUPABASE_URL = 'https://nwddtucvlhgjhidlgizf.supabase.co';
+var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53ZGR0dWN2bGhnamhpZGxnaXpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1NTExMjQsImV4cCI6MjA5MzEyNzEyNH0.cMlJdp8QAAuQZNIgXEwRI0y8MYsp8lG3T6dfK6I3HEo';
+
+var _supabase = null;
+var _currentUser = null;
+var _authMode = 'signin'; // or 'signup'
+
+function getSupabase() {
+  if (!_supabase && window.supabase && SUPABASE_ANON_KEY !== 'REPLACE_WITH_ANON_KEY') {
+    _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+  return _supabase;
+}
+
+// ── AUTH INIT ─────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  var sb = getSupabase();
+  if (!sb) return;
+
+  // Check existing session
+  sb.auth.getSession().then(function(result) {
+    if (result.data && result.data.session) {
+      _currentUser = result.data.session.user;
+      onUserLoggedIn(_currentUser);
+    } else {
+      openAuthModal();
+    }
+  });
+
+  // Listen for auth changes
+  sb.auth.onAuthStateChange(function(event, session) {
+    if (event === 'SIGNED_IN' && session) {
+      _currentUser = session.user;
+      onUserLoggedIn(_currentUser);
+      closeAuthModal();
+    } else if (event === 'SIGNED_OUT') {
+      _currentUser = null;
+      onUserLoggedOut();
+    }
+  });
+});
+
+function openAuthModal() {
+  document.getElementById('authModal').classList.add('open');
+}
+
+function closeAuthModal() {
+  document.getElementById('authModal').classList.remove('open');
+}
+
+function authSkip() {
+  closeAuthModal();
+  showToast('Browsing as guest — sign in to save recaps to the cloud');
+}
+
+function authToggleMode() {
+  _authMode = _authMode === 'signin' ? 'signup' : 'signin';
+  document.getElementById('authModalTitle').textContent = _authMode === 'signin' ? 'Sign in to AgentNav' : 'Create your account';
+  document.getElementById('authModalSub').textContent = _authMode === 'signin' ? 'Access your sales playbook and saved recaps' : 'Start saving demo recaps and coaching notes';
+  document.getElementById('authSubmitBtn').textContent = _authMode === 'signin' ? 'Sign In' : 'Create Account';
+  document.getElementById('authToggleText').textContent = _authMode === 'signin' ? "Don't have an account?" : 'Already have an account?';
+  document.getElementById('authError').style.display = 'none';
+}
+
+async function authSubmit() {
+  var email = document.getElementById('authEmail').value.trim();
+  var password = document.getElementById('authPassword').value;
+  var btn = document.getElementById('authSubmitBtn');
+  var errEl = document.getElementById('authError');
+
+  if (!email || !password) {
+    errEl.textContent = 'Please enter your email and password.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = _authMode === 'signin' ? 'Signing in...' : 'Creating account...';
+  errEl.style.display = 'none';
+
+  var sb = getSupabase();
+  var result;
+  if (_authMode === 'signin') {
+    result = await sb.auth.signInWithPassword({ email: email, password: password });
+  } else {
+    result = await sb.auth.signUp({ email: email, password: password });
+  }
+
+  if (result.error) {
+    errEl.textContent = result.error.message;
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = _authMode === 'signin' ? 'Sign In' : 'Create Account';
+  } else if (_authMode === 'signup' && result.data && !result.data.session) {
+    errEl.style.cssText = 'display:block;color:var(--green);';
+    errEl.textContent = 'Check your email for a confirmation link!';
+    btn.disabled = false;
+    btn.textContent = 'Create Account';
+  }
+}
+
+function onUserLoggedIn(user) {
+  var email = user.email || '';
+  var initials = email.slice(0,2).toUpperCase();
+  var name = email.split('@')[0];
+
+  // Find the app header and add user bar
+  var appHeader = document.querySelector('#section-home > div:first-child');
+  if (appHeader) {
+    // Remove existing user bar if any
+    var existing = document.getElementById('userBar');
+    if (existing) existing.remove();
+
+    var userBar = document.createElement('div');
+    userBar.id = 'userBar';
+    userBar.className = 'user-bar';
+    userBar.innerHTML =
+      '<div class="user-avatar">' + initials + '</div>' +
+      '<span class="user-name">' + name + '</span>' +
+      '<span class="user-logout" onclick="authSignOut()" title="Sign out">Sign out</span>';
+
+    // Insert before the last button in header
+    var lastBtn = appHeader.querySelector('button:last-child');
+    if (lastBtn) {
+      appHeader.insertBefore(userBar, lastBtn);
+    } else {
+      appHeader.appendChild(userBar);
+    }
+  }
+
+  // Load saved recaps from Supabase
+  loadRecapsFromSupabase();
+  showToast('Welcome back, ' + name + '!');
+}
+
+function onUserLoggedOut() {
+  var existing = document.getElementById('userBar');
+  if (existing) existing.remove();
+  openAuthModal();
+}
+
+async function authSignOut() {
+  var sb = getSupabase();
+  if (sb) {
+    await sb.auth.signOut();
+    showToast('Signed out');
+  }
+}
+
+// ── SUPABASE RECAP SAVE/LOAD ──────────────────────────────────────────
+async function saveRecapToSupabase(recap) {
+  var sb = getSupabase();
+  if (!sb || !_currentUser) {
+    showToast('Sign in to save recaps to the cloud');
+    return false;
+  }
+
+  var result = await sb.from('demo_recaps').insert({
+    user_id: _currentUser.id,
+    prospect: recap.prospect,
+    segment: recap.segment || '',
+    outcome: recap.outcome || '',
+    summary: recap.summary,
+    keywords: recap.keywords,
+    next_steps: recap.nextSteps,
+    email: recap.email,
+    demo_date: new Date().toISOString().split('T')[0]
+  });
+
+  if (result.error) {
+    console.error('Supabase save error:', result.error);
+    return false;
+  }
+  return true;
+}
+
+async function loadRecapsFromSupabase() {
+  var sb = getSupabase();
+  if (!sb || !_currentUser) return;
+
+  var result = await sb.from('demo_recaps')
+    .select('*')
+    .eq('user_id', _currentUser.id)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (result.error || !result.data) return;
+
+  // Merge with localStorage recaps
+  var localRecaps = JSON.parse(localStorage.getItem('agentnav-recaps') || '[]');
+  var cloudRecaps = result.data.map(function(r) {
+    return {
+      id: r.id,
+      prospect: r.prospect || '',
+      segment: r.segment || '',
+      outcome: r.outcome || '',
+      summary: r.summary || '',
+      keywords: Array.isArray(r.keywords) ? r.keywords : (r.keywords || '').split(',').map(function(k) { return k.trim(); }).filter(Boolean),
+      nextSteps: r.next_steps || '',
+      email: r.email || '',
+      date: r.demo_date || new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      source: 'cloud'
+    };
+  });
+
+  // Combine: cloud first, then local-only
+  var cloudIds = new Set(cloudRecaps.map(function(r) { return String(r.id); }));
+  var localOnly = localRecaps.filter(function(r) { return !cloudIds.has(String(r.id)); });
+  var combined = cloudRecaps.concat(localOnly);
+
+  // Save merged back to localStorage
+  localStorage.setItem('agentnav-recaps', JSON.stringify(combined));
+
+  // Refresh the UI if on demorecap section
+  var demoSection = document.getElementById('section-demorecap');
+  if (demoSection && demoSection.classList.contains('active')) {
+    loadPastRecaps();
+  }
+
+  showToast('Loaded ' + cloudRecaps.length + ' saved recaps');
+}
+
+// Override saveRecap to save to Supabase
+function saveRecap() {
+  var summaryEl = document.getElementById('recap-summary-text');
+  var kwEl = document.getElementById('recap-keywords');
+  var prospect = document.getElementById('recap-prospect').value.trim();
+  var summary = summaryEl ? summaryEl.textContent : '';
+
+  if (!summary) {
+    showToast('Generate a recap first');
+    return;
+  }
+
+  var keywords = [];
+  if (kwEl) {
+    kwEl.querySelectorAll('span').forEach(function(s) { keywords.push(s.textContent); });
+  }
+
+  var recap = {
+    prospect: prospect,
+    summary: summary,
+    keywords: keywords,
+    nextSteps: document.getElementById('recap-nextsteps-text') ? document.getElementById('recap-nextsteps-text').textContent : '',
+    email: document.getElementById('recap-email-text') ? document.getElementById('recap-email-text').textContent : ''
+  };
+
+  saveRecapToSupabase(recap).then(function(success) {
+    if (success) {
+      showToast('Saved to cloud!');
+      loadRecapsFromSupabase();
+    } else {
+      // Fall back to localStorage
+      showToast('Saved locally (sign in to sync)');
+    }
+  });
+}
+
 </script>
 </body>
 </html>
