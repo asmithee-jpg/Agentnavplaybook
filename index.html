@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AgentNav Sales Coach v3</title>
+<title>AgentNav Sales Coach</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -2294,8 +2294,8 @@ body.dark-mode .home-card p { color: #71717a; }
     <span id="themeToggleLabel">🌙 Dark Mode</span>
     <div class="theme-toggle-track"><div class="theme-toggle-thumb"></div></div>
   </button>
-  <div class="sidebar-footer" id="versionFooter">
-    AgentNav · v3 · 2026
+  <div class="sidebar-footer">
+    AgentNav Internal — 2026
   </div>
 </nav>
 
@@ -5909,20 +5909,17 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function showAuthNavBtn() {
-  // Add sign in button to the top nav
-  var homeHeader = document.querySelector('#section-home > div:first-child');
-  if (!homeHeader) return;
-  var existing = document.getElementById('authNavBtn');
-  if (!existing) {
+  try {
+    if (document.getElementById('authNavBtn')) return;
     var btn = document.createElement('button');
     btn.id = 'authNavBtn';
     btn.onclick = openAuthModal;
-        btn.setAttribute('style', 'display:flex;align-items:center;gap:6px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;color:#6366f1;cursor:pointer;');
-    btn.innerHTML = '&#128100; Sign In';
-    var lastBtn = homeHeader.querySelector('button:last-child');
-    if (lastBtn) homeHeader.insertBefore(btn, lastBtn);
-    else homeHeader.appendChild(btn);
-  }
+    btn.setAttribute('style', 'display:flex;align-items:center;gap:5px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;color:#6366f1;cursor:pointer;');
+    btn.textContent = 'Sign In';
+    // Find the right-most div in the home header and append
+    var header = document.querySelector('#section-home > div:first-child');
+    if (header) header.appendChild(btn);
+  } catch(e) { console.log('showAuthNavBtn skipped:', e.message); }
 }
 
 function initSupabaseAuth(sb) {
@@ -6024,39 +6021,39 @@ async function authSubmit() {
 }
 
 function onUserLoggedIn(user) {
-  var email = user.email || '';
-  var initials = email.slice(0,2).toUpperCase();
-  var name = email.split('@')[0];
-
-  // Remove sign in button
-  var signInBtn = document.getElementById('authNavBtn');
-  if (signInBtn) signInBtn.remove();
-
-  // Find the app header and add user bar safely
-  var existing2 = document.getElementById('userBar');
-  if (existing2) existing2.remove();
-
-  var userBar = document.createElement('div');
-  userBar.id = 'userBar';
-  userBar.setAttribute('style', 'display:flex;align-items:center;gap:8px;background:#f4f4f5;border:1px solid #e4e4e7;border-radius:20px;padding:3px 10px 3px 4px;font-family:system-ui,sans-serif;');
-  userBar.innerHTML =
-''; /* userBar built with createElement below */
-
   try {
-    var rightDiv = document.querySelector('#section-home > div:first-child > div:last-child');
-    if (rightDiv) {
-      rightDiv.insertBefore(userBar, rightDiv.firstChild);
-    } else {
-      var hdr = document.querySelector('#section-home > div:first-child');
-      if (hdr) hdr.appendChild(userBar);
-    }
-  } catch(e) {
-    console.log('Could not insert user bar:', e);
-  }
-
-  // Load saved recaps from Supabase
-  loadRecapsFromSupabase();
-  showToast('Welcome back, ' + name + '!');
+    var email = user.email || '';
+    var initials = email.slice(0,2).toUpperCase();
+    var name = email.split('@')[0];
+    // Remove sign in button if present
+    var signInBtn = document.getElementById('authNavBtn');
+    if (signInBtn) signInBtn.remove();
+    // Remove existing user bar
+    var existing = document.getElementById('userBar');
+    if (existing) existing.remove();
+    // Build user bar
+    var userBar = document.createElement('div');
+    userBar.id = 'userBar';
+    userBar.setAttribute('style', 'display:flex;align-items:center;gap:7px;background:#f4f4f5;border:1px solid #e4e4e7;border-radius:20px;padding:3px 10px 3px 4px;');
+    var av = document.createElement('div');
+    av.setAttribute('style', 'width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;');
+    av.textContent = initials;
+    var nm = document.createElement('span');
+    nm.setAttribute('style', 'font-size:12px;font-weight:600;color:#09090b;');
+    nm.textContent = name;
+    var so = document.createElement('span');
+    so.setAttribute('style', 'font-size:11px;color:#71717a;cursor:pointer;');
+    so.textContent = 'Sign out';
+    so.onclick = authSignOut;
+    userBar.appendChild(av);
+    userBar.appendChild(nm);
+    userBar.appendChild(so);
+    // Append to header safely
+    var header = document.querySelector('#section-home > div:first-child');
+    if (header) header.appendChild(userBar);
+    loadRecapsFromSupabase();
+    showToast('Welcome back, ' + name + '!');
+  } catch(e) { console.log('onUserLoggedIn error:', e.message); }
 }
 
 function onUserLoggedOut() {
