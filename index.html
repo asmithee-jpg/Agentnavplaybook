@@ -972,7 +972,7 @@ mark { background: rgba(37,99,235,0.12); color: var(--text-primary); border-radi
 @media print {
   .sidebar, .mobile-header { display: none !important; }
   .main { margin-left: 0 !important; }
-  .section { display: block !important; page-break-after: always; }
+  .section { page-break-after: always; }
   .obj-a { display: block !important; }
   .comp-panel, .battle-panel { display: block !important; }
 }
@@ -2304,23 +2304,24 @@ body.dark-mode .home-card p { color: #71717a; }
 
 <div class="section home-section active" id="section-home">
 
-  <!-- APP HEADER - HubSpot style -->
-  <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:0 32px;display:flex;align-items:center;height:52px;gap:0;">
-    <div style="display:flex;align-items:center;gap:6px;padding-right:24px;border-right:1px solid var(--border);margin-right:24px;">
-      <div style="width:7px;height:7px;background:var(--blue);border-radius:50%;"></div>
-      <span style="font-family:var(--mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-3);font-weight:500;">Sales Playbook</span>
+  <!-- APP HEADER -->
+  <div style="background:#ffffff;border-bottom:1px solid #e4e4e7;padding:0 28px;display:flex;align-items:center;height:52px;gap:16px;position:sticky;top:0;z-index:100;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+    <div style="display:flex;align-items:center;gap:8px;padding-right:20px;border-right:1px solid #e4e4e7;flex-shrink:0;">
+      <div style="width:8px;height:8px;background:#6366f1;border-radius:50%;box-shadow:0 0 6px rgba(99,102,241,0.5);"></div>
+      <span style="font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:13px;font-weight:700;color:#09090b;letter-spacing:-0.2px;">AgentNav Sales Coach</span>
     </div>
-    <div style="display:flex;align-items:center;gap:2px;flex:1;">
-      <button onclick="showSection('home',this)" style="padding:6px 14px;border-radius:6px;font-family:var(--font);font-size:13px;font-weight:600;color:var(--blue);background:var(--blue-dim);border:none;cursor:pointer;">Overview</button>
-      <button onclick="showSection('coldcall',null)" style="padding:6px 14px;border-radius:6px;font-family:var(--font);font-size:13px;font-weight:500;color:var(--text-2);background:none;border:none;cursor:pointer;transition:all 0.12s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'">Cold Call</button>
-      <button onclick="showSection('objections',null)" style="padding:6px 14px;border-radius:6px;font-family:var(--font);font-size:13px;font-weight:500;color:var(--text-2);background:none;border:none;cursor:pointer;transition:all 0.12s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'">Objections</button>
-      <button onclick="showSection('competition',null)" style="padding:6px 14px;border-radius:6px;font-family:var(--font);font-size:13px;font-weight:500;color:var(--text-2);background:none;border:none;cursor:pointer;transition:all 0.12s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'">Competition</button>
-      <button onclick="showSection('pricing',null)" style="padding:6px 14px;border-radius:6px;font-family:var(--font);font-size:13px;font-weight:500;color:var(--text-2);background:none;border:none;cursor:pointer;transition:all 0.12s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'">Pricing</button>
-      <button onclick="showSection('demorecap',null)" style="padding:6px 14px;border-radius:6px;font-family:var(--font);font-size:13px;font-weight:500;color:var(--text-2);background:none;border:none;cursor:pointer;transition:all 0.12s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'">Demo Recap</button>
+    <div style="display:flex;align-items:center;gap:1px;flex:1;overflow-x:auto;">
+      <button onclick="showSection('coldcall',null)" style="padding:5px 12px;border-radius:6px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12.5px;font-weight:500;color:#52525b;background:none;border:none;cursor:pointer;white-space:nowrap;transition:all 0.12s;" onmouseover="this.style.background='#f4f4f5';this.style.color='#09090b'" onmouseout="this.style.background='none';this.style.color='#52525b'">📞 Cold Call</button>
+      <button onclick="showSection('discovery',null)" style="padding:5px 12px;border-radius:6px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12.5px;font-weight:500;color:#52525b;background:none;border:none;cursor:pointer;white-space:nowrap;transition:all 0.12s;" onmouseover="this.style.background='#f4f4f5';this.style.color='#09090b'" onmouseout="this.style.background='none';this.style.color='#52525b'">🔍 Discovery</button>
+      <button onclick="showSection('objections',null)" style="padding:5px 12px;border-radius:6px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12.5px;font-weight:500;color:#52525b;background:none;border:none;cursor:pointer;white-space:nowrap;transition:all 0.12s;" onmouseover="this.style.background='#f4f4f5';this.style.color='#09090b'" onmouseout="this.style.background='none';this.style.color='#52525b'">🛡️ Objections</button>
+      <button onclick="showSection('battlecards',null)" style="padding:5px 12px;border-radius:6px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12.5px;font-weight:500;color:#52525b;background:none;border:none;cursor:pointer;white-space:nowrap;transition:all 0.12s;" onmouseover="this.style.background='#f4f4f5';this.style.color='#09090b'" onmouseout="this.style.background='none';this.style.color='#52525b'">⚔️ Battle Cards</button>
+      <button onclick="showSection('competition',null)" style="padding:5px 12px;border-radius:6px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12.5px;font-weight:500;color:#52525b;background:none;border:none;cursor:pointer;white-space:nowrap;transition:all 0.12s;" onmouseover="this.style.background='#f4f4f5';this.style.color='#09090b'" onmouseout="this.style.background='none';this.style.color='#52525b'">🎯 Competition</button>
+      <button onclick="showSection('pricing',null)" style="padding:5px 12px;border-radius:6px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12.5px;font-weight:500;color:#52525b;background:none;border:none;cursor:pointer;white-space:nowrap;transition:all 0.12s;" onmouseover="this.style.background='#f4f4f5';this.style.color='#09090b'" onmouseout="this.style.background='none';this.style.color='#52525b'">💰 Pricing</button>
+      <button onclick="showSection('demorecap',null)" style="padding:5px 12px;border-radius:6px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12.5px;font-weight:500;color:#52525b;background:none;border:none;cursor:pointer;white-space:nowrap;transition:all 0.12s;" onmouseover="this.style.background='#f4f4f5';this.style.color='#09090b'" onmouseout="this.style.background='none';this.style.color='#52525b'">📝 Demo Recap</button>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;">
-      <button onclick="toggleCallMode()" id="callModeTopBtn" style="display:flex;align-items:center;gap:6px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:7px;padding:6px 12px;font-family:var(--font);font-size:12px;font-weight:700;color:#ef4444;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'"><span style="width:7px;height:7px;background:#ef4444;border-radius:50%;display:inline-block;animation:pulse-red 2s infinite;"></span>On A Call</button>
-      <button onclick="openCoach()" style="display:flex;align-items:center;gap:6px;background:var(--blue);border:none;border-radius:7px;padding:6px 14px;font-family:var(--font);font-size:12px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(99,102,241,0.3);">&#129504; AI Coach</button>
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <button onclick="toggleCallMode()" style="display:flex;align-items:center;gap:5px;background:#fef2f2;border:1px solid #fecaca;border-radius:7px;padding:5px 11px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:11.5px;font-weight:700;color:#ef4444;cursor:pointer;"><span style="width:6px;height:6px;background:#ef4444;border-radius:50%;display:inline-block;"></span>On A Call</button>
+      <button onclick="openCoach()" style="display:flex;align-items:center;gap:5px;background:#6366f1;border:none;border-radius:7px;padding:5px 13px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:11.5px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(99,102,241,0.3);">&#129504; AI Coach</button>
     </div>
   </div>
 
@@ -5891,37 +5892,63 @@ function getSupabase() {
 
 // ── AUTH INIT ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
-  var sb = getSupabase();
-  if (!sb) return;
+  // Show sign in button in nav immediately
+  showAuthNavBtn();
 
-  // Handle email confirmation redirect (access_token in URL hash)
+  // Wait for Supabase SDK to load (it's async from CDN)
+  var sbCheckCount = 0;
+  var sbCheckInterval = setInterval(function() {
+    sbCheckCount++;
+    var sb = getSupabase();
+    if (sb || sbCheckCount > 20) {
+      clearInterval(sbCheckInterval);
+      if (!sb) return; // SDK failed to load, silent fail - tool still works
+      initSupabaseAuth(sb);
+    }
+  }, 200);
+});
+
+function showAuthNavBtn() {
+  // Add sign in button to the top nav
+  var homeHeader = document.querySelector('#section-home > div:first-child');
+  if (!homeHeader) return;
+  var existing = document.getElementById('authNavBtn');
+  if (!existing) {
+    var btn = document.createElement('button');
+    btn.id = 'authNavBtn';
+    btn.onclick = openAuthModal;
+        btn.setAttribute('style', 'display:flex;align-items:center;gap:6px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;color:#6366f1;cursor:pointer;');
+    btn.innerHTML = '&#128100; Sign In';
+    var lastBtn = homeHeader.querySelector('button:last-child');
+    if (lastBtn) homeHeader.insertBefore(btn, lastBtn);
+    else homeHeader.appendChild(btn);
+  }
+}
+
+function initSupabaseAuth(sb) {
+  // Handle email confirmation redirect
   var hash = window.location.hash;
   if (hash && hash.includes('access_token')) {
-    // Supabase will auto-detect and set the session
     setTimeout(function() {
       sb.auth.getSession().then(function(result) {
         if (result.data && result.data.session) {
           _currentUser = result.data.session.user;
           onUserLoggedIn(_currentUser);
-          // Clean up the URL
           window.history.replaceState({}, document.title, window.location.pathname);
           showToast('Email confirmed! Welcome to AgentNav Sales Coach.');
-        } else {
-          openAuthModal();
         }
       });
     }, 500);
     return;
   }
 
-  // Check existing session
+  // Check existing session - NON-BLOCKING
   sb.auth.getSession().then(function(result) {
     if (result.data && result.data.session) {
       _currentUser = result.data.session.user;
       onUserLoggedIn(_currentUser);
-    } else {
-      openAuthModal();
     }
+    // Don't open modal automatically - let users browse freely
   });
 
   // Listen for auth changes
@@ -5935,7 +5962,7 @@ document.addEventListener('DOMContentLoaded', function() {
       onUserLoggedOut();
     }
   });
-});
+}
 
 function openAuthModal() {
   document.getElementById('authModal').classList.add('open');
@@ -6001,28 +6028,30 @@ function onUserLoggedIn(user) {
   var initials = email.slice(0,2).toUpperCase();
   var name = email.split('@')[0];
 
-  // Find the app header and add user bar
-  var appHeader = document.querySelector('#section-home > div:first-child');
-  if (appHeader) {
-    // Remove existing user bar if any
-    var existing = document.getElementById('userBar');
-    if (existing) existing.remove();
+  // Remove sign in button
+  var signInBtn = document.getElementById('authNavBtn');
+  if (signInBtn) signInBtn.remove();
 
-    var userBar = document.createElement('div');
-    userBar.id = 'userBar';
-    userBar.className = 'user-bar';
-    userBar.innerHTML =
-      '<div class="user-avatar">' + initials + '</div>' +
-      '<span class="user-name">' + name + '</span>' +
-      '<span class="user-logout" onclick="authSignOut()" title="Sign out">Sign out</span>';
+  // Find the app header and add user bar safely
+  var existing2 = document.getElementById('userBar');
+  if (existing2) existing2.remove();
 
-    // Insert before the last button in header
-    var lastBtn = appHeader.querySelector('button:last-child');
-    if (lastBtn) {
-      appHeader.insertBefore(userBar, lastBtn);
+  var userBar = document.createElement('div');
+  userBar.id = 'userBar';
+  userBar.setAttribute('style', 'display:flex;align-items:center;gap:8px;background:#f4f4f5;border:1px solid #e4e4e7;border-radius:20px;padding:3px 10px 3px 4px;font-family:system-ui,sans-serif;');
+  userBar.innerHTML =
+''; /* userBar built with createElement below */
+
+  try {
+    var rightDiv = document.querySelector('#section-home > div:first-child > div:last-child');
+    if (rightDiv) {
+      rightDiv.insertBefore(userBar, rightDiv.firstChild);
     } else {
-      appHeader.appendChild(userBar);
+      var hdr = document.querySelector('#section-home > div:first-child');
+      if (hdr) hdr.appendChild(userBar);
     }
+  } catch(e) {
+    console.log('Could not insert user bar:', e);
   }
 
   // Load saved recaps from Supabase
@@ -6033,7 +6062,8 @@ function onUserLoggedIn(user) {
 function onUserLoggedOut() {
   var existing = document.getElementById('userBar');
   if (existing) existing.remove();
-  openAuthModal();
+  showAuthNavBtn();
+  showToast('Signed out');
 }
 
 async function authSignOut() {
