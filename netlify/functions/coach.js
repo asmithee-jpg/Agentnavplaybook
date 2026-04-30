@@ -39,7 +39,7 @@ exports.handler = async function (event) {
 
   const payload = JSON.stringify({
     model: body.model || 'claude-sonnet-4-5',
-    max_tokens: body.max_tokens || 1200,
+    max_tokens: body.max_tokens || 800,
     system: body.system,
     messages: body.messages
   });
@@ -49,6 +49,7 @@ exports.handler = async function (event) {
       hostname: 'api.anthropic.com',
       path: '/v1/messages',
       method: 'POST',
+      timeout: 25000,
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(payload),
@@ -72,11 +73,20 @@ exports.handler = async function (event) {
       });
     });
 
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({
+        statusCode: 504,
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        body: JSON.stringify({ error: 'Request timed out. Please try again.' })
+      });
+    });
+
     req.on('error', (err) => {
       resolve({
         statusCode: 500,
         headers: { 'Access-Control-Allow-Origin': '*' },
-        body: JSON.stringify({ error: 'Request to Anthropic failed', detail: err.message })
+        body: JSON.stringify({ error: 'Request failed: ' + err.message })
       });
     });
 
