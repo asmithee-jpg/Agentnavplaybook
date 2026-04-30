@@ -4085,11 +4085,11 @@ function copyAndOpenHubSpot(text, hsUrl) {
     showToast('Copied! Opening HubSpot...');
     // Open HubSpot activity log after short delay
     setTimeout(function() {
-      window.open('https://app.hubspot.com/contacts/activities', '_blank');
+      window.open('https://app.hubspot.com/crm', '_blank');
     }, 800);
   }).catch(function() {
     // Fallback - just open HubSpot
-    window.open('https://app.hubspot.com/contacts/activities', '_blank');
+    window.open('https://app.hubspot.com/crm', '_blank');
   });
 }
 
@@ -5789,7 +5789,48 @@ async function generateDemoRecap() {
 }
 
 function saveRecap() {
-  showToast('Saved to this device. Connect Supabase to sync with your team.');
+  var summaryEl = document.getElementById('recap-summary-text');
+  var kwEl = document.getElementById('recap-keywords');
+  var prospect = document.getElementById('recap-prospect') ? document.getElementById('recap-prospect').value.trim() : '';
+  var summary = summaryEl ? summaryEl.textContent : '';
+  var segment = document.getElementById('recap-segment') ? document.getElementById('recap-segment').value : '';
+  var outcome = document.getElementById('recap-outcome') ? document.getElementById('recap-outcome').value : '';
+
+  if (!summary) { showToast('Generate a recap first'); return; }
+
+  var keywords = [];
+  if (kwEl) { kwEl.querySelectorAll('span').forEach(function(s) { if(s.textContent) keywords.push(s.textContent); }); }
+
+  var recap = {
+    prospect: prospect,
+    segment: segment,
+    outcome: outcome,
+    summary: summary,
+    keywords: keywords,
+    nextSteps: document.getElementById('recap-nextsteps-text') ? document.getElementById('recap-nextsteps-text').textContent : '',
+    email: document.getElementById('recap-email-text') ? document.getElementById('recap-email-text').textContent : '',
+    date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    id: Date.now()
+  };
+
+  // Save to localStorage always
+  try {
+    var saved = JSON.parse(localStorage.getItem('agentnav-recaps') || '[]');
+    saved.unshift(recap);
+    if (saved.length > 50) saved = saved.slice(0, 50);
+    localStorage.setItem('agentnav-recaps', JSON.stringify(saved));
+  } catch(e) {}
+
+  // Try Supabase if logged in
+  if (_currentUser) {
+    saveRecapToSupabase(recap).then(function(success) {
+      showToast(success ? 'Saved to cloud!' : 'Saved locally only');
+      if (success) loadRecapsFromSupabase();
+    });
+  } else {
+    showToast('Saved on this device. Sign in to sync with your team.');
+    if (typeof loadPastRecaps === 'function') loadPastRecaps();
+  }
 }
 
 function loadPastRecaps() {
