@@ -2246,6 +2246,52 @@ body.dark-mode .home-card p { color: #71717a; }
 .section { display: none !important; }
 .section.active { display: block !important; }
 .section.home-section.active { display: block !important; }
+
+/* ══ HOME ══════════════════════════════════════════════════════════ */
+.home-wrap { min-height:100vh; background:var(--bg,#f9f9fb); font-family:'Plus Jakarta Sans',system-ui,sans-serif; }
+body.dark-mode .home-wrap { background:#09090b; }
+.home-header { padding:32px 40px 22px; }
+.home-label { font-size:10.5px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:#a1a1aa; margin-bottom:14px; }
+.home-actions { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:26px; }
+.home-action-btn { display:flex; align-items:center; gap:6px; border-radius:9px; padding:8px 15px; font-size:12.5px; font-weight:700; cursor:pointer; transition:all 0.15s; font-family:'Plus Jakarta Sans',system-ui,sans-serif; border:1.5px solid transparent; }
+.home-action-red { background:#fff; border-color:#fca5a5; color:#ef4444; }
+body.dark-mode .home-action-red { background:rgba(239,68,68,0.08); border-color:rgba(239,68,68,0.3); }
+.home-action-red:hover { background:#fef2f2; }
+.home-action-dot { width:7px; height:7px; background:#ef4444; border-radius:50%; flex-shrink:0; }
+.home-action-indigo { background:#6366f1; border-color:#6366f1; color:#fff; box-shadow:0 2px 10px rgba(99,102,241,0.28); }
+.home-action-indigo:hover { transform:translateY(-1px); }
+.home-action-ghost { background:#fff; border-color:#e4e4e7; color:#09090b; }
+body.dark-mode .home-action-ghost { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.1); color:rgba(255,255,255,0.8); }
+.home-action-ghost:hover { border-color:#6366f1; color:#6366f1; }
+.home-section-label { font-size:10px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:#a1a1aa; }
+.home-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; padding:0 40px 48px; }
+.home-card { background:#fff; border:1px solid #e4e4e7; border-radius:13px; padding:20px 20px 38px; cursor:pointer; transition:all 0.16s; position:relative; overflow:hidden; }
+body.dark-mode .home-card { background:#18181b; border-color:#27272a; }
+.home-card:hover { box-shadow:0 4px 18px rgba(0,0,0,0.08); }
+.home-card-icon { font-size:22px; margin-bottom:10px; }
+.home-card-tag { font-size:9.5px; font-weight:700; letter-spacing:0.13em; text-transform:uppercase; margin-bottom:5px; }
+.home-card-title { font-size:15px; font-weight:800; letter-spacing:-0.3px; margin-bottom:7px; color:#09090b; }
+body.dark-mode .home-card-title { color:#fafafa; }
+.home-card-title-light { color:#fff !important; }
+.home-card-desc { font-size:12.5px; color:#71717a; line-height:1.6; }
+body.dark-mode .home-card-desc { color:#52525b; }
+.home-card-desc-light { color:rgba(255,255,255,0.5) !important; }
+.home-card-arrow { position:absolute; bottom:14px; right:16px; font-size:9.5px; font-weight:700; opacity:0.55; letter-spacing:0.06em; }
+.home-card-blue:hover { border-color:#6366f1; } .home-tag-blue { color:#6366f1; } .home-arrow-blue { color:#6366f1; }
+.home-card-green:hover { border-color:#10b981; } .home-tag-green { color:#10b981; } .home-arrow-green { color:#10b981; }
+.home-card-amber:hover { border-color:#f59e0b; } .home-tag-amber { color:#f59e0b; } .home-arrow-amber { color:#f59e0b; }
+.home-tag-purple { color:#818cf8; } .home-arrow-purple { color:#818cf8; }
+.home-card-coach { background:#0c0c14 !important; border-color:#27272a !important; grid-column:span 2; }
+.home-card-coach:hover { border-color:#6366f1 !important; box-shadow:0 4px 24px rgba(99,102,241,0.2) !important; }
+.coach-preview-box { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px 14px; min-width:200px; flex-shrink:0; }
+.coach-preview-label { font-size:8px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:rgba(255,255,255,0.25); margin-bottom:8px; }
+.coach-preview-rows { display:flex; flex-direction:column; gap:5px; }
+.coach-preview-row { display:flex; gap:6px; align-items:flex-start; }
+.coach-tag { font-size:7.5px; font-weight:700; border-radius:3px; padding:2px 5px; white-space:nowrap; flex-shrink:0; margin-top:1px; }
+.coach-tag-green { background:rgba(16,185,129,0.15); color:#10b981; }
+.coach-tag-blue { background:rgba(99,102,241,0.15); color:#818cf8; }
+.coach-tag-amber { background:rgba(245,158,11,0.15); color:#f59e0b; }
+.coach-preview-text { font-size:11px; color:rgba(255,255,255,0.7); line-height:1.5; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -2311,12 +2357,14 @@ body.dark-mode .home-card p { color: #71717a; }
     <button class="nav-item" data-section="battlecards" onclick="showSection('battlecards',this)"><span class="nav-icon">✕</span>Battle Cards</button>
     <button class="nav-item" data-section="talktracks" onclick="showSection('talktracks',this)"><span class="nav-icon">💬</span>Talk Tracks</button>
     <button class="nav-item" data-section="demorecap" onclick="showSection('demorecap',this)"><span class="nav-icon">📝</span>Demo Recap</button>
+    <button class="nav-item" data-section="mypitches" onclick="showSection('mypitches',this)" id="nav-mypitches"><span class="nav-icon">&#127908;</span>My Pitches</button>
   </div>
 
   <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">
     <span id="themeToggleLabel">🌙 Dark Mode</span>
     <div class="theme-toggle-track"><div class="theme-toggle-thumb"></div></div>
   </button>
+  <button class="nav-item" data-section="admin" onclick="showSection('admin',this)" id="nav-admin" style="display:none;margin:0 10px 8px;width:calc(100% - 20px);background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#fca5a5;"><span class="nav-icon">&#9881;&#65039;</span>Admin Panel</button>
   <div class="sidebar-footer">
     AgentNav Internal — 2026
   </div>
@@ -2326,123 +2374,38 @@ body.dark-mode .home-card p { color: #71717a; }
 <div class="call-mode-bar" id="callModeBar"><span>🔴 CALL MODE ACTIVE — Scripts only. No distractions.</span><button onclick="toggleCallMode()">Exit Call Mode</button></div>
 
 <div class="section home-section active" id="section-home">
-
-  <!-- APP HEADER -->
-  <div style="background:#ffffff;border-bottom:1px solid #e4e4e7;padding:0 28px;display:flex;align-items:center;height:52px;gap:16px;position:sticky;top:0;z-index:100;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-    <div style="display:flex;align-items:center;gap:8px;padding-right:20px;border-right:1px solid #e4e4e7;flex-shrink:0;">
-      <div style="width:8px;height:8px;background:#6366f1;border-radius:50%;box-shadow:0 0 6px rgba(99,102,241,0.5);"></div>
-      <span style="font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:13px;font-weight:700;color:#09090b;letter-spacing:-0.2px;">AgentNav Sales Coach</span>
+<div class="home-wrap">
+  <div class="home-header">
+    <div class="home-label">AgentNav Sales Coach</div>
+    <div class="home-actions">
+      <button onclick="toggleCallMode()" class="home-action-btn home-action-red"><span class="home-action-dot"></span>I'm On A Call</button>
+      <button onclick="openCoach()" class="home-action-btn home-action-indigo">&#129504; Ask AI Coach</button>
+      <button onclick="showSection('demorecap',null)" class="home-action-btn home-action-ghost">&#128203; Recap a Demo</button>
+      <button onclick="showSection('pricing',null)" class="home-action-btn home-action-ghost">&#128196; Build a Quote</button>
+      <button onclick="showSection('objections',null)" class="home-action-btn home-action-ghost">&#128737;&#65039; Handle Objection</button>
+      <button onclick="showSection('competition',null)" class="home-action-btn home-action-ghost">&#127919; Competition</button>
     </div>
-    <div style="display:flex;align-items:center;gap:1px;flex:1;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;">
-      <button onclick="showSection('coldcall',null)" style="padding:5px 9px;border-radius:6px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12px;font-weight:500;color:#52525b;background:none;border:none;cursor:pointer;white-space:nowrap;transition:all 0.12s;" onmouseover="this.style.background='#f4f4f5';this.style.color='#09090b'" onmouseout="this.style.background='none';this.style.color='#52525b'">📞 Cold Call</button>
-      <button onclick="showSection('discovery',null)" style="padding:5px 9px;border-radius:6px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12px;font-weight:500;color:#52525b;background:none;border:none;cursor:pointer;white-space:nowrap;transition:all 0.12s;" onmouseover="this.style.background='#f4f4f5';this.style.color='#09090b'" onmouseout="this.style.background='none';this.style.color='#52525b'">🔍 Discovery</button>
-      <button onclick="showSection('objections',null)" style="padding:5px 9px;border-radius:6px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12px;font-weight:500;color:#52525b;background:none;border:none;cursor:pointer;white-space:nowrap;transition:all 0.12s;" onmouseover="this.style.background='#f4f4f5';this.style.color='#09090b'" onmouseout="this.style.background='none';this.style.color='#52525b'">🛡️ Objections</button>
-      <button onclick="showSection('battlecards',null)" style="padding:5px 9px;border-radius:6px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12px;font-weight:500;color:#52525b;background:none;border:none;cursor:pointer;white-space:nowrap;transition:all 0.12s;" onmouseover="this.style.background='#f4f4f5';this.style.color='#09090b'" onmouseout="this.style.background='none';this.style.color='#52525b'">⚔️ Battle Cards</button>
-      <button onclick="showSection('competition',null)" style="padding:5px 9px;border-radius:6px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12px;font-weight:500;color:#52525b;background:none;border:none;cursor:pointer;white-space:nowrap;transition:all 0.12s;" onmouseover="this.style.background='#f4f4f5';this.style.color='#09090b'" onmouseout="this.style.background='none';this.style.color='#52525b'">🎯 Competition</button>
-      <button onclick="showSection('pricing',null)" style="padding:5px 9px;border-radius:6px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12px;font-weight:500;color:#52525b;background:none;border:none;cursor:pointer;white-space:nowrap;transition:all 0.12s;" onmouseover="this.style.background='#f4f4f5';this.style.color='#09090b'" onmouseout="this.style.background='none';this.style.color='#52525b'">💰 Pricing</button>
-      <button onclick="showSection('demorecap',null)" style="padding:5px 9px;border-radius:6px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:12px;font-weight:500;color:#52525b;background:none;border:none;cursor:pointer;white-space:nowrap;transition:all 0.12s;" onmouseover="this.style.background='#f4f4f5';this.style.color='#09090b'" onmouseout="this.style.background='none';this.style.color='#52525b'">📝 Recap</button>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-      <button onclick="toggleCallMode()" style="display:flex;align-items:center;gap:5px;background:#fef2f2;border:1px solid #fecaca;border-radius:7px;padding:5px 11px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:11.5px;font-weight:700;color:#ef4444;cursor:pointer;"><span style="width:6px;height:6px;background:#ef4444;border-radius:50%;display:inline-block;"></span>On A Call</button>
-      <button onclick="openCoach()" style="display:flex;align-items:center;gap:5px;background:#6366f1;border:none;border-radius:7px;padding:5px 13px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:11.5px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(99,102,241,0.3);">&#129504; AI Coach</button>
-    </div>
+    <div class="home-section-label">All Tools</div>
   </div>
-
-  <!-- STAT BAR -->
-  <div style="background:var(--sb-bg);display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid rgba(255,255,255,0.05);">
-    <div style="padding:14px 24px;border-right:1px solid rgba(255,255,255,0.05);">
-      <div style="font-family:var(--font);font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.8px;line-height:1;">$79<span style="font-size:12px;font-weight:400;color:rgba(255,255,255,0.4);margin-left:3px;">/mo</span></div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;">Solo agent</div>
+  <div class="home-grid">
+    <div onclick="showSection('coldcall',null)" class="home-card home-card-blue"><div class="home-card-icon">&#128222;</div><div class="home-card-tag home-tag-blue">On The Call</div><div class="home-card-title">Cold Call Guide</div><div class="home-card-desc">5-step word-for-word script. Earn 30 more seconds every time.</div><div class="home-card-arrow home-arrow-blue">OPEN &#8594;</div></div>
+    <div onclick="showSection('discovery',null)" class="home-card home-card-blue"><div class="home-card-icon">&#128269;</div><div class="home-card-tag home-tag-blue">On The Call</div><div class="home-card-title">Discovery Call</div><div class="home-card-desc">Questions that write the demo for you. What to ask and how to listen.</div><div class="home-card-arrow home-arrow-blue">OPEN &#8594;</div></div>
+    <div onclick="showSection('demo',null)" class="home-card home-card-blue"><div class="home-card-icon">&#128421;</div><div class="home-card-tag home-tag-blue">On The Call</div><div class="home-card-title">Demo Call</div><div class="home-card-desc">What to show, what to skip, and how to close into the next step.</div><div class="home-card-arrow home-arrow-blue">OPEN &#8594;</div></div>
+    <div onclick="showSection('objections',null)" class="home-card home-card-green"><div class="home-card-icon">&#128737;&#65039;</div><div class="home-card-tag home-tag-green">Reference</div><div class="home-card-title">Objection Handling</div><div class="home-card-desc">8 real objections with human responses. Copy and paste on a call.</div><div class="home-card-arrow home-arrow-green">OPEN &#8594;</div></div>
+    <div onclick="showSection('battlecards',null)" class="home-card home-card-green"><div class="home-card-icon">&#9876;&#65039;</div><div class="home-card-tag home-tag-green">Reference</div><div class="home-card-title">Battle Cards</div><div class="home-card-desc">EZLynx, HawkSoft, AgencyBloc + 4 more. Know exactly where we win.</div><div class="home-card-arrow home-arrow-green">OPEN &#8594;</div></div>
+    <div onclick="showSection('pitches',null)" class="home-card home-card-green"><div class="home-card-icon">&#9889;</div><div class="home-card-tag home-tag-green">Before The Call</div><div class="home-card-title">Elevator Pitches</div><div class="home-card-desc">5 situation-specific pitches. Under 20 seconds, any scenario.</div><div class="home-card-arrow home-arrow-green">OPEN &#8594;</div></div>
+    <div onclick="openCoach()" class="home-card home-card-coach">
+      <div style="display:flex;align-items:flex-start;gap:16px;">
+        <div style="flex:1;"><div class="home-card-icon">&#129504;</div><div class="home-card-tag home-tag-purple">AI-Powered</div><div class="home-card-title home-card-title-light">AI Sales Coach</div><div class="home-card-desc home-card-desc-light">Tell the coach who you are talking to. Get the exact script and closing angle in seconds.</div></div>
+        <div class="coach-preview-box"><div class="coach-preview-label">Example Output</div><div class="coach-preview-rows"><div class="coach-preview-row"><span class="coach-tag coach-tag-green">SAY</span><span class="coach-preview-text">"Running OEP on a spreadsheet?"</span></div><div class="coach-preview-row"><span class="coach-tag coach-tag-blue">PUSH</span><span class="coach-preview-text">Renewal Autopilot. No one has it.</span></div><div class="coach-preview-row"><span class="coach-tag coach-tag-amber">CLOSE</span><span class="coach-preview-text">"See it live? 4 minutes."</span></div></div></div>
+      </div>
+      <div class="home-card-arrow home-arrow-purple">OPEN COACH &#8594;</div>
     </div>
-    <div style="padding:14px 24px;border-right:1px solid rgba(255,255,255,0.05);">
-      <div style="font-family:var(--font);font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.8px;line-height:1;">$247<span style="font-size:12px;font-weight:400;color:rgba(255,255,255,0.4);margin-left:3px;">/mo</span></div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;">Small agency (4 agents)</div>
-    </div>
-    <div style="padding:14px 24px;border-right:1px solid rgba(255,255,255,0.05);">
-      <div style="font-family:var(--font);font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.8px;line-height:1;">$597<span style="font-size:12px;font-weight:400;color:rgba(255,255,255,0.4);margin-left:3px;">/mo</span></div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;">Large agency (10 agents)</div>
-    </div>
-    <div style="padding:14px 24px;">
-      <div style="font-family:var(--font);font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.8px;line-height:1;">7</div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;">Competitors covered</div>
-    </div>
+    <div onclick="showSection('demorecap',null)" class="home-card home-card-amber"><div class="home-card-icon">&#128203;</div><div class="home-card-tag home-tag-amber">Post-Demo</div><div class="home-card-title">Demo Recap</div><div class="home-card-desc">AI extracts keywords, next steps, and writes your follow-up email.</div><div class="home-card-arrow home-arrow-amber">OPEN &#8594;</div></div>
   </div>
-
-  <!-- MAIN GRID -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);">
-
-    <!-- LEFT: CALL SCRIPTS + PRICING -->
-    <div style="background:var(--surface);">
-
-      <div style="padding:20px 28px;border-bottom:1px solid var(--border);">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-          <div>
-            <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--blue);margin-bottom:3px;font-weight:600;">On The Call</div>
-            <h2 style="font-family:var(--font);font-size:15px;font-weight:800;color:var(--text-1);">Call Scripts</h2>
-          </div>
-          <button onclick="showSection('coldcall',null)" style="font-family:var(--mono);font-size:9px;color:var(--blue);font-weight:700;background:var(--blue-dim);border:1px solid var(--blue-border);border-radius:6px;padding:4px 10px;cursor:pointer;letter-spacing:0.08em;">VIEW ALL</button>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:5px;">
-          <div onclick="showSection('coldcall',null)" style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'"><span>&#128222;</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text-1);">Cold Call</div><div style="font-size:11px;color:var(--text-3);">5 steps · Earn 30 more seconds</div></div><span style="font-family:var(--mono);font-size:9px;color:var(--blue);font-weight:700;">&#8594;</span></div>
-          <div onclick="showSection('discovery',null)" style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'"><span>&#128269;</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text-1);">Discovery Call</div><div style="font-size:11px;color:var(--text-3);">Questions that write the demo for you</div></div><span style="font-family:var(--mono);font-size:9px;color:var(--blue);font-weight:700;">&#8594;</span></div>
-          <div onclick="showSection('demo',null)" style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'"><span>&#128421;</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text-1);">Demo Call</div><div style="font-size:11px;color:var(--text-3);">What to show · What to skip</div></div><span style="font-family:var(--mono);font-size:9px;color:var(--blue);font-weight:700;">&#8594;</span></div>
-          <div onclick="showSection('closing',null)" style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'"><span>&#127942;</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text-1);">Closing Call</div><div style="font-size:11px;color:var(--text-3);">Push for decision · Handle final objections</div></div><span style="font-family:var(--mono);font-size:9px;color:var(--blue);font-weight:700;">&#8594;</span></div>
-        </div>
-      </div>
-
-      <div style="padding:20px 28px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-          <div>
-            <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--amber);margin-bottom:3px;font-weight:600;">Pricing</div>
-            <h2 style="font-family:var(--font);font-size:15px;font-weight:800;color:var(--text-1);">Quick Reference</h2>
-          </div>
-          <button onclick="showSection('pricing',null)" style="font-family:var(--mono);font-size:9px;color:var(--amber);font-weight:700;background:var(--amber-dim);border:1px solid rgba(245,158,11,0.25);border-radius:6px;padding:4px 10px;cursor:pointer;letter-spacing:0.08em;">BUILD QUOTE</button>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:5px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;"><span style="font-size:13px;font-weight:600;color:var(--text-1);">Solo Agent</span><div><span style="font-family:var(--font);font-size:16px;font-weight:800;color:var(--blue);">$79</span><span style="font-size:11px;color:var(--text-3);">/mo &middot; 1 seat &middot; all features</span></div></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;"><span style="font-size:13px;font-weight:600;color:var(--text-1);">Small Agency</span><div><span style="font-family:var(--font);font-size:16px;font-weight:800;color:var(--blue);">$247</span><span style="font-size:11px;color:var(--text-3);">/mo &middot; 4 agents + 1 asst</span></div></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;"><span style="font-size:13px;font-weight:600;color:var(--text-1);">Large Agency</span><div><span style="font-family:var(--font);font-size:16px;font-weight:800;color:var(--blue);">$597</span><span style="font-size:11px;color:var(--text-3);">/mo &middot; 10 agents + 2 asst</span></div></div>
-          <div onclick="showSection('pricing',null)" style="display:flex;justify-content:space-between;align-items:center;padding:9px 13px;background:var(--blue-dim);border:1px solid var(--blue-border);border-radius:8px;cursor:pointer;"><span style="font-size:13px;font-weight:700;color:var(--blue);">Enterprise / Custom</span><span style="font-family:var(--mono);font-size:9px;color:var(--blue);font-weight:700;">BUILD &#8594;</span></div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- RIGHT: REFERENCE + AI COACH -->
-    <div style="background:var(--surface);">
-
-      <div style="padding:20px 28px;border-bottom:1px solid var(--border);">
-        <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--green);margin-bottom:3px;font-weight:600;">Reference</div>
-        <h2 style="font-family:var(--font);font-size:15px;font-weight:800;color:var(--text-1);margin-bottom:12px;">Handle Any Situation</h2>
-        <div style="display:flex;flex-direction:column;gap:5px;">
-          <div onclick="showSection('objections',null)" style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'"><span>&#128737;</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text-1);">Objection Handling</div><div style="font-size:11px;color:var(--text-3);">8 objections &middot; Word-for-word responses</div></div><span style="font-family:var(--mono);font-size:9px;color:var(--green);font-weight:700;">&#8594;</span></div>
-          <div onclick="showSection('battlecards',null)" style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'"><span>&#9876;</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text-1);">Battle Cards</div><div style="font-size:11px;color:var(--text-3);">EZLynx, HawkSoft, AgencyBloc + 4 more</div></div><span style="font-family:var(--mono);font-size:9px;color:var(--green);font-weight:700;">&#8594;</span></div>
-          <div onclick="showSection('competition',null)" style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'"><span>&#127919;</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text-1);">Know Your Competition</div><div style="font-size:11px;color:var(--text-3);">Deep dives &middot; Where we win and where we lose</div></div><span style="font-family:var(--mono);font-size:9px;color:var(--green);font-weight:700;">&#8594;</span></div>
-          <div onclick="showSection('pitches',null)" style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'"><span>&#9889;</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text-1);">Elevator Pitches</div><div style="font-size:11px;color:var(--text-3);">5 situation scripts &middot; Copy instantly</div></div><span style="font-family:var(--mono);font-size:9px;color:var(--green);font-weight:700;">&#8594;</span></div>
-          <div onclick="showSection('personas',null)" style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'"><span>&#128100;</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text-1);">Buyer Personas</div><div style="font-size:11px;color:var(--text-3);">Solo, Small, Large, Enterprise snapshots</div></div><span style="font-family:var(--mono);font-size:9px;color:var(--green);font-weight:700;">&#8594;</span></div>
-        </div>
-      </div>
-
-      <!-- AI COACH PREVIEW -->
-      <div style="padding:20px 28px;">
-        <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(165,180,252,0.8);margin-bottom:3px;font-weight:600;">AI-Powered</div>
-        <h2 style="font-family:var(--font);font-size:15px;font-weight:800;color:var(--text-1);margin-bottom:6px;">AI Sales Coach</h2>
-        <p style="font-size:12px;color:var(--text-3);line-height:1.6;margin-bottom:12px;">Tell the coach who you are talking to. Get the exact script, demo focus, and closing angle in seconds.</p>
-        <div style="background:var(--sb-bg);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:14px 16px;margin-bottom:12px;">
-          <div style="font-family:var(--mono);font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(165,180,252,0.6);margin-bottom:8px;">Example output</div>
-          <div style="display:flex;flex-direction:column;gap:6px;">
-            <div style="display:flex;gap:7px;align-items:flex-start;"><span style="font-family:var(--mono);font-size:8px;background:rgba(16,185,129,0.15);color:#10b981;padding:2px 6px;border-radius:3px;font-weight:700;white-space:nowrap;margin-top:1px;">SAY</span><span style="font-size:11.5px;color:rgba(255,255,255,0.8);line-height:1.5;">"Are you running OEP on a spreadsheet or do you have something automated?"</span></div>
-            <div style="display:flex;gap:7px;align-items:flex-start;"><span style="font-family:var(--mono);font-size:8px;background:rgba(99,102,241,0.15);color:#818cf8;padding:2px 6px;border-radius:3px;font-weight:700;white-space:nowrap;margin-top:1px;">PUSH</span><span style="font-size:11.5px;color:rgba(255,255,255,0.8);line-height:1.5;">Renewal Autopilot. They have zero equivalent. Ask about their October nightmare.</span></div>
-            <div style="display:flex;gap:7px;align-items:flex-start;"><span style="font-family:var(--mono);font-size:8px;background:rgba(245,158,11,0.15);color:#f59e0b;padding:2px 6px;border-radius:3px;font-weight:700;white-space:nowrap;margin-top:1px;">CLOSE</span><span style="font-size:11.5px;color:rgba(255,255,255,0.8);line-height:1.5;">"Want to see the OEP board live? 4 minutes and you will see exactly how it works."</span></div>
-          </div>
-        </div>
-        <button onclick="openCoach()" style="width:100%;background:linear-gradient(135deg,var(--blue),var(--purple));border:none;border-radius:9px;padding:12px;font-family:var(--font);font-size:13px;font-weight:700;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 16px rgba(99,102,241,0.35);transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">&#129504; Open AI Coach</button>
-      </div>
-
-    </div>
-  </div>
-
 </div>
+</div>
+
 
 <div class="section" id="section-personas">
   <div class="page-header">
@@ -2873,166 +2836,115 @@ body.dark-mode .home-card p { color: #71717a; }
 <div class="section" id="section-pricing">
   <div class="page-header">
     <div class="page-label">Before The Call</div>
-    <h1>Pricing & Quote Builder</h1>
-    <p>Enter prospect details and team size to generate a branded PDF quote instantly.</p>
+    <h1>Pricing &amp; Quote Builder</h1>
+    <p>Enter prospect details and team size to generate a branded PDF quote.</p>
   </div>
   <div class="content" style="max-width:1100px;">
-
-    <!-- PLAN CARDS -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;">
-      <div onclick="setQuotePlan('solo')" style="background:#fff;border:1px solid #e4e4e7;border-top:3px solid #6366f1;border-radius:10px;padding:14px 16px;text-align:center;cursor:pointer;">
-        <div style="font-size:10px;font-weight:600;color:#6366f1;margin-bottom:4px;font-family:monospace;letter-spacing:0.1em;">SOLO AGENT</div>
-        <div style="font-size:26px;font-weight:800;color:#09090b;letter-spacing:-1px;">$79</div>
-        <div style="font-size:11px;color:#71717a;">/month · 1 seat</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px;">
+      <div onclick="setQuotePlan('solo')" style="background:#fff;border:1px solid #e4e4e7;border-top:3px solid #6366f1;border-radius:10px;padding:13px 14px;text-align:center;cursor:pointer;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.09)'" onmouseout="this.style.boxShadow=''">
+        <div style="font-size:9.5px;font-weight:700;color:#6366f1;margin-bottom:4px;letter-spacing:0.12em;">SOLO AGENT</div>
+        <div style="font-size:24px;font-weight:800;color:#09090b;letter-spacing:-1px;">$79</div>
+        <div style="font-size:11px;color:#71717a;">/mo &middot; 1 seat</div>
       </div>
-      <div onclick="setQuotePlan('small')" style="background:#fff;border:2px solid #6366f1;border-top:3px solid #6366f1;border-radius:10px;padding:14px 16px;text-align:center;cursor:pointer;box-shadow:0 0 0 3px rgba(99,102,241,0.1);">
-        <div style="font-size:10px;font-weight:600;color:#6366f1;margin-bottom:4px;font-family:monospace;letter-spacing:0.1em;">SMALL AGENCY ★</div>
-        <div style="font-size:26px;font-weight:800;color:#09090b;letter-spacing:-1px;">$247</div>
-        <div style="font-size:11px;color:#71717a;">/month · 4 agents</div>
+      <div onclick="setQuotePlan('small')" style="background:#fff;border:2px solid #6366f1;border-top:3px solid #6366f1;border-radius:10px;padding:13px 14px;text-align:center;cursor:pointer;box-shadow:0 0 0 3px rgba(99,102,241,0.1);">
+        <div style="font-size:9.5px;font-weight:700;color:#6366f1;margin-bottom:4px;letter-spacing:0.12em;">SMALL AGENCY &#9733;</div>
+        <div style="font-size:24px;font-weight:800;color:#09090b;letter-spacing:-1px;">$247</div>
+        <div style="font-size:11px;color:#71717a;">/mo &middot; 4 agents</div>
       </div>
-      <div onclick="setQuotePlan('large')" style="background:#fff;border:1px solid #e4e4e7;border-top:3px solid #6366f1;border-radius:10px;padding:14px 16px;text-align:center;cursor:pointer;">
-        <div style="font-size:10px;font-weight:600;color:#6366f1;margin-bottom:4px;font-family:monospace;letter-spacing:0.1em;">LARGE AGENCY</div>
-        <div style="font-size:26px;font-weight:800;color:#09090b;letter-spacing:-1px;">$597</div>
-        <div style="font-size:11px;color:#71717a;">/month · 10 agents</div>
+      <div onclick="setQuotePlan('large')" style="background:#fff;border:1px solid #e4e4e7;border-top:3px solid #6366f1;border-radius:10px;padding:13px 14px;text-align:center;cursor:pointer;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.09)'" onmouseout="this.style.boxShadow=''">
+        <div style="font-size:9.5px;font-weight:700;color:#6366f1;margin-bottom:4px;letter-spacing:0.12em;">LARGE AGENCY</div>
+        <div style="font-size:24px;font-weight:800;color:#09090b;letter-spacing:-1px;">$597</div>
+        <div style="font-size:11px;color:#71717a;">/mo &middot; 10 agents</div>
       </div>
-      <div onclick="setQuotePlan('enterprise')" style="background:#0c0c14;border:1px solid #27272a;border-top:3px solid #6366f1;border-radius:10px;padding:14px 16px;text-align:center;cursor:pointer;">
-        <div style="font-size:10px;font-weight:600;color:#818cf8;margin-bottom:4px;font-family:monospace;letter-spacing:0.1em;">ENTERPRISE</div>
-        <div style="font-size:26px;font-weight:800;color:#fff;letter-spacing:-1px;">Custom</div>
-        <div style="font-size:11px;color:#71717a;">20+ agents</div>
+      <div onclick="setQuotePlan('enterprise')" style="background:#0c0c14;border:1px solid #27272a;border-top:3px solid #6366f1;border-radius:10px;padding:13px 14px;text-align:center;cursor:pointer;">
+        <div style="font-size:9.5px;font-weight:700;color:#818cf8;margin-bottom:4px;letter-spacing:0.12em;">ENTERPRISE</div>
+        <div style="font-size:24px;font-weight:800;color:#fff;letter-spacing:-1px;">Custom</div>
+        <div style="font-size:11px;color:#52525b;">20+ agents</div>
       </div>
     </div>
-
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
-
-      <!-- LEFT: CONTACT FORM -->
-      <div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
-        <div style="padding:14px 20px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;">
-          <div style="font-size:9.5px;font-weight:600;color:#71717a;font-family:monospace;letter-spacing:0.12em;text-transform:uppercase;">Prospect Details</div>
+      <div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
+        <div style="padding:13px 18px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;">
+          <div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;">Prospect Details</div>
         </div>
-        <div style="padding:18px 20px;display:flex;flex-direction:column;gap:11px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <div>
-              <label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">First Name</label>
-              <input id="qb-fname" type="text" placeholder="Mike" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:9px 11px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;font-family:system-ui;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
-            </div>
-            <div>
-              <label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Last Name</label>
-              <input id="qb-lname" type="text" placeholder="Torres" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:9px 11px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;font-family:system-ui;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
-            </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;">
+            <div><label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">First Name</label><input id="qb-fname" type="text" placeholder="Mike" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div>
+            <div><label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Last Name</label><input id="qb-lname" type="text" placeholder="Torres" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div>
           </div>
-          <div>
-            <label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Agency Name</label>
-            <input id="qb-agency" type="text" placeholder="Sunrise Health Agency" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:9px 11px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;font-family:system-ui;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <div>
-              <label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Email</label>
-              <input id="qb-email" type="email" placeholder="mike@agency.com" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:9px 11px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;font-family:system-ui;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
-            </div>
-            <div>
-              <label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Phone</label>
-              <input id="qb-phone" type="tel" placeholder="(555) 000-0000" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:9px 11px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;font-family:system-ui;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
-            </div>
+          <div><label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Agency Name</label><input id="qb-agency" type="text" placeholder="Sunrise Health Agency" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;">
+            <div><label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Email</label><input id="qb-email" type="email" placeholder="mike@agency.com" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div>
+            <div><label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Phone</label><input id="qb-phone" type="tel" placeholder="(555) 000-0000" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div>
           </div>
           <div style="border-top:1px solid #e4e4e7;padding-top:12px;">
-            <div style="font-size:9px;font-weight:600;color:#71717a;margin-bottom:10px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Team Size</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-              <div>
-                <label style="font-size:9px;color:#71717a;display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Agents</label>
-                <div style="display:flex;align-items:center;gap:6px;">
-                  <button onclick="adjustQBAgents(-1)" style="width:30px;height:30px;border:1px solid #e4e4e7;border-radius:6px;background:#f8f8fa;font-size:16px;cursor:pointer;font-family:system-ui;">-</button>
-                  <input id="qb-agents" type="number" value="1" min="1" max="500" oninput="updateQuotePreview2()" style="width:55px;text-align:center;border:1.5px solid #e4e4e7;border-radius:7px;padding:6px;font-size:15px;font-weight:700;color:#09090b;">
-                  <button onclick="adjustQBAgents(1)" style="width:30px;height:30px;border:1px solid #e4e4e7;border-radius:6px;background:#f8f8fa;font-size:16px;cursor:pointer;font-family:system-ui;">+</button>
+            <div style="font-size:9px;font-weight:700;color:#71717a;margin-bottom:9px;letter-spacing:0.12em;text-transform:uppercase;">Team Size</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px;">
+              <div><label style="font-size:9px;color:#71717a;display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Agents</label>
+                <div style="display:flex;align-items:center;gap:5px;">
+                  <button onclick="adjustQBAgents(-1)" style="width:28px;height:30px;border:1px solid #e4e4e7;border-radius:6px;background:#f4f4f5;font-size:15px;cursor:pointer;flex-shrink:0;">-</button>
+                  <input id="qb-agents" type="text" inputmode="numeric" value="1" style="width:48px;text-align:center;border:1.5px solid #e4e4e7;border-radius:7px;padding:5px 2px;font-size:15px;font-weight:700;color:#09090b;outline:none;" oninput="updateQuotePreview2()" onchange="updateQuotePreview2()">
+                  <button onclick="adjustQBAgents(1)" style="width:28px;height:30px;border:1px solid #e4e4e7;border-radius:6px;background:#f4f4f5;font-size:15px;cursor:pointer;flex-shrink:0;">+</button>
                 </div>
               </div>
-              <div>
-                <label style="font-size:9px;color:#71717a;display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Assistants</label>
-                <div style="display:flex;align-items:center;gap:6px;">
-                  <button onclick="adjustQBAssistants(-1)" style="width:30px;height:30px;border:1px solid #e4e4e7;border-radius:6px;background:#f8f8fa;font-size:16px;cursor:pointer;font-family:system-ui;">-</button>
-                  <input id="qb-assistants" type="number" value="0" min="0" max="100" oninput="updateQuotePreview2()" style="width:55px;text-align:center;border:1.5px solid #e4e4e7;border-radius:7px;padding:6px;font-size:15px;font-weight:700;color:#09090b;">
-                  <button onclick="adjustQBAssistants(1)" style="width:30px;height:30px;border:1px solid #e4e4e7;border-radius:6px;background:#f8f8fa;font-size:16px;cursor:pointer;font-family:system-ui;">+</button>
+              <div><label style="font-size:9px;color:#71717a;display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Assistants</label>
+                <div style="display:flex;align-items:center;gap:5px;">
+                  <button onclick="adjustQBAssistants(-1)" style="width:28px;height:30px;border:1px solid #e4e4e7;border-radius:6px;background:#f4f4f5;font-size:15px;cursor:pointer;flex-shrink:0;">-</button>
+                  <input id="qb-assistants" type="text" inputmode="numeric" value="0" style="width:48px;text-align:center;border:1.5px solid #e4e4e7;border-radius:7px;padding:5px 2px;font-size:15px;font-weight:700;color:#09090b;outline:none;" oninput="updateQuotePreview2()" onchange="updateQuotePreview2()">
+                  <button onclick="adjustQBAssistants(1)" style="width:28px;height:30px;border:1px solid #e4e4e7;border-radius:6px;background:#f4f4f5;font-size:15px;cursor:pointer;flex-shrink:0;">+</button>
                 </div>
               </div>
             </div>
-            <div id="qb-plan-display" style="background:#eef2ff;border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
-              <div>
-                <div style="font-size:13px;font-weight:700;color:#6366f1;" id="qb-plan-name">Independent Agent</div>
-                <div style="font-size:11px;color:#71717a;" id="qb-plan-desc">1 agent, all features</div>
-              </div>
-              <div style="text-align:right;">
-                <div style="font-size:22px;font-weight:800;color:#6366f1;letter-spacing:-1px;" id="qb-price-display">$79</div>
-                <div style="font-size:11px;color:#71717a;">/month</div>
-              </div>
+            <div id="qb-plan-display" style="background:#eef2ff;border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:10px 13px;display:flex;align-items:center;justify-content:space-between;">
+              <div><div style="font-size:13px;font-weight:700;color:#6366f1;" id="qb-plan-name">Independent Agent</div><div style="font-size:11px;color:#71717a;margin-top:1px;" id="qb-plan-desc">1 agent &middot; all features</div></div>
+              <div style="text-align:right;"><div style="font-size:22px;font-weight:800;color:#6366f1;letter-spacing:-1px;" id="qb-price-display">$79</div><div style="font-size:10px;color:#71717a;">/month</div></div>
             </div>
           </div>
-          <div>
-            <label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Your Name (Rep)</label>
-            <input id="qb-repname" type="text" placeholder="Your name" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:9px 11px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;font-family:system-ui;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
-          </div>
-          <div>
-            <label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Notes (optional)</label>
-            <input id="qb-notes" type="text" placeholder="e.g. Includes dedicated onboarding" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:9px 11px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;font-family:system-ui;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
-          </div>
-          <button onclick="generateQuotePDF2()" style="width:100%;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:9px;padding:13px;font-size:14px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 4px 16px rgba(99,102,241,0.3);font-family:system-ui;">
-            Download PDF Quote
-          </button>
+          <div><label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Your Name (Rep)</label><input id="qb-repname" type="text" placeholder="Your name" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div>
+          <div><label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Notes (optional)</label><input id="qb-notes" type="text" placeholder="e.g. Includes dedicated onboarding" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div>
+          <button onclick="generateQuotePDF2()" style="width:100%;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:9px;padding:12px;font-size:13.5px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(99,102,241,0.3);">&#128196; Download PDF Quote</button>
         </div>
       </div>
-
-      <!-- RIGHT: INCLUDED + ENTERPRISE -->
       <div style="display:flex;flex-direction:column;gap:12px;">
-        <div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
-          <div style="padding:13px 18px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;">
-            <div style="font-size:9.5px;font-weight:600;color:#71717a;font-family:monospace;letter-spacing:0.12em;text-transform:uppercase;">Every Plan Includes</div>
-          </div>
-          <div style="padding:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:7px;">
-            <div style="font-size:12.5px;color:#52525b;display:flex;gap:6px;"><span style="color:#10b981;font-weight:700;">&#10003;</span>ACA, STM, Life, Ancillary &amp; Indemnity</div>
-            <div style="font-size:12.5px;color:#52525b;display:flex;gap:6px;"><span style="color:#10b981;font-weight:700;">&#10003;</span>Full CRM &amp; household tracking</div>
-            <div style="font-size:12.5px;color:#52525b;display:flex;gap:6px;"><span style="color:#10b981;font-weight:700;">&#10003;</span>Renewal Autopilot OEP workflow</div>
-            <div style="font-size:12.5px;color:#52525b;display:flex;gap:6px;"><span style="color:#10b981;font-weight:700;">&#10003;</span>SMS with dedicated number</div>
-            <div style="font-size:12.5px;color:#52525b;display:flex;gap:6px;"><span style="color:#10b981;font-weight:700;">&#10003;</span>HealthSherpa &amp; EDE integration</div>
-            <div style="font-size:12.5px;color:#52525b;display:flex;gap:6px;"><span style="color:#10b981;font-weight:700;">&#10003;</span>Google Calendar sync</div>
-            <div style="font-size:12.5px;color:#52525b;display:flex;gap:6px;"><span style="color:#10b981;font-weight:700;">&#10003;</span>Policy tracker &amp; reconciliation</div>
-            <div style="font-size:12.5px;color:#52525b;display:flex;gap:6px;"><span style="color:#10b981;font-weight:700;">&#10003;</span>No annual contract</div>
+        <div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
+          <div style="padding:12px 16px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;">Every Plan Includes</div></div>
+          <div style="padding:13px 16px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <div style="font-size:12px;color:#52525b;display:flex;gap:5px;align-items:flex-start;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>ACA, STM, Life, Ancillary &amp; Indemnity</div>
+            <div style="font-size:12px;color:#52525b;display:flex;gap:5px;align-items:flex-start;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Full CRM &amp; household tracking</div>
+            <div style="font-size:12px;color:#52525b;display:flex;gap:5px;align-items:flex-start;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Renewal Autopilot OEP workflow</div>
+            <div style="font-size:12px;color:#52525b;display:flex;gap:5px;align-items:flex-start;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>SMS with dedicated number</div>
+            <div style="font-size:12px;color:#52525b;display:flex;gap:5px;align-items:flex-start;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>HealthSherpa &amp; EDE integration</div>
+            <div style="font-size:12px;color:#52525b;display:flex;gap:5px;align-items:flex-start;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Google Calendar sync</div>
+            <div style="font-size:12px;color:#52525b;display:flex;gap:5px;align-items:flex-start;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Policy tracker &amp; reconciliation</div>
+            <div style="font-size:12px;color:#52525b;display:flex;gap:5px;align-items:flex-start;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>No annual contract required</div>
           </div>
         </div>
-
         <div style="background:#0c0c14;border:1px solid rgba(255,255,255,0.07);border-radius:12px;overflow:hidden;">
-          <div style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.06);">
-            <div style="font-size:9.5px;font-weight:600;color:rgba(165,180,252,0.7);font-family:monospace;letter-spacing:0.12em;text-transform:uppercase;">Enterprise Calculator (20+ agents)</div>
-          </div>
-          <div style="padding:16px 18px;">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-              <div>
-                <label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Agents</label>
-                <div style="display:flex;align-items:center;gap:5px;">
-                  <button onclick="adjustAgents(-10)" style="width:28px;height:28px;border:1px solid rgba(255,255,255,0.1);border-radius:5px;background:rgba(255,255,255,0.05);color:#fff;cursor:pointer;">-</button>
-                  <input id="agentCount" type="number" value="20" min="20" max="500" oninput="calcPrice()" style="width:55px;text-align:center;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:5px;font-size:13px;font-weight:700;color:#fff;background:rgba(255,255,255,0.05);">
-                  <button onclick="adjustAgents(10)" style="width:28px;height:28px;border:1px solid rgba(255,255,255,0.1);border-radius:5px;background:rgba(255,255,255,0.05);color:#fff;cursor:pointer;">+</button>
+          <div style="padding:13px 16px;border-bottom:1px solid rgba(255,255,255,0.06);"><div style="font-size:9px;font-weight:700;color:rgba(165,180,252,0.7);letter-spacing:0.14em;text-transform:uppercase;">Enterprise Calculator (20+ Agents)</div></div>
+          <div style="padding:14px 16px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:11px;">
+              <div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Agents (min 20)</label>
+                <div style="display:flex;align-items:center;gap:4px;">
+                  <button onclick="adjustAgents(-10)" style="width:26px;height:26px;border:1px solid rgba(255,255,255,0.1);border-radius:5px;background:rgba(255,255,255,0.06);color:#fff;cursor:pointer;font-size:12px;">-</button>
+                  <input id="agentCount" type="text" inputmode="numeric" value="20" style="width:50px;text-align:center;border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:4px;font-size:13px;font-weight:700;color:#fff;background:rgba(255,255,255,0.06);outline:none;" oninput="calcPrice()" onchange="calcPrice()">
+                  <button onclick="adjustAgents(10)" style="width:26px;height:26px;border:1px solid rgba(255,255,255,0.1);border-radius:5px;background:rgba(255,255,255,0.06);color:#fff;cursor:pointer;font-size:12px;">+</button>
                 </div>
               </div>
-              <div>
-                <label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:5px;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;">Assistants</label>
-                <div style="display:flex;align-items:center;gap:5px;">
-                  <button onclick="adjustAssistants(-1)" style="width:28px;height:28px;border:1px solid rgba(255,255,255,0.1);border-radius:5px;background:rgba(255,255,255,0.05);color:#fff;cursor:pointer;">-</button>
-                  <input id="assistantCount" type="number" value="4" min="4" max="100" oninput="calcPrice()" style="width:55px;text-align:center;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:5px;font-size:13px;font-weight:700;color:#fff;background:rgba(255,255,255,0.05);">
-                  <button onclick="adjustAssistants(1)" style="width:28px;height:28px;border:1px solid rgba(255,255,255,0.1);border-radius:5px;background:rgba(255,255,255,0.05);color:#fff;cursor:pointer;">+</button>
+              <div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Assistants (min 4)</label>
+                <div style="display:flex;align-items:center;gap:4px;">
+                  <button onclick="adjustAssistants(-1)" style="width:26px;height:26px;border:1px solid rgba(255,255,255,0.1);border-radius:5px;background:rgba(255,255,255,0.06);color:#fff;cursor:pointer;font-size:12px;">-</button>
+                  <input id="assistantCount" type="text" inputmode="numeric" value="4" style="width:50px;text-align:center;border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:4px;font-size:13px;font-weight:700;color:#fff;background:rgba(255,255,255,0.06);outline:none;" oninput="calcPrice()" onchange="calcPrice()">
+                  <button onclick="adjustAssistants(1)" style="width:26px;height:26px;border:1px solid rgba(255,255,255,0.1);border-radius:5px;background:rgba(255,255,255,0.06);color:#fff;cursor:pointer;font-size:12px;">+</button>
                 </div>
               </div>
             </div>
-            <div style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.25);border-radius:8px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-              <div>
-                <div style="font-size:11px;color:rgba(165,180,252,0.7);margin-bottom:2px;" id="calcPerPerson">~$30/person/month</div>
-                <div style="font-size:10px;color:rgba(255,255,255,0.35);" id="calcSavings">Save $0 annually</div>
-              </div>
-              <div style="text-align:right;">
-                <div style="font-size:26px;font-weight:800;color:#818cf8;letter-spacing:-1px;" id="calcPrice">$897</div>
-                <div style="font-size:10px;color:rgba(255,255,255,0.35);" id="calcAnnual">$9,683/yr (10% off)</div>
-              </div>
+            <div style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.25);border-radius:8px;padding:11px 13px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <div><div style="font-size:11px;color:rgba(165,180,252,0.8);" id="calcPerPerson">~$30/person/mo</div><div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:1px;" id="calcSavings">Save $0 annual</div></div>
+              <div style="text-align:right;"><div style="font-size:24px;font-weight:800;color:#818cf8;letter-spacing:-1px;" id="calcPrice">$897</div><div style="font-size:10px;color:rgba(255,255,255,0.3);" id="calcAnnual">$9,683/yr (10% off)</div></div>
             </div>
-            <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:10px;" id="breakdownAgents">Base $597 + extras</div>
-            <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:12px;" id="breakdownAssistants"></div>
-            <button onclick="useEnterpriseQuote()" style="width:100%;background:#6366f1;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:system-ui;">Use This Price in Quote Above</button>
+            <div style="font-size:9.5px;color:rgba(255,255,255,0.28);margin-bottom:3px;" id="breakdownAgents">Base $597 + 10 agents x $30</div>
+            <div style="font-size:9.5px;color:rgba(255,255,255,0.28);margin-bottom:10px;" id="breakdownAssistants"></div>
+            <button onclick="useEnterpriseQuote()" style="width:100%;background:#6366f1;border:none;border-radius:8px;padding:9px;font-size:12.5px;font-weight:700;color:#fff;cursor:pointer;">Use This Price in Quote &uarr;</button>
           </div>
         </div>
       </div>
@@ -5311,6 +5223,149 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 </script>
+<!-- MY PITCHES SECTION -->
+<div class="section" id="section-mypitches">
+  <div class="page-header">
+    <div class="page-label">Personal</div>
+    <h1>My Elevator Pitches</h1>
+    <p>Your custom pitches. Use the defaults or write your own for each scenario. Saved to your account.</p>
+  </div>
+  <div class="content" style="max-width:900px;">
+    <div class="nba-bar">
+      <span class="nba-label">&#9889; Tip</span>
+      <div class="nba-actions">
+        <button class="nba-btn" onclick="resetPitchesToDefault()">&#8635; Reset to Defaults</button>
+        <button class="nba-btn primary" onclick="saveMyPitches()">&#9729; Save All Pitches</button>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;margin-top:16px;" id="my-pitches-list">
+      <!-- Rendered by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN SECTION -->
+<div class="section" id="section-admin">
+  <div class="page-header">
+    <div class="page-label">Admin</div>
+    <h1>Admin Panel</h1>
+    <p>Manage content across the playbook. Changes are saved to the team cloud and visible to all reps.</p>
+  </div>
+  <div class="content" style="max-width:1000px;">
+
+    <!-- ADMIN TABS -->
+    <div style="display:flex;gap:0;border-bottom:2px solid #e4e4e7;margin-bottom:22px;overflow-x:auto;">
+      <button onclick="switchAdminTab('scripts')" id="admin-tab-scripts" class="admin-tab admin-tab-active">&#128222; Call Scripts</button>
+      <button onclick="switchAdminTab('reference')" id="admin-tab-reference" class="admin-tab">&#128737;&#65039; Reference</button>
+      <button onclick="switchAdminTab('competition')" id="admin-tab-competition" class="admin-tab">&#127919; Competition</button>
+      <button onclick="switchAdminTab('pricing')" id="admin-tab-pricing" class="admin-tab">&#128196; Pricing</button>
+      <button onclick="switchAdminTab('reps')" id="admin-tab-reps" class="admin-tab">&#128100; Reps</button>
+    </div>
+
+    <!-- SCRIPTS TAB -->
+    <div id="admin-panel-scripts">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="admin-edit-card">
+          <div class="admin-edit-label">Cold Call Script</div>
+          <textarea id="admin-coldcall" class="admin-textarea" rows="8" placeholder="Enter the default cold call script for all reps..."></textarea>
+          <button onclick="saveAdminContent('coldcall')" class="admin-save-btn">Save Cold Call Script</button>
+        </div>
+        <div class="admin-edit-card">
+          <div class="admin-edit-label">Discovery Call Script</div>
+          <textarea id="admin-discovery" class="admin-textarea" rows="8" placeholder="Enter the default discovery call script..."></textarea>
+          <button onclick="saveAdminContent('discovery')" class="admin-save-btn">Save Discovery Script</button>
+        </div>
+        <div class="admin-edit-card">
+          <div class="admin-edit-label">Demo Call Script</div>
+          <textarea id="admin-demo" class="admin-textarea" rows="8" placeholder="Enter the default demo call script..."></textarea>
+          <button onclick="saveAdminContent('demo')" class="admin-save-btn">Save Demo Script</button>
+        </div>
+        <div class="admin-edit-card">
+          <div class="admin-edit-label">Closing Call Script</div>
+          <textarea id="admin-closing" class="admin-textarea" rows="8" placeholder="Enter the default closing call script..."></textarea>
+          <button onclick="saveAdminContent('closing')" class="admin-save-btn">Save Closing Script</button>
+        </div>
+        <div class="admin-edit-card">
+          <div class="admin-edit-label">Onboarding Call Script</div>
+          <textarea id="admin-onboarding" class="admin-textarea" rows="8" placeholder="Enter the default onboarding call script..."></textarea>
+          <button onclick="saveAdminContent('onboarding')" class="admin-save-btn">Save Onboarding Script</button>
+        </div>
+        <div class="admin-edit-card">
+          <div class="admin-edit-label">Talk Tracks</div>
+          <textarea id="admin-talktracks" class="admin-textarea" rows="8" placeholder="Enter default talk tracks..."></textarea>
+          <button onclick="saveAdminContent('talktracks')" class="admin-save-btn">Save Talk Tracks</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- REFERENCE TAB -->
+    <div id="admin-panel-reference" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="admin-edit-card">
+          <div class="admin-edit-label">Objection Handling</div>
+          <textarea id="admin-objections" class="admin-textarea" rows="10" placeholder="Enter objections and responses..."></textarea>
+          <button onclick="saveAdminContent('objections')" class="admin-save-btn">Save Objections</button>
+        </div>
+        <div class="admin-edit-card">
+          <div class="admin-edit-label">Battle Cards</div>
+          <textarea id="admin-battlecards" class="admin-textarea" rows="10" placeholder="Enter battle card content per competitor..."></textarea>
+          <button onclick="saveAdminContent('battlecards')" class="admin-save-btn">Save Battle Cards</button>
+        </div>
+        <div class="admin-edit-card" style="grid-column:span 2;">
+          <div class="admin-edit-label">Elevator Pitches (Default for All Reps)</div>
+          <textarea id="admin-pitches" class="admin-textarea" rows="8" placeholder="Enter default elevator pitches..."></textarea>
+          <button onclick="saveAdminContent('pitches')" class="admin-save-btn">Save Default Pitches</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPETITION TAB -->
+    <div id="admin-panel-competition" style="display:none;">
+      <div class="admin-edit-card">
+        <div class="admin-edit-label">Know Your Competition Content</div>
+        <div style="font-size:12px;color:#71717a;margin-bottom:10px;">Update competitor info, pricing, and where AgentNav wins. Use the format: ## Competitor Name then bullet points.</div>
+        <textarea id="admin-competition" class="admin-textarea" rows="16" placeholder="## EZLynx&#10;- Strength: Large market share&#10;- Weakness: No OEP automation&#10;- We win when: They mention renewal season struggles&#10;&#10;## HawkSoft&#10;..."></textarea>
+        <button onclick="saveAdminContent('competition')" class="admin-save-btn">Save Competition Intel</button>
+      </div>
+    </div>
+
+    <!-- PRICING TAB -->
+    <div id="admin-panel-pricing" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="admin-edit-card">
+          <div class="admin-edit-label">Plan Prices</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><label style="font-size:13px;font-weight:600;color:#09090b;min-width:120px;">Solo Agent</label><div style="display:flex;align-items:center;gap:4px;"><span style="color:#71717a;font-size:13px;">$</span><input id="admin-price-solo" type="text" inputmode="numeric" value="79" style="width:70px;border:1.5px solid #e4e4e7;border-radius:7px;padding:7px 10px;font-size:13px;font-weight:700;color:#09090b;outline:none;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><span style="color:#71717a;font-size:12px;">/mo</span></div></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><label style="font-size:13px;font-weight:600;color:#09090b;min-width:120px;">Small Agency</label><div style="display:flex;align-items:center;gap:4px;"><span style="color:#71717a;font-size:13px;">$</span><input id="admin-price-small" type="text" inputmode="numeric" value="247" style="width:70px;border:1.5px solid #e4e4e7;border-radius:7px;padding:7px 10px;font-size:13px;font-weight:700;color:#09090b;outline:none;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><span style="color:#71717a;font-size:12px;">/mo</span></div></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><label style="font-size:13px;font-weight:600;color:#09090b;min-width:120px;">Large Agency</label><div style="display:flex;align-items:center;gap:4px;"><span style="color:#71717a;font-size:13px;">$</span><input id="admin-price-large" type="text" inputmode="numeric" value="597" style="width:70px;border:1.5px solid #e4e4e7;border-radius:7px;padding:7px 10px;font-size:13px;font-weight:700;color:#09090b;outline:none;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><span style="color:#71717a;font-size:12px;">/mo</span></div></div>
+          </div>
+          <button onclick="saveAdminPrices()" class="admin-save-btn" style="margin-top:14px;">Save Prices</button>
+        </div>
+        <div class="admin-edit-card">
+          <div class="admin-edit-label">Pricing Notes / Promotions</div>
+          <textarea id="admin-pricing-notes" class="admin-textarea" rows="6" placeholder="Any current promotions, special offers, or pricing notes for the team..."></textarea>
+          <button onclick="saveAdminContent('pricing-notes')" class="admin-save-btn">Save Notes</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- REPS TAB -->
+    <div id="admin-panel-reps" style="display:none;">
+      <div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;">
+        <div style="padding:14px 18px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;">Team Members</div>
+          <button onclick="loadAdminReps()" style="font-size:12px;font-weight:600;color:#6366f1;background:none;border:none;cursor:pointer;">&#8635; Refresh</button>
+        </div>
+        <div id="admin-reps-list" style="padding:16px 18px;">
+          <div style="text-align:center;padding:30px;color:#71717a;font-size:13px;">Loading team members...</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 
 <!-- QUOTE MODAL -->
 <div class="quote-modal-overlay" id="quoteModal">
@@ -6364,6 +6419,217 @@ function generateQuotePDF2() {
   doc.save('AgentNav-Quote-'+prospect.replace(/[^a-z0-9]/gi,'-')+'.pdf');
   showToast('PDF downloaded!');
 }
+
+</script>
+<script>
+// ── ADMIN CSS ──────────────────────────────────────────────────────────
+// (injected via JS to keep it clean)
+(function() {
+  var s = document.createElement('style');
+  s.textContent = [
+    '.admin-tab{padding:9px 18px;font-size:13px;font-weight:600;color:#71717a;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;margin-bottom:-2px;font-family:inherit;}',
+    '.admin-tab:hover{color:#09090b;}',
+    '.admin-tab-active{color:#6366f1!important;border-bottom-color:#6366f1!important;}',
+    '.admin-edit-card{background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:10px;}',
+    'body.dark-mode .admin-edit-card{background:#18181b;border-color:#27272a;}',
+    '.admin-edit-label{font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;}',
+    '.admin-textarea{width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:10px 12px;font-size:13px;color:#09090b;outline:none;resize:vertical;font-family:inherit;line-height:1.6;box-sizing:border-box;}',
+    'body.dark-mode .admin-textarea{background:#09090b;border-color:#27272a;color:#fafafa;}',
+    '.admin-textarea:focus{border-color:#6366f1;}',
+    '.admin-save-btn{background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;align-self:flex-start;}',
+    '.admin-save-btn:hover{transform:translateY(-1px);}',
+    '.pitch-card{background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;}',
+    'body.dark-mode .pitch-card{background:#18181b;border-color:#27272a;}',
+    '.pitch-card-header{padding:12px 16px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;display:flex;align-items:center;justify-content:space-between;}',
+    'body.dark-mode .pitch-card-header{background:#09090b;border-color:#27272a;}',
+    '.pitch-label{font-size:9px;font-weight:700;letter-spacing:0.13em;text-transform:uppercase;color:#6366f1;}',
+    '.pitch-textarea{width:100%;border:none;padding:14px 16px;font-size:13.5px;color:#09090b;outline:none;resize:vertical;font-family:inherit;line-height:1.7;min-height:90px;background:transparent;box-sizing:border-box;}',
+    'body.dark-mode .pitch-textarea{color:#fafafa;}'
+  ].join('');
+  document.head.appendChild(s);
+})();
+
+// ── ADMIN: who is admin ────────────────────────────────────────────────
+var ADMIN_EMAILS = ['asmithee@insurewithcompass.com']; // add more here
+
+function isAdmin() {
+  return _currentUser && ADMIN_EMAILS.indexOf(_currentUser.email) >= 0;
+}
+
+function checkAdminAccess() {
+  var adminBtn = document.getElementById('nav-admin');
+  if (adminBtn) adminBtn.style.display = isAdmin() ? 'flex' : 'none';
+}
+
+// ── ADMIN TABS ─────────────────────────────────────────────────────────
+function switchAdminTab(tab) {
+  var tabs = ['scripts','reference','competition','pricing','reps'];
+  tabs.forEach(function(t) {
+    var panel = document.getElementById('admin-panel-' + t);
+    var btn   = document.getElementById('admin-tab-' + t);
+    if (panel) panel.style.display = t === tab ? 'block' : 'none';
+    if (btn) { btn.classList.toggle('admin-tab-active', t === tab); }
+  });
+  if (tab === 'reps') loadAdminReps();
+  loadAdminContent(tab);
+}
+
+function loadAdminContent(tab) {
+  var sb = getSupabase();
+  var fieldMap = {
+    scripts:     ['coldcall','discovery','demo','closing','onboarding','talktracks'],
+    reference:   ['objections','battlecards','pitches'],
+    competition: ['competition'],
+    pricing:     ['pricing-notes']
+  };
+  var fields = fieldMap[tab] || [];
+  fields.forEach(function(key) {
+    var el = document.getElementById('admin-' + key.replace('-','_'));
+    if (!el) el = document.getElementById('admin-' + key);
+    if (!el) return;
+    // Load from localStorage first
+    var val = localStorage.getItem('admin-content-' + key);
+    if (val) el.value = val;
+  });
+}
+
+function saveAdminContent(key) {
+  var el = document.getElementById('admin-' + key.replace('-','_'));
+  if (!el) el = document.getElementById('admin-' + key);
+  if (!el) return;
+  var val = el.value;
+  localStorage.setItem('admin-content-' + key, val);
+  // Save to Supabase if available
+  var sb = getSupabase();
+  if (sb && _currentUser) {
+    sb.from('admin_content').upsert({ key: key, value: val, updated_by: _currentUser.email, updated_at: new Date().toISOString() })
+      .then(function(r) {
+        if (!r.error) showToast('Saved: ' + key);
+        else showToast('Saved locally. Cloud sync: ' + r.error.message);
+      });
+  } else {
+    showToast('Saved locally');
+  }
+}
+
+function saveAdminPrices() {
+  var prices = {
+    solo:  document.getElementById('admin-price-solo')  ? document.getElementById('admin-price-solo').value  : '79',
+    small: document.getElementById('admin-price-small') ? document.getElementById('admin-price-small').value : '247',
+    large: document.getElementById('admin-price-large') ? document.getElementById('admin-price-large').value : '597'
+  };
+  localStorage.setItem('admin-prices', JSON.stringify(prices));
+  showToast('Prices saved! Reps will see updated pricing.');
+}
+
+async function loadAdminReps() {
+  var listEl = document.getElementById('admin-reps-list');
+  if (!listEl) return;
+  var sb = getSupabase();
+  if (!sb) { listEl.innerHTML = '<div style="padding:20px;color:#71717a;font-size:13px;">Sign in to see team members.</div>'; return; }
+  var result = await sb.from('demo_recaps').select('user_id, prospect').order('created_at', {ascending:false}).limit(200);
+  if (result.error || !result.data) { listEl.innerHTML = '<div style="padding:20px;color:#71717a;font-size:13px;">Could not load reps.</div>'; return; }
+  var repMap = {};
+  result.data.forEach(function(r) {
+    if (!repMap[r.user_id]) repMap[r.user_id] = 0;
+    repMap[r.user_id]++;
+  });
+  var repIds = Object.keys(repMap);
+  if (repIds.length === 0) { listEl.innerHTML = '<div style="padding:20px;color:#71717a;font-size:13px;">No reps have saved recaps yet.</div>'; return; }
+  var html = repIds.map(function(id) {
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #e4e4e7;">' +
+      '<div>' +
+        '<div style="font-size:13px;font-weight:600;color:#09090b;">' + id.slice(0,8) + '...</div>' +
+        '<div style="font-size:11.5px;color:#71717a;margin-top:2px;">' + repMap[id] + ' demo recap' + (repMap[id] !== 1 ? 's' : '') + ' saved</div>' +
+      '</div>' +
+      '<div style="font-size:11px;color:#10b981;font-weight:600;">Active</div>' +
+    '</div>';
+  }).join('');
+  listEl.innerHTML = '<div style="font-size:12px;color:#71717a;margin-bottom:12px;">' + repIds.length + ' reps with saved data</div>' + html;
+}
+
+// ── MY PITCHES ─────────────────────────────────────────────────────────
+var DEFAULT_PITCHES = [
+  { key: 'cold', label: 'Cold Outreach', placeholder: 'e.g. "Hey [Name], I work with health insurance brokers who are drowning in spreadsheets during OEP. AgentNav automates the whole thing. Worth 15 minutes?"' },
+  { key: 'followup', label: 'Follow-Up Call', placeholder: 'e.g. "Last time we talked you mentioned struggling with renewals. I wanted to show you specifically how Renewal Autopilot works..."' },
+  { key: 'voicemail', label: 'Voicemail', placeholder: 'e.g. "Hey [Name], it\'s [You] from AgentNav. I work with brokers who want to stop manually tracking renewals. Call me back at..."' },
+  { key: 'referral', label: 'Referral / Warm Intro', placeholder: 'e.g. "[Referrer] suggested I reach out — they mentioned you\'re growing your agency and looking at better tools for quoting and CRM..."' },
+  { key: 'objection-price', label: 'Objection: "Too Expensive"', placeholder: 'e.g. "I get that. What are you currently paying for your quoting tool, CRM, and SMS separately? Most agents pay more than $79 across those three..."' }
+];
+
+function renderMyPitches() {
+  var listEl = document.getElementById('my-pitches-list');
+  if (!listEl) return;
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem('my-pitches') || '{}'); } catch(e) {}
+  listEl.innerHTML = '';
+  DEFAULT_PITCHES.forEach(function(p) {
+    var val = saved[p.key] || '';
+    var card = document.createElement('div');
+    card.className = 'pitch-card';
+    card.innerHTML =
+      '<div class="pitch-card-header">' +
+        '<div class="pitch-label">' + p.label + '</div>' +
+        '<div style="display:flex;gap:6px;">' +
+          '<button onclick="copyPitch(\'' + p.key + '\')" class="qa-btn">&#128203; Copy</button>' +
+          '<button onclick="clearPitch(\'' + p.key + '\')" style="font-size:11px;color:#a1a1aa;background:none;border:none;cursor:pointer;">Clear</button>' +
+        '</div>' +
+      '</div>' +
+      '<textarea id="pitch-' + p.key + '" class="pitch-textarea" placeholder="' + p.placeholder.replace(/"/g, '&quot;') + '">' + val + '</textarea>';
+    listEl.appendChild(card);
+  });
+}
+
+function saveMyPitches() {
+  var pitches = {};
+  DEFAULT_PITCHES.forEach(function(p) {
+    var el = document.getElementById('pitch-' + p.key);
+    if (el) pitches[p.key] = el.value;
+  });
+  localStorage.setItem('my-pitches', JSON.stringify(pitches));
+  // Save to Supabase if logged in
+  var sb = getSupabase();
+  if (sb && _currentUser) {
+    sb.from('rep_pitches').upsert({ user_id: _currentUser.id, pitches: JSON.stringify(pitches), updated_at: new Date().toISOString() })
+      .then(function(r) { showToast(r.error ? 'Saved locally' : 'Pitches saved to cloud!'); });
+  } else {
+    showToast('Pitches saved on this device. Sign in to sync.');
+  }
+}
+
+function resetPitchesToDefault() {
+  DEFAULT_PITCHES.forEach(function(p) {
+    var el = document.getElementById('pitch-' + p.key);
+    if (el) el.value = '';
+  });
+  showToast('Cleared. You can now write your own pitches.');
+}
+
+function copyPitch(key) {
+  var el = document.getElementById('pitch-' + key);
+  if (el && el.value) { qaCopy(el.value); }
+  else showToast('Write a pitch first, then copy it!');
+}
+
+function clearPitch(key) {
+  var el = document.getElementById('pitch-' + key);
+  if (el) el.value = '';
+}
+
+// ── WIRE UP ON SECTION SHOW ────────────────────────────────────────────
+var _origSS = showSection;
+showSection = function(id, btn) {
+  _origSS(id, btn);
+  if (id === 'mypitches') setTimeout(renderMyPitches, 50);
+  if (id === 'admin') setTimeout(function() { switchAdminTab('scripts'); }, 50);
+};
+
+// ── WIRE UP AFTER LOGIN ────────────────────────────────────────────────
+var _origOnLogin = onUserLoggedIn;
+onUserLoggedIn = function(user) {
+  _origOnLogin(user);
+  setTimeout(checkAdminAccess, 200);
+};
 
 </script>
 </body>
