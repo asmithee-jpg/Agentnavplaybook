@@ -2247,13 +2247,112 @@ body.dark-mode .home-card p { color: #71717a; }
 .section.active { display: block !important; }
 .section.home-section.active { display: block !important; }
 
-/* ══ HOME ══ */
+/* ══ SIDEBAR COLLAPSE ══ */
+.sidebar { transition: width 0.2s ease; }
+.sidebar.collapsed { width: 48px; overflow: hidden; }
+.sidebar.collapsed .nav-group-label,
+.sidebar.collapsed .brand-name,
+.sidebar.collapsed .sidebar-subtitle,
+.sidebar.collapsed .nav-item span:not(.nav-icon),
+.sidebar.collapsed .call-mode-toggle span:not(:first-child),
+.sidebar.collapsed .sidebar-footer,
+.sidebar.collapsed .theme-toggle-btn span:not(.theme-toggle-track),
+.sidebar.collapsed #nav-admin-wrap { display: none !important; }
+.sidebar.collapsed .nav-icon { margin: 0 auto; }
+.sidebar.collapsed .nav-item { justify-content: center; padding: 8px 0; }
+.sidebar.collapsed .main { margin-left: 48px; }
+.sidebar-toggle-btn {
+  position: absolute; top: 12px; right: -12px;
+  width: 24px; height: 24px;
+  background: #1e1e2e; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 50%; cursor: pointer; z-index: 300;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: rgba(255,255,255,0.5);
+  transition: all 0.2s;
+}
+.sidebar-toggle-btn:hover { background: #6366f1; color: #fff; border-color: #6366f1; }
+
+/* ══ AUTH IN SIDEBAR ══ */
+.sidebar-auth {
+  padding: 10px 10px 6px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.sidebar-auth-btn {
+  width: 100%;
+  background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.2);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-size: 11.5px; font-weight: 600; color: #818cf8;
+  cursor: pointer; display: flex; align-items: center; gap: 7px;
+  transition: all 0.15s;
+}
+.sidebar-auth-btn:hover { background: rgba(99,102,241,0.2); }
+.sidebar-user-area {
+  padding: 8px 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.sidebar-user-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.sidebar-user-info { flex: 1; min-width: 0; }
+.sidebar-user-name { font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidebar-user-signout { font-size: 10.5px; color: rgba(255,255,255,0.35); cursor: pointer; }
+.sidebar-user-signout:hover { color: #ef4444; }
+
+/* ══ MY SCRIPT STEPS ══ */
+.myscript-panel { background: #fff; border: 1.5px solid #6366f1; border-radius: 12px; overflow: hidden; margin: 0 auto 4px; max-width: 860px; box-shadow: 0 2px 12px rgba(99,102,241,0.1); }
+body.dark-mode .myscript-panel { background: #18181b; }
+.myscript-header { padding: 12px 16px; background: linear-gradient(135deg, rgba(99,102,241,0.07), rgba(139,92,246,0.07)); border-bottom: 1px solid rgba(99,102,241,0.15); display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.myscript-title { font-size: 13px; font-weight: 700; color: #6366f1; }
+.myscript-subtitle { font-size: 11.5px; color: #71717a; margin-top: 2px; }
+.myscript-steps { padding: 8px 14px; display: flex; flex-direction: column; gap: 0; }
+.myscript-step { border: 1px solid #e4e4e7; border-radius: 9px; margin-bottom: 8px; overflow: hidden; }
+body.dark-mode .myscript-step { border-color: #27272a; }
+.myscript-step-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f8f8fa; border-bottom: 1px solid #e4e4e7; }
+body.dark-mode .myscript-step-header { background: #09090b; border-color: #27272a; }
+.myscript-step-num { width: 22px; height: 22px; border-radius: 50%; background: #6366f1; color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.myscript-step-title { flex: 1; border: none; background: transparent; font-size: 13px; font-weight: 600; color: #09090b; outline: none; font-family: inherit; }
+body.dark-mode .myscript-step-title { color: #fafafa; }
+.myscript-step-body { width: 100%; border: none; padding: 10px 12px; font-size: 13px; color: #09090b; outline: none; resize: vertical; font-family: inherit; line-height: 1.7; min-height: 70px; background: #fff; box-sizing: border-box; }
+body.dark-mode .myscript-step-body { background: #18181b; color: #fafafa; }
+.myscript-footer { padding: 10px 14px; border-top: 1px solid rgba(99,102,241,0.1); display: flex; align-items: center; gap: 8px; background: rgba(99,102,241,0.02); }
+.myscript-save-btn { background: #6366f1; border: none; border-radius: 7px; padding: 7px 14px; font-size: 12.5px; font-weight: 700; color: #fff; cursor: pointer; font-family: inherit; }
+.myscript-save-btn:hover { transform: translateY(-1px); }
+
+/* ══ ADMIN & MY SCRIPTS CSS ══ */
+.admin-tab { padding: 9px 16px; font-size: 13px; font-weight: 600; color: #71717a; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; margin-bottom: -2px; font-family: inherit; transition: color 0.15s; }
+.admin-tab:hover { color: #09090b; }
+.admin-tab.atab-active { color: #6366f1 !important; border-bottom-color: #6366f1 !important; }
+.aedit-card { background: #fff; border: 1px solid #e4e4e7; border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 9px; }
+body.dark-mode .aedit-card { background: #18181b; border-color: #27272a; }
+.aedit-label { font-size: 9px; font-weight: 700; color: #71717a; letter-spacing: 0.13em; text-transform: uppercase; }
+.aedit-ta { width: 100%; border: 1.5px solid #e4e4e7; border-radius: 8px; padding: 10px 12px; font-size: 13px; color: #09090b; outline: none; resize: vertical; font-family: inherit; line-height: 1.6; box-sizing: border-box; }
+body.dark-mode .aedit-ta { background: #09090b; border-color: #27272a; color: #fafafa; }
+.aedit-ta:focus { border-color: #6366f1; }
+.aedit-btn { background: linear-gradient(135deg,#6366f1,#8b5cf6); border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer; align-self: flex-start; font-family: inherit; }
+.aedit-btn:hover { transform: translateY(-1px); }
+
+/* ══ MY SCRIPTS COLLECTION ══ */
+.msc-card { background: #fff; border: 1px solid #e4e4e7; border-radius: 12px; overflow: hidden; }
+body.dark-mode .msc-card { background: #18181b; border-color: #27272a; }
+.msc-header { padding: 11px 16px; border-bottom: 1px solid #e4e4e7; background: #f8f8fa; display: flex; align-items: center; justify-content: space-between; }
+body.dark-mode .msc-header { background: #09090b; border-color: #27272a; }
+.msc-tag { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.msc-body { padding: 14px 16px; font-size: 13px; color: #09090b; line-height: 1.7; }
+body.dark-mode .msc-body { color: #fafafa; }
+
+/* ══ HOME PAGE ══ */
 .home-wrap{min-height:100vh;background:var(--bg,#f9f9fb);font-family:'Plus Jakarta Sans',system-ui,sans-serif;}
 body.dark-mode .home-wrap{background:#09090b;}
-.home-header{padding:32px 40px 22px;}
-.home-label{font-size:10.5px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:#a1a1aa;margin-bottom:14px;}
-.home-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:26px;}
-.home-action-btn{display:flex;align-items:center;gap:6px;border-radius:9px;padding:8px 15px;font-size:12.5px;font-weight:700;cursor:pointer;transition:all 0.15s;font-family:inherit;border:1.5px solid transparent;}
+.home-header{padding:28px 36px 20px;}
+.home-label{font-size:10.5px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:#a1a1aa;margin-bottom:12px;}
+.home-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;}
+.home-action-btn{display:flex;align-items:center;gap:6px;border-radius:9px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer;transition:all 0.15s;font-family:inherit;border:1.5px solid transparent;}
 .home-action-red{background:#fff;border-color:#fca5a5;color:#ef4444;}
 body.dark-mode .home-action-red{background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.3);}
 .home-action-red:hover{background:#fef2f2;}
@@ -2264,27 +2363,27 @@ body.dark-mode .home-action-red{background:rgba(239,68,68,0.08);border-color:rgb
 body.dark-mode .home-action-ghost{background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);}
 .home-action-ghost:hover{border-color:#6366f1;color:#6366f1;}
 .home-section-label{font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#a1a1aa;}
-.home-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:0 40px 48px;}
-.home-card{background:#fff;border:1px solid #e4e4e7;border-radius:13px;padding:20px 20px 38px;cursor:pointer;transition:all 0.16s;position:relative;overflow:hidden;}
+.home-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;padding:0 36px 40px;}
+.home-card{background:#fff;border:1px solid #e4e4e7;border-radius:13px;padding:18px 18px 34px;cursor:pointer;transition:all 0.16s;position:relative;overflow:hidden;}
 body.dark-mode .home-card{background:#18181b;border-color:#27272a;}
 .home-card:hover{box-shadow:0 4px 18px rgba(0,0,0,0.08);}
-.home-card-icon{font-size:22px;margin-bottom:10px;}
+.home-card-icon{font-size:20px;margin-bottom:9px;}
 .home-card-tag{font-size:9.5px;font-weight:700;letter-spacing:0.13em;text-transform:uppercase;margin-bottom:5px;}
-.home-card-title{font-size:15px;font-weight:800;letter-spacing:-0.3px;margin-bottom:7px;color:#09090b;}
+.home-card-title{font-size:14.5px;font-weight:800;letter-spacing:-0.3px;margin-bottom:6px;color:#09090b;}
 body.dark-mode .home-card-title{color:#fafafa;}
 .home-card-title-light{color:#fff!important;}
-.home-card-desc{font-size:12.5px;color:#71717a;line-height:1.6;}
+.home-card-desc{font-size:12px;color:#71717a;line-height:1.6;}
 body.dark-mode .home-card-desc{color:#52525b;}
 .home-card-desc-light{color:rgba(255,255,255,0.5)!important;}
-.home-card-arrow{position:absolute;bottom:14px;right:16px;font-size:9.5px;font-weight:700;opacity:0.55;letter-spacing:0.06em;}
+.home-card-arrow{position:absolute;bottom:12px;right:14px;font-size:9.5px;font-weight:700;opacity:0.55;letter-spacing:0.06em;}
 .home-card-blue:hover{border-color:#6366f1;}.home-tag-blue{color:#6366f1;}.home-arrow-blue{color:#6366f1;}
 .home-card-green:hover{border-color:#10b981;}.home-tag-green{color:#10b981;}.home-arrow-green{color:#10b981;}
 .home-card-amber:hover{border-color:#f59e0b;}.home-tag-amber{color:#f59e0b;}.home-arrow-amber{color:#f59e0b;}
 .home-tag-purple{color:#818cf8;}.home-arrow-purple{color:#818cf8;}
 .home-card-coach{background:#0c0c14!important;border-color:#27272a!important;grid-column:span 2;}
 .home-card-coach:hover{border-color:#6366f1!important;box-shadow:0 4px 24px rgba(99,102,241,0.2)!important;}
-.coach-preview-box{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 14px;min-width:200px;flex-shrink:0;}
-.coach-preview-label{font-size:8px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.25);margin-bottom:8px;}
+.coach-preview-box{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:11px 13px;min-width:190px;flex-shrink:0;}
+.coach-preview-label{font-size:8px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.25);margin-bottom:7px;}
 .coach-preview-rows{display:flex;flex-direction:column;gap:5px;}
 .coach-preview-row{display:flex;gap:6px;align-items:flex-start;}
 .coach-tag{font-size:7.5px;font-weight:700;border-radius:3px;padding:2px 5px;white-space:nowrap;flex-shrink:0;margin-top:1px;}
@@ -2292,37 +2391,6 @@ body.dark-mode .home-card-desc{color:#52525b;}
 .coach-tag-blue{background:rgba(99,102,241,0.15);color:#818cf8;}
 .coach-tag-amber{background:rgba(245,158,11,0.15);color:#f59e0b;}
 .coach-preview-text{font-size:11px;color:rgba(255,255,255,0.7);line-height:1.5;}
-
-/* ══ MY SCRIPT EDITOR (on every call section) ══ */
-.my-script-panel{background:#fff;border:1.5px solid #6366f1;border-radius:12px;overflow:hidden;margin-top:20px;box-shadow:0 2px 12px rgba(99,102,241,0.1);}
-body.dark-mode .my-script-panel{background:#18181b;}
-.my-script-header{padding:12px 18px;background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(139,92,246,0.08));border-bottom:1px solid rgba(99,102,241,0.15);display:flex;align-items:center;justify-content:space-between;}
-.my-script-title{font-size:13px;font-weight:700;color:#6366f1;}
-.my-script-subtitle{font-size:11.5px;color:#71717a;margin-top:1px;}
-.my-script-textarea{width:100%;border:none;padding:14px 18px;font-size:13.5px;color:#09090b;outline:none;resize:vertical;font-family:inherit;line-height:1.75;min-height:120px;background:transparent;box-sizing:border-box;}
-body.dark-mode .my-script-textarea{color:#fafafa;}
-.my-script-footer{padding:10px 18px;border-top:1px solid rgba(99,102,241,0.1);display:flex;align-items:center;gap:8px;background:rgba(99,102,241,0.02);}
-
-/* ══ ADMIN + MY PITCHES CSS ══ */
-.admin-tab{padding:9px 18px;font-size:13px;font-weight:600;color:#71717a;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;margin-bottom:-2px;font-family:inherit;transition:all 0.15s;}
-.admin-tab:hover{color:#09090b;}
-.admin-tab.admin-tab-active{color:#6366f1;border-bottom-color:#6366f1;}
-body.dark-mode .admin-tab:hover{color:#fafafa;}
-.admin-edit-card{background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:10px;}
-body.dark-mode .admin-edit-card{background:#18181b;border-color:#27272a;}
-.admin-edit-label{font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;}
-.admin-textarea{width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:10px 12px;font-size:13px;color:#09090b;outline:none;resize:vertical;font-family:inherit;line-height:1.6;box-sizing:border-box;}
-body.dark-mode .admin-textarea{background:#09090b;border-color:#27272a;color:#fafafa;}
-.admin-textarea:focus{border-color:#6366f1;}
-.admin-save-btn{background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;align-self:flex-start;font-family:inherit;}
-.admin-save-btn:hover{transform:translateY(-1px);}
-.pitch-collected-card{background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;margin-bottom:8px;}
-body.dark-mode .pitch-collected-card{background:#18181b;border-color:#27272a;}
-.pitch-collected-header{padding:11px 16px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;display:flex;align-items:center;justify-content:space-between;}
-body.dark-mode .pitch-collected-header{background:#09090b;border-color:#27272a;}
-.pitch-collected-tag{font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;}
-.pitch-collected-body{padding:14px 16px;font-size:13.5px;color:#09090b;line-height:1.75;white-space:pre-wrap;}
-body.dark-mode .pitch-collected-body{color:#fafafa;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -2347,7 +2415,8 @@ body.dark-mode .pitch-collected-body{color:#fafafa;}
 <!-- SIDEBAR -->
 <div class="qa-toast" id="qaToast"></div>
 <nav class="sidebar" id="sidebar">
-  <div class="sidebar-header">
+  <div class="sidebar-header" style="position:relative;">
+  <button onclick="toggleSidebar()" class="sidebar-toggle-btn" id="sidebar-toggle-btn" title="Collapse sidebar">&#9664;</button>
     <div class="sidebar-brand">
       <span class="brand-name">AgentNav Sales Coach</span>
     </div>
@@ -2388,15 +2457,21 @@ body.dark-mode .pitch-collected-body{color:#fafafa;}
     <button class="nav-item" data-section="battlecards" onclick="showSection('battlecards',this)"><span class="nav-icon">✕</span>Battle Cards</button>
     <button class="nav-item" data-section="talktracks" onclick="showSection('talktracks',this)"><span class="nav-icon">💬</span>Talk Tracks</button>
     <button class="nav-item" data-section="demorecap" onclick="showSection('demorecap',this)"><span class="nav-icon">📝</span>Demo Recap</button>
-    <button class="nav-item" data-section="mypitches" onclick="showSection('mypitches',this)" id="nav-mypitches"><span class="nav-icon">&#127908;</span>My Scripts</button>
+    <button class="nav-item" data-section="myscripts" onclick="showSection('myscripts',this)"><span class="nav-icon">&#9997;&#65039;</span>My Scripts</button>
   </div>
 
   <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">
     <span id="themeToggleLabel">🌙 Dark Mode</span>
     <div class="theme-toggle-track"><div class="theme-toggle-thumb"></div></div>
   </button>
-  <div id="nav-admin-wrap" style="display:none;padding:0 10px 8px;">
-    <button class="nav-item" data-section="admin" onclick="showSection('admin',this)" id="nav-admin" style="width:100%;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#fca5a5;"><span class="nav-icon">&#9881;&#65039;</span>Admin Panel</button>
+  <div class="sidebar-auth" id="sidebar-auth-area">
+    <!-- populated by JS based on auth state -->
+    <button onclick="openAuthModal()" class="sidebar-auth-btn" id="sidebar-signin-btn">
+      <span>&#128100;</span> Sign In
+    </button>
+  </div>
+  <div id="nav-admin-wrap" style="display:none;padding:0 10px 6px;">
+    <button class="nav-item" data-section="admin" onclick="showSection('admin',this)" style="width:100%;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#fca5a5;"><span class="nav-icon">&#9881;&#65039;</span>Admin Panel</button>
   </div>
   <div class="sidebar-footer">
     AgentNav Internal — 2026
@@ -2428,10 +2503,8 @@ body.dark-mode .pitch-collected-body{color:#fafafa;}
     <div onclick="showSection('battlecards',null)" class="home-card home-card-green"><div class="home-card-icon">&#9876;&#65039;</div><div class="home-card-tag home-tag-green">Reference</div><div class="home-card-title">Battle Cards</div><div class="home-card-desc">EZLynx, HawkSoft, AgencyBloc + 4 more. Know exactly where we win.</div><div class="home-card-arrow home-arrow-green">OPEN &#8594;</div></div>
     <div onclick="showSection('pitches',null)" class="home-card home-card-green"><div class="home-card-icon">&#9889;</div><div class="home-card-tag home-tag-green">Before The Call</div><div class="home-card-title">Elevator Pitches</div><div class="home-card-desc">5 situation-specific pitches. Under 20 seconds, any scenario.</div><div class="home-card-arrow home-arrow-green">OPEN &#8594;</div></div>
     <div onclick="openCoach()" class="home-card home-card-coach">
-      <div style="display:flex;align-items:flex-start;gap:16px;">
-        <div style="flex:1;"><div class="home-card-icon">&#129504;</div><div class="home-card-tag home-tag-purple">AI-Powered</div><div class="home-card-title home-card-title-light">AI Sales Coach</div><div class="home-card-desc home-card-desc-light">Tell the coach who you are talking to. Get the exact script, demo focus, and closing angle in seconds.</div></div>
-        <div class="coach-preview-box"><div class="coach-preview-label">Example Output</div><div class="coach-preview-rows"><div class="coach-preview-row"><span class="coach-tag coach-tag-green">SAY</span><span class="coach-preview-text">"Running OEP on a spreadsheet?"</span></div><div class="coach-preview-row"><span class="coach-tag coach-tag-blue">PUSH</span><span class="coach-preview-text">Renewal Autopilot. No one has it.</span></div><div class="coach-preview-row"><span class="coach-tag coach-tag-amber">CLOSE</span><span class="coach-preview-text">"See it live? 4 minutes."</span></div></div></div>
-      </div>
+      <div style="display:flex;align-items:flex-start;gap:14px;"><div style="flex:1;"><div class="home-card-icon">&#129504;</div><div class="home-card-tag home-tag-purple">AI-Powered</div><div class="home-card-title home-card-title-light">AI Sales Coach</div><div class="home-card-desc home-card-desc-light">Tell the coach who you are talking to. Get the exact script and closing angle in seconds.</div></div>
+      <div class="coach-preview-box"><div class="coach-preview-label">Example Output</div><div class="coach-preview-rows"><div class="coach-preview-row"><span class="coach-tag coach-tag-green">SAY</span><span class="coach-preview-text">"Running OEP on a spreadsheet?"</span></div><div class="coach-preview-row"><span class="coach-tag coach-tag-blue">PUSH</span><span class="coach-preview-text">Renewal Autopilot. No one has it.</span></div><div class="coach-preview-row"><span class="coach-tag coach-tag-amber">CLOSE</span><span class="coach-preview-text">"See it live? 4 minutes."</span></div></div></div></div>
       <div class="home-card-arrow home-arrow-purple">OPEN COACH &#8594;</div>
     </div>
     <div onclick="showSection('demorecap',null)" class="home-card home-card-amber"><div class="home-card-icon">&#128203;</div><div class="home-card-tag home-tag-amber">Post-Demo</div><div class="home-card-title">Demo Recap</div><div class="home-card-desc">AI extracts keywords, next steps, and writes your follow-up email.</div><div class="home-card-arrow home-arrow-amber">OPEN &#8594;</div></div>
@@ -2870,48 +2943,96 @@ body.dark-mode .pitch-collected-body{color:#fafafa;}
   <div class="page-header">
     <div class="page-label">Before The Call</div>
     <h1>Pricing &amp; Quote Builder</h1>
-    <p>Enter prospect details to generate a branded PDF quote.</p>
+    <p>One calculator for any size — 1 to 100,000+ agents. Generate a PDF quote instantly.</p>
   </div>
   <div class="content" style="max-width:1100px;">
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px;">
-      <div onclick="setQuotePlan('solo')" style="background:#fff;border:1px solid #e4e4e7;border-top:3px solid #6366f1;border-radius:10px;padding:13px 14px;text-align:center;cursor:pointer;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.09)'" onmouseout="this.style.boxShadow=''"><div style="font-size:9.5px;font-weight:700;color:#6366f1;margin-bottom:4px;letter-spacing:0.12em;">SOLO AGENT</div><div style="font-size:24px;font-weight:800;color:#09090b;letter-spacing:-1px;">$79</div><div style="font-size:11px;color:#71717a;">/mo &middot; 1 seat</div></div>
-      <div onclick="setQuotePlan('small')" style="background:#fff;border:2px solid #6366f1;border-top:3px solid #6366f1;border-radius:10px;padding:13px 14px;text-align:center;cursor:pointer;box-shadow:0 0 0 3px rgba(99,102,241,0.1);"><div style="font-size:9.5px;font-weight:700;color:#6366f1;margin-bottom:4px;letter-spacing:0.12em;">SMALL AGENCY &#9733;</div><div style="font-size:24px;font-weight:800;color:#09090b;letter-spacing:-1px;">$247</div><div style="font-size:11px;color:#71717a;">/mo &middot; 4 agents</div></div>
-      <div onclick="setQuotePlan('large')" style="background:#fff;border:1px solid #e4e4e7;border-top:3px solid #6366f1;border-radius:10px;padding:13px 14px;text-align:center;cursor:pointer;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.09)'" onmouseout="this.style.boxShadow=''"><div style="font-size:9.5px;font-weight:700;color:#6366f1;margin-bottom:4px;letter-spacing:0.12em;">LARGE AGENCY</div><div style="font-size:24px;font-weight:800;color:#09090b;letter-spacing:-1px;">$597</div><div style="font-size:11px;color:#71717a;">/mo &middot; 10 agents</div></div>
-      <div onclick="setQuotePlan('enterprise')" style="background:#0c0c14;border:1px solid #27272a;border-top:3px solid #6366f1;border-radius:10px;padding:13px 14px;text-align:center;cursor:pointer;"><div style="font-size:9.5px;font-weight:700;color:#818cf8;margin-bottom:4px;letter-spacing:0.12em;">ENTERPRISE</div><div style="font-size:24px;font-weight:800;color:#fff;letter-spacing:-1px;">Custom</div><div style="font-size:11px;color:#52525b;">20+ agents</div></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+      <!-- LEFT: SINGLE UNIVERSAL CALCULATOR -->
       <div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
-        <div style="padding:13px 18px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;">Prospect Details</div></div>
-        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;">
-            <div><label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">First Name</label><input id="qb-fname" type="text" placeholder="Mike" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div>
-            <div><label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Last Name</label><input id="qb-lname" type="text" placeholder="Torres" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div>
-          </div>
-          <div><label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Agency Name</label><input id="qb-agency" type="text" placeholder="Sunrise Health Agency" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;">
-            <div><label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Email</label><input id="qb-email" type="email" placeholder="mike@agency.com" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div>
-            <div><label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Phone</label><input id="qb-phone" type="tel" placeholder="(555) 000-0000" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div>
-          </div>
-          <div style="border-top:1px solid #e4e4e7;padding-top:12px;">
-            <div style="font-size:9px;font-weight:700;color:#71717a;margin-bottom:9px;letter-spacing:0.12em;text-transform:uppercase;">Team Size</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px;">
-              <div><label style="font-size:9px;color:#71717a;display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Agents</label>
-                <div style="display:flex;align-items:center;gap:5px;"><button onclick="adjustQBAgents(-1)" style="width:28px;height:30px;border:1px solid #e4e4e7;border-radius:6px;background:#f4f4f5;font-size:15px;cursor:pointer;flex-shrink:0;">-</button><input id="qb-agents" type="text" inputmode="numeric" value="1" style="width:48px;text-align:center;border:1.5px solid #e4e4e7;border-radius:7px;padding:5px 2px;font-size:15px;font-weight:700;color:#09090b;outline:none;" oninput="updateQuotePreview2()" onchange="updateQuotePreview2()"><button onclick="adjustQBAgents(1)" style="width:28px;height:30px;border:1px solid #e4e4e7;border-radius:6px;background:#f4f4f5;font-size:15px;cursor:pointer;flex-shrink:0;">+</button></div>
-              </div>
-              <div><label style="font-size:9px;color:#71717a;display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Assistants</label>
-                <div style="display:flex;align-items:center;gap:5px;"><button onclick="adjustQBAssistants(-1)" style="width:28px;height:30px;border:1px solid #e4e4e7;border-radius:6px;background:#f4f4f5;font-size:15px;cursor:pointer;flex-shrink:0;">-</button><input id="qb-assistants" type="text" inputmode="numeric" value="0" style="width:48px;text-align:center;border:1.5px solid #e4e4e7;border-radius:7px;padding:5px 2px;font-size:15px;font-weight:700;color:#09090b;outline:none;" oninput="updateQuotePreview2()" onchange="updateQuotePreview2()"><button onclick="adjustQBAssistants(1)" style="width:28px;height:30px;border:1px solid #e4e4e7;border-radius:6px;background:#f4f4f5;font-size:15px;cursor:pointer;flex-shrink:0;">+</button></div>
-              </div>
+        <div style="padding:14px 18px;border-bottom:1px solid #e4e4e7;background:linear-gradient(135deg,rgba(99,102,241,0.07),rgba(139,92,246,0.06));">
+          <div style="font-size:10px;font-weight:700;color:#6366f1;letter-spacing:0.14em;text-transform:uppercase;">Universal Price Calculator</div>
+          <div style="font-size:11.5px;color:#71717a;margin-top:2px;">Handles 1 agent to 100,000+ agents with full tiered pricing</div>
+        </div>
+        <div style="padding:18px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+            <div>
+              <label style="font-size:9px;font-weight:700;color:#71717a;display:block;margin-bottom:6px;letter-spacing:0.12em;text-transform:uppercase;">Agents</label>
+              <input id="univ-agents" type="text" inputmode="numeric" value="1" placeholder="e.g. 50000"
+                style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:10px 12px;font-size:17px;font-weight:700;color:#09090b;outline:none;box-sizing:border-box;"
+                oninput="calcUniversal()" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
             </div>
-            <div id="qb-plan-display" style="background:#eef2ff;border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:10px 13px;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:13px;font-weight:700;color:#6366f1;" id="qb-plan-name">Independent Agent</div><div style="font-size:11px;color:#71717a;margin-top:1px;" id="qb-plan-desc">1 agent &middot; all features</div></div><div style="text-align:right;"><div style="font-size:22px;font-weight:800;color:#6366f1;letter-spacing:-1px;" id="qb-price-display">$79</div><div style="font-size:10px;color:#71717a;">/month</div></div></div>
+            <div>
+              <label style="font-size:9px;font-weight:700;color:#71717a;display:block;margin-bottom:6px;letter-spacing:0.12em;text-transform:uppercase;">Assistants</label>
+              <input id="univ-assistants" type="text" inputmode="numeric" value="0" placeholder="e.g. 100"
+                style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:10px 12px;font-size:17px;font-weight:700;color:#09090b;outline:none;box-sizing:border-box;"
+                oninput="calcUniversal()" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
+            </div>
           </div>
-          <div><label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Your Name (Rep)</label><input id="qb-repname" type="text" placeholder="Your name" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div>
-          <div><label style="font-size:9px;font-weight:600;color:#71717a;display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Notes (optional)</label><input id="qb-notes" type="text" placeholder="e.g. Includes dedicated onboarding" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div>
-          <button onclick="generateQuotePDF2()" style="width:100%;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:9px;padding:12px;font-size:13.5px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(99,102,241,0.3);font-family:inherit;">&#128196; Download PDF Quote</button>
+          <div style="background:#eef2ff;border:1.5px solid rgba(99,102,241,0.25);border-radius:10px;padding:14px 16px;margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+              <div><div style="font-size:14px;font-weight:800;color:#6366f1;" id="univ-plan-name">Independent Agent</div><div style="font-size:11.5px;color:#71717a;margin-top:2px;" id="univ-plan-desc">1 agent &middot; all features</div></div>
+              <div style="text-align:right;"><div style="font-size:30px;font-weight:800;color:#6366f1;letter-spacing:-1.5px;line-height:1;" id="univ-monthly">$79</div><div style="font-size:10.5px;color:#71717a;">/month</div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-top:10px;border-top:1px solid rgba(99,102,241,0.15);">
+              <div style="text-align:center;"><div style="font-size:10.5px;color:#71717a;margin-bottom:2px;">Annual (10% off)</div><div style="font-size:13px;font-weight:700;color:#09090b;" id="univ-annual">$854/yr</div></div>
+              <div style="text-align:center;"><div style="font-size:10.5px;color:#71717a;margin-bottom:2px;">Per Person/mo</div><div style="font-size:13px;font-weight:700;color:#09090b;" id="univ-per-person">$79</div></div>
+              <div style="text-align:center;"><div style="font-size:10.5px;color:#71717a;margin-bottom:2px;">Annual Savings</div><div style="font-size:13px;font-weight:700;color:#10b981;" id="univ-savings">Save $95</div></div>
+            </div>
+          </div>
+          <div style="font-size:10.5px;color:#a1a1aa;margin-bottom:14px;" id="univ-breakdown">Standard plan</div>
+
+          <!-- TIER TABLE -->
+          <div style="background:#f8f8fa;border-radius:8px;padding:10px 12px;margin-bottom:14px;">
+            <div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;">Pricing Tiers</div>
+            <div style="display:grid;grid-template-columns:auto auto;gap:3px 16px;">
+              <span style="font-size:11.5px;color:#52525b;">1 agent</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$79/mo flat</span>
+              <span style="font-size:11.5px;color:#52525b;">2–4 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$247/mo flat</span>
+              <span style="font-size:11.5px;color:#52525b;">5–10 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$597/mo flat</span>
+              <span style="font-size:11.5px;color:#52525b;">11–50 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$30/agent/mo</span>
+              <span style="font-size:11.5px;color:#52525b;">51–100 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$27/agent/mo</span>
+              <span style="font-size:11.5px;color:#52525b;">101–200 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$24/agent/mo</span>
+              <span style="font-size:11.5px;color:#52525b;">201–500 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$22/agent/mo</span>
+              <span style="font-size:11.5px;color:#52525b;">501–10,000 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$20/agent/mo</span>
+              <span style="font-size:11.5px;color:#52525b;">10,001–100,000+</span><span style="font-size:11.5px;font-weight:700;color:#6366f1;">Custom &mdash; contact us</span>
+            </div>
+          </div>
+          <button onclick="applyCalcToQuote()" style="width:100%;background:#6366f1;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;margin-bottom:0;">Use This Price in Quote &#8595;</button>
         </div>
       </div>
+
+      <!-- RIGHT: FEATURES + QUOTE FORM -->
       <div style="display:flex;flex-direction:column;gap:12px;">
-        <div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.05);"><div style="padding:12px 16px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;">Every Plan Includes</div></div><div style="padding:13px 16px;display:grid;grid-template-columns:1fr 1fr;gap:6px;"><div style="font-size:12px;color:#52525b;display:flex;gap:5px;align-items:flex-start;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>ACA, STM, Life, Ancillary &amp; Indemnity</div><div style="font-size:12px;color:#52525b;display:flex;gap:5px;align-items:flex-start;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Full CRM &amp; household tracking</div><div style="font-size:12px;color:#52525b;display:flex;gap:5px;align-items:flex-start;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Renewal Autopilot OEP workflow</div><div style="font-size:12px;color:#52525b;display:flex;gap:5px;align-items:flex-start;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>SMS with dedicated number</div><div style="font-size:12px;color:#52525b;display:flex;gap:5px;align-items:flex-start;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>HealthSherpa &amp; EDE integration</div><div style="font-size:12px;color:#52525b;display:flex;gap:5px;align-items:flex-start;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Google Calendar sync</div><div style="font-size:12px;color:#52525b;display:flex;gap:5px;align-items:flex-start;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Policy tracker &amp; reconciliation</div><div style="font-size:12px;color:#52525b;display:flex;gap:5px;align-items:flex-start;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>No annual contract required</div></div></div>
-        <div style="background:#0c0c14;border:1px solid rgba(255,255,255,0.07);border-radius:12px;overflow:hidden;"><div style="padding:13px 16px;border-bottom:1px solid rgba(255,255,255,0.06);"><div style="font-size:9px;font-weight:700;color:rgba(165,180,252,0.7);letter-spacing:0.14em;text-transform:uppercase;">Enterprise Calculator (20+ Agents)</div></div><div style="padding:14px 16px;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:11px;"><div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Agents (min 20)</label><div style="display:flex;align-items:center;gap:4px;"><button onclick="adjustAgents(-10)" style="width:26px;height:26px;border:1px solid rgba(255,255,255,0.1);border-radius:5px;background:rgba(255,255,255,0.06);color:#fff;cursor:pointer;font-size:12px;">-</button><input id="agentCount" type="text" inputmode="numeric" value="20" style="width:50px;text-align:center;border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:4px;font-size:13px;font-weight:700;color:#fff;background:rgba(255,255,255,0.06);outline:none;" oninput="calcPrice()" onchange="calcPrice()"><button onclick="adjustAgents(10)" style="width:26px;height:26px;border:1px solid rgba(255,255,255,0.1);border-radius:5px;background:rgba(255,255,255,0.06);color:#fff;cursor:pointer;font-size:12px;">+</button></div></div><div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:4px;letter-spacing:0.1em;text-transform:uppercase;">Assistants (min 4)</label><div style="display:flex;align-items:center;gap:4px;"><button onclick="adjustAssistants(-1)" style="width:26px;height:26px;border:1px solid rgba(255,255,255,0.1);border-radius:5px;background:rgba(255,255,255,0.06);color:#fff;cursor:pointer;font-size:12px;">-</button><input id="assistantCount" type="text" inputmode="numeric" value="4" style="width:50px;text-align:center;border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:4px;font-size:13px;font-weight:700;color:#fff;background:rgba(255,255,255,0.06);outline:none;" oninput="calcPrice()" onchange="calcPrice()"><button onclick="adjustAssistants(1)" style="width:26px;height:26px;border:1px solid rgba(255,255,255,0.1);border-radius:5px;background:rgba(255,255,255,0.06);color:#fff;cursor:pointer;font-size:12px;">+</button></div></div></div><div style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.25);border-radius:8px;padding:11px 13px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div><div style="font-size:11px;color:rgba(165,180,252,0.8);" id="calcPerPerson">~$30/person/mo</div><div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:1px;" id="calcSavings">Save $0 annual</div></div><div style="text-align:right;"><div style="font-size:24px;font-weight:800;color:#818cf8;letter-spacing:-1px;" id="calcPrice">$897</div><div style="font-size:10px;color:rgba(255,255,255,0.3);" id="calcAnnual">$9,683/yr (10% off)</div></div></div><div style="font-size:9.5px;color:rgba(255,255,255,0.28);margin-bottom:3px;" id="breakdownAgents">Base $597 + 10 agents x $30</div><div style="font-size:9.5px;color:rgba(255,255,255,0.28);margin-bottom:10px;" id="breakdownAssistants"></div><button onclick="useEnterpriseQuote()" style="width:100%;background:#6366f1;border:none;border-radius:8px;padding:9px;font-size:12.5px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">Use This Price in Quote &uarr;</button></div></div>
+        <div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
+          <div style="padding:12px 16px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;">Every Plan Includes</div></div>
+          <div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>ACA, STM, Life, Ancillary &amp; Indemnity</div>
+            <div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Full CRM &amp; household tracking</div>
+            <div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Renewal Autopilot OEP workflow</div>
+            <div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>SMS with dedicated number</div>
+            <div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>HealthSherpa &amp; EDE integration</div>
+            <div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Google Calendar sync</div>
+            <div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Policy tracker &amp; reconciliation</div>
+            <div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>No annual contract required</div>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
+          <div style="padding:12px 16px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;">PDF Quote &mdash; Prospect Info</div></div>
+          <div style="padding:13px 15px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <input id="qb-fname" type="text" placeholder="First Name" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
+              <input id="qb-lname" type="text" placeholder="Last Name" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
+            </div>
+            <input id="qb-agency" type="text" placeholder="Agency Name" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <input id="qb-email" type="email" placeholder="Email" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
+              <input id="qb-phone" type="tel" placeholder="Phone" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
+            </div>
+            <input id="qb-repname" type="text" placeholder="Your Name (Rep)" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
+            <input id="qb-notes" type="text" placeholder="Notes (optional)" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
+            <button onclick="generateQuotePDF2()" style="width:100%;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:9px;padding:11px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(99,102,241,0.3);font-family:inherit;">&#128196; Download PDF Quote</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -2929,24 +3050,66 @@ body.dark-mode .pitch-collected-body{color:#fafafa;}
       <button class="nba-btn" onclick="openCoach()">🧠 Customize for This Prospect</button>
     </div>
   </div>
-  <!-- MY SCRIPT EDITOR -->
-  <div class="my-script-panel" id="my-script-panel-coldcall" style="max-width:860px;margin:0 auto 0;">
-    <div class="my-script-header">
+  <!-- MY SCRIPT: COLD CALL — only appears in this section -->
+  <div class="myscript-panel" id="msp-coldcall" style="margin:0 auto 6px;">
+    <div class="myscript-header">
       <div>
-        <div class="my-script-title">&#9997;&#65039; My Cold Call Script</div>
-        <div class="my-script-subtitle">Your version of the cold call opening. What works for your style and territory.</div>
+        <div class="myscript-title" style="color:#6366f1;">&#9997;&#65039; My Cold Call Script</div>
+        <div class="myscript-subtitle">Your cold call. Your words. Your style.</div>
       </div>
-      <div style="display:flex;gap:6px;">
-        <button onclick="loadDefaultScript('coldcall')" class="qa-btn">&#8635; Load Default</button>
-        <button onclick="qaCopy(document.getElementById('my-script-coldcall').value)" class="qa-btn">&#128203; Copy</button>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;">
+        <button onclick="addMSStep('coldcall','')" class="qa-btn" style="border-color:#6366f1;color:#6366f1;white-space:nowrap;">&#43; Step</button>
+        <button onclick="loadDefaultMS('coldcall')" class="qa-btn" style="white-space:nowrap;">&#8635; Default</button>
+        <button onclick="copyMyScript('coldcall')" class="qa-btn" style="white-space:nowrap;">&#128203; Copy All</button>
       </div>
     </div>
-    <textarea id="my-script-coldcall" class="my-script-textarea" placeholder="Write your own cold call script here. This is yours — your words, your style. Click Load Default to start from the team script, then customize it."></textarea>
-    <div class="my-script-footer">
-      <button onclick="saveMyScript('coldcall')" style="background:#6366f1;border:none;border-radius:7px;padding:8px 16px;font-size:12.5px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">&#9729; Save My Script</button>
-      <span id="my-script-status-coldcall" style="font-size:11.5px;color:#10b981;display:none;">&#10003; Saved</span>
+    <div class="myscript-steps" id="mss-coldcall">
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">1</div>
+            <input class="myscript-step-title" type="text" value="Opening (0:00–0:15)" placeholder="Step name..." onchange="schedSave('coldcall')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Name, who you are, one-line value. End with a permission question." onchange="schedSave('coldcall')" oninput="schedSave('coldcall')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">2</div>
+            <input class="myscript-step-title" type="text" value="Earn the minute (0:15–0:45)" placeholder="Step name..." onchange="schedSave('coldcall')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Ask before you pitch. Discover their pain first." onchange="schedSave('coldcall')" oninput="schedSave('coldcall')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">3</div>
+            <input class="myscript-step-title" type="text" value="Connect pain to feature (0:45–1:30)" placeholder="Step name..." onchange="schedSave('coldcall')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Link what they said to ONE AgentNav feature." onchange="schedSave('coldcall')" oninput="schedSave('coldcall')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">4</div>
+            <input class="myscript-step-title" type="text" value="Soft pitch (1:30–2:00)" placeholder="Step name..." onchange="schedSave('coldcall')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Brief platform mention. No feature lists." onchange="schedSave('coldcall')" oninput="schedSave('coldcall')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">5</div>
+            <input class="myscript-step-title" type="text" value="Close for meeting (2:00–2:30)" placeholder="Step name..." onchange="schedSave('coldcall')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Ask for 15 min. Give a specific time option." onchange="schedSave('coldcall')" oninput="schedSave('coldcall')"></textarea>
+        </div>
+    </div>
+    <div class="myscript-footer">
+      <button onclick="saveMyScript('coldcall')" class="myscript-save-btn" style="background:#6366f1;">&#9729; Save</button>
+      <span id="mss-status-coldcall" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span>
       <span style="flex:1;"></span>
-      <span style="font-size:11px;color:#a1a1aa;">Saves to My Pitches &#8594;</span>
+      <span style="font-size:10.5px;color:#a1a1aa;">Visible in My Scripts &#8594;</span>
     </div>
   </div>
 
@@ -3430,112 +3593,338 @@ body.dark-mode .pitch-collected-body{color:#fafafa;}
       <button class="nba-btn" onclick="qaCopy('Most agents say that at first. What they find is they close 1-2 more deals a month and it more than pays for itself. The real question is: how many clients slipped through last OEP?')">📋 Copy Price Objection Response</button>
     </div>
   </div>
-  <!-- MY SCRIPT EDITOR -->
-  <div class="my-script-panel" id="my-script-panel-objections" style="max-width:860px;margin:0 auto 0;">
-    <div class="my-script-header">
+  <!-- MY SCRIPT: OBJECTION HANDLING — only appears in this section -->
+  <div class="myscript-panel" id="msp-objections" style="margin:0 auto 6px;">
+    <div class="myscript-header">
       <div>
-        <div class="my-script-title">&#9997;&#65039; My Objection Handling Script</div>
-        <div class="my-script-subtitle">Your go-to responses. Your words, your style, your success rate.</div>
+        <div class="myscript-title" style="color:#10b981;">&#9997;&#65039; My Objection Handling Script</div>
+        <div class="myscript-subtitle">Your go-to responses. Your words.</div>
       </div>
-      <div style="display:flex;gap:6px;">
-        <button onclick="loadDefaultScript('objections')" class="qa-btn">&#8635; Load Default</button>
-        <button onclick="qaCopy(document.getElementById('my-script-objections').value)" class="qa-btn">&#128203; Copy</button>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;">
+        <button onclick="addMSStep('objections','')" class="qa-btn" style="border-color:#10b981;color:#10b981;white-space:nowrap;">&#43; Step</button>
+        <button onclick="loadDefaultMS('objections')" class="qa-btn" style="white-space:nowrap;">&#8635; Default</button>
+        <button onclick="copyMyScript('objections')" class="qa-btn" style="white-space:nowrap;">&#128203; Copy All</button>
       </div>
     </div>
-    <textarea id="my-script-objections" class="my-script-textarea" placeholder="Write your own objection handling script here. This is yours — your words, your style. Click Load Default to start from the team script, then customize it."></textarea>
-    <div class="my-script-footer">
-      <button onclick="saveMyScript('objections')" style="background:#6366f1;border:none;border-radius:7px;padding:8px 16px;font-size:12.5px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">&#9729; Save My Script</button>
-      <span id="my-script-status-objections" style="font-size:11.5px;color:#10b981;display:none;">&#10003; Saved</span>
+    <div class="myscript-steps" id="mss-objections">
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">1</div>
+            <input class="myscript-step-title" type="text" value="&quot;Too expensive&quot;" placeholder="Step name..." onchange="schedSave('objections')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Break down per-person cost. Compare to 3 separate tools." onchange="schedSave('objections')" oninput="schedSave('objections')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">2</div>
+            <input class="myscript-step-title" type="text" value="&quot;Need to think about it&quot;" placeholder="Step name..." onchange="schedSave('objections')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="What specifically? Pull out the real objection." onchange="schedSave('objections')" oninput="schedSave('objections')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">3</div>
+            <input class="myscript-step-title" type="text" value="&quot;Happy with what we have&quot;" placeholder="Step name..." onchange="schedSave('objections')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="How are renewals going? What does OEP look like?" onchange="schedSave('objections')" oninput="schedSave('objections')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">4</div>
+            <input class="myscript-step-title" type="text" value="&quot;Need to talk to my partner&quot;" placeholder="Step name..." onchange="schedSave('objections')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Can we get them on a quick call together?" onchange="schedSave('objections')" oninput="schedSave('objections')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">5</div>
+            <input class="myscript-step-title" type="text" value="&quot;Not the right time&quot;" placeholder="Step name..." onchange="schedSave('objections')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="When is? Get a specific follow-up date." onchange="schedSave('objections')" oninput="schedSave('objections')"></textarea>
+        </div>
+    </div>
+    <div class="myscript-footer">
+      <button onclick="saveMyScript('objections')" class="myscript-save-btn" style="background:#10b981;">&#9729; Save</button>
+      <span id="mss-status-objections" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span>
       <span style="flex:1;"></span>
-      <span style="font-size:11px;color:#a1a1aa;">Saves to My Pitches &#8594;</span>
+      <span style="font-size:10.5px;color:#a1a1aa;">Visible in My Scripts &#8594;</span>
     </div>
   </div>
 
 
-  <!-- MY SCRIPT EDITOR -->
-  <div class="my-script-panel" id="my-script-panel-onboarding" style="max-width:860px;margin:0 auto 0;">
-    <div class="my-script-header">
+  <!-- MY SCRIPT: ONBOARDING CALL — only appears in this section -->
+  <div class="myscript-panel" id="msp-onboarding" style="margin:0 auto 6px;">
+    <div class="myscript-header">
       <div>
-        <div class="my-script-title">&#9997;&#65039; My Onboarding Call Script</div>
-        <div class="my-script-subtitle">Your onboarding script. How you set expectations and kick off the relationship.</div>
+        <div class="myscript-title" style="color:#10b981;">&#9997;&#65039; My Onboarding Call Script</div>
+        <div class="myscript-subtitle">How you set expectations and kick off.</div>
       </div>
-      <div style="display:flex;gap:6px;">
-        <button onclick="loadDefaultScript('onboarding')" class="qa-btn">&#8635; Load Default</button>
-        <button onclick="qaCopy(document.getElementById('my-script-onboarding').value)" class="qa-btn">&#128203; Copy</button>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;">
+        <button onclick="addMSStep('onboarding','')" class="qa-btn" style="border-color:#10b981;color:#10b981;white-space:nowrap;">&#43; Step</button>
+        <button onclick="loadDefaultMS('onboarding')" class="qa-btn" style="white-space:nowrap;">&#8635; Default</button>
+        <button onclick="copyMyScript('onboarding')" class="qa-btn" style="white-space:nowrap;">&#128203; Copy All</button>
       </div>
     </div>
-    <textarea id="my-script-onboarding" class="my-script-textarea" placeholder="Write your own onboarding call script here. This is yours — your words, your style. Click Load Default to start from the team script, then customize it."></textarea>
-    <div class="my-script-footer">
-      <button onclick="saveMyScript('onboarding')" style="background:#6366f1;border:none;border-radius:7px;padding:8px 16px;font-size:12.5px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">&#9729; Save My Script</button>
-      <span id="my-script-status-onboarding" style="font-size:11.5px;color:#10b981;display:none;">&#10003; Saved</span>
+    <div class="myscript-steps" id="mss-onboarding">
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">1</div>
+            <input class="myscript-step-title" type="text" value="Set expectations" placeholder="Step name..." onchange="schedSave('onboarding')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="What happens in the first 30 days. Be specific." onchange="schedSave('onboarding')" oninput="schedSave('onboarding')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">2</div>
+            <input class="myscript-step-title" type="text" value="Data migration" placeholder="Step name..." onchange="schedSave('onboarding')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="How their contacts and policies move over." onchange="schedSave('onboarding')" oninput="schedSave('onboarding')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">3</div>
+            <input class="myscript-step-title" type="text" value="Training plan" placeholder="Step name..." onchange="schedSave('onboarding')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Who gets trained, when, and how long." onchange="schedSave('onboarding')" oninput="schedSave('onboarding')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">4</div>
+            <input class="myscript-step-title" type="text" value="First win" placeholder="Step name..." onchange="schedSave('onboarding')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="What should they do first to see immediate value?" onchange="schedSave('onboarding')" oninput="schedSave('onboarding')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">5</div>
+            <input class="myscript-step-title" type="text" value="Check-in schedule" placeholder="Step name..." onchange="schedSave('onboarding')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="When will you follow up to make sure they are succeeding?" onchange="schedSave('onboarding')" oninput="schedSave('onboarding')"></textarea>
+        </div>
+    </div>
+    <div class="myscript-footer">
+      <button onclick="saveMyScript('onboarding')" class="myscript-save-btn" style="background:#10b981;">&#9729; Save</button>
+      <span id="mss-status-onboarding" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span>
       <span style="flex:1;"></span>
-      <span style="font-size:11px;color:#a1a1aa;">Saves to My Pitches &#8594;</span>
+      <span style="font-size:10.5px;color:#a1a1aa;">Visible in My Scripts &#8594;</span>
     </div>
   </div>
 
 
-  <!-- MY SCRIPT EDITOR -->
-  <div class="my-script-panel" id="my-script-panel-closing" style="max-width:860px;margin:0 auto 0;">
-    <div class="my-script-header">
+  <!-- MY SCRIPT: CLOSING CALL — only appears in this section -->
+  <div class="myscript-panel" id="msp-closing" style="margin:0 auto 6px;">
+    <div class="myscript-header">
       <div>
-        <div class="my-script-title">&#9997;&#65039; My Closing Call Script</div>
-        <div class="my-script-subtitle">Your closing language. How you ask for the deal, handle the last pushback.</div>
+        <div class="myscript-title" style="color:#6366f1;">&#9997;&#65039; My Closing Call Script</div>
+        <div class="myscript-subtitle">How you ask for the deal.</div>
       </div>
-      <div style="display:flex;gap:6px;">
-        <button onclick="loadDefaultScript('closing')" class="qa-btn">&#8635; Load Default</button>
-        <button onclick="qaCopy(document.getElementById('my-script-closing').value)" class="qa-btn">&#128203; Copy</button>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;">
+        <button onclick="addMSStep('closing','')" class="qa-btn" style="border-color:#6366f1;color:#6366f1;white-space:nowrap;">&#43; Step</button>
+        <button onclick="loadDefaultMS('closing')" class="qa-btn" style="white-space:nowrap;">&#8635; Default</button>
+        <button onclick="copyMyScript('closing')" class="qa-btn" style="white-space:nowrap;">&#128203; Copy All</button>
       </div>
     </div>
-    <textarea id="my-script-closing" class="my-script-textarea" placeholder="Write your own closing call script here. This is yours — your words, your style. Click Load Default to start from the team script, then customize it."></textarea>
-    <div class="my-script-footer">
-      <button onclick="saveMyScript('closing')" style="background:#6366f1;border:none;border-radius:7px;padding:8px 16px;font-size:12.5px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">&#9729; Save My Script</button>
-      <span id="my-script-status-closing" style="font-size:11.5px;color:#10b981;display:none;">&#10003; Saved</span>
+    <div class="myscript-steps" id="mss-closing">
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">1</div>
+            <input class="myscript-step-title" type="text" value="Summarize their words" placeholder="Step name..." onchange="schedSave('closing')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Recap their pain and what resonated. Use their language." onchange="schedSave('closing')" oninput="schedSave('closing')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">2</div>
+            <input class="myscript-step-title" type="text" value="Handle final objection" placeholder="Step name..." onchange="schedSave('closing')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Price, timing, or thinking about it. Have your answer ready." onchange="schedSave('closing')" oninput="schedSave('closing')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">3</div>
+            <input class="myscript-step-title" type="text" value="Ask for the decision" placeholder="Step name..." onchange="schedSave('closing')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Direct question. Ask, don&#39;t hint." onchange="schedSave('closing')" oninput="schedSave('closing')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">4</div>
+            <input class="myscript-step-title" type="text" value="Easy next step" placeholder="Step name..." onchange="schedSave('closing')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Trial, onboarding call, or send the link." onchange="schedSave('closing')" oninput="schedSave('closing')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">5</div>
+            <input class="myscript-step-title" type="text" value="Confirm and follow up" placeholder="Step name..." onchange="schedSave('closing')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Nail the next action and timeline before hanging up." onchange="schedSave('closing')" oninput="schedSave('closing')"></textarea>
+        </div>
+    </div>
+    <div class="myscript-footer">
+      <button onclick="saveMyScript('closing')" class="myscript-save-btn" style="background:#6366f1;">&#9729; Save</button>
+      <span id="mss-status-closing" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span>
       <span style="flex:1;"></span>
-      <span style="font-size:11px;color:#a1a1aa;">Saves to My Pitches &#8594;</span>
+      <span style="font-size:10.5px;color:#a1a1aa;">Visible in My Scripts &#8594;</span>
     </div>
   </div>
 
 
-  <!-- MY SCRIPT EDITOR -->
-  <div class="my-script-panel" id="my-script-panel-demo" style="max-width:860px;margin:0 auto 0;">
-    <div class="my-script-header">
+  <!-- MY SCRIPT: DEMO CALL — only appears in this section -->
+  <div class="myscript-panel" id="msp-demo" style="margin:0 auto 6px;">
+    <div class="myscript-header">
       <div>
-        <div class="my-script-title">&#9997;&#65039; My Demo Call Script</div>
-        <div class="my-script-subtitle">Your demo flow. Which features you lead with, what you skip, how you close.</div>
+        <div class="myscript-title" style="color:#6366f1;">&#9997;&#65039; My Demo Call Script</div>
+        <div class="myscript-subtitle">What to show, what to skip, and how to close.</div>
       </div>
-      <div style="display:flex;gap:6px;">
-        <button onclick="loadDefaultScript('demo')" class="qa-btn">&#8635; Load Default</button>
-        <button onclick="qaCopy(document.getElementById('my-script-demo').value)" class="qa-btn">&#128203; Copy</button>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;">
+        <button onclick="addMSStep('demo','')" class="qa-btn" style="border-color:#6366f1;color:#6366f1;white-space:nowrap;">&#43; Step</button>
+        <button onclick="loadDefaultMS('demo')" class="qa-btn" style="white-space:nowrap;">&#8635; Default</button>
+        <button onclick="copyMyScript('demo')" class="qa-btn" style="white-space:nowrap;">&#128203; Copy All</button>
       </div>
     </div>
-    <textarea id="my-script-demo" class="my-script-textarea" placeholder="Write your own demo call script here. This is yours — your words, your style. Click Load Default to start from the team script, then customize it."></textarea>
-    <div class="my-script-footer">
-      <button onclick="saveMyScript('demo')" style="background:#6366f1;border:none;border-radius:7px;padding:8px 16px;font-size:12.5px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">&#9729; Save My Script</button>
-      <span id="my-script-status-demo" style="font-size:11.5px;color:#10b981;display:none;">&#10003; Saved</span>
+    <div class="myscript-steps" id="mss-demo">
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">1</div>
+            <input class="myscript-step-title" type="text" value="Set agenda" placeholder="Step name..." onchange="schedSave('demo')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Tell them what you will show and get their buy-in." onchange="schedSave('demo')" oninput="schedSave('demo')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">2</div>
+            <input class="myscript-step-title" type="text" value="Start with their pain" placeholder="Step name..." onchange="schedSave('demo')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Begin with the feature that solves what they told you in discovery." onchange="schedSave('demo')" oninput="schedSave('demo')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">3</div>
+            <input class="myscript-step-title" type="text" value="Renewal Autopilot" placeholder="Step name..." onchange="schedSave('demo')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Show the OEP board. This is the aha moment." onchange="schedSave('demo')" oninput="schedSave('demo')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">4</div>
+            <input class="myscript-step-title" type="text" value="CRM + quoting" placeholder="Step name..." onchange="schedSave('demo')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Show how they work together. Less tool switching." onchange="schedSave('demo')" oninput="schedSave('demo')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">5</div>
+            <input class="myscript-step-title" type="text" value="SMS + communication" placeholder="Step name..." onchange="schedSave('demo')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Texting clients from the platform." onchange="schedSave('demo')" oninput="schedSave('demo')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">6</div>
+            <input class="myscript-step-title" type="text" value="Close the demo" placeholder="Step name..." onchange="schedSave('demo')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="What resonated? Transition to next steps." onchange="schedSave('demo')" oninput="schedSave('demo')"></textarea>
+        </div>
+    </div>
+    <div class="myscript-footer">
+      <button onclick="saveMyScript('demo')" class="myscript-save-btn" style="background:#6366f1;">&#9729; Save</button>
+      <span id="mss-status-demo" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span>
       <span style="flex:1;"></span>
-      <span style="font-size:11px;color:#a1a1aa;">Saves to My Pitches &#8594;</span>
+      <span style="font-size:10.5px;color:#a1a1aa;">Visible in My Scripts &#8594;</span>
     </div>
   </div>
 
 
-  <!-- MY SCRIPT EDITOR -->
-  <div class="my-script-panel" id="my-script-panel-discovery" style="max-width:860px;margin:0 auto 0;">
-    <div class="my-script-header">
+  <!-- MY SCRIPT: DISCOVERY CALL — only appears in this section -->
+  <div class="myscript-panel" id="msp-discovery" style="margin:0 auto 6px;">
+    <div class="myscript-header">
       <div>
-        <div class="my-script-title">&#9997;&#65039; My Discovery Call Script</div>
-        <div class="my-script-subtitle">Your discovery questions. Add ones that resonate with your prospects.</div>
+        <div class="myscript-title" style="color:#6366f1;">&#9997;&#65039; My Discovery Call Script</div>
+        <div class="myscript-subtitle">Questions that write the demo for you.</div>
       </div>
-      <div style="display:flex;gap:6px;">
-        <button onclick="loadDefaultScript('discovery')" class="qa-btn">&#8635; Load Default</button>
-        <button onclick="qaCopy(document.getElementById('my-script-discovery').value)" class="qa-btn">&#128203; Copy</button>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;">
+        <button onclick="addMSStep('discovery','')" class="qa-btn" style="border-color:#6366f1;color:#6366f1;white-space:nowrap;">&#43; Step</button>
+        <button onclick="loadDefaultMS('discovery')" class="qa-btn" style="white-space:nowrap;">&#8635; Default</button>
+        <button onclick="copyMyScript('discovery')" class="qa-btn" style="white-space:nowrap;">&#128203; Copy All</button>
       </div>
     </div>
-    <textarea id="my-script-discovery" class="my-script-textarea" placeholder="Write your own discovery call script here. This is yours — your words, your style. Click Load Default to start from the team script, then customize it."></textarea>
-    <div class="my-script-footer">
-      <button onclick="saveMyScript('discovery')" style="background:#6366f1;border:none;border-radius:7px;padding:8px 16px;font-size:12.5px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">&#9729; Save My Script</button>
-      <span id="my-script-status-discovery" style="font-size:11.5px;color:#10b981;display:none;">&#10003; Saved</span>
+    <div class="myscript-steps" id="mss-discovery">
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">1</div>
+            <input class="myscript-step-title" type="text" value="Current setup" placeholder="Step name..." onchange="schedSave('discovery')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="How are they managing quoting, CRM, and renewals today?" onchange="schedSave('discovery')" oninput="schedSave('discovery')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">2</div>
+            <input class="myscript-step-title" type="text" value="Where it breaks" placeholder="Step name..." onchange="schedSave('discovery')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="What takes the most time? Where does the process fail?" onchange="schedSave('discovery')" oninput="schedSave('discovery')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">3</div>
+            <input class="myscript-step-title" type="text" value="Renewal season" placeholder="Step name..." onchange="schedSave('discovery')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="What does OEP look like for their book? How many clients?" onchange="schedSave('discovery')" oninput="schedSave('discovery')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">4</div>
+            <input class="myscript-step-title" type="text" value="Team size & growth" placeholder="Step name..." onchange="schedSave('discovery')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="How many agents, assistants? Growing?" onchange="schedSave('discovery')" oninput="schedSave('discovery')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">5</div>
+            <input class="myscript-step-title" type="text" value="Decision process" placeholder="Step name..." onchange="schedSave('discovery')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Who else is involved in choosing a platform?" onchange="schedSave('discovery')" oninput="schedSave('discovery')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">6</div>
+            <input class="myscript-step-title" type="text" value="Timeline" placeholder="Step name..." onchange="schedSave('discovery')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="When do they want to be set up by?" onchange="schedSave('discovery')" oninput="schedSave('discovery')"></textarea>
+        </div>
+    </div>
+    <div class="myscript-footer">
+      <button onclick="saveMyScript('discovery')" class="myscript-save-btn" style="background:#6366f1;">&#9729; Save</button>
+      <span id="mss-status-discovery" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span>
       <span style="flex:1;"></span>
-      <span style="font-size:11px;color:#a1a1aa;">Saves to My Pitches &#8594;</span>
+      <span style="font-size:10.5px;color:#a1a1aa;">Visible in My Scripts &#8594;</span>
     </div>
   </div>
 
@@ -3877,46 +4266,130 @@ body.dark-mode .pitch-collected-body{color:#fafafa;}
       <button class="nba-btn" onclick="qaCopy(document.getElementById('recap-summary-text').textContent)">&#128203; Copy Summary</button>
     </div>
   </div>
-  <!-- MY SCRIPT EDITOR -->
-  <div class="my-script-panel" id="my-script-panel-talktracks" style="max-width:860px;margin:0 auto 0;">
-    <div class="my-script-header">
+  <!-- MY SCRIPT: TALK TRACKS — only appears in this section -->
+  <div class="myscript-panel" id="msp-talktracks" style="margin:0 auto 6px;">
+    <div class="myscript-header">
       <div>
-        <div class="my-script-title">&#9997;&#65039; My Talk Tracks Script</div>
-        <div class="my-script-subtitle">Your talk tracks. Lines that have actually worked in real calls.</div>
+        <div class="myscript-title" style="color:#10b981;">&#9997;&#65039; My Talk Tracks Script</div>
+        <div class="myscript-subtitle">Lines that have worked on real calls.</div>
       </div>
-      <div style="display:flex;gap:6px;">
-        <button onclick="loadDefaultScript('talktracks')" class="qa-btn">&#8635; Load Default</button>
-        <button onclick="qaCopy(document.getElementById('my-script-talktracks').value)" class="qa-btn">&#128203; Copy</button>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;">
+        <button onclick="addMSStep('talktracks','')" class="qa-btn" style="border-color:#10b981;color:#10b981;white-space:nowrap;">&#43; Step</button>
+        <button onclick="loadDefaultMS('talktracks')" class="qa-btn" style="white-space:nowrap;">&#8635; Default</button>
+        <button onclick="copyMyScript('talktracks')" class="qa-btn" style="white-space:nowrap;">&#128203; Copy All</button>
       </div>
     </div>
-    <textarea id="my-script-talktracks" class="my-script-textarea" placeholder="Write your own talk tracks script here. This is yours — your words, your style. Click Load Default to start from the team script, then customize it."></textarea>
-    <div class="my-script-footer">
-      <button onclick="saveMyScript('talktracks')" style="background:#6366f1;border:none;border-radius:7px;padding:8px 16px;font-size:12.5px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">&#9729; Save My Script</button>
-      <span id="my-script-status-talktracks" style="font-size:11.5px;color:#10b981;display:none;">&#10003; Saved</span>
+    <div class="myscript-steps" id="mss-talktracks">
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">1</div>
+            <input class="myscript-step-title" type="text" value="OEP Opener" placeholder="Step name..." onchange="schedSave('talktracks')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Line that works when they mention renewal season struggles." onchange="schedSave('talktracks')" oninput="schedSave('talktracks')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">2</div>
+            <input class="myscript-step-title" type="text" value="Price Reframe" placeholder="Step name..." onchange="schedSave('talktracks')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="How to talk about price when they push back." onchange="schedSave('talktracks')" oninput="schedSave('talktracks')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">3</div>
+            <input class="myscript-step-title" type="text" value="Competitor Response" placeholder="Step name..." onchange="schedSave('talktracks')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="What to say when they name a competitor." onchange="schedSave('talktracks')" oninput="schedSave('talktracks')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">4</div>
+            <input class="myscript-step-title" type="text" value="Urgency Close" placeholder="Step name..." onchange="schedSave('talktracks')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Creating urgency without being pushy." onchange="schedSave('talktracks')" oninput="schedSave('talktracks')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">5</div>
+            <input class="myscript-step-title" type="text" value="My Best Line" placeholder="Step name..." onchange="schedSave('talktracks')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Your single best line that has actually closed conversations." onchange="schedSave('talktracks')" oninput="schedSave('talktracks')"></textarea>
+        </div>
+    </div>
+    <div class="myscript-footer">
+      <button onclick="saveMyScript('talktracks')" class="myscript-save-btn" style="background:#10b981;">&#9729; Save</button>
+      <span id="mss-status-talktracks" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span>
       <span style="flex:1;"></span>
-      <span style="font-size:11px;color:#a1a1aa;">Saves to My Pitches &#8594;</span>
+      <span style="font-size:10.5px;color:#a1a1aa;">Visible in My Scripts &#8594;</span>
     </div>
   </div>
 
 
-  <!-- MY SCRIPT EDITOR -->
-  <div class="my-script-panel" id="my-script-panel-battlecards" style="max-width:860px;margin:0 auto 0;">
-    <div class="my-script-header">
+  <!-- MY SCRIPT: BATTLE CARDS — only appears in this section -->
+  <div class="myscript-panel" id="msp-battlecards" style="margin:0 auto 6px;">
+    <div class="myscript-header">
       <div>
-        <div class="my-script-title">&#9997;&#65039; My Battle Cards Script</div>
-        <div class="my-script-subtitle">Your competitive notes. What you've seen work against specific competitors.</div>
+        <div class="myscript-title" style="color:#10b981;">&#9997;&#65039; My Battle Cards Script</div>
+        <div class="myscript-subtitle">Your competitive notes. What has worked.</div>
       </div>
-      <div style="display:flex;gap:6px;">
-        <button onclick="loadDefaultScript('battlecards')" class="qa-btn">&#8635; Load Default</button>
-        <button onclick="qaCopy(document.getElementById('my-script-battlecards').value)" class="qa-btn">&#128203; Copy</button>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;">
+        <button onclick="addMSStep('battlecards','')" class="qa-btn" style="border-color:#10b981;color:#10b981;white-space:nowrap;">&#43; Step</button>
+        <button onclick="loadDefaultMS('battlecards')" class="qa-btn" style="white-space:nowrap;">&#8635; Default</button>
+        <button onclick="copyMyScript('battlecards')" class="qa-btn" style="white-space:nowrap;">&#128203; Copy All</button>
       </div>
     </div>
-    <textarea id="my-script-battlecards" class="my-script-textarea" placeholder="Write your own battle cards script here. This is yours — your words, your style. Click Load Default to start from the team script, then customize it."></textarea>
-    <div class="my-script-footer">
-      <button onclick="saveMyScript('battlecards')" style="background:#6366f1;border:none;border-radius:7px;padding:8px 16px;font-size:12.5px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;">&#9729; Save My Script</button>
-      <span id="my-script-status-battlecards" style="font-size:11.5px;color:#10b981;display:none;">&#10003; Saved</span>
+    <div class="myscript-steps" id="mss-battlecards">
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">1</div>
+            <input class="myscript-step-title" type="text" value="EZLynx" placeholder="Step name..." onchange="schedSave('battlecards')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Their strength, their weakness, when we win." onchange="schedSave('battlecards')" oninput="schedSave('battlecards')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">2</div>
+            <input class="myscript-step-title" type="text" value="HawkSoft" placeholder="Step name..." onchange="schedSave('battlecards')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Their strength, their weakness, when we win." onchange="schedSave('battlecards')" oninput="schedSave('battlecards')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">3</div>
+            <input class="myscript-step-title" type="text" value="AgencyBloc" placeholder="Step name..." onchange="schedSave('battlecards')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Their strength, their weakness, when we win." onchange="schedSave('battlecards')" oninput="schedSave('battlecards')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">4</div>
+            <input class="myscript-step-title" type="text" value="Applied Epic" placeholder="Step name..." onchange="schedSave('battlecards')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Their strength, their weakness, when we win." onchange="schedSave('battlecards')" oninput="schedSave('battlecards')"></textarea>
+        </div>
+        <div class="myscript-step">
+          <div class="myscript-step-header">
+            <div class="myscript-step-num">5</div>
+            <input class="myscript-step-title" type="text" value="No System / Spreadsheets" placeholder="Step name..." onchange="schedSave('battlecards')">
+            <button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button>
+          </div>
+          <textarea class="myscript-step-body" placeholder="Why staying manual costs more than switching." onchange="schedSave('battlecards')" oninput="schedSave('battlecards')"></textarea>
+        </div>
+    </div>
+    <div class="myscript-footer">
+      <button onclick="saveMyScript('battlecards')" class="myscript-save-btn" style="background:#10b981;">&#9729; Save</button>
+      <span id="mss-status-battlecards" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span>
       <span style="flex:1;"></span>
-      <span style="font-size:11px;color:#a1a1aa;">Saves to My Pitches &#8594;</span>
+      <span style="font-size:10.5px;color:#a1a1aa;">Visible in My Scripts &#8594;</span>
     </div>
   </div>
 
@@ -6419,241 +6892,385 @@ function generateQuotePDF2() {
 }
 
 </script>
-<!-- MY PITCHES / MY SCRIPTS COLLECTION -->
-<div class="section" id="section-mypitches">
+<!-- MY SCRIPTS COLLECTION -->
+<div class="section" id="section-myscripts">
   <div class="page-header">
     <div class="page-label">Personal</div>
     <h1>My Scripts</h1>
-    <p>All your custom scripts in one place, organized by call type. Edit them here or directly in each section.</p>
+    <p>All your custom scripts organized by type. Edit here or directly inside each section.</p>
   </div>
   <div class="content" style="max-width:860px;">
     <div class="nba-bar">
-      <span class="nba-label">&#9997;&#65039; Your Scripts</span>
+      <span class="nba-label">&#9997;&#65039; Your Playbook</span>
       <div class="nba-actions">
-        <button class="nba-btn" onclick="loadAllDefaultScripts()">&#8635; Reset All to Defaults</button>
         <button class="nba-btn primary" onclick="saveAllMyScripts()">&#9729; Save All</button>
       </div>
     </div>
-    <div id="my-pitches-collection" style="margin-top:16px;display:flex;flex-direction:column;gap:12px;">
-      <!-- Rendered by JS -->
-    </div>
+    <div id="myscripts-collection" style="margin-top:16px;display:flex;flex-direction:column;gap:14px;"></div>
   </div>
 </div>
 
 <!-- ADMIN PANEL -->
 <div class="section" id="section-admin">
   <div class="page-header">
-    <div class="page-label">Admin</div>
+    <div class="page-label">Admin Only</div>
     <h1>Admin Panel</h1>
-    <p>Edit default scripts and content for the whole team. Changes save to Supabase and are visible to all reps.</p>
+    <p>Set default scripts for all reps. Content saves to Supabase and is team-wide.</p>
   </div>
   <div class="content" style="max-width:1000px;">
-    <div style="display:flex;gap:0;border-bottom:2px solid #e4e4e7;margin-bottom:22px;overflow-x:auto;" id="admin-tabs-bar">
-      <button onclick="switchAdminTab('scripts')" id="admin-tab-scripts" class="admin-tab admin-tab-active">&#128222; Call Scripts</button>
-      <button onclick="switchAdminTab('reference')" id="admin-tab-reference" class="admin-tab">&#128737;&#65039; Reference</button>
-      <button onclick="switchAdminTab('competition')" id="admin-tab-competition" class="admin-tab">&#127919; Competition</button>
-      <button onclick="switchAdminTab('pricing')" id="admin-tab-pricing" class="admin-tab">&#128196; Pricing</button>
-      <button onclick="switchAdminTab('reps')" id="admin-tab-reps" class="admin-tab">&#128100; Reps</button>
+    <div style="display:flex;border-bottom:2px solid #e4e4e7;margin-bottom:22px;overflow-x:auto;" id="admin-tab-bar">
+      <button onclick="switchAdminTab('scripts')" id="atab-scripts" class="admin-tab atab-active">&#128222; Scripts</button>
+      <button onclick="switchAdminTab('reference')" id="atab-reference" class="admin-tab">&#128737; Reference</button>
+      <button onclick="switchAdminTab('competition')" id="atab-competition" class="admin-tab">&#127919; Competition</button>
+      <button onclick="switchAdminTab('pricing')" id="atab-pricing" class="admin-tab">&#128196; Pricing</button>
+      <button onclick="switchAdminTab('reps')" id="atab-reps" class="admin-tab">&#128100; Reps</button>
     </div>
-    <div id="admin-panel-scripts">
+    <div id="apanel-scripts">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-        <div class="admin-edit-card"><div class="admin-edit-label">Cold Call Script</div><textarea id="admin-coldcall" class="admin-textarea" rows="8" placeholder="Default cold call script for all reps..."></textarea><button onclick="saveAdminContent('coldcall')" class="admin-save-btn">Save Cold Call</button></div>
-        <div class="admin-edit-card"><div class="admin-edit-label">Discovery Call Script</div><textarea id="admin-discovery" class="admin-textarea" rows="8" placeholder="Default discovery call script..."></textarea><button onclick="saveAdminContent('discovery')" class="admin-save-btn">Save Discovery</button></div>
-        <div class="admin-edit-card"><div class="admin-edit-label">Demo Call Script</div><textarea id="admin-demo" class="admin-textarea" rows="8" placeholder="Default demo call script..."></textarea><button onclick="saveAdminContent('demo')" class="admin-save-btn">Save Demo</button></div>
-        <div class="admin-edit-card"><div class="admin-edit-label">Closing Call Script</div><textarea id="admin-closing" class="admin-textarea" rows="8" placeholder="Default closing call script..."></textarea><button onclick="saveAdminContent('closing')" class="admin-save-btn">Save Closing</button></div>
-        <div class="admin-edit-card"><div class="admin-edit-label">Onboarding Call Script</div><textarea id="admin-onboarding" class="admin-textarea" rows="8" placeholder="Default onboarding script..."></textarea><button onclick="saveAdminContent('onboarding')" class="admin-save-btn">Save Onboarding</button></div>
-        <div class="admin-edit-card"><div class="admin-edit-label">Talk Tracks</div><textarea id="admin-talktracks" class="admin-textarea" rows="8" placeholder="Default talk tracks..."></textarea><button onclick="saveAdminContent('talktracks')" class="admin-save-btn">Save Talk Tracks</button></div>
+        <div class="aedit-card"><div class="aedit-label">Cold Call Default</div><textarea id="afield-coldcall" class="aedit-ta" rows="7" placeholder="Default cold call script for all reps..."></textarea><button onclick="saveAField('coldcall')" class="aedit-btn">Save</button></div>
+        <div class="aedit-card"><div class="aedit-label">Discovery Call Default</div><textarea id="afield-discovery" class="aedit-ta" rows="7"></textarea><button onclick="saveAField('discovery')" class="aedit-btn">Save</button></div>
+        <div class="aedit-card"><div class="aedit-label">Demo Call Default</div><textarea id="afield-demo" class="aedit-ta" rows="7"></textarea><button onclick="saveAField('demo')" class="aedit-btn">Save</button></div>
+        <div class="aedit-card"><div class="aedit-label">Closing Call Default</div><textarea id="afield-closing" class="aedit-ta" rows="7"></textarea><button onclick="saveAField('closing')" class="aedit-btn">Save</button></div>
+        <div class="aedit-card"><div class="aedit-label">Onboarding Default</div><textarea id="afield-onboarding" class="aedit-ta" rows="7"></textarea><button onclick="saveAField('onboarding')" class="aedit-btn">Save</button></div>
+        <div class="aedit-card"><div class="aedit-label">Talk Tracks Default</div><textarea id="afield-talktracks" class="aedit-ta" rows="7"></textarea><button onclick="saveAField('talktracks')" class="aedit-btn">Save</button></div>
       </div>
     </div>
-    <div id="admin-panel-reference" style="display:none;">
+    <div id="apanel-reference" style="display:none;">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-        <div class="admin-edit-card"><div class="admin-edit-label">Objection Handling</div><textarea id="admin-objections" class="admin-textarea" rows="10" placeholder="Objections and responses..."></textarea><button onclick="saveAdminContent('objections')" class="admin-save-btn">Save Objections</button></div>
-        <div class="admin-edit-card"><div class="admin-edit-label">Battle Cards</div><textarea id="admin-battlecards" class="admin-textarea" rows="10" placeholder="Battle card content per competitor..."></textarea><button onclick="saveAdminContent('battlecards')" class="admin-save-btn">Save Battle Cards</button></div>
-        <div class="admin-edit-card" style="grid-column:span 2;"><div class="admin-edit-label">Default Elevator Pitches</div><textarea id="admin-pitches" class="admin-textarea" rows="8" placeholder="Default elevator pitches for all reps..."></textarea><button onclick="saveAdminContent('pitches')" class="admin-save-btn">Save Pitches</button></div>
+        <div class="aedit-card"><div class="aedit-label">Objection Handling Default</div><textarea id="afield-objections" class="aedit-ta" rows="10"></textarea><button onclick="saveAField('objections')" class="aedit-btn">Save</button></div>
+        <div class="aedit-card"><div class="aedit-label">Battle Cards Default</div><textarea id="afield-battlecards" class="aedit-ta" rows="10"></textarea><button onclick="saveAField('battlecards')" class="aedit-btn">Save</button></div>
+        <div class="aedit-card" style="grid-column:span 2;"><div class="aedit-label">Elevator Pitches Default</div><textarea id="afield-pitches" class="aedit-ta" rows="7"></textarea><button onclick="saveAField('pitches')" class="aedit-btn">Save</button></div>
       </div>
     </div>
-    <div id="admin-panel-competition" style="display:none;">
-      <div class="admin-edit-card">
-        <div class="admin-edit-label">Know Your Competition Content</div>
-        <div style="font-size:12px;color:#71717a;margin-bottom:8px;">Use ## Competitor Name then bullet points for each competitor.</div>
-        <textarea id="admin-competition" class="admin-textarea" rows="16" placeholder="## EZLynx&#10;- Strength: Large market share&#10;- Weakness: No OEP automation&#10;- We win when: They mention renewal season struggles"></textarea>
-        <button onclick="saveAdminContent('competition')" class="admin-save-btn">Save Competition Intel</button>
-      </div>
+    <div id="apanel-competition" style="display:none;">
+      <div class="aedit-card"><div class="aedit-label">Competition Intel</div><textarea id="afield-competition" class="aedit-ta" rows="16" placeholder="## EZLynx&#10;- Strength: ...&#10;- Weakness: ...&#10;- We win when: ..."></textarea><button onclick="saveAField('competition')" class="aedit-btn">Save</button></div>
     </div>
-    <div id="admin-panel-pricing" style="display:none;">
+    <div id="apanel-pricing" style="display:none;">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-        <div class="admin-edit-card">
-          <div class="admin-edit-label">Plan Prices</div>
-          <div style="display:flex;flex-direction:column;gap:10px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><label style="font-size:13px;font-weight:600;color:#09090b;min-width:120px;">Solo Agent</label><div style="display:flex;align-items:center;gap:4px;"><span style="color:#71717a;">$</span><input id="admin-price-solo" type="text" inputmode="numeric" value="79" style="width:70px;border:1.5px solid #e4e4e7;border-radius:7px;padding:7px 10px;font-size:13px;font-weight:700;color:#09090b;outline:none;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><span style="color:#71717a;font-size:12px;">/mo</span></div></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><label style="font-size:13px;font-weight:600;color:#09090b;min-width:120px;">Small Agency</label><div style="display:flex;align-items:center;gap:4px;"><span style="color:#71717a;">$</span><input id="admin-price-small" type="text" inputmode="numeric" value="247" style="width:70px;border:1.5px solid #e4e4e7;border-radius:7px;padding:7px 10px;font-size:13px;font-weight:700;color:#09090b;outline:none;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><span style="color:#71717a;font-size:12px;">/mo</span></div></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><label style="font-size:13px;font-weight:600;color:#09090b;min-width:120px;">Large Agency</label><div style="display:flex;align-items:center;gap:4px;"><span style="color:#71717a;">$</span><input id="admin-price-large" type="text" inputmode="numeric" value="597" style="width:70px;border:1.5px solid #e4e4e7;border-radius:7px;padding:7px 10px;font-size:13px;font-weight:700;color:#09090b;outline:none;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><span style="color:#71717a;font-size:12px;">/mo</span></div></div>
+        <div class="aedit-card"><div class="aedit-label">Custom Plan Prices</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;"><label style="font-size:13px;font-weight:600;color:#09090b;min-width:120px;">Solo Agent</label><span>$</span><input id="aprice-solo" type="text" value="79" style="width:65px;border:1.5px solid #e4e4e7;border-radius:7px;padding:6px 9px;font-size:13px;font-weight:700;outline:none;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><span style="color:#71717a;font-size:12px;">/mo</span></div>
+            <div style="display:flex;align-items:center;gap:8px;"><label style="font-size:13px;font-weight:600;color:#09090b;min-width:120px;">Small Agency</label><span>$</span><input id="aprice-small" type="text" value="247" style="width:65px;border:1.5px solid #e4e4e7;border-radius:7px;padding:6px 9px;font-size:13px;font-weight:700;outline:none;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><span style="color:#71717a;font-size:12px;">/mo</span></div>
+            <div style="display:flex;align-items:center;gap:8px;"><label style="font-size:13px;font-weight:600;color:#09090b;min-width:120px;">Large Agency</label><span>$</span><input id="aprice-large" type="text" value="597" style="width:65px;border:1.5px solid #e4e4e7;border-radius:7px;padding:6px 9px;font-size:13px;font-weight:700;outline:none;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><span style="color:#71717a;font-size:12px;">/mo</span></div>
           </div>
-          <button onclick="saveAdminPrices()" class="admin-save-btn" style="margin-top:14px;">Save Prices</button>
+          <button onclick="saveAdminPrices()" class="aedit-btn" style="margin-top:4px;">Save Prices</button>
         </div>
-        <div class="admin-edit-card"><div class="admin-edit-label">Pricing Notes / Promotions</div><textarea id="admin-pricing-notes" class="admin-textarea" rows="6" placeholder="Current promotions, special offers, notes for the team..."></textarea><button onclick="saveAdminContent('pricing-notes')" class="admin-save-btn">Save Notes</button></div>
+        <div class="aedit-card"><div class="aedit-label">Promotions / Notes</div><textarea id="afield-pricing-notes" class="aedit-ta" rows="6" placeholder="Current promos or notes for the team..."></textarea><button onclick="saveAField('pricing-notes')" class="aedit-btn">Save</button></div>
       </div>
     </div>
-    <div id="admin-panel-reps" style="display:none;">
+    <div id="apanel-reps" style="display:none;">
       <div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;">
-        <div style="padding:14px 18px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;display:flex;align-items:center;justify-content:space-between;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;">Team Members</div><button onclick="loadAdminReps()" style="font-size:12px;font-weight:600;color:#6366f1;background:none;border:none;cursor:pointer;">&#8635; Refresh</button></div>
-        <div id="admin-reps-list" style="padding:16px 18px;"><div style="text-align:center;padding:30px;color:#71717a;font-size:13px;">Click Refresh to load team members.</div></div>
+        <div style="padding:13px 18px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;display:flex;align-items:center;justify-content:space-between;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;">Team Members</div><button onclick="loadAdminReps()" style="font-size:12px;font-weight:600;color:#6366f1;background:none;border:none;cursor:pointer;">&#8635; Refresh</button></div>
+        <div id="admin-reps-list" style="padding:16px 18px;"><div style="padding:30px;text-align:center;color:#71717a;font-size:13px;">Click Refresh to load team data.</div></div>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-// ── MY SCRIPTS SYSTEM ─────────────────────────────────────────────────
-var MY_SCRIPT_SECTIONS = [
-  { id: 'coldcall',    label: 'Cold Call',         color: '#6366f1' },
-  { id: 'discovery',  label: 'Discovery Call',     color: '#6366f1' },
-  { id: 'demo',       label: 'Demo Call',          color: '#6366f1' },
-  { id: 'closing',    label: 'Closing Call',       color: '#6366f1' },
-  { id: 'onboarding', label: 'Onboarding Call',    color: '#10b981' },
-  { id: 'objections', label: 'Objection Handling', color: '#10b981' },
-  { id: 'battlecards',label: 'Battle Cards',       color: '#10b981' },
-  { id: 'talktracks', label: 'Talk Tracks',        color: '#10b981' }
-];
-
-var ADMIN_EMAILS = ['asmithee@insurewithcompass.com'];
-
-function isAdmin() {
-  return _currentUser && ADMIN_EMAILS.indexOf(_currentUser.email) >= 0;
+// ── SIDEBAR COLLAPSE ─────────────────────────────────────────────────
+var _sidebarCollapsed = false;
+function toggleSidebar() {
+  _sidebarCollapsed = !_sidebarCollapsed;
+  var sb = document.querySelector('.sidebar');
+  var main = document.querySelector('.main');
+  var btn = document.getElementById('sidebar-toggle-btn');
+  if (sb) sb.classList.toggle('collapsed', _sidebarCollapsed);
+  if (main) main.style.marginLeft = _sidebarCollapsed ? '48px' : '';
+  if (btn) btn.innerHTML = _sidebarCollapsed ? '&#9654;' : '&#9664;';
 }
 
+// ── AUTH IN SIDEBAR ───────────────────────────────────────────────────
+function updateSidebarAuth(user) {
+  var area = document.getElementById('sidebar-auth-area');
+  if (!area) return;
+  if (user) {
+    var email = user.email || '';
+    var initials = email.slice(0,2).toUpperCase();
+    var name = email.split('@')[0];
+    area.innerHTML =
+      '<div class="sidebar-user-area">' +
+        '<div class="sidebar-user-avatar">' + initials + '</div>' +
+        '<div class="sidebar-user-info">' +
+          '<div class="sidebar-user-name">' + name + '</div>' +
+          '<div class="sidebar-user-signout" onclick="authSignOut()">Sign out</div>' +
+        '</div>' +
+      '</div>';
+  } else {
+    area.innerHTML = '<button onclick="openAuthModal()" class="sidebar-auth-btn"><span>&#128100;</span> Sign In</button>';
+  }
+}
+
+// ── ADMIN CHECK ───────────────────────────────────────────────────────
+var ADMIN_EMAILS = ['asmithee@insurewithcompass.com'];
+function isAdmin() { return _currentUser && ADMIN_EMAILS.indexOf(_currentUser.email) >= 0; }
 function checkAdminAccess() {
   var wrap = document.getElementById('nav-admin-wrap');
   if (wrap) wrap.style.display = isAdmin() ? 'block' : 'none';
 }
 
-// Save one section's script
+// ── UNIVERSAL PRICING CALCULATOR ─────────────────────────────────────
+function calcUniversal() {
+  var agents = Math.max(0, parseInt(document.getElementById('univ-agents').value) || 0);
+  var assts  = Math.max(0, parseInt(document.getElementById('univ-assistants').value) || 0);
+  var monthly = 0; var planName = ''; var planDesc = ''; var breakdown = '';
+
+  if (agents <= 0) { agents = 0; }
+
+  if (agents === 0) {
+    monthly = 0; planName = 'Enter agents above'; planDesc = ''; breakdown = '';
+  } else if (agents === 1) {
+    monthly = 79 + assts * 25; planName = 'Independent Agent'; planDesc = '1 agent'; breakdown = '$79 flat + ' + assts + ' assistants @ $25';
+  } else if (agents <= 4) {
+    monthly = 247 + assts * 25; planName = 'Small Agency'; planDesc = agents + ' agents'; breakdown = '$247 flat + ' + assts + ' assistants @ $25';
+  } else if (agents <= 10) {
+    monthly = 597 + assts * 25; planName = 'Large Agency'; planDesc = agents + ' agents'; breakdown = '$597 flat + ' + assts + ' assistants @ $25';
+  } else if (agents <= 50) {
+    monthly = agents * 30 + assts * 15; planName = 'Enterprise'; planDesc = agents + ' agents @ $30/ea'; breakdown = agents + ' × $30 + ' + assts + ' assts × $15';
+  } else if (agents <= 100) {
+    monthly = agents * 27 + assts * 12; planName = 'Enterprise'; planDesc = agents + ' agents @ $27/ea'; breakdown = agents + ' × $27 + ' + assts + ' assts × $12';
+  } else if (agents <= 200) {
+    monthly = agents * 24 + assts * 10; planName = 'Enterprise'; planDesc = agents + ' agents @ $24/ea'; breakdown = agents + ' × $24 + ' + assts + ' assts × $10';
+  } else if (agents <= 500) {
+    monthly = agents * 22 + assts * 8; planName = 'Enterprise'; planDesc = agents + ' agents @ $22/ea'; breakdown = agents + ' × $22 + ' + assts + ' assts × $8';
+  } else if (agents <= 10000) {
+    monthly = agents * 20 + assts * 7; planName = 'Enterprise (Scale)'; planDesc = agents + ' agents @ $20/ea'; breakdown = agents + ' × $20 + ' + assts + ' assts × $7';
+  } else {
+    monthly = agents * 18 + assts * 6; planName = 'Enterprise (Large Scale)'; planDesc = agents + ' agents @ $18/ea'; breakdown = agents.toLocaleString() + ' × $18 + ' + assts + ' assts × $6 — confirm with sales';
+  }
+
+  var annual = Math.round(monthly * 12 * 0.9);
+  var savings = Math.round(monthly * 12 * 0.1);
+  var perPerson = agents + assts > 0 ? Math.round(monthly / (agents + assts)) : 0;
+
+  var set = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
+  set('univ-plan-name', planName);
+  set('univ-plan-desc', planDesc);
+  set('univ-monthly', monthly > 0 ? '$' + monthly.toLocaleString() : '—');
+  set('univ-annual', annual > 0 ? '$' + annual.toLocaleString() + '/yr' : '—');
+  set('univ-per-person', perPerson > 0 ? '$' + perPerson : '—');
+  set('univ-savings', savings > 0 ? 'Save $' + savings.toLocaleString() : '—');
+  set('univ-breakdown', breakdown);
+}
+
+function applyCalcToQuote() {
+  var agents = document.getElementById('univ-agents').value;
+  var assts  = document.getElementById('univ-assistants').value;
+  // Store for PDF gen
+  window._quoteAgents = agents;
+  window._quoteAssistants = assts;
+  showToast('Price applied — fill in prospect details and download PDF');
+}
+
+// ── MY SCRIPT SYSTEM ─────────────────────────────────────────────────
+var _saveTimers = {};
+
+function schedSave(sectionId) {
+  clearTimeout(_saveTimers[sectionId]);
+  _saveTimers[sectionId] = setTimeout(function() { saveMyScript(sectionId); }, 1500);
+}
+
+function collectScriptData(sectionId) {
+  var stepsEl = document.getElementById('mss-' + sectionId);
+  if (!stepsEl) return null;
+  var steps = [];
+  stepsEl.querySelectorAll('.myscript-step').forEach(function(step) {
+    var titleEl = step.querySelector('.myscript-step-title');
+    var bodyEl  = step.querySelector('.myscript-step-body');
+    steps.push({
+      title: titleEl ? titleEl.value : '',
+      body:  bodyEl  ? bodyEl.value  : ''
+    });
+  });
+  return steps;
+}
+
 function saveMyScript(sectionId) {
-  var el = document.getElementById('my-script-' + sectionId);
-  if (!el) return;
-  var val = el.value;
+  var steps = collectScriptData(sectionId);
+  if (steps === null) return;
   var all = {};
   try { all = JSON.parse(localStorage.getItem('my-scripts') || '{}'); } catch(e) {}
-  all[sectionId] = val;
+  all[sectionId] = steps;
   localStorage.setItem('my-scripts', JSON.stringify(all));
-  var statusEl = document.getElementById('my-script-status-' + sectionId);
-  if (statusEl) { statusEl.style.display = 'inline'; setTimeout(function() { statusEl.style.display = 'none'; }, 2000); }
-  // Save to Supabase if logged in
+  var statusEl = document.getElementById('mss-status-' + sectionId);
+  if (statusEl) { statusEl.style.display = 'inline'; setTimeout(function(){ statusEl.style.display='none'; }, 2000); }
+  // Supabase sync
   var sb = getSupabase();
   if (sb && _currentUser) {
-    sb.from('rep_pitches').upsert({ user_id: _currentUser.id, pitches: JSON.stringify(all), updated_at: new Date().toISOString() }).then(function() {});
+    sb.from('rep_pitches').upsert({ user_id: _currentUser.id, pitches: JSON.stringify(all), updated_at: new Date().toISOString() }).then(function(){});
   }
-  showToast('Script saved \u2192 My Scripts');
-}
-
-// Load default admin script into textarea
-function loadDefaultScript(sectionId) {
-  var el = document.getElementById('my-script-' + sectionId);
-  if (!el) return;
-  var defaults = {};
-  try { defaults = JSON.parse(localStorage.getItem('admin-scripts') || '{}'); } catch(e) {}
-  var def = defaults[sectionId] || '';
-  if (def) {
-    el.value = def;
-    showToast('Default script loaded \u2014 customize it and save!');
-  } else {
-    showToast('No default script set yet. Ask your admin to set one.');
-  }
-}
-
-// Load saved scripts into textareas when section opens
-function loadMyScriptForSection(sectionId) {
-  var el = document.getElementById('my-script-' + sectionId);
-  if (!el) return;
-  var all = {};
-  try { all = JSON.parse(localStorage.getItem('my-scripts') || '{}'); } catch(e) {}
-  if (all[sectionId]) el.value = all[sectionId];
 }
 
 function saveAllMyScripts() {
-  MY_SCRIPT_SECTIONS.forEach(function(s) { saveMyScript(s.id); });
+  ['coldcall','discovery','demo','closing','onboarding','objections','battlecards','talktracks'].forEach(saveMyScript);
   showToast('All scripts saved!');
 }
 
-function loadAllDefaultScripts() {
-  MY_SCRIPT_SECTIONS.forEach(function(s) { loadDefaultScript(s.id); });
+function loadMyScript(sectionId) {
+  var stepsEl = document.getElementById('mss-' + sectionId);
+  if (!stepsEl) return;
+  var all = {};
+  try { all = JSON.parse(localStorage.getItem('my-scripts') || '{}'); } catch(e) {}
+  var steps = all[sectionId];
+  if (!steps || !steps.length) return;
+  var stepDivs = stepsEl.querySelectorAll('.myscript-step');
+  steps.forEach(function(step, i) {
+    if (i < stepDivs.length) {
+      var t = stepDivs[i].querySelector('.myscript-step-title');
+      var b = stepDivs[i].querySelector('.myscript-step-body');
+      if (t && step.title) t.value = step.title;
+      if (b && step.body)  b.value = step.body;
+    }
+  });
 }
 
-// Render My Scripts collection page
-function renderMyPitchesCollection() {
-  var container = document.getElementById('my-pitches-collection');
+function addMSStep(sectionId, title) {
+  var stepsEl = document.getElementById('mss-' + sectionId);
+  if (!stepsEl) return;
+  var num = stepsEl.querySelectorAll('.myscript-step').length + 1;
+  var div = document.createElement('div');
+  div.className = 'myscript-step';
+  div.innerHTML =
+    '<div class="myscript-step-header">' +
+      '<div class="myscript-step-num">' + num + '</div>' +
+      '<input class="myscript-step-title" type="text" value="' + (title||'') + '" placeholder="Step name..." onchange="schedSave(\'' + sectionId + '\')">' +
+      '<button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;">&#10005;</button>' +
+    '</div>' +
+    '<textarea class="myscript-step-body" placeholder="Write this step..." onchange="schedSave(\'' + sectionId + '\')" oninput="schedSave(\'' + sectionId + '\')"></textarea>';
+  stepsEl.appendChild(div);
+}
+
+function removeStep(btn) {
+  var step = btn.closest('.myscript-step');
+  var stepsEl = step.parentElement;
+  var sectionId = stepsEl.id.replace('mss-','');
+  step.remove();
+  // renumber
+  stepsEl.querySelectorAll('.myscript-step').forEach(function(s, i) {
+    var num = s.querySelector('.myscript-step-num');
+    if (num) num.textContent = i+1;
+  });
+  schedSave(sectionId);
+}
+
+function copyMyScript(sectionId) {
+  var stepsEl = document.getElementById('mss-' + sectionId);
+  if (!stepsEl) return;
+  var text = '';
+  stepsEl.querySelectorAll('.myscript-step').forEach(function(step, i) {
+    var t = step.querySelector('.myscript-step-title');
+    var b = step.querySelector('.myscript-step-body');
+    if (t && t.value) text += 'Step ' + (i+1) + ': ' + t.value + '\n';
+    if (b && b.value) text += b.value + '\n\n';
+  });
+  qaCopy(text.trim());
+}
+
+function loadDefaultMS(sectionId) {
+  var defaults = {};
+  try { defaults = JSON.parse(localStorage.getItem('admin-scripts') || '{}'); } catch(e) {}
+  var def = defaults[sectionId] || '';
+  if (!def) { showToast('No default set. Ask admin to save one.'); return; }
+  var stepsEl = document.getElementById('mss-' + sectionId);
+  if (!stepsEl) return;
+  // Clear existing step bodies and set first body to default text
+  var bodies = stepsEl.querySelectorAll('.myscript-step-body');
+  if (bodies.length > 0) {
+    bodies[0].value = def;
+    showToast('Default loaded into Step 1. Customize and save!');
+  }
+}
+
+// ── MY SCRIPTS COLLECTION PAGE ────────────────────────────────────────
+var MS_SECTIONS = [
+  {id:'coldcall', label:'Cold Call', color:'#6366f1'},
+  {id:'discovery', label:'Discovery Call', color:'#6366f1'},
+  {id:'demo', label:'Demo Call', color:'#6366f1'},
+  {id:'closing', label:'Closing Call', color:'#6366f1'},
+  {id:'onboarding', label:'Onboarding Call', color:'#10b981'},
+  {id:'objections', label:'Objection Handling', color:'#10b981'},
+  {id:'battlecards', label:'Battle Cards', color:'#10b981'},
+  {id:'talktracks', label:'Talk Tracks', color:'#10b981'}
+];
+
+function renderMyScriptsCollection() {
+  var container = document.getElementById('myscripts-collection');
   if (!container) return;
   var all = {};
   try { all = JSON.parse(localStorage.getItem('my-scripts') || '{}'); } catch(e) {}
   container.innerHTML = '';
-  MY_SCRIPT_SECTIONS.forEach(function(s) {
-    var val = all[s.id] || '';
+  MS_SECTIONS.forEach(function(s) {
+    var steps = all[s.id] || [];
+    var hasContent = steps.some(function(st) { return st.body && st.body.trim(); });
     var card = document.createElement('div');
-    card.className = 'pitch-collected-card';
+    card.className = 'msc-card';
+    var preview = '';
+    if (hasContent) {
+      steps.forEach(function(st, i) {
+        if (st.body && st.body.trim()) {
+          preview += '<div style="margin-bottom:8px;"><div style="font-size:10px;font-weight:700;color:' + s.color + ';margin-bottom:2px;">Step ' + (i+1) + (st.title ? ': ' + st.title : '') + '</div><div style="font-size:13px;color:#09090b;line-height:1.6;">' + st.body.replace(/</g,'&lt;') + '</div></div>';
+        }
+      });
+    } else {
+      preview = '<span style="color:#a1a1aa;font-style:italic;">No script written yet. Click Edit to get started.</span>';
+    }
     card.innerHTML =
-      '<div class="pitch-collected-header">' +
-        '<div style="display:flex;align-items:center;gap:8px;">' +
-          '<div class="pitch-collected-tag" style="color:' + s.color + ';">' + s.label.toUpperCase() + '</div>' +
-          (val ? '' : '<span style="font-size:10.5px;color:#a1a1aa;background:#f4f4f5;border-radius:4px;padding:1px 7px;">Not written yet</span>') +
-        '</div>' +
+      '<div class="msc-header">' +
+        '<div class="msc-tag" style="color:' + s.color + ';">' + s.label.toUpperCase() + '</div>' +
         '<div style="display:flex;gap:6px;">' +
-          '<button onclick="showSection(\'' + s.id + '\',null);setTimeout(function(){document.getElementById(\'my-script-panel-' + s.id + '\').scrollIntoView({behavior:\'smooth\'})},200)" class="qa-btn">&#9997;&#65039; Edit</button>' +
-          (val ? '<button onclick="qaCopy(this.dataset.text)" data-text="' + val.replace(/"/g,'&quot;') + '" class="qa-btn">&#128203; Copy</button>' : '') +
+          '<button onclick="showSection(\'' + s.id + '\',null);setTimeout(function(){var el=document.getElementById(\'msp-' + s.id + '\');if(el)el.scrollIntoView({behavior:\'smooth\'})},200)" class="qa-btn">&#9997;&#65039; Edit</button>' +
+          (hasContent ? '<button onclick="copyMSC(\'' + s.id + '\')" class="qa-btn">&#128203; Copy</button>' : '') +
         '</div>' +
       '</div>' +
-      '<div class="pitch-collected-body">' + (val ? val.replace(/</g,'&lt;') : '<span style="color:#a1a1aa;font-style:italic;">No script written yet. Click Edit to write your version.</span>') + '</div>';
+      '<div class="msc-body">' + preview + '</div>';
     container.appendChild(card);
   });
 }
 
-// ── ADMIN TABS ─────────────────────────────────────────────────────────
+function copyMSC(sectionId) {
+  var all = {};
+  try { all = JSON.parse(localStorage.getItem('my-scripts') || '{}'); } catch(e) {}
+  var steps = all[sectionId] || [];
+  var text = steps.map(function(st, i) {
+    return 'Step ' + (i+1) + (st.title ? ': ' + st.title : '') + '\n' + (st.body || '');
+  }).join('\n\n');
+  qaCopy(text.trim());
+}
+
+// ── ADMIN PANEL ───────────────────────────────────────────────────────
 function switchAdminTab(tab) {
   var panels = ['scripts','reference','competition','pricing','reps'];
   panels.forEach(function(t) {
-    var panel = document.getElementById('admin-panel-' + t);
-    var btn   = document.getElementById('admin-tab-' + t);
+    var panel = document.getElementById('apanel-' + t);
+    var btn   = document.getElementById('atab-' + t);
     if (panel) panel.style.display = t === tab ? 'block' : 'none';
     if (btn) {
-      if (t === tab) {
-        btn.classList.add('admin-tab-active');
-      } else {
-        btn.classList.remove('admin-tab-active');
-      }
+      if (t === tab) btn.classList.add('atab-active');
+      else btn.classList.remove('atab-active');
     }
   });
   if (tab === 'reps') loadAdminReps();
-  loadAdminTabContent(tab);
-}
-
-function loadAdminTabContent(tab) {
-  var keyMap = {
-    scripts:     ['coldcall','discovery','demo','closing','onboarding','talktracks'],
-    reference:   ['objections','battlecards','pitches'],
-    competition: ['competition']
-  };
-  var keys = keyMap[tab] || [];
-  var savedScripts = {};
-  try { savedScripts = JSON.parse(localStorage.getItem('admin-scripts') || '{}'); } catch(e) {}
-  keys.forEach(function(key) {
-    var el = document.getElementById('admin-' + key);
-    if (el && savedScripts[key]) el.value = savedScripts[key];
+  // Load saved content into textareas
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem('admin-scripts') || '{}'); } catch(e) {}
+  ['coldcall','discovery','demo','closing','onboarding','talktracks','objections','battlecards','pitches','competition'].forEach(function(k) {
+    var el = document.getElementById('afield-' + k);
+    if (el && saved[k]) el.value = saved[k];
   });
 }
 
-function saveAdminContent(key) {
-  var el = document.getElementById('admin-' + key);
+function saveAField(key) {
+  var el = document.getElementById('afield-' + key);
   if (!el) return;
-  var val = el.value;
-  // Save to admin-scripts localStorage
   var saved = {};
   try { saved = JSON.parse(localStorage.getItem('admin-scripts') || '{}'); } catch(e) {}
-  saved[key] = val;
+  saved[key] = el.value;
   localStorage.setItem('admin-scripts', JSON.stringify(saved));
-  // Save to Supabase
   var sb = getSupabase();
-  if (sb) {
-    sb.from('admin_content').upsert({ key: key, value: val, updated_by: _currentUser ? _currentUser.email : 'admin', updated_at: new Date().toISOString() })
-      .then(function(r) { showToast(r.error ? 'Saved locally' : 'Saved to team cloud!'); });
+  if (sb && _currentUser) {
+    sb.from('admin_content').upsert({key: key, value: el.value, updated_by: _currentUser.email, updated_at: new Date().toISOString()}).then(function(r) {
+      showToast(r.error ? 'Saved locally' : 'Saved to team cloud!');
+    });
   } else {
     showToast('Saved locally');
   }
@@ -6662,59 +7279,124 @@ function saveAdminContent(key) {
 function saveAdminPrices() {
   var prices = {};
   ['solo','small','large'].forEach(function(p) {
-    var el = document.getElementById('admin-price-' + p);
+    var el = document.getElementById('aprice-' + p);
     if (el) prices[p] = el.value;
   });
   localStorage.setItem('admin-prices', JSON.stringify(prices));
-  showToast('Prices saved! Reps will see updated pricing.');
+  showToast('Prices saved!');
 }
 
 async function loadAdminReps() {
   var listEl = document.getElementById('admin-reps-list');
   if (!listEl) return;
-  listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#71717a;font-size:13px;">Loading...</div>';
+  listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#71717a;font-size:13px;">Loading...</div>';
   var sb = getSupabase();
-  if (!sb) { listEl.innerHTML = '<div style="padding:20px;color:#71717a;font-size:13px;">Sign in to see team members.</div>'; return; }
+  if (!sb) { listEl.innerHTML = '<div style="padding:20px;color:#71717a;font-size:13px;">Sign in to see team data.</div>'; return; }
   var result = await sb.from('demo_recaps').select('user_id,created_at').order('created_at',{ascending:false}).limit(500);
   if (result.error || !result.data || result.data.length === 0) {
-    listEl.innerHTML = '<div style="padding:20px;color:#71717a;font-size:13px;">No reps have saved recaps yet.</div>';
-    return;
+    listEl.innerHTML = '<div style="padding:20px;color:#71717a;font-size:13px;">No recaps saved yet.</div>'; return;
   }
   var repMap = {};
   result.data.forEach(function(r) {
-    if (!repMap[r.user_id]) repMap[r.user_id] = { count: 0, last: r.created_at };
+    if (!repMap[r.user_id]) repMap[r.user_id] = {count:0, last:r.created_at};
     repMap[r.user_id].count++;
   });
-  var html = '<div style="font-size:12px;color:#71717a;margin-bottom:12px;">' + Object.keys(repMap).length + ' reps with saved data</div>';
+  var html = '<div style="font-size:12px;color:#71717a;margin-bottom:12px;">' + Object.keys(repMap).length + ' reps with data</div>';
   Object.keys(repMap).forEach(function(id) {
     var d = repMap[id];
-    var lastDate = d.last ? new Date(d.last).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid #e4e4e7;">' +
-      '<div><div style="font-size:13px;font-weight:600;color:#09090b;">Rep ID: ' + id.slice(0,12) + '...</div>' +
+    var lastDate = new Date(d.last).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #e4e4e7;">' +
+      '<div><div style="font-size:13px;font-weight:600;color:#09090b;">Rep: ' + id.slice(0,12) + '...</div>' +
       '<div style="font-size:11.5px;color:#71717a;margin-top:2px;">' + d.count + ' recap' + (d.count!==1?'s':'') + ' &middot; Last: ' + lastDate + '</div></div>' +
-      '<div style="font-size:11px;color:#10b981;font-weight:600;background:rgba(16,185,129,0.1);border-radius:4px;padding:3px 8px;">Active</div>' +
-    '</div>';
+      '<span style="font-size:11px;font-weight:600;color:#10b981;background:rgba(16,185,129,0.1);border-radius:4px;padding:3px 8px;">Active</span></div>';
   });
   listEl.innerHTML = html;
 }
 
-// ── WIRE UP showSection OVERRIDE ───────────────────────────────────────
-var _origSS2 = showSection;
+// ── PDF QUOTE ─────────────────────────────────────────────────────────
+function generateQuotePDF2() {
+  var agents = parseInt(window._quoteAgents || document.getElementById('univ-agents').value) || 1;
+  var assts  = parseInt(window._quoteAssistants || document.getElementById('univ-assistants').value) || 0;
+  var fname  = (document.getElementById('qb-fname')||{}).value || '';
+  var lname  = (document.getElementById('qb-lname')||{}).value || '';
+  var agency = (document.getElementById('qb-agency')||{}).value || '';
+  var email  = (document.getElementById('qb-email')||{}).value || '';
+  var phone  = (document.getElementById('qb-phone')||{}).value || '';
+  var rep    = ((document.getElementById('qb-repname')||{}).value || '').trim() || 'AgentNav Sales';
+  var notes  = (document.getElementById('qb-notes')||{}).value || '';
+  var prospect = ((fname+' '+lname).trim() || agency) || 'Valued Prospect';
+
+  // Calculate price
+  var monthly = 0; var planName = 'Custom';
+  if (agents===1) { monthly=79+assts*25; planName='Independent Agent'; }
+  else if (agents<=4) { monthly=247+assts*25; planName='Small Agency'; }
+  else if (agents<=10) { monthly=597+assts*25; planName='Large Agency'; }
+  else if (agents<=50)  { monthly=agents*30+assts*15; planName='Enterprise'; }
+  else if (agents<=100) { monthly=agents*27+assts*12; planName='Enterprise'; }
+  else if (agents<=200) { monthly=agents*24+assts*10; planName='Enterprise'; }
+  else if (agents<=500) { monthly=agents*22+assts*8;  planName='Enterprise'; }
+  else if (agents<=10000){ monthly=agents*20+assts*7; planName='Enterprise (Scale)'; }
+  else { monthly=agents*18+assts*6; planName='Enterprise (Large Scale)'; }
+
+  var annual = Math.round(monthly*12*0.9);
+  var perPerson = Math.round(monthly/Math.max(1,agents+assts));
+
+  if (!window.jspdf) { showToast('PDF loading — try again in a moment'); return; }
+  var doc = new window.jspdf.jsPDF({unit:'mm',format:'letter'});
+  var W = 215.9;
+  doc.setFillColor(12,12,20); doc.rect(0,0,W,38,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(255,255,255);
+  doc.text('AgentNav Sales Coach',18,22);
+  doc.setFontSize(8); doc.setTextColor(165,180,252); doc.text('SALES PROPOSAL',18,30);
+  var today=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  doc.text(today,W-18,22,{align:'right'}); doc.text('Valid 30 days',W-18,29,{align:'right'});
+  var y=50;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120,120,140); doc.text('PREPARED FOR',18,y); y+=7;
+  doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.setTextColor(9,9,11); doc.text(prospect,18,y); y+=7;
+  if (agency&&agency!==prospect) { doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(82,82,91); doc.text(agency,18,y); y+=5; }
+  if (email) { doc.setFontSize(9); doc.setTextColor(120,120,140); doc.text(email,18,y); y+=4; }
+  if (phone) { doc.setFontSize(9); doc.setTextColor(120,120,140); doc.text(phone,18,y); y+=4; }
+  y+=6;
+  doc.setFillColor(238,242,255); doc.roundedRect(18,y,W-36,30,4,4,'F');
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(99,102,241); doc.text('RECOMMENDED PLAN',26,y+7);
+  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(9,9,11); doc.text(planName,26,y+16);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(82,82,91); doc.text(agents+' agents + '+assts+' assistants',26,y+23);
+  doc.setFont('helvetica','bold'); doc.setFontSize(26); doc.setTextColor(99,102,241); doc.text('$'+monthly.toLocaleString(),W-20,y+18,{align:'right'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(82,82,91); doc.text('/month',W-20,y+25,{align:'right'});
+  y+=38;
+  var rows=[['Monthly','$'+monthly.toLocaleString()+'/mo'],['Annual (10% off)','$'+annual.toLocaleString()+'/yr'],['Per Person','$'+perPerson+'/person'],['Contract','Month-to-month, cancel anytime']];
+  rows.forEach(function(row,i){if(i%2===0){doc.setFillColor(248,248,250);doc.rect(18,y-3,W-36,9,'F');}doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(82,82,91);doc.text(row[0],22,y+2);doc.setFont('helvetica','bold');doc.setTextColor(9,9,11);doc.text(row[1],W-22,y+2,{align:'right'});y+=9;});
+  y+=6;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(9,9,11); doc.text("What's Included",18,y); y+=7;
+  ['ACA,STM,Life,Ancillary & Indemnity','Full CRM with household tracking','Renewal Autopilot OEP automation','SMS with dedicated agent number','HealthSherpa & EDE integration','Policy tracker & reconciliation','Google Calendar sync','No annual contract required'].forEach(function(f,i){var col=i%2,row=Math.floor(i/2),fx=18+col*(W-36)/2,fy=y+row*8;doc.setFillColor(16,185,129);doc.circle(fx+2,fy-0.5,1,'F');doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(82,82,91);doc.text(f.length>44?f.slice(0,44)+'...':f,fx+6,fy);});
+  y+=Math.ceil(8/2)*8+8;
+  if(notes){doc.setFillColor(255,251,235);doc.roundedRect(18,y,W-36,13,3,3,'F');doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(120,80,0);doc.text('NOTE: ',22,y+6);doc.setFont('helvetica','normal');doc.setTextColor(82,60,0);doc.text(notes.slice(0,80),36,y+6);y+=18;}
+  doc.setFillColor(248,248,250); doc.rect(0,279.4-20,W,20,'F');
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(140,140,160);
+  doc.text('Prepared by: '+rep,18,279.4-11); doc.text('agentnav.com',18,279.4-5);
+  doc.setFont('helvetica','bold'); doc.setTextColor(99,102,241); doc.text('AgentNav Sales Coach',W-18,279.4-8,{align:'right'});
+  doc.save('AgentNav-Quote-'+prospect.replace(/[^a-z0-9]/gi,'-')+'.pdf');
+  showToast('PDF downloaded!');
+}
+
+// ── WIRE UP showSection OVERRIDE ──────────────────────────────────────
+var _origSS3 = showSection;
 showSection = function(id, btn) {
-  _origSS2(id, btn);
-  if (id === 'mypitches') setTimeout(renderMyPitchesCollection, 50);
+  _origSS3(id, btn);
+  if (id === 'myscripts') setTimeout(renderMyScriptsCollection, 50);
   if (id === 'admin') setTimeout(function() { switchAdminTab('scripts'); }, 50);
-  // Load saved script when opening a script section
+  if (id === 'pricing') setTimeout(calcUniversal, 50);
   var scriptSections = ['coldcall','discovery','demo','closing','onboarding','objections','battlecards','talktracks'];
-  if (scriptSections.indexOf(id) >= 0) setTimeout(function() { loadMyScriptForSection(id); }, 50);
+  if (scriptSections.indexOf(id) >= 0) setTimeout(function() { loadMyScript(id); }, 50);
 };
 
-// ── WIRE UP AFTER LOGIN ────────────────────────────────────────────────
-var _origOnLogin2 = onUserLoggedIn;
+// ── WIRE UP AFTER LOGIN ───────────────────────────────────────────────
+var _origOnLogin3 = typeof onUserLoggedIn !== 'undefined' ? onUserLoggedIn : function(){};
 onUserLoggedIn = function(user) {
-  _origOnLogin2(user);
-  setTimeout(checkAdminAccess, 300);
-  // Also try loading saved scripts from Supabase
+  if (typeof _origOnLogin3 === 'function') _origOnLogin3(user);
+  updateSidebarAuth(user);
+  setTimeout(checkAdminAccess, 200);
+  // Load cloud scripts
   var sb = getSupabase();
   if (sb && user) {
     sb.from('rep_pitches').select('pitches').eq('user_id', user.id).single().then(function(r) {
@@ -6723,20 +7405,31 @@ onUserLoggedIn = function(user) {
           var remote = JSON.parse(r.data.pitches);
           var local = {};
           try { local = JSON.parse(localStorage.getItem('my-scripts') || '{}'); } catch(e) {}
-          // Merge: remote wins for non-empty values
           Object.keys(remote).forEach(function(k) { if (remote[k]) local[k] = remote[k]; });
           localStorage.setItem('my-scripts', JSON.stringify(local));
-          showToast('Your scripts synced from cloud');
         } catch(e) {}
       }
     });
   }
 };
 
-// On load: check admin access if already logged in
-setTimeout(function() {
-  if (typeof _currentUser !== 'undefined' && _currentUser) checkAdminAccess();
-}, 1000);
+var _origOnLogout3 = typeof onUserLoggedOut !== 'undefined' ? onUserLoggedOut : function(){};
+onUserLoggedOut = function() {
+  if (typeof _origOnLogout3 === 'function') _origOnLogout3();
+  updateSidebarAuth(null);
+};
+
+// Init on load
+document.addEventListener('DOMContentLoaded', function() {
+  calcUniversal();
+  updateSidebarAuth(null); // default: signed out
+  setTimeout(function() {
+    if (typeof _currentUser !== 'undefined' && _currentUser) {
+      updateSidebarAuth(_currentUser);
+      checkAdminAccess();
+    }
+  }, 1500);
+});
 
 </script>
 </body>
