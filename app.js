@@ -5,8 +5,8 @@ window.scrollTo(0,0);if(id==='personas'){setTimeout(function(){var soloBtn=docum
 if(id==='myscripts')setTimeout(renderMyScriptsCollection,50);}
 function copyPitchScript(btn){var card=btn;while(card&&!card.classList.contains('pitch-card'))card=card.parentElement;if(!card)return;var p=card.querySelector('.pitch-quote p');if(p)qaCopy(p.textContent);}
 function copyPitchScriptHS(btn){var card=btn;while(card&&!card.classList.contains('pitch-card'))card=card.parentElement;if(!card)return;var p=card.querySelector('.pitch-quote p');if(p)copyAndOpenHubSpot(p.textContent);}
-function toggleCallMode(){var body=document.body;var toggle=document.getElementById('callModeToggle');var bar=document.getElementById('callModeBar');var isOn=body.classList.toggle('call-mode');if(toggle){toggle.classList.toggle('on',isOn);toggle.textContent=isOn?"Exit Call Mode":"On A Call Right Now";}
-if(bar)bar.classList.toggle('active',isOn);if(isOn){showSection('coldcall',null);setTimeout(function(){openCoach();},400);showToast('Call Mode ON — Cold Call guide loaded. AI Coach is ready.');}else{showToast('Call Mode OFF');}}
+function toggleCallMode(){var body=document.body;var toggle=document.getElementById('callModeToggle');var bar=document.getElementById('callModeBar');var isOn=body.classList.toggle('call-mode');if(toggle){toggle.classList.toggle('on',isOn);toggle.textContent=isOn?'Exit Call Mode':'🔴 On A Call Right Now';}
+if(bar)bar.classList.toggle('active',isOn);if(isOn){showScriptPicker();}else{showToast('Call Mode OFF');}}
 function copyAndOpenHubSpot(text,hsUrl){if(!text)text='';text=text.trim().replace(/^['"]/,'').replace(/['"]$/,'');navigator.clipboard.writeText(text).then(function(){showToast('Copied! Opening HubSpot...');setTimeout(function(){window.open('https://app.hubspot.com/crm','_blank');},800);}).catch(function(){window.open('https://app.hubspot.com/crm','_blank');});}
 function toggleTheme(){var body=document.body;var isDark=body.classList.toggle('dark-mode');body.classList.remove('light-mode');var btn=document.getElementById('themeToggleBtn');var label=document.getElementById('themeToggleLabel');if(btn)btn.classList.toggle('dark-on',isDark);if(label)label.textContent=isDark?'☀️ Light Mode':'🌙 Dark Mode';try{localStorage.setItem('agentnav-theme',isDark?'dark':'light');}catch(e){}}
 function toggleMobile(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarOverlay').classList.toggle('open');}
@@ -258,8 +258,101 @@ function seUpdateCount(steps){var el=document.getElementById('se-step-count');if
 function seCollectSteps(){var list=document.getElementById('se-steps-list');if(!list)return[];return Array.from(list.children).map(function(div){var ti=div.querySelector('input');var ta=div.querySelector('textarea');return{title:ti?ti.value:'',body:ta?ta.value:''};});}
 function seMarkDirty(){seDirty=true;var st=document.getElementById('se-save-status');if(st){st.textContent='Unsaved changes';st.style.color='#f59e0b';}
 clearTimeout(seAutoTimer);seAutoTimer=setTimeout(seSave,2000);}
-function seSave(){if(!seCurrentId)return;var s=seScripts.find(function(x){return x.id===seCurrentId});if(!s)return;var n=document.getElementById('se-script-name');var t=document.getElementById('se-script-type');s.name=n?n.value.trim()||'Untitled':s.name;s.type=t?t.value:s.type;s.steps=seCollectSteps();sePersist();seDirty=false;var st=document.getElementById('se-save-status');if(st){st.textContent='Saved';st.style.color='#10b981';}
-seRenderLib();if(typeof showToast==='function')showToast('Script saved!');}
+function seSave(){
+  if(!seCurrentId)return;
+  var s=seScripts.find(function(x){return x.id===seCurrentId});
+  if(!s)return;
+  var n=document.getElementById('se-script-name');
+  var t=document.getElementById('se-script-type');
+  s.name=n?n.value.trim()||'Untitled':s.name;
+  s.type=t?t.value:s.type;
+  s.steps=seCollectSteps();
+  s.updatedAt=new Date().toISOString();
+  sePersist();
+  seDirty=false;
+  var st=document.getElementById('se-save-status');
+  if(st){st.textContent='✓ Saved';st.style.color='#10b981';}
+  seRenderLib();
+  if(typeof showToast==='function')showToast('Script saved!');
+}
+
+// ── ON A CALL SCRIPT PICKER ───────────────────────────────────────────
+function showScriptPicker(){
+  // If Script Editor isn't open, go there first
+  var existing=document.getElementById('se-script-picker-modal');
+  if(existing)existing.remove();
+
+  seLoad();
+  var modal=document.createElement('div');
+  modal.id='se-script-picker-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+
+  var box=document.createElement('div');
+  box.style.cssText='background:#fff;border-radius:14px;padding:28px;width:480px;max-width:95vw;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
+
+  var title=document.createElement('div');
+  title.style.cssText='font-size:18px;font-weight:800;color:#09090b;margin-bottom:6px;';
+  title.textContent='🔴 On A Call — Which script?';
+  var sub=document.createElement('div');
+  sub.style.cssText='font-size:13px;color:#71717a;margin-bottom:20px;';
+  sub.textContent='Pick the script to open in the editor.';
+
+  box.appendChild(title);
+  box.appendChild(sub);
+
+  // Group scripts by type
+  var groups=[
+    {label:'Cold Call',type:'coldcall',icon:'📞'},
+    {label:'Discovery Call',type:'discovery',icon:'🔍'},
+    {label:'Demo Meeting',type:'demo',icon:'🖥️'},
+    {label:'Closing Meeting',type:'closing',icon:'🏆'},
+    {label:'Onboarding Meeting',type:'onboarding',icon:'🚀'},
+    {label:'Objection Handling',type:'objections',icon:'🛡️'},
+    {label:'Talk Track',type:'talktracks',icon:'💬'},
+    {label:'Custom',type:'custom',icon:'✏️'}
+  ];
+
+  var hasAny=false;
+  groups.forEach(function(g){
+    var matches=seScripts.filter(function(s){return s.type===g.type;});
+    if(!matches.length)return;
+    hasAny=true;
+    var grpLabel=document.createElement('div');
+    grpLabel.style.cssText='font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#a1a1aa;margin-bottom:6px;margin-top:14px;';
+    grpLabel.textContent=g.icon+' '+g.label;
+    box.appendChild(grpLabel);
+    matches.forEach(function(s){
+      var btn=document.createElement('button');
+      btn.style.cssText='width:100%;text-align:left;padding:12px 14px;border:1.5px solid #e4e4e7;border-radius:8px;margin-bottom:6px;background:#fff;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:#09090b;display:flex;align-items:center;justify-content:space-between;';
+      btn.innerHTML='<span>'+s.name+'</span><span style="font-size:11px;color:#6366f1;font-weight:700;">Open →</span>';
+      btn.onmouseover=function(){this.style.background='#f5f5ff';this.style.borderColor='#6366f1';};
+      btn.onmouseout=function(){this.style.background='#fff';this.style.borderColor='#e4e4e7';};
+      btn.onclick=function(){
+        modal.remove();
+        showSection('scripteditor',null);
+        setTimeout(function(){seOpenScript(s.id);},100);
+      };
+      box.appendChild(btn);
+    });
+  });
+
+  if(!hasAny){
+    var empty=document.createElement('div');
+    empty.style.cssText='text-align:center;padding:24px;color:#a1a1aa;font-size:13px;';
+    empty.innerHTML='No scripts saved yet.<br><br><button onclick="document.getElementById(\'se-script-picker-modal\').remove();showSection(\'scripteditor\',null);" style="background:#6366f1;color:#fff;border:none;border-radius:7px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;">Go to Script Editor →</button>';
+    box.appendChild(empty);
+  }
+
+  var closeBtn=document.createElement('button');
+  closeBtn.style.cssText='width:100%;margin-top:16px;padding:10px;border:1.5px solid #e4e4e7;border-radius:8px;background:#fff;color:#71717a;font-size:13px;cursor:pointer;font-family:inherit;';
+  closeBtn.textContent='Cancel';
+  closeBtn.onclick=function(){modal.remove();};
+  box.appendChild(closeBtn);
+
+  modal.appendChild(box);
+  modal.onclick=function(e){if(e.target===modal)modal.remove();};
+  document.body.appendChild(modal);
+}
 function seCopyAll(){var steps=seCollectSteps();var text=steps.map(function(s,i){return'Step '+(i+1)+(s.title?': '+s.title:'')+'\n'+s.body}).join('\n\n');if(navigator.clipboard)navigator.clipboard.writeText(text.trim());}
 function seUpdateAI(s){var ctx=document.getElementById('se-ai-ctx');var sl=document.getElementById('se-sugg-list');if(ctx)ctx.textContent='Coaching: '+(SE_TYPE_LABELS[s.type]||s.name);if(!sl)return;sl.innerHTML='';var suggs=SE_SUGGESTIONS[s.type]||SE_SUGGESTIONS.custom;suggs.forEach(function(p){var btn=document.createElement('button');btn.style.cssText='width:100%;text-align:left;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:7px 10px;font-size:11px;color:rgba(255,255,255,.6);cursor:pointer;font-family:inherit;line-height:1.5;display:block;margin-bottom:5px;';btn.textContent=p;btn.onclick=function(){var inp=document.getElementById('se-ai-input');if(inp){inp.value=p;inp.focus()}};sl.appendChild(btn);});}
 async function seAskAI(){var inp=document.getElementById('se-ai-input');var msgs=document.getElementById('se-ai-msgs');if(!inp||!msgs)return;var q=inp.value.trim();if(!q)return;var s=seScripts.find(function(x){return x.id===seCurrentId});var ctx=s?'Script: '+s.name+' ('+s.type+')\nSteps:\n'+seCollectSteps().map(function(st,i){return(i+1)+'. '+st.title+': '+st.body}).join('\n'):'';var uDiv=document.createElement('div');uDiv.style.cssText='background:rgba(99,102,241,.2);border-radius:8px;padding:8px 10px;font-size:12px;color:#c7d2fe;line-height:1.5;';uDiv.textContent=q;msgs.appendChild(uDiv);inp.value='';var bDiv=document.createElement('div');bDiv.style.cssText='background:rgba(255,255,255,.06);border-radius:8px;padding:8px 10px;font-size:12px;color:rgba(255,255,255,.75);line-height:1.6;';bDiv.textContent='...';msgs.appendChild(bDiv);bDiv.scrollIntoView({behavior:'smooth',block:'nearest'});try{var sys='You are an elite sales coach for AgentNav, a health insurance broker platform. Help reps write and improve call scripts. Be direct and give word-for-word suggestions.';if(ctx)sys+='\n\nCurrent script:\n'+ctx;var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,system:sys,messages:[{role:'user',content:q}]})});var d=await r.json();bDiv.textContent=d.content&&d.content[0]?d.content[0].text:'Could not get response.';}catch(e){bDiv.textContent='Error: '+e.message;bDiv.style.color='#fca5a5';}}
