@@ -7403,152 +7403,75 @@ function generateQuotePDF2() {
 <!-- MY SCRIPTS COLLECTION -->
 <!-- ── SCRIPT EDITOR ──────────────────────────────────────────────── -->
 <div class="section" id="section-scripteditor" style="padding:0!important;overflow:hidden!important;">
-  <style id="se-styles">
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;background:#f5f5f7;height:100vh;overflow:hidden}
-.app{display:grid;grid-template-columns:220px 1fr 280px;height:100vh;overflow:hidden}
-.left{background:#1a1a24;border-right:1px solid #2a2a38;display:flex;flex-direction:column;overflow:hidden}
-.left-header{padding:14px 14px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #2a2a38;flex-shrink:0}
-.left-title{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6366f1}
-.new-btn{background:#6366f1;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer}
-.new-btn:hover{background:#4f46e5}
-.left-scroll{flex:1;overflow-y:auto;padding:4px 0}
-.lib-group{padding-bottom:4px}
-.lib-label{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#52525b;padding:10px 14px 4px}
-.script-item{display:flex;align-items:center;width:100%;border:none;background:none;cursor:pointer;padding:0}
-.script-inner{flex:1;text-align:left;padding:7px 14px;font-size:12.5px;color:#a1a1aa;font-family:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-left:3px solid transparent}
-.script-item:hover .script-inner{background:#2a2a38;color:#fff}
-.script-item.active .script-inner{background:#2a2a38;color:#6366f1;font-weight:600;border-left-color:#6366f1}
-.script-del{opacity:0;padding:7px 8px;background:none;border:none;cursor:pointer;color:#52525b;font-size:11px;flex-shrink:0}
-.script-item:hover .script-del{opacity:1}
-.script-del:hover{color:#ef4444}
-.tmpl-item{display:flex;align-items:center;width:100%;border:none;background:none;cursor:pointer;padding:0}
-.tmpl-inner{flex:1;text-align:left;padding:6px 14px;font-size:12px;color:#4a4a5a;font-family:inherit;font-style:italic}
-.tmpl-item:hover .tmpl-inner{color:#6366f1;background:#1e1e2e}
-.divider{margin:6px 14px;border:none;border-top:1px dashed #2a2a38}
-.center{display:flex;flex-direction:column;overflow:hidden;background:#fff}
-.center-header{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid #e4e4e7;flex-shrink:0;flex-wrap:wrap}
-.script-name-input{flex:1;min-width:120px;font-size:15px;font-weight:700;border:none;outline:none;color:#09090b;font-family:inherit}
-.script-name-input::placeholder{color:#d4d4d8}
-.type-select{border:1.5px solid #e4e4e7;border-radius:6px;padding:5px 8px;font-size:12px;font-weight:600;color:#52525b;font-family:inherit;cursor:pointer;outline:none;background:#fff}
-.act-btn{padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid #e4e4e7;background:#fff;color:#52525b;white-space:nowrap}
-.act-btn:hover{border-color:#6366f1;color:#6366f1}
-.act-btn.save{background:#6366f1;color:#fff;border-color:#6366f1}
-.act-btn.danger{border-color:#fca5a5;color:#ef4444}
-.center-body{flex:1;overflow-y:auto;padding:16px 20px}
-.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;gap:10px}
-.empty-icon{font-size:36px}
-.empty-title{font-size:15px;font-weight:700;color:#71717a}
-.empty-desc{font-size:13px;max-width:260px;line-height:1.6;color:#a1a1aa}
-.steps-list{display:flex;flex-direction:column;gap:10px}
-.step-card{background:#f8f8fa;border:1.5px solid #e4e4e7;border-radius:10px;overflow:hidden}
-.step-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #e4e4e7;background:#fff}
-.step-num{width:22px;height:22px;border-radius:50%;background:#6366f1;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.step-title-in{flex:1;border:none;background:none;font-size:13px;font-weight:600;color:#09090b;font-family:inherit;outline:none}
-.step-drag{cursor:grab;color:#d4d4d8;font-size:16px;padding:0 2px}
-.step-del-btn{background:none;border:none;color:#d4d4d8;font-size:12px;cursor:pointer;padding:2px 4px;border-radius:3px}
-.step-del-btn:hover{color:#ef4444;background:#fef2f2}
-.step-body-ta{width:100%;min-height:80px;border:none;background:none;padding:10px 12px;font-size:13px;color:#52525b;font-family:inherit;resize:vertical;outline:none;line-height:1.65}
-.step-body-ta::placeholder{color:#c4c4cc}
-.add-step-btn{width:100%;padding:10px;border:1.5px dashed #d4d4d8;background:none;border-radius:8px;color:#a1a1aa;font-size:13px;cursor:pointer;font-family:inherit;margin-top:6px}
-.add-step-btn:hover{border-color:#6366f1;color:#6366f1;background:#f8f8ff}
-.save-bar{padding:10px 18px;border-top:1px solid #e4e4e7;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:#fff}
-.save-status{font-size:11px;font-weight:600}
-.step-count{font-size:11px;color:#a1a1aa}
-.right{background:#0f0f17;display:flex;flex-direction:column;overflow:hidden;border-left:1px solid #2a2a38}
-.right-header{padding:14px 14px 12px;border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0}
-.right-title{font-size:12px;font-weight:700;color:#fff;margin-bottom:3px}
-.right-context{font-size:10px;color:rgba(255,255,255,.35)}
-.right-body{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
-.ai-hint{background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.25);border-radius:8px;padding:10px 12px}
-.ai-hint-label{font-size:9px;font-weight:700;color:#818cf8;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
-.ai-hint-text{font-size:11.5px;color:rgba(255,255,255,.6);line-height:1.6}
-.ai-messages{display:flex;flex-direction:column;gap:8px}
-.ai-msg-user{background:rgba(99,102,241,.2);border-radius:8px;padding:8px 10px;font-size:12px;color:#c7d2fe;line-height:1.5}
-.ai-msg-bot{background:rgba(255,255,255,.06);border-radius:8px;padding:8px 10px;font-size:12px;color:rgba(255,255,255,.75);line-height:1.6}
-.sugg-btn{width:100%;text-align:left;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:7px 10px;font-size:11px;color:rgba(255,255,255,.6);cursor:pointer;font-family:inherit;line-height:1.5;display:block;margin-bottom:5px}
-.sugg-btn:hover{background:rgba(99,102,241,.2);color:#c7d2fe}
-.ai-input-area{padding:10px 12px;border-top:1px solid rgba(255,255,255,.07);flex-shrink:0}
-.ai-textarea{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 11px;font-size:12px;color:#fff;font-family:inherit;outline:none;resize:none;line-height:1.5}
-.ai-textarea::placeholder{color:rgba(255,255,255,.3)}
-.ai-send{margin-top:6px;width:100%;background:#6366f1;color:#fff;border:none;border-radius:7px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
-.ai-send:hover{background:#4f46e5}
-</style>
-  <div id="se-root" style="display:grid;grid-template-columns:220px 1fr 280px;height:100vh;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;">
-
-<div class="app">
-<div class="left"><div class="left-header"><span class="left-title">Library</span><button class="new-btn" onclick="newScript()">+ New</button></div><div class="left-scroll" id="lib-list"></div></div>
-<div class="center">
-<div id="editor-panel" style="display:none;flex:1;flex-direction:column;overflow:hidden">
-<div class="center-header"><input class="script-name-input" id="script-name" type="text" placeholder="Script name..." oninput="markDirty()"><select class="type-select" id="script-type" onchange="markDirty()"><option value="coldcall">Cold Call</option><option value="discovery">Discovery</option><option value="demo">Demo Meeting</option><option value="closing">Closing</option><option value="onboarding">Onboarding</option><option value="objections">Objections</option><option value="talktracks">Talk Track</option><option value="custom">Custom</option></select><button class="act-btn" onclick="copyAll()">Copy</button><button class="act-btn save" onclick="saveScript()">Save</button><button class="act-btn danger" onclick="deleteScript()">Delete</button></div>
-<div class="center-body"><div class="steps-list" id="steps-list"></div><button class="add-step-btn" onclick="addStep()">+ Add Step</button></div>
-<div class="save-bar"><span class="save-status" id="save-status"></span><span class="step-count" id="step-count"></span></div>
-</div>
-<div id="empty-panel" style="flex:1;display:flex"><div class="empty-state"><div class="empty-icon">&#9999;&#65039;</div><div class="empty-title">No script selected</div><div class="empty-desc">Pick from the library or create a new script.</div><button class="new-btn" style="margin-top:12px;padding:9px 18px;font-size:13px" onclick="newScript()">+ Create Script</button></div></div>
-</div>
-<div class="right"><div class="right-header"><div class="right-title">Ask AI</div><div class="right-context" id="ai-context">Select a script to get coaching</div></div><div class="right-body" id="right-body"><div class="ai-hint"><div class="ai-hint-label">How to use</div><div class="ai-hint-text">Select a script then ask the AI to improve it, write a step, or tailor it to a specific prospect.</div></div><div id="sugg-list"></div><div class="ai-messages" id="ai-messages"></div></div><div class="ai-input-area"><textarea class="ai-textarea" id="ai-input" rows="3" placeholder="Ask AI to help write or improve this script..."></textarea><button class="ai-send" onclick="askAI()">Ask AI</button></div></div>
-</div>
-<script>
-var scripts=[],currentId=null,dirty=false,autoTimer=null,dragEl=null;
-var TEMPLATES={coldcall:{name:'Cold Call Script',type:'coldcall',steps:[{title:'Opening (0:00-0:15)',body:'Hey [Name], this is [Your name] from AgentNav. Quick question - we built a platform for health brokers: ACA and STM quoting, full CRM, SMS, and Renewal Autopilot that automates your entire OEP. Worth two minutes?'},{title:'Earn the minute (0:15-0:45)',body:'What does your OEP process look like right now? Running it manually or do you have something in place?'},{title:'Connect pain to feature (0:45-1:30)',body:'[Repeat back what they said.] That is exactly the problem we solve. [Name one specific feature that addresses their pain.]'},{title:'Soft pitch (1:30-2:00)',body:'AgentNav is the only platform built for health brokers - ACA quoting, HealthSherpa, Renewal Autopilot, CRM, SMS, all in one place. Starts at $79 per month.'},{title:'Close for meeting (2:00-2:30)',body:'I would love to show you a 15-minute demo. Do you have time Thursday or Friday?'}]},discovery:{name:'Discovery Call Script',type:'discovery',steps:[{title:'Set the agenda',body:'Thanks for making time. I want to spend most of this call learning about how you are set up right now. Then if I think AgentNav could help, I will be honest about that. Sound good?'},{title:'Current setup',body:'Walk me through your agency. How big is your team? What tools for quoting, CRM, SMS, enrollment? How are you managing renewals?'},{title:'Find the pain',body:'What does your OEP look like? How many clients are you manually reaching out to in November? How many slip through?'},{title:'Qualify',body:'What percentage of your book is ACA vs other lines? Do you use HealthSherpa or EDE? Looking to grow the team this year?'},{title:'Set up the demo',body:'Based on what you told me, here is what I want to show you: [Name 2-3 specific features]. Does that sound right?'}]},demo:{name:'Demo Meeting Script',type:'demo',steps:[{title:'Confirm discovery',body:'Before I share my screen - last time you mentioned [pain point]. Is that still the main thing you want to see solved today?'},{title:'Client record',body:'This is where a client lives - everything in one place. Medical history, Rx, FPL tracking, policy history, SMS thread, calendar.'},{title:'Renewal Autopilot',body:'Every renewal client has a status. For each one with Autopilot on, the system sends the campaign, collects preferences, and generates a new quote. You just review and approve.'},{title:'Quoting',body:'ACA, STM, Life, Ancillary, Indemnity - all quoted side by side. Pull from HealthSherpa or EDE directly. One-click to send the proposal.'},{title:'Close',body:'What questions do you have? [Pause.] Based on what you saw today, what would need to be true for this to be a yes?'}]},objections:{name:'Objection Handling',type:'objections',steps:[{title:'"Too expensive"',body:'What are you paying right now for CRM, quoting, SMS, and enrollment combined? Most agents are at $200-400 per month. AgentNav replaces all of it for $79.'},{title:'"Need to think about it"',body:'Totally fair. What specifically do you want to think through? Price, timing, or something you want to verify?'},{title:'"Happy with what we have"',body:'What does your OEP process look like? How many clients did you lose last November because they fell through? That is what Renewal Autopilot eliminates.'},{title:'"Need to talk to my partner"',body:'Of course. Can we get them on a quick call together this week?'},{title:'"Not the right time"',body:'When is? Agents who switch before OEP go in with Autopilot already configured.'}]}};
-var GROUPS=[{label:'Before The Call',types:['coldcall','discovery']},{label:'On The Call',types:['demo','closing','onboarding']},{label:'Reference',types:['objections','talktracks']},{label:'My Scripts',types:['custom']}];
-var LABELS={coldcall:'Cold Call',discovery:'Discovery',demo:'Demo Meeting',closing:'Closing',onboarding:'Onboarding',objections:'Objections',talktracks:'Talk Track',custom:'Custom'};
-var SUGGESTIONS={coldcall:['Rewrite step 1 to sound more natural','Make the pitch under 30 words','Add a line for when they say they are happy with their setup'],discovery:['Write 3 follow-up questions for step 2','Add a question about how they handle renewals','Make the agenda line more conversational'],demo:['Rewrite Renewal Autopilot step for a solo agent','Add a line for when they compare to EZLynx','Write a closing line that creates urgency'],objections:['Write a response for when they bring up HawkSoft','Make the price objection shorter','Add a response for not ready until after OEP'],custom:['Improve the flow of this script','Make this more conversational','Suggest a stronger opening line']};
-function load(){try{scripts=JSON.parse(localStorage.getItem('se2')||'[]')}catch(e){scripts=[]}}
-function persist(){localStorage.setItem('se2',JSON.stringify(scripts))}
-function renderLib(){var el=document.getElementById('lib-list');if(!el)return;el.innerHTML='';GROUPS.forEach(function(g){var inGrp=scripts.filter(function(s){return g.types.indexOf(s.type)>=0});var tpls=Object.keys(TEMPLATES).filter(function(k){return g.types.indexOf(k)>=0&&!scripts.some(function(s){return s._tpl===k})});if(!inGrp.length&&!tpls.length&&g.label!=='My Scripts')return;var grp=document.createElement('div');grp.className='lib-group';var lbl=document.createElement('div');lbl.className='lib-label';lbl.textContent=g.label;grp.appendChild(lbl);inGrp.forEach(function(s){var item=document.createElement('button');item.className='script-item'+(currentId===s.id?' active':'');var inner=document.createElement('span');inner.className='script-inner';inner.textContent=s.name||'Untitled';var del=document.createElement('button');del.className='script-del';del.textContent='x';del.onclick=function(e){e.stopPropagation();delById(s.id)};item.appendChild(inner);item.appendChild(del);item.onclick=function(){openScript(s.id)};grp.appendChild(item)});if(tpls.length){if(inGrp.length){var hr=document.createElement('hr');hr.className='divider';grp.appendChild(hr)}tpls.forEach(function(k){var btn=document.createElement('button');btn.className='tmpl-item';var inner=document.createElement('span');inner.className='tmpl-inner';inner.textContent='+ Use '+TEMPLATES[k].name;btn.appendChild(inner);btn.onclick=function(){loadTemplate(k)};grp.appendChild(btn)})}if(g.label==='My Scripts'&&!inGrp.length){var note=document.createElement('div');note.style.cssText='padding:6px 14px 10px;font-size:11px;color:#4a4a5a;font-style:italic';note.textContent='No custom scripts yet.';grp.appendChild(note)}el.appendChild(grp)})}
-function openScript(id){if(dirty&&!confirm('Unsaved changes. Discard?'))return;currentId=id;dirty=false;var s=scripts.find(function(x){return x.id===id});if(!s)return;showEditor(s);renderLib();updateAI(s)}
-function newScript(){var id='s'+Date.now();var s={id:id,name:'New Script',type:'custom',steps:[{title:'Step 1',body:''}]};scripts.push(s);persist();renderLib();setTimeout(function(){openScript(id);var n=document.getElementById('script-name');if(n){n.focus();n.select()}},10)}
-function loadTemplate(k){var t=TEMPLATES[k];if(!t)return;var id='s'+Date.now();var s={id:id,name:t.name,type:t.type,_tpl:k,steps:t.steps.map(function(st){return{title:st.title,body:st.body}})};scripts.push(s);persist();renderLib();openScript(id)}
-function delById(id){if(!confirm('Delete this script?'))return;scripts=scripts.filter(function(s){return s.id!==id});if(currentId===id){currentId=null;dirty=false;showEmpty()}persist();renderLib()}
-function deleteScript(){if(currentId)delById(currentId)}
-function showEditor(s){var ep=document.getElementById('editor-panel');var emp=document.getElementById('empty-panel');if(ep){ep.style.display='flex';ep.style.flex='1';ep.style.flexDirection='column';ep.style.overflow='hidden'}if(emp)emp.style.display='none';document.getElementById('script-name').value=s.name||'';document.getElementById('script-type').value=s.type||'custom';renderSteps(s.steps||[]);updateCount(s.steps||[]);document.getElementById('save-status').textContent=''}
-function showEmpty(){var ep=document.getElementById('editor-panel');var emp=document.getElementById('empty-panel');if(ep)ep.style.display='none';if(emp){emp.style.display='flex';emp.style.flex='1'}}
-function renderSteps(steps){var list=document.getElementById('steps-list');list.innerHTML='';steps.forEach(function(st,i){list.appendChild(makeStep(st,i))})}
-function makeStep(st,idx){var div=document.createElement('div');div.className='step-card';div.draggable=true;var head=document.createElement('div');head.className='step-head';var num=document.createElement('div');num.className='step-num';num.textContent=idx+1;var ti=document.createElement('input');ti.className='step-title-in';ti.type='text';ti.value=st.title||'';ti.placeholder='Step name...';ti.oninput=markDirty;var drag=document.createElement('span');drag.className='step-drag';drag.textContent=':::';var del=document.createElement('button');del.className='step-del-btn';del.textContent='x';del.onclick=function(){div.remove();renumber();markDirty()};head.append(num,ti,drag,del);var ta=document.createElement('textarea');ta.className='step-body-ta';ta.placeholder='Write this step...';ta.value=st.body||'';ta.oninput=markDirty;div.append(head,ta);div.addEventListener('dragstart',function(e){e.dataTransfer.effectAllowed='move';div.style.opacity='.4';dragEl=div});div.addEventListener('dragend',function(){div.style.opacity='';dragEl=null;renumber();markDirty()});div.addEventListener('dragover',function(e){e.preventDefault();if(dragEl&&dragEl!==div){var items=Array.from(div.parentNode.children);if(items.indexOf(dragEl)<items.indexOf(div))div.parentNode.insertBefore(dragEl,div.nextSibling);else div.parentNode.insertBefore(dragEl,div)}});return div}
-function renumber(){var list=document.getElementById('steps-list');list.querySelectorAll('.step-card').forEach(function(c,i){var n=c.querySelector('.step-num');if(n)n.textContent=i+1});updateCount(collectSteps())}
-function addStep(){var list=document.getElementById('steps-list');var idx=list.children.length;var el=makeStep({title:'Step '+(idx+1),body:''},idx);list.appendChild(el);markDirty();updateCount(collectSteps());el.scrollIntoView({behavior:'smooth',block:'nearest'})}
-function updateCount(steps){var el=document.getElementById('step-count');if(el)el.textContent=steps.length+' step'+(steps.length!==1?'s':'')}
-function collectSteps(){return Array.from(document.getElementById('steps-list').querySelectorAll('.step-card')).map(function(div){return{title:(div.querySelector('.step-title-in')||{}).value||'',body:(div.querySelector('.step-body-ta')||{}).value||''}})}
-function markDirty(){dirty=true;var st=document.getElementById('save-status');if(st){st.textContent='Unsaved';st.style.color='#f59e0b'}clearTimeout(autoTimer);autoTimer=setTimeout(saveScript,2000)}
-function saveScript(){if(!currentId)return;var s=scripts.find(function(x){return x.id===currentId});if(!s)return;var n=document.getElementById('script-name');var t=document.getElementById('script-type');s.name=n?n.value.trim()||'Untitled':s.name;s.type=t?t.value:s.type;s.steps=collectSteps();persist();dirty=false;var st=document.getElementById('save-status');if(st){st.textContent='Saved';st.style.color='#10b981'}renderLib()}
-function copyAll(){var steps=collectSteps();var lines=steps.map(function(s,i){return'Step '+(i+1)+(s.title?': '+s.title:'')+'\\n'+s.body});if(navigator.clipboard)navigator.clipboard.writeText(lines.join('\\n\\n'))}
-function updateAI(s){var ctx=document.getElementById('ai-context');var sl=document.getElementById('sugg-list');if(ctx)ctx.textContent='Coaching: '+(LABELS[s.type]||s.name);if(!sl)return;sl.innerHTML='';var suggs=SUGGESTIONS[s.type]||SUGGESTIONS.custom;suggs.forEach(function(p){var btn=document.createElement('button');btn.className='sugg-btn';btn.textContent=p;btn.onclick=function(){var inp=document.getElementById('ai-input');if(inp){inp.value=p;inp.focus()}};sl.appendChild(btn)})}
-async function askAI(){var inp=document.getElementById('ai-input');var msgs=document.getElementById('ai-messages');if(!inp||!msgs)return;var q=inp.value.trim();if(!q)return;var s=scripts.find(function(x){return x.id===currentId});var sname=s?s.name:'';var stype=s?s.type:'';var ssteps=s?collectSteps().map(function(st,i){return(i+1)+'. '+st.title+': '+st.body}).join('\n'):'';var uDiv=document.createElement('div');uDiv.className='ai-msg-user';uDiv.textContent=q;msgs.appendChild(uDiv);inp.value='';var bDiv=document.createElement('div');bDiv.className='ai-msg-bot';bDiv.textContent='...';msgs.appendChild(bDiv);bDiv.scrollIntoView({behavior:'smooth',block:'nearest'});try{var sys='You are an elite sales coach for AgentNav, a health insurance broker platform. Help reps write and improve call scripts. Be direct and give word-for-word suggestions.';if(sname)sys+='\\n\\nCurrent script: '+sname+' ('+stype+')\\nSteps:\\n'+ssteps;var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,system:sys,messages:[{role:'user',content:q}]})});var d=await r.json();bDiv.textContent=d.content&&d.content[0]?d.content[0].text:'Could not get response.'}catch(e){bDiv.textContent='Error: '+e.message;bDiv.style.color='#fca5a5'}}
-load();renderLib();showEmpty();
-</script>
   
-<script>
-var scripts=[],currentId=null,dirty=false,autoTimer=null,dragEl=null;
-var TEMPLATES={coldcall:{name:'Cold Call Script',type:'coldcall',steps:[{title:'Opening (0:00-0:15)',body:'Hey [Name], this is [Your name] from AgentNav. Quick question - we built a platform for health brokers: ACA and STM quoting, full CRM, SMS, and Renewal Autopilot that automates your entire OEP. Worth two minutes?'},{title:'Earn the minute (0:15-0:45)',body:'What does your OEP process look like right now? Running it manually or do you have something in place?'},{title:'Connect pain to feature (0:45-1:30)',body:'[Repeat back what they said.] That is exactly the problem we solve. [Name one specific feature that addresses their pain.]'},{title:'Soft pitch (1:30-2:00)',body:'AgentNav is the only platform built for health brokers - ACA quoting, HealthSherpa, Renewal Autopilot, CRM, SMS, all in one place. Starts at $79 per month.'},{title:'Close for meeting (2:00-2:30)',body:'I would love to show you a 15-minute demo. Do you have time Thursday or Friday?'}]},discovery:{name:'Discovery Call Script',type:'discovery',steps:[{title:'Set the agenda',body:'Thanks for making time. I want to spend most of this call learning about how you are set up right now. Then if I think AgentNav could help, I will be honest about that. Sound good?'},{title:'Current setup',body:'Walk me through your agency. How big is your team? What tools for quoting, CRM, SMS, enrollment? How are you managing renewals?'},{title:'Find the pain',body:'What does your OEP look like? How many clients are you manually reaching out to in November? How many slip through?'},{title:'Qualify',body:'What percentage of your book is ACA vs other lines? Do you use HealthSherpa or EDE? Looking to grow the team this year?'},{title:'Set up the demo',body:'Based on what you told me, here is what I want to show you: [Name 2-3 specific features]. Does that sound right?'}]},demo:{name:'Demo Meeting Script',type:'demo',steps:[{title:'Confirm discovery',body:'Before I share my screen - last time you mentioned [pain point]. Is that still the main thing you want to see solved today?'},{title:'Client record',body:'This is where a client lives - everything in one place. Medical history, Rx, FPL tracking, policy history, SMS thread, calendar.'},{title:'Renewal Autopilot',body:'Every renewal client has a status. For each one with Autopilot on, the system sends the campaign, collects preferences, and generates a new quote. You just review and approve.'},{title:'Quoting',body:'ACA, STM, Life, Ancillary, Indemnity - all quoted side by side. Pull from HealthSherpa or EDE directly. One-click to send the proposal.'},{title:'Close',body:'What questions do you have? [Pause.] Based on what you saw today, what would need to be true for this to be a yes?'}]},objections:{name:'Objection Handling',type:'objections',steps:[{title:'"Too expensive"',body:'What are you paying right now for CRM, quoting, SMS, and enrollment combined? Most agents are at $200-400 per month. AgentNav replaces all of it for $79.'},{title:'"Need to think about it"',body:'Totally fair. What specifically do you want to think through? Price, timing, or something you want to verify?'},{title:'"Happy with what we have"',body:'What does your OEP process look like? How many clients did you lose last November because they fell through? That is what Renewal Autopilot eliminates.'},{title:'"Need to talk to my partner"',body:'Of course. Can we get them on a quick call together this week?'},{title:'"Not the right time"',body:'When is? Agents who switch before OEP go in with Autopilot already configured.'}]}};
-var GROUPS=[{label:'Before The Call',types:['coldcall','discovery']},{label:'On The Call',types:['demo','closing','onboarding']},{label:'Reference',types:['objections','talktracks']},{label:'My Scripts',types:['custom']}];
-var LABELS={coldcall:'Cold Call',discovery:'Discovery',demo:'Demo Meeting',closing:'Closing',onboarding:'Onboarding',objections:'Objections',talktracks:'Talk Track',custom:'Custom'};
-var SUGGESTIONS={coldcall:['Rewrite step 1 to sound more natural','Make the pitch under 30 words','Add a line for when they say they are happy with their setup'],discovery:['Write 3 follow-up questions for step 2','Add a question about how they handle renewals','Make the agenda line more conversational'],demo:['Rewrite Renewal Autopilot step for a solo agent','Add a line for when they compare to EZLynx','Write a closing line that creates urgency'],objections:['Write a response for when they bring up HawkSoft','Make the price objection shorter','Add a response for not ready until after OEP'],custom:['Improve the flow of this script','Make this more conversational','Suggest a stronger opening line']};
-function load(){try{scripts=JSON.parse(localStorage.getItem('se2')||'[]')}catch(e){scripts=[]}}
-function persist(){localStorage.setItem('se2',JSON.stringify(scripts))}
-function renderLib(){var el=document.getElementById('lib-list');if(!el)return;el.innerHTML='';GROUPS.forEach(function(g){var inGrp=scripts.filter(function(s){return g.types.indexOf(s.type)>=0});var tpls=Object.keys(TEMPLATES).filter(function(k){return g.types.indexOf(k)>=0&&!scripts.some(function(s){return s._tpl===k})});if(!inGrp.length&&!tpls.length&&g.label!=='My Scripts')return;var grp=document.createElement('div');grp.className='lib-group';var lbl=document.createElement('div');lbl.className='lib-label';lbl.textContent=g.label;grp.appendChild(lbl);inGrp.forEach(function(s){var item=document.createElement('button');item.className='script-item'+(currentId===s.id?' active':'');var inner=document.createElement('span');inner.className='script-inner';inner.textContent=s.name||'Untitled';var del=document.createElement('button');del.className='script-del';del.textContent='x';del.onclick=function(e){e.stopPropagation();delById(s.id)};item.appendChild(inner);item.appendChild(del);item.onclick=function(){openScript(s.id)};grp.appendChild(item)});if(tpls.length){if(inGrp.length){var hr=document.createElement('hr');hr.className='divider';grp.appendChild(hr)}tpls.forEach(function(k){var btn=document.createElement('button');btn.className='tmpl-item';var inner=document.createElement('span');inner.className='tmpl-inner';inner.textContent='+ Use '+TEMPLATES[k].name;btn.appendChild(inner);btn.onclick=function(){loadTemplate(k)};grp.appendChild(btn)})}if(g.label==='My Scripts'&&!inGrp.length){var note=document.createElement('div');note.style.cssText='padding:6px 14px 10px;font-size:11px;color:#4a4a5a;font-style:italic';note.textContent='No custom scripts yet.';grp.appendChild(note)}el.appendChild(grp)})}
-function openScript(id){if(dirty&&!confirm('Unsaved changes. Discard?'))return;currentId=id;dirty=false;var s=scripts.find(function(x){return x.id===id});if(!s)return;showEditor(s);renderLib();updateAI(s)}
-function newScript(){var id='s'+Date.now();var s={id:id,name:'New Script',type:'custom',steps:[{title:'Step 1',body:''}]};scripts.push(s);persist();renderLib();setTimeout(function(){openScript(id);var n=document.getElementById('script-name');if(n){n.focus();n.select()}},10)}
-function loadTemplate(k){var t=TEMPLATES[k];if(!t)return;var id='s'+Date.now();var s={id:id,name:t.name,type:t.type,_tpl:k,steps:t.steps.map(function(st){return{title:st.title,body:st.body}})};scripts.push(s);persist();renderLib();openScript(id)}
-function delById(id){if(!confirm('Delete this script?'))return;scripts=scripts.filter(function(s){return s.id!==id});if(currentId===id){currentId=null;dirty=false;showEmpty()}persist();renderLib()}
-function deleteScript(){if(currentId)delById(currentId)}
-function showEditor(s){var ep=document.getElementById('editor-panel');var emp=document.getElementById('empty-panel');if(ep){ep.style.display='flex';ep.style.flex='1';ep.style.flexDirection='column';ep.style.overflow='hidden'}if(emp)emp.style.display='none';document.getElementById('script-name').value=s.name||'';document.getElementById('script-type').value=s.type||'custom';renderSteps(s.steps||[]);updateCount(s.steps||[]);document.getElementById('save-status').textContent=''}
-function showEmpty(){var ep=document.getElementById('editor-panel');var emp=document.getElementById('empty-panel');if(ep)ep.style.display='none';if(emp){emp.style.display='flex';emp.style.flex='1'}}
-function renderSteps(steps){var list=document.getElementById('steps-list');list.innerHTML='';steps.forEach(function(st,i){list.appendChild(makeStep(st,i))})}
-function makeStep(st,idx){var div=document.createElement('div');div.className='step-card';div.draggable=true;var head=document.createElement('div');head.className='step-head';var num=document.createElement('div');num.className='step-num';num.textContent=idx+1;var ti=document.createElement('input');ti.className='step-title-in';ti.type='text';ti.value=st.title||'';ti.placeholder='Step name...';ti.oninput=markDirty;var drag=document.createElement('span');drag.className='step-drag';drag.textContent=':::';var del=document.createElement('button');del.className='step-del-btn';del.textContent='x';del.onclick=function(){div.remove();renumber();markDirty()};head.append(num,ti,drag,del);var ta=document.createElement('textarea');ta.className='step-body-ta';ta.placeholder='Write this step...';ta.value=st.body||'';ta.oninput=markDirty;div.append(head,ta);div.addEventListener('dragstart',function(e){e.dataTransfer.effectAllowed='move';div.style.opacity='.4';dragEl=div});div.addEventListener('dragend',function(){div.style.opacity='';dragEl=null;renumber();markDirty()});div.addEventListener('dragover',function(e){e.preventDefault();if(dragEl&&dragEl!==div){var items=Array.from(div.parentNode.children);if(items.indexOf(dragEl)<items.indexOf(div))div.parentNode.insertBefore(dragEl,div.nextSibling);else div.parentNode.insertBefore(dragEl,div)}});return div}
-function renumber(){var list=document.getElementById('steps-list');list.querySelectorAll('.step-card').forEach(function(c,i){var n=c.querySelector('.step-num');if(n)n.textContent=i+1});updateCount(collectSteps())}
-function addStep(){var list=document.getElementById('steps-list');var idx=list.children.length;var el=makeStep({title:'Step '+(idx+1),body:''},idx);list.appendChild(el);markDirty();updateCount(collectSteps());el.scrollIntoView({behavior:'smooth',block:'nearest'})}
-function updateCount(steps){var el=document.getElementById('step-count');if(el)el.textContent=steps.length+' step'+(steps.length!==1?'s':'')}
-function collectSteps(){return Array.from(document.getElementById('steps-list').querySelectorAll('.step-card')).map(function(div){return{title:(div.querySelector('.step-title-in')||{}).value||'',body:(div.querySelector('.step-body-ta')||{}).value||''}})}
-function markDirty(){dirty=true;var st=document.getElementById('save-status');if(st){st.textContent='Unsaved';st.style.color='#f59e0b'}clearTimeout(autoTimer);autoTimer=setTimeout(saveScript,2000)}
-function saveScript(){if(!currentId)return;var s=scripts.find(function(x){return x.id===currentId});if(!s)return;var n=document.getElementById('script-name');var t=document.getElementById('script-type');s.name=n?n.value.trim()||'Untitled':s.name;s.type=t?t.value:s.type;s.steps=collectSteps();persist();dirty=false;var st=document.getElementById('save-status');if(st){st.textContent='Saved';st.style.color='#10b981'}renderLib()}
-function copyAll(){var steps=collectSteps();var lines=steps.map(function(s,i){return'Step '+(i+1)+(s.title?': '+s.title:'')+'\\n'+s.body});if(navigator.clipboard)navigator.clipboard.writeText(lines.join('\\n\\n'))}
-function updateAI(s){var ctx=document.getElementById('ai-context');var sl=document.getElementById('sugg-list');if(ctx)ctx.textContent='Coaching: '+(LABELS[s.type]||s.name);if(!sl)return;sl.innerHTML='';var suggs=SUGGESTIONS[s.type]||SUGGESTIONS.custom;suggs.forEach(function(p){var btn=document.createElement('button');btn.className='sugg-btn';btn.textContent=p;btn.onclick=function(){var inp=document.getElementById('ai-input');if(inp){inp.value=p;inp.focus()}};sl.appendChild(btn)})}
-async function askAI(){var inp=document.getElementById('ai-input');var msgs=document.getElementById('ai-messages');if(!inp||!msgs)return;var q=inp.value.trim();if(!q)return;var s=scripts.find(function(x){return x.id===currentId});var sname=s?s.name:'';var stype=s?s.type:'';var ssteps=s?collectSteps().map(function(st,i){return(i+1)+'. '+st.title+': '+st.body}).join('\n'):'';var uDiv=document.createElement('div');uDiv.className='ai-msg-user';uDiv.textContent=q;msgs.appendChild(uDiv);inp.value='';var bDiv=document.createElement('div');bDiv.className='ai-msg-bot';bDiv.textContent='...';msgs.appendChild(bDiv);bDiv.scrollIntoView({behavior:'smooth',block:'nearest'});try{var sys='You are an elite sales coach for AgentNav, a health insurance broker platform. Help reps write and improve call scripts. Be direct and give word-for-word suggestions.';if(sname)sys+='\\n\\nCurrent script: '+sname+' ('+stype+')\\nSteps:\\n'+ssteps;var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,system:sys,messages:[{role:'user',content:q}]})});var d=await r.json();bDiv.textContent=d.content&&d.content[0]?d.content[0].text:'Could not get response.'}catch(e){bDiv.textContent='Error: '+e.message;bDiv.style.color='#fca5a5'}}
-load();renderLib();showEmpty();
-</script>
+  <div id="se-root" style="display:grid;grid-template-columns:220px 1fr 280px;height:100vh;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;box-sizing:border-box;">
+
+<!-- LEFT -->
+<div style="display:flex;flex-direction:column;background:#1a1a24;border-right:1px solid #2a2a38;overflow:hidden;">
+  <div style="padding:14px 14px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #2a2a38;flex-shrink:0;">
+    <span style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6366f1;">Library</span>
+    <button onclick="seNewScript()" style="background:#6366f1;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">+ New</button>
+  </div>
+  <div id="se-lib-list" style="flex:1;overflow-y:auto;padding:4px 0;"></div>
 </div>
+
+<!-- CENTER -->
+<div style="display:flex;flex-direction:column;overflow:hidden;background:#fff;">
+  <div id="se-editor-wrap" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
+    <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid #e4e4e7;flex-shrink:0;flex-wrap:wrap;background:#fff;">
+      <input id="se-script-name" type="text" placeholder="Script name..." oninput="seMarkDirty()" style="flex:1;min-width:100px;font-size:15px;font-weight:700;border:none;outline:none;color:#09090b;font-family:inherit;background:transparent;">
+      <select id="se-script-type" onchange="seMarkDirty()" style="border:1.5px solid #e4e4e7;border-radius:6px;padding:5px 8px;font-size:12px;font-weight:600;color:#52525b;font-family:inherit;cursor:pointer;outline:none;background:#fff;">
+        <option value="coldcall">Cold Call</option>
+        <option value="discovery">Discovery</option>
+        <option value="demo">Demo Meeting</option>
+        <option value="closing">Closing</option>
+        <option value="onboarding">Onboarding</option>
+        <option value="objections">Objections</option>
+        <option value="talktracks">Talk Track</option>
+        <option value="custom">Custom</option>
+      </select>
+      <button onclick="seCopyAll()" style="padding:6px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid #e4e4e7;background:#fff;color:#52525b;">Copy</button>
+      <button onclick="seSave()" style="padding:6px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:none;background:#6366f1;color:#fff;">Save</button>
+      <button onclick="seDeleteScript()" style="padding:6px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid #fca5a5;background:#fff;color:#ef4444;">Delete</button>
+    </div>
+    <div id="se-steps-body" style="flex:1;overflow-y:auto;padding:16px 20px;">
+      <div id="se-steps-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+      <button onclick="seAddStep()" style="width:100%;margin-top:10px;padding:10px;border:1.5px dashed #d4d4d8;background:none;border-radius:8px;color:#a1a1aa;font-size:13px;cursor:pointer;font-family:inherit;">+ Add Step</button>
+    </div>
+    <div style="padding:10px 16px;border-top:1px solid #e4e4e7;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:#fff;">
+      <span id="se-save-status" style="font-size:11px;font-weight:600;"></span>
+      <span id="se-step-count" style="font-size:11px;color:#a1a1aa;"></span>
+    </div>
+  </div>
+  <div id="se-empty-wrap" style="flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:40px;flex-direction:column;gap:12px;">
+    <div style="font-size:36px;">✏️</div>
+    <div style="font-size:15px;font-weight:700;color:#71717a;">No script selected</div>
+    <div style="font-size:13px;color:#a1a1aa;max-width:260px;line-height:1.6;">Pick from the library on the left or create a new script to start editing.</div>
+    <button onclick="seNewScript()" style="margin-top:8px;background:#6366f1;color:#fff;border:none;border-radius:6px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">+ Create Script</button>
+  </div>
 </div>
+
+<!-- RIGHT -->
+<div style="display:flex;flex-direction:column;background:#0f0f17;border-left:1px solid #2a2a38;overflow:hidden;">
+  <div style="padding:14px 14px 12px;border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0;">
+    <div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:3px;">🧠 Ask AI</div>
+    <div id="se-ai-ctx" style="font-size:10px;color:rgba(255,255,255,.35);">Select a script to get coaching</div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;">
+    <div style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.25);border-radius:8px;padding:10px 12px;">
+      <div style="font-size:9px;font-weight:700;color:#818cf8;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;">How to use</div>
+      <div style="font-size:11.5px;color:rgba(255,255,255,.6);line-height:1.6;">Select a script then ask the AI to improve it, write a step, or tailor it to a specific prospect.</div>
+    </div>
+    <div id="se-sugg-list" style="display:flex;flex-direction:column;gap:5px;"></div>
+    <div id="se-ai-msgs" style="display:flex;flex-direction:column;gap:8px;"></div>
+  </div>
+  <div style="padding:10px 12px;border-top:1px solid rgba(255,255,255,.07);flex-shrink:0;">
+    <textarea id="se-ai-input" rows="3" placeholder="Ask AI to help write or improve this script..." style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 11px;font-size:12px;color:#fff;font-family:inherit;outline:none;resize:none;line-height:1.5;box-sizing:border-box;"></textarea>
+    <button onclick="seAskAI()" style="margin-top:6px;width:100%;background:#6366f1;color:#fff;border:none;border-radius:7px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Ask AI</button>
+  </div>
+</div>
+
+</div></div>
 
 
 <div class="section" id="section-myscripts">
@@ -8164,16 +8087,263 @@ function addUserCompCard(bc) {
 }
 
 // ── SCRIPT EDITOR ──────────────────────────────────────────────────────
-function initScriptEditor() {
-  var sec = document.getElementById('section-scripteditor');
-  if (sec) {
-    sec.style.cssText = 'padding:0!important;overflow:hidden!important;height:100vh!important;display:block!important;';
-  }
-  var root = document.getElementById('se-root');
-  if (root) {
-    root.style.cssText = 'display:grid;grid-template-columns:220px 1fr 280px;height:100vh;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;font-size:13px;';
-  }
+
+var seScripts=[],seCurrentId=null,seDirty=false,seAutoTimer=null,seDragEl=null;
+
+var SE_TEMPLATES={
+  coldcall:{name:'Cold Call Script',type:'coldcall',steps:[
+    {title:'Opening (0:00-0:15)',body:'Hey [Name], this is [Your name] from AgentNav. Quick question - we built a platform for health brokers: ACA and STM quoting, full CRM, SMS, and Renewal Autopilot that automates your entire OEP. Worth two minutes?'},
+    {title:'Earn the minute (0:15-0:45)',body:'What does your OEP process look like right now? Running it manually or do you have something in place?'},
+    {title:'Connect pain to feature (0:45-1:30)',body:'[Repeat back what they said.] That is exactly the problem we solve. [Name one specific feature that addresses their pain.]'},
+    {title:'Soft pitch (1:30-2:00)',body:'AgentNav is the only platform built for health brokers - ACA quoting, HealthSherpa, Renewal Autopilot, CRM, SMS, all in one place. Starts at $79 per month.'},
+    {title:'Close for meeting (2:00-2:30)',body:'I would love to show you a 15-minute demo. Do you have time Thursday or Friday?'}
+  ]},
+  discovery:{name:'Discovery Call Script',type:'discovery',steps:[
+    {title:'Set the agenda',body:'Thanks for making time. I want to spend most of this call learning about how you are set up right now. Then if I think AgentNav could help, I will be honest about that. Sound good?'},
+    {title:'Current setup',body:'Walk me through your agency. How big is your team? What tools for quoting, CRM, SMS, enrollment? How are you managing renewals?'},
+    {title:'Find the pain',body:'What does your OEP look like? How many clients are you manually reaching out to in November? How many slip through?'},
+    {title:'Qualify',body:'What percentage of your book is ACA vs other lines? Do you use HealthSherpa or EDE? Looking to grow the team this year?'},
+    {title:'Set up the demo',body:'Based on what you told me, here is what I want to show you: [Name 2-3 specific features]. Does that sound right?'}
+  ]},
+  demo:{name:'Demo Meeting Script',type:'demo',steps:[
+    {title:'Confirm discovery',body:'Before I share my screen - last time you mentioned [pain point]. Is that still the main thing you want to see solved today?'},
+    {title:'Client record',body:'This is where a client lives - everything in one place. Medical history, Rx, FPL tracking, policy history, SMS thread, calendar.'},
+    {title:'Renewal Autopilot',body:'Every renewal client has a status. For each one with Autopilot on, the system sends the campaign, collects preferences, and generates a new quote. You just review and approve.'},
+    {title:'Quoting',body:'ACA, STM, Life, Ancillary, Indemnity - all quoted side by side. Pull from HealthSherpa or EDE directly. One-click to send the proposal.'},
+    {title:'Close',body:'What questions do you have? [Pause.] Based on what you saw today, what would need to be true for this to be a yes?'}
+  ]},
+  objections:{name:'Objection Handling',type:'objections',steps:[
+    {title:'"Too expensive"',body:'What are you paying right now for CRM, quoting, SMS, and enrollment combined? Most agents are at $200-400 per month. AgentNav replaces all of it for $79.'},
+    {title:'"Need to think about it"',body:'Totally fair. What specifically do you want to think through? Price, timing, or something you want to verify?'},
+    {title:'"Happy with what we have"',body:'What does your OEP process look like? How many clients did you lose last November because they fell through? That is what Renewal Autopilot eliminates.'},
+    {title:'"Need to talk to my partner"',body:'Of course. Can we get them on a quick call together this week?'},
+    {title:'"Not the right time"',body:'When is? Agents who switch before OEP go in with Autopilot already configured.'}
+  ]}
+};
+
+var SE_GROUPS=[
+  {label:'Before The Call',types:['coldcall','discovery']},
+  {label:'On The Call',types:['demo','closing','onboarding']},
+  {label:'Reference',types:['objections','talktracks']},
+  {label:'My Scripts',types:['custom']}
+];
+
+var SE_TYPE_LABELS={coldcall:'Cold Call',discovery:'Discovery',demo:'Demo Meeting',closing:'Closing',onboarding:'Onboarding',objections:'Objections',talktracks:'Talk Track',custom:'Custom'};
+var SE_SUGGESTIONS={
+  coldcall:['Rewrite step 1 to sound more natural','Make the pitch under 30 words','Add a line for when they say they are happy with their setup'],
+  discovery:['Write 3 follow-up questions for step 2','Add a question about how they handle renewals','Make the agenda line more conversational'],
+  demo:['Rewrite Renewal Autopilot step for a solo agent','Add a line for when they compare to EZLynx','Write a closing line that creates urgency'],
+  objections:['Write a response for when they bring up HawkSoft','Make the price objection shorter','Add a response for not ready until after OEP'],
+  custom:['Improve the flow of this script','Make this more conversational','Suggest a stronger opening line']
+};
+
+function seLoad(){try{seScripts=JSON.parse(localStorage.getItem('se2')||'[]')}catch(e){seScripts=[]}}
+function sePersist(){localStorage.setItem('se2',JSON.stringify(seScripts))}
+
+function seRenderLib(){
+  var el=document.getElementById('se-lib-list');
+  if(!el)return;
+  el.innerHTML='';
+  SE_GROUPS.forEach(function(g){
+    var inGrp=seScripts.filter(function(s){return g.types.indexOf(s.type)>=0});
+    var tpls=Object.keys(SE_TEMPLATES).filter(function(k){return g.types.indexOf(k)>=0&&!seScripts.some(function(s){return s._tpl===k})});
+    if(!inGrp.length&&!tpls.length&&g.label!=='My Scripts')return;
+    var grp=document.createElement('div');grp.style.cssText='padding-bottom:4px;';
+    var lbl=document.createElement('div');lbl.style.cssText='font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#52525b;padding:10px 14px 4px;';lbl.textContent=g.label;
+    grp.appendChild(lbl);
+    inGrp.forEach(function(s){
+      var item=document.createElement('div');item.style.cssText='display:flex;align-items:center;cursor:pointer;'+(seCurrentId===s.id?'background:#2a2a38;':'');
+      var inner=document.createElement('div');inner.style.cssText='flex:1;padding:7px 14px;font-size:12.5px;color:'+(seCurrentId===s.id?'#6366f1':'#a1a1aa')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-left:3px solid '+(seCurrentId===s.id?'#6366f1':'transparent')+';font-weight:'+(seCurrentId===s.id?'600':'400')+';';inner.textContent=s.name||'Untitled';
+      var del=document.createElement('button');del.style.cssText='padding:7px 8px;background:none;border:none;cursor:pointer;color:#52525b;font-size:11px;flex-shrink:0;';del.textContent='x';del.title='Delete';
+      del.onclick=function(e){e.stopPropagation();seDelById(s.id)};
+      item.appendChild(inner);item.appendChild(del);
+      item.onclick=function(){seOpenScript(s.id)};
+      grp.appendChild(item);
+    });
+    if(tpls.length){
+      if(inGrp.length){var hr=document.createElement('div');hr.style.cssText='margin:6px 14px;border-top:1px dashed #2a2a38;';grp.appendChild(hr)}
+      tpls.forEach(function(k){
+        var btn=document.createElement('div');btn.style.cssText='cursor:pointer;padding:6px 14px;font-size:12px;color:#4a4a5a;font-style:italic;';btn.textContent='+ Use '+SE_TEMPLATES[k].name;
+        btn.onmouseover=function(){this.style.color='#6366f1'};btn.onmouseout=function(){this.style.color='#4a4a5a'};
+        btn.onclick=function(){seLoadTemplate(k)};
+        grp.appendChild(btn);
+      });
+    }
+    if(g.label==='My Scripts'&&!inGrp.length){
+      var note=document.createElement('div');note.style.cssText='padding:6px 14px 10px;font-size:11px;color:#4a4a5a;font-style:italic;';note.textContent='No custom scripts yet.';grp.appendChild(note);
+    }
+    el.appendChild(grp);
+  });
 }
+
+function seOpenScript(id){
+  if(seDirty&&!confirm('Unsaved changes. Discard?'))return;
+  seCurrentId=id;seDirty=false;
+  var s=seScripts.find(function(x){return x.id===id});
+  if(!s)return;
+  seShowEditor(s);seRenderLib();seUpdateAI(s);
+}
+
+function seNewScript(){
+  var id='s'+Date.now();
+  var s={id:id,name:'New Script',type:'custom',steps:[{title:'Step 1',body:''}]};
+  seScripts.push(s);sePersist();seRenderLib();
+  setTimeout(function(){seOpenScript(id);var n=document.getElementById('se-script-name');if(n){n.focus();n.select()}},10);
+}
+
+function seLoadTemplate(k){
+  var t=SE_TEMPLATES[k];if(!t)return;
+  var id='s'+Date.now();
+  var s={id:id,name:t.name,type:t.type,_tpl:k,steps:t.steps.map(function(st){return{title:st.title,body:st.body}})};
+  seScripts.push(s);sePersist();seRenderLib();seOpenScript(id);
+}
+
+function seDelById(id){
+  if(!confirm('Delete this script?'))return;
+  seScripts=seScripts.filter(function(s){return s.id!==id});
+  if(seCurrentId===id){seCurrentId=null;seDirty=false;seShowEmpty()}
+  sePersist();seRenderLib();
+}
+
+function seDeleteScript(){if(seCurrentId)seDelById(seCurrentId)}
+
+function seShowEditor(s){
+  var ew=document.getElementById('se-editor-wrap');var emp=document.getElementById('se-empty-wrap');
+  if(ew){ew.style.display='flex';ew.style.flex='1';ew.style.flexDirection='column';ew.style.overflow='hidden';}
+  if(emp)emp.style.display='none';
+  var n=document.getElementById('se-script-name');var t=document.getElementById('se-script-type');
+  if(n)n.value=s.name||'';if(t)t.value=s.type||'custom';
+  seRenderSteps(s.steps||[]);seUpdateCount(s.steps||[]);
+  var st=document.getElementById('se-save-status');if(st)st.textContent='';
+}
+
+function seShowEmpty(){
+  var ew=document.getElementById('se-editor-wrap');var emp=document.getElementById('se-empty-wrap');
+  if(ew)ew.style.display='none';
+  if(emp){emp.style.display='flex';emp.style.flex='1';}
+}
+
+function seRenderSteps(steps){
+  var list=document.getElementById('se-steps-list');if(!list)return;
+  list.innerHTML='';
+  steps.forEach(function(st,i){list.appendChild(seMakeStep(st,i))});
+}
+
+function seMakeStep(st,idx){
+  var div=document.createElement('div');
+  div.style.cssText='background:#f8f8fa;border:1.5px solid #e4e4e7;border-radius:10px;overflow:hidden;';
+  div.draggable=true;
+  var head=document.createElement('div');head.style.cssText='display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #e4e4e7;background:#fff;';
+  var num=document.createElement('div');num.style.cssText='width:22px;height:22px;border-radius:50%;background:#6366f1;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;';num.textContent=idx+1;
+  var ti=document.createElement('input');ti.type='text';ti.value=st.title||'';ti.placeholder='Step name...';ti.style.cssText='flex:1;border:none;background:none;font-size:13px;font-weight:600;color:#09090b;font-family:inherit;outline:none;';ti.oninput=seMarkDirty;
+  var drag=document.createElement('span');drag.textContent=':::';drag.style.cssText='cursor:grab;color:#d4d4d8;font-size:14px;padding:0 2px;';
+  var del=document.createElement('button');del.textContent='x';del.style.cssText='background:none;border:none;color:#d4d4d8;font-size:12px;cursor:pointer;padding:2px 4px;border-radius:3px;';
+  del.onclick=function(){div.remove();seRenumber();seMarkDirty()};
+  head.append(num,ti,drag,del);
+  var ta=document.createElement('textarea');ta.value=st.body||'';ta.placeholder='Write this step...';ta.style.cssText='width:100%;min-height:80px;border:none;background:none;padding:10px 12px;font-size:13px;color:#52525b;font-family:inherit;resize:vertical;outline:none;line-height:1.65;box-sizing:border-box;';ta.oninput=seMarkDirty;
+  div.append(head,ta);
+  div.addEventListener('dragstart',function(e){e.dataTransfer.effectAllowed='move';div.style.opacity='.4';seDragEl=div});
+  div.addEventListener('dragend',function(){div.style.opacity='';seDragEl=null;seRenumber();seMarkDirty()});
+  div.addEventListener('dragover',function(e){e.preventDefault();if(seDragEl&&seDragEl!==div){var items=Array.from(div.parentNode.children);if(items.indexOf(seDragEl)<items.indexOf(div))div.parentNode.insertBefore(seDragEl,div.nextSibling);else div.parentNode.insertBefore(seDragEl,div)}});
+  return div;
+}
+
+function seRenumber(){
+  var list=document.getElementById('se-steps-list');if(!list)return;
+  list.querySelectorAll('div>div:first-child>div:first-child').forEach(function(num,i){if(num&&!isNaN(parseInt(num.textContent)))num.textContent=i+1});
+  seUpdateCount(seCollectSteps());
+}
+
+function seAddStep(){
+  var list=document.getElementById('se-steps-list');if(!list)return;
+  var idx=list.children.length;
+  var el=seMakeStep({title:'Step '+(idx+1),body:''},idx);
+  list.appendChild(el);seMarkDirty();seUpdateCount(seCollectSteps());
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function seUpdateCount(steps){
+  var el=document.getElementById('se-step-count');
+  if(el)el.textContent=steps.length+' step'+(steps.length!==1?'s':'');
+}
+
+function seCollectSteps(){
+  var list=document.getElementById('se-steps-list');if(!list)return[];
+  return Array.from(list.children).map(function(div){
+    var ti=div.querySelector('input');var ta=div.querySelector('textarea');
+    return{title:ti?ti.value:'',body:ta?ta.value:''};
+  });
+}
+
+function seMarkDirty(){
+  seDirty=true;
+  var st=document.getElementById('se-save-status');
+  if(st){st.textContent='Unsaved changes';st.style.color='#f59e0b';}
+  clearTimeout(seAutoTimer);seAutoTimer=setTimeout(seSave,2000);
+}
+
+function seSave(){
+  if(!seCurrentId)return;
+  var s=seScripts.find(function(x){return x.id===seCurrentId});if(!s)return;
+  var n=document.getElementById('se-script-name');var t=document.getElementById('se-script-type');
+  s.name=n?n.value.trim()||'Untitled':s.name;
+  s.type=t?t.value:s.type;
+  s.steps=seCollectSteps();
+  sePersist();seDirty=false;
+  var st=document.getElementById('se-save-status');
+  if(st){st.textContent='Saved';st.style.color='#10b981';}
+  seRenderLib();
+  if(typeof showToast==='function')showToast('Script saved!');
+}
+
+function seCopyAll(){
+  var steps=seCollectSteps();
+  var text=steps.map(function(s,i){return'Step '+(i+1)+(s.title?': '+s.title:'')+'\n'+s.body}).join('\n\n');
+  if(navigator.clipboard)navigator.clipboard.writeText(text.trim());
+}
+
+function seUpdateAI(s){
+  var ctx=document.getElementById('se-ai-ctx');var sl=document.getElementById('se-sugg-list');
+  if(ctx)ctx.textContent='Coaching: '+(SE_TYPE_LABELS[s.type]||s.name);
+  if(!sl)return;sl.innerHTML='';
+  var suggs=SE_SUGGESTIONS[s.type]||SE_SUGGESTIONS.custom;
+  suggs.forEach(function(p){
+    var btn=document.createElement('button');
+    btn.style.cssText='width:100%;text-align:left;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:7px 10px;font-size:11px;color:rgba(255,255,255,.6);cursor:pointer;font-family:inherit;line-height:1.5;display:block;margin-bottom:5px;';
+    btn.textContent=p;
+    btn.onclick=function(){var inp=document.getElementById('se-ai-input');if(inp){inp.value=p;inp.focus()}};
+    sl.appendChild(btn);
+  });
+}
+
+async function seAskAI(){
+  var inp=document.getElementById('se-ai-input');var msgs=document.getElementById('se-ai-msgs');
+  if(!inp||!msgs)return;
+  var q=inp.value.trim();if(!q)return;
+  var s=seScripts.find(function(x){return x.id===seCurrentId});
+  var ctx=s?'Script: '+s.name+' ('+s.type+')\nSteps:\n'+seCollectSteps().map(function(st,i){return(i+1)+'. '+st.title+': '+st.body}).join('\n'):'';
+  var uDiv=document.createElement('div');uDiv.style.cssText='background:rgba(99,102,241,.2);border-radius:8px;padding:8px 10px;font-size:12px;color:#c7d2fe;line-height:1.5;';uDiv.textContent=q;msgs.appendChild(uDiv);
+  inp.value='';
+  var bDiv=document.createElement('div');bDiv.style.cssText='background:rgba(255,255,255,.06);border-radius:8px;padding:8px 10px;font-size:12px;color:rgba(255,255,255,.75);line-height:1.6;';bDiv.textContent='...';msgs.appendChild(bDiv);
+  bDiv.scrollIntoView({behavior:'smooth',block:'nearest'});
+  try{
+    var sys='You are an elite sales coach for AgentNav, a health insurance broker platform. Help reps write and improve call scripts. Be direct and give word-for-word suggestions.';
+    if(ctx)sys+='\n\nCurrent script:\n'+ctx;
+    var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,system:sys,messages:[{role:'user',content:q}]})});
+    var d=await r.json();
+    bDiv.textContent=d.content&&d.content[0]?d.content[0].text:'Could not get response.';
+  }catch(e){bDiv.textContent='Error: '+e.message;bDiv.style.color='#fca5a5';}
+}
+
+function initScriptEditor(){
+  var sec=document.getElementById('section-scripteditor');
+  if(sec){sec.style.cssText='padding:0!important;overflow:hidden!important;height:100vh!important;display:block!important;';}
+  var root=document.getElementById('se-root');
+  if(root){root.style.cssText='display:grid;grid-template-columns:220px 1fr 280px;height:100vh;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;font-size:13px;';}
+  seLoad();seRenderLib();
+  if(seScripts.length===0){seShowEmpty();}else{seOpenScript(seScripts[0].id);}
+}
+
 
 // ── OBJECTION TAB SWITCHER ────────────────────────────────────────────
 // ── OBJECTION TAB SWITCHER ────────────────────────────────────────────
