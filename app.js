@@ -242,7 +242,16 @@ if(seScripts.length===0){
 }
 }
 function seOpenScript(id){if(seDirty&&!confirm('Unsaved changes. Discard?'))return;seCurrentId=id;seDirty=false;var s=seScripts.find(function(x){return x.id===id});if(!s)return;seShowEditor(s);seRenderLib();seUpdateAI(s);}
-function seNewScript(){var id='s'+Date.now();var s={id:id,name:'New Script',type:'custom',steps:[{title:'Step 1',body:''}]};seScripts.push(s);sePersist();seRenderLib();setTimeout(function(){seOpenScript(id);var n=document.getElementById('se-script-name');if(n){n.focus();n.select()}},10);}
+function seNewScript(){
+  var id='s'+Date.now();
+  var s={id:id,name:'My Script',type:'custom',steps:[{title:'Step 1',body:''}]};
+  seScripts.push(s);sePersist();seRenderLib();
+  setTimeout(function(){
+    seOpenScript(id);
+    var n=document.getElementById('se-script-name');
+    if(n){n.focus();n.select();}
+  },10);
+}
 function seLoadTemplate(k){var t=SE_TEMPLATES[k];if(!t)return;var id='s'+Date.now();var s={id:id,name:t.name,type:t.type,_tpl:k,steps:t.steps.map(function(st){return{title:st.title,body:st.body}})};seScripts.push(s);sePersist();seRenderLib();seOpenScript(id);}
 function seDelById(id){if(!confirm('Delete this script?'))return;seScripts=seScripts.filter(function(s){return s.id!==id});if(seCurrentId===id){seCurrentId=null;seDirty=false;seShowEmpty()}
 sePersist();seRenderLib();}
@@ -264,12 +273,20 @@ function seSave(){
   if(!s)return;
   var n=document.getElementById('se-script-name');
   var t=document.getElementById('se-script-type');
-  s.name=n?n.value.trim()||'Untitled':s.name;
-  s.type=t?t.value:s.type;
+  var newType=t?t.value:s.type;
+  var newName=n?n.value.trim()||'':s.name;
+  // If name is still a default placeholder, auto-update it to match the type
+  var defaults=['My Script','New Script','Untitled'];
+  var typeNames={coldcall:'Cold Call Script',discovery:'Discovery Call Script',demo:'Demo Meeting Script',closing:'Closing Meeting Script',onboarding:'Onboarding Meeting Script',objections:'Objection Handling Script',battlecards:'Battle Card',talktracks:'Talk Track',custom:'My Script'};
+  if(!newName||defaults.indexOf(newName)>=0){
+    newName=typeNames[newType]||'My Script';
+    if(n)n.value=newName;
+  }
+  s.name=newName;
+  s.type=newType;
   s.steps=seCollectSteps();
   s.updatedAt=new Date().toISOString();
-  sePersist();
-  seDirty=false;
+  sePersist();seDirty=false;
   var st=document.getElementById('se-save-status');
   if(st){st.textContent='✓ Saved';st.style.color='#10b981';}
   seRenderLib();
@@ -441,8 +458,110 @@ _origSS3(id,btn);
 // Restore floating Ask AI button when leaving Script Editor
 var fab=document.querySelector('.coach-fab');
 if(fab)fab.style.display='';
-// Hide it again if entering Script Editor
 if(id==='scripteditor'){if(fab)fab.style.display='none';}
 if(id==='myscripts')setTimeout(renderMyScriptsCollection,50);
-if(id==='scripteditor')setTimeout(initScriptEditor,50);if(id==='admin')setTimeout(function(){switchAdminTab('scripts');},50);if(id==='pricing')setTimeout(calcUniversal,50);var scriptSections=['pitches','coldcall','discovery','demo','closing','onboarding','objections','battlecards','talktracks'];if(scriptSections.indexOf(id)>=0)setTimeout(function(){loadMyScript(id);},50);};var _origOnLogin3=typeof onUserLoggedIn!=='undefined'?onUserLoggedIn:function(){};onUserLoggedIn=function(user){if(typeof _origOnLogin3==='function')_origOnLogin3(user);updateSidebarAuth(user);setTimeout(checkAdminAccess,200);var sb=getSupabase();if(sb&&user){sb.from('rep_pitches').select('pitches').eq('user_id',user.id).single().then(function(r){if(r.data&&r.data.pitches){try{var remote=JSON.parse(r.data.pitches);var local={};try{local=JSON.parse(localStorage.getItem('my-scripts')||'{}');}catch(e){}
+if(id==='scripteditor')setTimeout(initScriptEditor,50);
+if(id==='scriptlibrary')setTimeout(renderScriptLibrary,50);
+};
+
+// ── SCRIPT LIBRARY PAGE ───────────────────────────────────────────────
+function renderScriptLibrary(){
+  var container=document.getElementById('scriptlibrary-content');
+  if(!container)return;
+  seLoad();
+  container.innerHTML='';
+
+  var LIBRARY_CATS=[
+    {label:'Cold Call Scripts',type:'coldcall',icon:'📞',color:'#6366f1'},
+    {label:'Discovery Call Scripts',type:'discovery',icon:'🔍',color:'#8b5cf6'},
+    {label:'Demo Meeting Scripts',type:'demo',icon:'🖥️',color:'#06b6d4'},
+    {label:'Closing Meeting Scripts',type:'closing',icon:'🏆',color:'#f59e0b'},
+    {label:'Onboarding Meeting Scripts',type:'onboarding',icon:'🚀',color:'#10b981'},
+    {label:'Objection Handling',type:'objections',icon:'🛡️',color:'#ef4444'},
+    {label:'Battle Cards',type:'battlecards',icon:'✕',color:'#ec4899'},
+    {label:'Talk Tracks',type:'talktracks',icon:'💬',color:'#14b8a6'},
+    {label:'Custom Scripts',type:'custom',icon:'✏️',color:'#a1a1aa'},
+  ];
+
+  var hasAny=false;
+  LIBRARY_CATS.forEach(function(cat){
+    var scripts=seScripts.filter(function(s){return s.type===cat.type;});
+    if(!scripts.length)return;
+    hasAny=true;
+
+    var section=document.createElement('div');
+    section.style.cssText='margin-bottom:32px;';
+
+    // Category header
+    var hdr=document.createElement('div');
+    hdr.style.cssText='display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid '+cat.color+'22;';
+    hdr.innerHTML='<div style="width:32px;height:32px;border-radius:8px;background:'+cat.color+'18;display:flex;align-items:center;justify-content:center;font-size:16px;">'+cat.icon+'</div>'
+      +'<div>'
+      +'<div style="font-size:13px;font-weight:700;color:#09090b;">'+cat.label+'</div>'
+      +'<div style="font-size:11px;color:#a1a1aa;">'+scripts.length+' script'+(scripts.length!==1?'s':'')+'</div>'
+      +'</div>'
+      +'<button onclick="showSection(\'scripteditor\',null);setTimeout(function(){seNewScriptOfType(\''+cat.type+'\');},150);" style="margin-left:auto;padding:6px 12px;background:'+cat.color+';color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ New</button>';
+    section.appendChild(hdr);
+
+    // Script cards grid
+    var grid=document.createElement('div');
+    grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;';
+
+    scripts.forEach(function(s){
+      var card=document.createElement('div');
+      card.style.cssText='background:#fff;border:1.5px solid #e4e4e7;border-radius:10px;padding:16px;cursor:pointer;transition:border-color 0.15s,box-shadow 0.15s;';
+      card.onmouseover=function(){this.style.borderColor=cat.color;this.style.boxShadow='0 4px 12px '+cat.color+'22';};
+      card.onmouseout=function(){this.style.borderColor='#e4e4e7';this.style.boxShadow='';};
+
+      var steps=s.steps||[];
+      var hasContent=steps.some(function(st){return st.body&&st.body.trim();});
+      var preview=steps.length?steps[0].title:'No steps yet';
+
+      card.innerHTML='<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">'
+        +'<div style="font-size:14px;font-weight:700;color:#09090b;flex:1;">'+s.name+'</div>'
+        +'<div style="width:8px;height:8px;border-radius:50%;background:'+(hasContent?cat.color:'#e4e4e7')+';margin-top:4px;flex-shrink:0;"></div>'
+        +'</div>'
+        +'<div style="font-size:12px;color:#71717a;margin-bottom:12px;">'+steps.length+' step'+(steps.length!==1?'s':'')+' · '+(hasContent?'Has content':'Empty')+'</div>'
+        +'<div style="font-size:12px;color:#a1a1aa;font-style:italic;margin-bottom:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+preview+'</div>'
+        +'<div style="display:flex;gap:6px;">'
+        +'<button onclick="event.stopPropagation();showSection(\'scripteditor\',null);setTimeout(function(){seOpenScript(\''+s.id+'\');},150);" style="flex:1;padding:7px;background:#6366f1;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Edit</button>'
+        +'<button onclick="event.stopPropagation();seLoad();seScripts=seScripts.filter(function(x){return x.id!==\''+s.id+'\'});sePersist();renderScriptLibrary();" style="padding:7px 10px;background:#fff;color:#ef4444;border:1.5px solid #fca5a5;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Delete</button>'
+        +'</div>';
+
+      card.onclick=function(){
+        showSection('scripteditor',null);
+        setTimeout(function(){seOpenScript(s.id);},150);
+      };
+      grid.appendChild(card);
+    });
+
+    section.appendChild(grid);
+    container.appendChild(section);
+  });
+
+  if(!hasAny){
+    container.innerHTML='<div style="text-align:center;padding:60px 20px;color:#a1a1aa;">'
+      +'<div style="font-size:40px;margin-bottom:14px;">📝</div>'
+      +'<div style="font-size:16px;font-weight:700;color:#71717a;margin-bottom:8px;">No scripts yet</div>'
+      +'<div style="font-size:13px;margin-bottom:20px;">Create scripts in the Script Editor and they will appear here organized by category.</div>'
+      +'<button onclick="showSection(\'scripteditor\',null);" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Open Script Editor →</button>'
+      +'</div>';
+  }
+}
+
+function seNewScriptOfType(type){
+  var id='s'+Date.now();
+  var typeNames={coldcall:'Cold Call Script',discovery:'Discovery Call Script',demo:'Demo Meeting Script',closing:'Closing Meeting Script',onboarding:'Onboarding Meeting Script',objections:'Objection Handling Script',battlecards:'Battle Card',talktracks:'Talk Track',custom:'New Script'};
+  var s={id:id,name:typeNames[type]||'New Script',type:type,steps:[{title:'Step 1',body:''}]};
+  seScripts.push(s);sePersist();seRenderLib();
+  setTimeout(function(){seOpenScript(id);var n=document.getElementById('se-script-name');if(n){n.focus();n.select();}},50);
+}
+// end seNewScriptOfType
+
+// ── showSection override continued ───────────────────────────────────
+var _origSS3b=showSection;
+showSection=function(id,btn){
+  _origSS3b(id,btn);
+  if(id==='admin')setTimeout(function(){switchAdminTab('scripts');},50);if(id==='pricing')setTimeout(calcUniversal,50);var scriptSections=['pitches','coldcall','discovery','demo','closing','onboarding','objections','battlecards','talktracks'];if(scriptSections.indexOf(id)>=0)setTimeout(function(){loadMyScript(id);},50);
+};;onUserLoggedIn=function(user){if(typeof _origOnLogin3==='function')_origOnLogin3(user);updateSidebarAuth(user);setTimeout(checkAdminAccess,200);var sb=getSupabase();if(sb&&user){sb.from('rep_pitches').select('pitches').eq('user_id',user.id).single().then(function(r){if(r.data&&r.data.pitches){try{var remote=JSON.parse(r.data.pitches);var local={};try{local=JSON.parse(localStorage.getItem('my-scripts')||'{}');}catch(e){}
 Object.keys(remote).forEach(function(k){if(remote[k])local[k]=remote[k];});localStorage.setItem('my-scripts',JSON.stringify(local));}catch(e){}}});}};var _origOnLogout3=typeof onUserLoggedOut!=='undefined'?onUserLoggedOut:function(){};onUserLoggedOut=function(){if(typeof _origOnLogout3==='function')_origOnLogout3();updateSidebarAuth(null);};document.addEventListener('DOMContentLoaded',function(){calcUniversal();updateSidebarAuth(null);setTimeout(function(){if(typeof _currentUser!=='undefined'&&_currentUser){updateSidebarAuth(_currentUser);checkAdminAccess();}},1500);});
