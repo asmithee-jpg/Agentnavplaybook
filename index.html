@@ -902,6 +902,104 @@ body.dark-mode .guide-right-panel { background:#18181b; border-color:#27272a; }
 .guide-panel-body .obj-item .obj-a { padding:10px 12px !important; font-size:11.5px !important; }
 @media (max-width:900px) { .guide-split-wrap { flex-direction:column; padding:0 14px 24px; } .guide-right-panel { width:100%; position:static; max-height:none; } }
 
+/* ── SCRIPT EDITOR ──────────────────────────────────────────────────── */
+#section-scripteditor { padding:0!important; min-height:unset!important; }
+#section-scripteditor.active { display:flex!important; flex-direction:column; height:100vh; overflow:hidden; }
+.se-wrap { display:grid; grid-template-columns:240px 1fr 300px; flex:1; min-height:0; overflow:hidden; }
+
+/* LEFT */
+.se-left { display:flex; flex-direction:column; border-right:1px solid #e4e4e7; background:#fafafa; overflow:hidden; }
+body.dark-mode .se-left { background:#111113; border-right-color:#27272a; }
+.se-left-top { padding:14px 14px 10px; border-bottom:1px solid #e4e4e7; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+body.dark-mode .se-left-top { border-bottom-color:#27272a; }
+.se-left-heading { font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#71717a; }
+.se-new-btn { background:#6366f1; color:#fff; border:none; border-radius:6px; padding:5px 10px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; }
+.se-new-btn:hover { background:#4f46e5; }
+.se-left-scroll { flex:1; overflow-y:auto; padding:6px 0; }
+.se-lib-group { padding:0 0 4px; }
+.se-lib-label { font-size:9px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#a1a1aa; padding:10px 14px 4px; }
+.se-script-item { display:flex; align-items:center; gap:0; width:100%; padding:0; border:none; background:none; cursor:pointer; font-family:inherit; }
+.se-script-item-inner { flex:1; text-align:left; padding:8px 14px; font-size:13px; color:#52525b; border-radius:0; transition:background 0.1s; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.se-script-item:hover .se-script-item-inner { background:#f0f0f5; color:#09090b; }
+.se-script-item.active .se-script-item-inner { background:#ededff; color:#6366f1; font-weight:600; border-left:3px solid #6366f1; padding-left:11px; }
+body.dark-mode .se-script-item-inner { color:#a1a1aa; }
+body.dark-mode .se-script-item:hover .se-script-item-inner { background:#1c1c22; color:#fff; }
+body.dark-mode .se-script-item.active .se-script-item-inner { background:rgba(99,102,241,0.15); color:#818cf8; }
+.se-script-dot { width:7px; height:7px; border-radius:50%; background:#e4e4e7; flex-shrink:0; margin-right:10px; }
+.se-script-item.active .se-script-dot, .se-script-item.has-content .se-script-dot { background:#6366f1; }
+.se-item-del { opacity:0; padding:8px 10px; background:none; border:none; cursor:pointer; color:#a1a1aa; font-size:11px; flex-shrink:0; }
+.se-script-item:hover .se-item-del { opacity:1; }
+.se-item-del:hover { color:#ef4444; }
+.se-template-divider { margin:8px 14px; border:none; border-top:1px dashed #e4e4e7; }
+body.dark-mode .se-template-divider { border-top-color:#27272a; }
+
+/* CENTER */
+.se-center { display:flex; flex-direction:column; overflow:hidden; background:#fff; }
+body.dark-mode .se-center { background:#09090b; }
+.se-center-top { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid #e4e4e7; flex-shrink:0; gap:12px; }
+body.dark-mode .se-center-top { border-bottom-color:#27272a; }
+.se-center-name { font-size:16px; font-weight:700; color:#09090b; border:none; background:none; font-family:inherit; outline:none; flex:1; min-width:0; padding:2px 4px; border-radius:4px; }
+.se-center-name:focus { background:#f4f4f8; }
+body.dark-mode .se-center-name { color:#fff; }
+body.dark-mode .se-center-name:focus { background:#18181b; }
+.se-center-actions { display:flex; gap:6px; flex-shrink:0; }
+.se-act-btn { padding:6px 12px; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; border:1.5px solid #e4e4e7; background:#fff; color:#52525b; transition:all 0.1s; }
+.se-act-btn:hover { border-color:#6366f1; color:#6366f1; }
+.se-act-btn.primary { background:#6366f1; color:#fff; border-color:#6366f1; }
+.se-act-btn.primary:hover { background:#4f46e5; }
+.se-act-btn.danger { border-color:#fca5a5; color:#ef4444; }
+.se-act-btn.danger:hover { background:#fef2f2; }
+body.dark-mode .se-act-btn { background:#18181b; border-color:#27272a; color:#a1a1aa; }
+body.dark-mode .se-act-btn.primary { background:#6366f1; color:#fff; }
+.se-editor-body { flex:1; overflow-y:auto; padding:20px; }
+.se-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; text-align:center; color:#a1a1aa; gap:10px; padding:40px; }
+.se-empty-icon { font-size:40px; }
+.se-empty h3 { font-size:16px; font-weight:700; color:#71717a; margin:0; }
+.se-empty p { font-size:13px; margin:0; max-width:280px; line-height:1.6; }
+/* Steps */
+.se-steps { display:flex; flex-direction:column; gap:10px; }
+.se-step { background:#f8f8fa; border:1.5px solid #e4e4e7; border-radius:10px; overflow:hidden; transition:box-shadow 0.15s; }
+.se-step:hover { box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+body.dark-mode .se-step { background:#111113; border-color:#27272a; }
+.se-step-head { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid #e4e4e7; background:#fff; }
+body.dark-mode .se-step-head { background:#18181b; border-bottom-color:#27272a; }
+.se-step-num { width:24px; height:24px; border-radius:50%; background:#6366f1; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.se-step-title-input { flex:1; border:none; background:none; font-size:13px; font-weight:600; color:#09090b; font-family:inherit; outline:none; }
+body.dark-mode .se-step-title-input { color:#fff; }
+.se-step-drag { cursor:grab; color:#d4d4d8; font-size:14px; padding:2px; }
+.se-step-drag:active { cursor:grabbing; }
+.se-step-del { background:none; border:none; color:#d4d4d8; font-size:13px; cursor:pointer; padding:2px 4px; border-radius:4px; }
+.se-step-del:hover { color:#ef4444; background:#fef2f2; }
+.se-step-body-ta { width:100%; min-height:90px; border:none; background:none; padding:12px 14px; font-size:13px; color:#52525b; font-family:inherit; resize:vertical; outline:none; box-sizing:border-box; line-height:1.65; }
+body.dark-mode .se-step-body-ta { color:#a1a1aa; }
+.se-step-body-ta::placeholder { color:#c4c4cc; }
+.se-add-step-btn { width:100%; padding:10px; border:1.5px dashed #d4d4d8; background:none; border-radius:8px; color:#a1a1aa; font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; transition:all 0.15s; margin-top:4px; }
+.se-add-step-btn:hover { border-color:#6366f1; color:#6366f1; background:#f8f8ff; }
+.se-save-bar { padding:12px 20px; border-top:1px solid #e4e4e7; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; background:#fff; }
+body.dark-mode .se-save-bar { background:#09090b; border-top-color:#27272a; }
+.se-save-status { font-size:11px; color:#10b981; font-weight:600; }
+
+/* RIGHT */
+.se-right { display:flex; flex-direction:column; border-left:1px solid #e4e4e7; background:#0f0f17; overflow:hidden; }
+.se-right-head { padding:16px 16px 12px; border-bottom:1px solid rgba(255,255,255,0.07); flex-shrink:0; }
+.se-right-title { font-size:12px; font-weight:700; color:#fff; margin-bottom:2px; }
+.se-right-context { font-size:10px; color:rgba(255,255,255,0.35); }
+.se-right-body { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; }
+.se-ai-hint { background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.25); border-radius:8px; padding:10px 12px; }
+.se-ai-hint-label { font-size:9px; font-weight:700; color:#818cf8; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:4px; }
+.se-ai-hint-text { font-size:12px; color:rgba(255,255,255,0.65); line-height:1.6; }
+.se-ai-input-wrap { margin-top:auto; border-top:1px solid rgba(255,255,255,0.07); padding-top:12px; }
+.se-ai-input { width:100%; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:10px 12px; font-size:12px; color:#fff; font-family:inherit; outline:none; resize:none; box-sizing:border-box; }
+.se-ai-input::placeholder { color:rgba(255,255,255,0.3); }
+.se-ai-send { margin-top:6px; width:100%; background:#6366f1; color:#fff; border:none; border-radius:7px; padding:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
+.se-ai-send:hover { background:#4f46e5; }
+
+@media(max-width:900px){
+  .se-wrap{grid-template-columns:1fr;}
+  .se-right{display:none;}
+  .se-left{max-height:220px;}
+}
+
 /* ── TALK TRACKS ──────────────────────────────────────────────────────── */
 .talk-card {
   background: var(--card-bg);
@@ -2460,36 +2558,15 @@ body.dark-mode .home-card-desc{color:#52525b;}
   <div class="nav-group">
     <div class="nav-group-label">Overview</div>
     <button class="nav-item active" data-section="home" onclick="showSection('home',this)"><span class="nav-icon">🏠</span>Home</button>
-  </div>
-
-  <div class="nav-group">
-    <div class="nav-group-label">Who You're Selling To</div>
     <button class="nav-item" data-section="personas" onclick="showSection('personas',this)"><span class="nav-icon">👤</span>Buyer Personas</button>
-  </div>
-
-  <div class="nav-group">
-    <div class="nav-group-label">Before The Call</div>
-    <button class="nav-item" data-section="pitches" onclick="showSection('pitches',this)"><span class="nav-icon">⚡</span>Elevator Pitches</button>
-    <button class="nav-item" data-section="competition" onclick="showSection('competition',this)"><span class="nav-icon">🎯</span>Know Your Competition</button>
     <button class="nav-item" data-section="pricing" onclick="showSection('pricing',this)"><span class="nav-icon">💰</span>Pricing</button>
+    <button class="nav-item" data-section="competition" onclick="showSection('competition',this)"><span class="nav-icon">🎯</span>Know Your Competition</button>
   </div>
 
   <div class="nav-group">
-    <div class="nav-group-label">On The Call</div>
-    <button class="nav-item" data-section="coldcall" onclick="showSection('coldcall',this)"><span class="nav-icon">📞</span>Cold Call</button>
-    <button class="nav-item" data-section="discovery" onclick="showSection('discovery',this)"><span class="nav-icon">🔍</span>Discovery Call</button>
-    <button class="nav-item" data-section="demo" onclick="showSection('demo',this)"><span class="nav-icon">🖥️</span>Demo Meeting</button>
-    <button class="nav-item" data-section="closing" onclick="showSection('closing',this)"><span class="nav-icon">🏆</span>Closing Meeting</button>
-    <button class="nav-item" data-section="onboarding" onclick="showSection('onboarding',this)"><span class="nav-icon">🚀</span>Onboarding Meeting</button>
-  </div>
-
-  <div class="nav-group">
-    <div class="nav-group-label">Reference</div>
-    <button class="nav-item" data-section="objections" onclick="showSection('objections',this)"><span class="nav-icon">🛡️</span>Objection Handling</button>
-    <button class="nav-item" data-section="battlecards" onclick="showSection('battlecards',this)"><span class="nav-icon">✕</span>Battle Cards</button>
-    <button class="nav-item" data-section="talktracks" onclick="showSection('talktracks',this)"><span class="nav-icon">💬</span>Talk Tracks</button>
+    <div class="nav-group-label">Tools</div>
+    <button class="nav-item" data-section="scripteditor" onclick="showSection('scripteditor',this)"><span class="nav-icon">✏️</span>Script Editor</button>
     <button class="nav-item" data-section="demorecap" onclick="showSection('demorecap',this)"><span class="nav-icon">📝</span>Demo Recap</button>
-    <button class="nav-item" data-section="myscripts" onclick="showSection('myscripts',this)"><span class="nav-icon">&#9997;&#65039;</span>My Scripts</button>
   </div>
 
   <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">
@@ -2521,19 +2598,19 @@ body.dark-mode .home-card-desc{color:#52525b;}
       <button onclick="toggleCallMode()" class="home-action-btn home-action-red"><span class="home-action-dot"></span>I'm On A Call</button>
       <button onclick="openCoach()" class="home-action-btn home-action-indigo">&#129504; Ask AI Coach</button>
       <button onclick="showSection('demorecap',null)" class="home-action-btn home-action-ghost">&#128203; Recap a Demo</button>
-      <button onclick="showSection('pricing',null)" class="home-action-btn home-action-ghost">&#128196; Build a Quote</button>
-      <button onclick="showSection('objections',null)" class="home-action-btn home-action-ghost">&#128737;&#65039; Handle Objection</button>
-      <button onclick="showSection('competition',null)" class="home-action-btn home-action-ghost">&#127919; Competition</button>
+      <button onclick="showSection('scripteditor',null);setTimeout(function(){switchSETab('pricing')},60)" class="home-action-btn home-action-ghost">&#128196; Build a Quote</button>
+      <button onclick="showSection('scripteditor',null);setTimeout(function(){switchSETab('objections')},60)" class="home-action-btn home-action-ghost">&#128737;&#65039; Handle Objection</button>
+      <button onclick="showSection('scripteditor',null);setTimeout(function(){switchSETab('competition')},60)" class="home-action-btn home-action-ghost">&#127919; Competition</button>
     </div>
     <div class="home-section-label">All Tools</div>
   </div>
   <div class="home-grid">
-    <div onclick="showSection('coldcall',null)" class="home-card home-card-blue"><div class="home-card-icon">&#128222;</div><div class="home-card-tag home-tag-blue">On The Call</div><div class="home-card-title">Cold Call Guide</div><div class="home-card-desc">5-step word-for-word script. Earn 30 more seconds every time.</div><div class="home-card-arrow home-arrow-blue">OPEN &#8594;</div></div>
-    <div onclick="showSection('discovery',null)" class="home-card home-card-blue"><div class="home-card-icon">&#128269;</div><div class="home-card-tag home-tag-blue">On The Call</div><div class="home-card-title">Discovery Call</div><div class="home-card-desc">Questions that write the demo for you. What to ask and how to listen.</div><div class="home-card-arrow home-arrow-blue">OPEN &#8594;</div></div>
-    <div onclick="showSection('demo',null)" class="home-card home-card-blue"><div class="home-card-icon">&#128421;</div><div class="home-card-tag home-tag-blue">On The Call</div><div class="home-card-title">Demo Meeting</div><div class="home-card-desc">What to show, what to skip, and how to close into the next step.</div><div class="home-card-arrow home-arrow-blue">OPEN &#8594;</div></div>
-    <div onclick="showSection('objections',null)" class="home-card home-card-green"><div class="home-card-icon">&#128737;&#65039;</div><div class="home-card-tag home-tag-green">Reference</div><div class="home-card-title">Objection Handling</div><div class="home-card-desc">8 real objections with human responses. Copy and paste on a call.</div><div class="home-card-arrow home-arrow-green">OPEN &#8594;</div></div>
-    <div onclick="showSection('battlecards',null)" class="home-card home-card-green"><div class="home-card-icon">&#9876;&#65039;</div><div class="home-card-tag home-tag-green">Reference</div><div class="home-card-title">Battle Cards</div><div class="home-card-desc">EZLynx, HawkSoft, AgencyBloc + 4 more. Know exactly where we win.</div><div class="home-card-arrow home-arrow-green">OPEN &#8594;</div></div>
-    <div onclick="showSection('pitches',null)" class="home-card home-card-green"><div class="home-card-icon">&#9889;</div><div class="home-card-tag home-tag-green">Before The Call</div><div class="home-card-title">Elevator Pitches</div><div class="home-card-desc">5 situation-specific pitches. Under 20 seconds, any scenario.</div><div class="home-card-arrow home-arrow-green">OPEN &#8594;</div></div>
+    <div onclick="showSection('scripteditor',null);setTimeout(function(){switchSETab('coldcall')},60)" class="home-card home-card-blue"><div class="home-card-icon">&#128222;</div><div class="home-card-tag home-tag-blue">On The Call</div><div class="home-card-title">Cold Call Guide</div><div class="home-card-desc">5-step word-for-word script. Earn 30 more seconds every time.</div><div class="home-card-arrow home-arrow-blue">OPEN &#8594;</div></div>
+    <div onclick="showSection('scripteditor',null);setTimeout(function(){switchSETab('discovery')},60)" class="home-card home-card-blue"><div class="home-card-icon">&#128269;</div><div class="home-card-tag home-tag-blue">On The Call</div><div class="home-card-title">Discovery Call</div><div class="home-card-desc">Questions that write the demo for you. What to ask and how to listen.</div><div class="home-card-arrow home-arrow-blue">OPEN &#8594;</div></div>
+    <div onclick="showSection('scripteditor',null);setTimeout(function(){switchSETab('demo')},60)" class="home-card home-card-blue"><div class="home-card-icon">&#128421;</div><div class="home-card-tag home-tag-blue">On The Call</div><div class="home-card-title">Demo Meeting</div><div class="home-card-desc">What to show, what to skip, and how to close into the next step.</div><div class="home-card-arrow home-arrow-blue">OPEN &#8594;</div></div>
+    <div onclick="showSection('scripteditor',null);setTimeout(function(){switchSETab('objections')},60)" class="home-card home-card-green"><div class="home-card-icon">&#128737;&#65039;</div><div class="home-card-tag home-tag-green">Reference</div><div class="home-card-title">Objection Handling</div><div class="home-card-desc">8 real objections with human responses. Copy and paste on a call.</div><div class="home-card-arrow home-arrow-green">OPEN &#8594;</div></div>
+    <div onclick="showSection('scripteditor',null);setTimeout(function(){switchSETab('battlecards')},60)" class="home-card home-card-green"><div class="home-card-icon">&#9876;&#65039;</div><div class="home-card-tag home-tag-green">Reference</div><div class="home-card-title">Battle Cards</div><div class="home-card-desc">EZLynx, HawkSoft, AgencyBloc + 4 more. Know exactly where we win.</div><div class="home-card-arrow home-arrow-green">OPEN &#8594;</div></div>
+    <div onclick="showSection('scripteditor',null);setTimeout(function(){switchSETab('pitches')},60)" class="home-card home-card-green"><div class="home-card-icon">&#9889;</div><div class="home-card-tag home-tag-green">Before The Call</div><div class="home-card-title">Elevator Pitches</div><div class="home-card-desc">5 situation-specific pitches. Under 20 seconds, any scenario.</div><div class="home-card-arrow home-arrow-green">OPEN &#8594;</div></div>
     <div onclick="openCoach()" class="home-card home-card-coach">
       <div style="display:flex;align-items:flex-start;gap:14px;"><div style="flex:1;"><div class="home-card-icon">&#129504;</div><div class="home-card-tag home-tag-purple">AI-Powered</div><div class="home-card-title home-card-title-light">AI Sales Coach</div><div class="home-card-desc home-card-desc-light">Tell the coach who you are talking to. Get the exact script and closing angle in seconds.</div></div>
       <div class="coach-preview-box"><div class="coach-preview-label">Example Output</div><div class="coach-preview-rows"><div class="coach-preview-row"><span class="coach-tag coach-tag-green">SAY</span><span class="coach-preview-text">"Running OEP on a spreadsheet?"</span></div><div class="coach-preview-row"><span class="coach-tag coach-tag-blue">PUSH</span><span class="coach-preview-text">Renewal Autopilot. No one has it.</span></div><div class="coach-preview-row"><span class="coach-tag coach-tag-amber">CLOSE</span><span class="coach-preview-text">"See it live? 4 minutes."</span></div></div></div></div>
@@ -3208,7 +3285,7 @@ body.dark-mode .home-card-desc{color:#52525b;}
       <button onclick="saveMyScript('coldcall')" class="myscript-save-btn" style="background:#6366f1;">&#9729; Save</button>
       <span id="mss-status-coldcall" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span>
       <span style="flex:1;"></span>
-      <span style="font-size:10.5px;color:#a1a1aa;">Visible in My Scripts &#8594;</span>
+      <button onclick="goToMyScript('coldcall')" style="font-size:11px;color:#6366f1;background:none;border:none;cursor:pointer;font-weight:600;padding:0;font-family:inherit;">View in Script Library →</button>
     </div>
   </div>
 
@@ -3464,7 +3541,7 @@ body.dark-mode .home-card-desc{color:#52525b;}
       <button onclick="saveMyScript('discovery')" class="myscript-save-btn" style="background:#6366f1;">&#9729; Save</button>
       <span id="mss-status-discovery" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span>
       <span style="flex:1;"></span>
-      <span style="font-size:10.5px;color:#a1a1aa;">Visible in My Scripts &#8594;</span>
+      <button onclick="goToMyScript('discovery')" style="font-size:11px;color:#6366f1;background:none;border:none;cursor:pointer;font-weight:600;padding:0;font-family:inherit;">View in Script Library →</button>
     </div>
   </div>
 
@@ -3729,7 +3806,7 @@ body.dark-mode .home-card-desc{color:#52525b;}
       <button onclick="saveMyScript('demo')" class="myscript-save-btn" style="background:#6366f1;">&#9729; Save</button>
       <span id="mss-status-demo" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span>
       <span style="flex:1;"></span>
-      <span style="font-size:10.5px;color:#a1a1aa;">Visible in My Scripts &#8594;</span>
+      <button onclick="goToMyScript('demo')" style="font-size:11px;color:#6366f1;background:none;border:none;cursor:pointer;font-weight:600;padding:0;font-family:inherit;">View in Script Library →</button>
     </div>
   </div>
 
@@ -3984,7 +4061,7 @@ body.dark-mode .home-card-desc{color:#52525b;}
       <button onclick="saveMyScript('closing')" class="myscript-save-btn" style="background:#6366f1;">&#9729; Save</button>
       <span id="mss-status-closing" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span>
       <span style="flex:1;"></span>
-      <span style="font-size:10.5px;color:#a1a1aa;">Visible in My Scripts &#8594;</span>
+      <button onclick="goToMyScript('closing')" style="font-size:11px;color:#6366f1;background:none;border:none;cursor:pointer;font-weight:600;padding:0;font-family:inherit;">View in Script Library →</button>
     </div>
   </div>
 
@@ -4236,7 +4313,7 @@ body.dark-mode .home-card-desc{color:#52525b;}
       <button onclick="saveMyScript('onboarding')" class="myscript-save-btn" style="background:#10b981;">&#9729; Save</button>
       <span id="mss-status-onboarding" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span>
       <span style="flex:1;"></span>
-      <span style="font-size:10.5px;color:#a1a1aa;">Visible in My Scripts &#8594;</span>
+      <button onclick="goToMyScript('onboarding')" style="font-size:11px;color:#6366f1;background:none;border:none;cursor:pointer;font-weight:600;padding:0;font-family:inherit;">View in Script Library →</button>
     </div>
   </div>
 
@@ -4419,7 +4496,7 @@ body.dark-mode .home-card-desc{color:#52525b;}
       <button onclick="saveMyScript('objections')" class="myscript-save-btn" style="background:#10b981;">&#9729; Save</button>
       <span id="mss-status-objections" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span>
       <span style="flex:1;"></span>
-      <span style="font-size:10.5px;color:#a1a1aa;">Visible in My Scripts &#8594;</span>
+      <button onclick="goToMyScript('objections')" style="font-size:11px;color:#6366f1;background:none;border:none;cursor:pointer;font-weight:600;padding:0;font-family:inherit;">View in Script Library →</button>
     </div>
   </div>
   </div><!-- /obj-panel-script -->
@@ -7416,11 +7493,94 @@ function generateQuotePDF2() {
 
 </script>
 <!-- MY SCRIPTS COLLECTION -->
+<!-- ── SCRIPT EDITOR ──────────────────────────────────────────────── -->
+<div class="section" id="section-scripteditor">
+  <div class="se-wrap">
+
+    <!-- ═══ LEFT: SCRIPT LIBRARY ═══ -->
+    <div class="se-left">
+      <div class="se-left-top">
+        <span class="se-left-heading">Script Library</span>
+        <button class="se-new-btn" onclick="seNewScript()">+ New Script</button>
+      </div>
+      <div class="se-left-scroll" id="se-lib-list">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <!-- ═══ CENTER: EDITOR ═══ -->
+    <div class="se-center">
+      <div id="se-editor-panel" style="display:none;flex:1;display:flex;flex-direction:column;overflow:hidden;">
+        <div class="se-center-top">
+          <input class="se-center-name" id="se-script-name" type="text" placeholder="Script name..." oninput="seMarkDirty()">
+          <div class="se-center-actions">
+            <select id="se-script-type" onchange="seMarkDirty()" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:6px 10px;font-size:12px;font-weight:600;color:#52525b;font-family:inherit;cursor:pointer;outline:none;background:#fff;">
+              <option value="coldcall">📞 Cold Call</option>
+              <option value="discovery">🔍 Discovery Call</option>
+              <option value="demo">🖥️ Demo Meeting</option>
+              <option value="closing">🏆 Closing Meeting</option>
+              <option value="onboarding">🚀 Onboarding Meeting</option>
+              <option value="objections">🛡️ Objection Handling</option>
+              <option value="battlecards">✕ Battle Cards</option>
+              <option value="talktracks">💬 Talk Track</option>
+              <option value="custom">✏️ Custom</option>
+            </select>
+            <button class="se-act-btn" onclick="seCopyAll()">📋 Copy All</button>
+            <button class="se-act-btn primary" onclick="seSave()">☁ Save</button>
+            <button class="se-act-btn danger" onclick="seDeleteScript()">Delete</button>
+          </div>
+        </div>
+        <div class="se-editor-body">
+          <div class="se-steps" id="se-steps-list"></div>
+          <button class="se-add-step-btn" onclick="seAddStep()">+ Add Step</button>
+        </div>
+        <div class="se-save-bar">
+          <span class="se-save-status" id="se-save-status"></span>
+          <span style="font-size:11px;color:#a1a1aa;" id="se-step-count"></span>
+        </div>
+      </div>
+      <div id="se-empty-panel" style="flex:1;display:flex;">
+        <div class="se-empty">
+          <div class="se-empty-icon">✏️</div>
+          <h3>No script selected</h3>
+          <p>Choose a script from the library or create a new one to start editing.</p>
+          <button class="se-new-btn" style="margin-top:8px;padding:10px 20px;font-size:13px;" onclick="seNewScript()">+ Create Your First Script</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ RIGHT: AI PANEL ═══ -->
+    <div class="se-right">
+      <div class="se-right-head">
+        <div class="se-right-title">🧠 Ask AI</div>
+        <div class="se-right-context" id="se-ai-context">Select a script to get coaching</div>
+      </div>
+      <div class="se-right-body" id="se-ai-body">
+        <div class="se-ai-hint">
+          <div class="se-ai-hint-label">How to use</div>
+          <div class="se-ai-hint-text">Select any script from the left, then ask the AI to improve it, write a step, handle objections, or customize it for a specific prospect.</div>
+        </div>
+        <div class="se-ai-hint" id="se-ai-suggestions" style="display:none;">
+          <div class="se-ai-hint-label">Suggested prompts</div>
+          <div id="se-ai-suggestion-list" style="display:flex;flex-direction:column;gap:6px;margin-top:4px;"></div>
+        </div>
+        <div id="se-ai-messages" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+      <div class="se-ai-input-wrap" style="padding:12px;">
+        <textarea class="se-ai-input" id="se-ai-input" rows="3" placeholder="Ask AI to help write or improve this script..."></textarea>
+        <button class="se-ai-send" onclick="seAskAI()">Ask AI →</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
 <div class="section" id="section-myscripts">
   <div class="page-header">
-    <div class="page-label">Personal</div>
-    <h1>My Scripts</h1>
-    <p>All your custom scripts, organized by call type. Edit any section inline or go directly to that section to update.</p>
+    <div class="page-label">Script Library</div>
+    <h1>Script Library</h1>
+    <p>All your saved scripts organized by type. Click <strong>View in Script Library →</strong> from any section to jump here. Edit directly or click Edit to go to that section.</p>
   </div>
   <div class="content" style="max-width:860px;">
     <div class="nba-bar">
@@ -7638,7 +7798,7 @@ function saveMyScript(sectionId) {
 }
 
 function saveAllMyScripts() {
-  ['coldcall','discovery','demo','closing','onboarding','objections','battlecards','talktracks'].forEach(saveMyScript);
+  ['pitches','coldcall','discovery','demo','closing','onboarding','objections','battlecards','talktracks'].forEach(saveMyScript);
   showToast('All scripts saved!');
 }
 
@@ -7649,14 +7809,38 @@ function loadMyScript(sectionId) {
   try { all = JSON.parse(localStorage.getItem('my-scripts') || '{}'); } catch(e) {}
   var steps = all[sectionId];
   if (!steps || !steps.length) return;
-  var stepDivs = stepsEl.querySelectorAll('.myscript-step');
+  // Fully rebuild steps from saved data so count always matches
+  stepsEl.innerHTML = '';
   steps.forEach(function(step, i) {
-    if (i < stepDivs.length) {
-      var t = stepDivs[i].querySelector('.myscript-step-title');
-      var b = stepDivs[i].querySelector('.myscript-step-body');
-      if (t && step.title) t.value = step.title;
-      if (b && step.body)  b.value = step.body;
-    }
+    var div = document.createElement('div');
+    div.className = 'myscript-step';
+    var titleInput = document.createElement('input');
+    titleInput.className = 'myscript-step-title';
+    titleInput.type = 'text';
+    titleInput.value = step.title || '';
+    titleInput.placeholder = 'Step name...';
+    titleInput.onchange = function() { schedSave(sectionId); };
+    var bodyTA = document.createElement('textarea');
+    bodyTA.className = 'myscript-step-body';
+    bodyTA.placeholder = 'Write this step...';
+    bodyTA.value = step.body || '';
+    bodyTA.onchange = function() { schedSave(sectionId); };
+    bodyTA.oninput = function() { schedSave(sectionId); };
+    var removeBtn = document.createElement('button');
+    removeBtn.innerHTML = '&#10005;';
+    removeBtn.style.cssText = 'background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;';
+    removeBtn.onclick = function() { removeStep(removeBtn); };
+    var header = document.createElement('div');
+    header.className = 'myscript-step-header';
+    var numEl = document.createElement('div');
+    numEl.className = 'myscript-step-num';
+    numEl.textContent = i + 1;
+    header.appendChild(numEl);
+    header.appendChild(titleInput);
+    header.appendChild(removeBtn);
+    div.appendChild(header);
+    div.appendChild(bodyTA);
+    stepsEl.appendChild(div);
   });
 }
 
@@ -7730,6 +7914,25 @@ var MS_SECTIONS = [
   {id:'talktracks', label:'Talk Tracks', color:'#10b981', group:'reference', icon:'💬'}
 ];
 
+function goToMyScript(sectionId) {
+  showSection('scripteditor', null);
+  setTimeout(function() {
+    switchSETab('myscripts');
+    setTimeout(function() {
+      renderMyScriptsCollection();
+      setTimeout(function() {
+        var el = document.getElementById('msc-' + sectionId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          el.style.transition = 'box-shadow 0.3s';
+          el.style.boxShadow = '0 0 0 3px #6366f1, 0 4px 20px rgba(99,102,241,0.3)';
+          setTimeout(function() { el.style.boxShadow = ''; }, 2500);
+        }
+      }, 100);
+    }, 50);
+  }, 50);
+}
+
 function renderMyScriptsCollection() {
   var oncall = document.getElementById('myscripts-oncall');
   var reference = document.getElementById('myscripts-reference');
@@ -7743,25 +7946,21 @@ function renderMyScriptsCollection() {
     var hasContent = steps.some(function(st) { return st.body && st.body.trim(); });
     var card = document.createElement('div');
     card.className = 'msc-card';
+    card.id = 'msc-' + s.id;
     card.style.cssText = 'border-left:3px solid ' + s.color + ';';
     var preview = '';
     if (hasContent) {
-      var count = 0;
       steps.forEach(function(st, i) {
-        if (st.body && st.body.trim() && count < 3) {
-          count++;
+        if (st.body && st.body.trim()) {
           preview += '<div style="margin-bottom:10px;padding:10px 12px;background:#f8f8fa;border-radius:8px;">' +
-            '<div style="font-size:10px;font-weight:700;color:' + s.color + ';margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em;">' + s.icon + ' Step ' + (i+1) + (st.title ? ': ' + st.title : '') + '</div>' +
-            '<div style="font-size:13px;color:#09090b;line-height:1.6;">' + st.body.replace(/</g,'&lt;') + '</div></div>';
+            '<div style="font-size:10px;font-weight:700;color:' + s.color + ';margin-bottom:5px;text-transform:uppercase;letter-spacing:0.08em;">' + s.icon + ' Step ' + (i+1) + (st.title ? ': ' + st.title : '') + '</div>' +
+            '<div style="font-size:13px;color:#09090b;line-height:1.6;white-space:pre-wrap;">' + st.body.replace(/</g,'&lt;') + '</div></div>';
         }
       });
-      if (steps.length > 3) {
-        preview += '<div style="font-size:11px;color:#a1a1aa;padding:4px 0;">+ ' + (steps.length - 3) + ' more steps</div>';
-      }
     } else {
       preview = '<div style="padding:16px;text-align:center;background:#f8f8fa;border-radius:8px;border:1.5px dashed #e4e4e7;">' +
-        '<div style="font-size:13px;color:#a1a1aa;font-style:italic;">No script written yet.</div>' +
-        '<div style="font-size:12px;color:#6366f1;margin-top:6px;font-weight:600;">Click Edit to get started →</div></div>';
+        '<div style="font-size:13px;color:#a1a1aa;font-style:italic;">No script saved yet for this section.</div>' +
+        '<div style="font-size:12px;color:#6366f1;margin-top:6px;font-weight:600;">Click Edit to write your script →</div></div>';
     }
     card.innerHTML =
       '<div class="msc-header" style="border-bottom:1px solid #f0f0f0;">' +
@@ -7858,23 +8057,70 @@ function openSplitGuide(sectionKey, btn) {
     wrap.appendChild(leftDiv);
     wrap.appendChild(rightPanel);
   } else {
-    // No myscript panel — append guide panel to section
+    // No visible myscript panel — for battlecards/talktracks/pitches
+    // just append the guide panel to the right of the section
     var secEl = document.getElementById('section-' + sectionKey);
     if (!secEl) return;
     var wrap2 = document.createElement('div');
     wrap2.className = 'guide-split-wrap';
     wrap2.id = 'guide-wrap-' + sectionKey;
-    var contentEl = secEl.querySelector('.content') || secEl;
+    // Find the nba-bar to insert after
+    var nbaBar = secEl.querySelector('.nba-bar');
+    var insertAfter = nbaBar ? nbaBar.nextSibling : null;
+    // Wrap existing section content in left div
+    var contentEl = secEl.querySelector('.content') || secEl.querySelector('.myscript-panel') || null;
     var leftDiv2 = document.createElement('div');
     leftDiv2.className = 'guide-split-left';
-    while (contentEl.firstChild) leftDiv2.appendChild(contentEl.firstChild);
-    contentEl.appendChild(wrap2);
+    if (contentEl) {
+      contentEl.parentNode.insertBefore(wrap2, contentEl);
+      leftDiv2.appendChild(contentEl);
+    } else {
+      secEl.appendChild(wrap2);
+    }
     wrap2.appendChild(leftDiv2);
     wrap2.appendChild(rightPanel);
   }
 
   _guideOpen[sectionKey] = true;
   if (btn) { btn.style.background='#6366f1'; btn.style.borderColor='#6366f1'; btn.textContent='✕ Hide Guide'; }
+  // Re-activate battle cards tabs if in guide panel
+  if (sectionKey === 'battlecards') {
+    setTimeout(function() {
+      var guideBody = document.querySelector('#guide-right-battlecards .guide-panel-body');
+      if (!guideBody) return;
+      var firstTab = guideBody.querySelector('.battle-tab');
+      if (firstTab) {
+        // Show first panel
+        guideBody.querySelectorAll('.battle-panel').forEach(function(p){ p.classList.remove('active'); });
+        guideBody.querySelectorAll('.battle-tab').forEach(function(t){ t.classList.remove('active'); });
+        var firstPanel = guideBody.querySelector('.battle-panel');
+        if (firstPanel) firstPanel.classList.add('active');
+        firstTab.classList.add('active');
+        // Rewire tab clicks within guide panel
+        guideBody.querySelectorAll('.battle-tab').forEach(function(tab, idx) {
+          tab.onclick = function() {
+            guideBody.querySelectorAll('.battle-tab').forEach(function(t){ t.classList.remove('active'); });
+            guideBody.querySelectorAll('.battle-panel').forEach(function(p){ p.classList.remove('active'); });
+            tab.classList.add('active');
+            var panels = guideBody.querySelectorAll('.battle-panel');
+            if (panels[idx]) panels[idx].classList.add('active');
+          };
+        });
+      }
+    }, 50);
+  }
+  // Re-activate talk tracks tabs in guide
+  if (sectionKey === 'talktracks') {
+    setTimeout(function() {
+      var guideBody = document.querySelector('#guide-right-talktracks .guide-panel-body');
+      if (!guideBody) return;
+      // Show pre-written tracks, hide My Tracks
+      var pre = guideBody.querySelector('#tt-panel-prewritten');
+      var mine = guideBody.querySelector('#tt-panel-mine');
+      if (pre) pre.style.display = 'block';
+      if (mine) mine.style.display = 'none';
+    }, 50);
+  }
 }
 
 function closeSplitGuide(sectionKey, btn) {
@@ -7940,6 +8186,512 @@ function addUserCompCard(bc) {
     localStorage.setItem('user-comp-cards', JSON.stringify(cards));
     showToast(bc.name + ' added to battle cards!');
   } catch(e) {}
+}
+
+// ── SCRIPT EDITOR ──────────────────────────────────────────────────────
+var _seScripts = [];       // all scripts in memory
+var _seCurrentId = null;   // currently open script id
+var _seDirty = false;      // unsaved changes flag
+var _seAutoSaveTimer = null;
+
+// ── PREBUILT TEMPLATES ───────────────────────────────────────────────
+var SE_TEMPLATES = {
+  coldcall: {
+    name: 'Cold Call Script',
+    type: 'coldcall',
+    steps: [
+      { title: 'Opening (0:00-0:15)', body: 'Hey [Name], this is [Your name] from AgentNav. Quick question - we built a platform for health brokers: ACA/STM/Life quoting, CRM, SMS, and Renewal Autopilot that automates your entire OEP. Worth two minutes?' },
+      { title: 'Earn the minute (0:15-0:45)', body: 'What does your OEP process look like right now? Running it manually or do you have something in place?' },
+      { title: 'Connect pain to feature (0:45-1:30)', body: '[Repeat back what they said.] That is exactly the problem we solve. [Name one specific feature that addresses their pain point.]' },
+      { title: 'Soft pitch (1:30-2:00)', body: 'AgentNav is the only platform built specifically for health brokers - ACA quoting, HealthSherpa integration, Renewal Autopilot, CRM, SMS, all in one place. Starts at $79/month.' },
+      { title: 'Close for meeting (2:00-2:30)', body: 'I would love to show you a 15-minute demo. Do you have time Thursday or Friday this week?' }
+    ]
+  },
+  discovery: {
+    name: 'Discovery Call Script',
+    type: 'discovery',
+    steps: [
+      { title: 'Set the agenda', body: 'Thanks for making time. I want to spend most of this call learning about how you are set up right now, what is working and what is not. Then if I think AgentNav could help, I will be honest about that. Sound good?' },
+      { title: 'Understand current setup', body: 'Walk me through how your agency works right now. How big is your team? What tools are you using for quoting, CRM, SMS, enrollment? How are you managing renewals?' },
+      { title: 'Find the pain', body: 'What does your OEP look like? How many clients are you manually reaching out to in November? How many slip through? What would it mean if you could automate that?' },
+      { title: 'Qualify', body: 'What percentage of your book is ACA vs other lines? Do you use HealthSherpa or EDE? Are you looking to grow the team this year?' },
+      { title: 'Set up the demo', body: 'Based on what you have told me, here is what I want to show you in the demo: [Name 2-3 specific features]. Does that sound like the right focus?' }
+    ]
+  },
+  demo: {
+    name: 'Demo Meeting Script',
+    type: 'demo',
+    steps: [
+      { title: 'Confirm discovery', body: 'Before I share my screen - last time you mentioned [pain point]. Is that still the main thing you want to see solved today?' },
+      { title: 'Show the client record', body: 'This is where a client lives - everything in one place. Medical history, Rx, FPL tracking, policy history, SMS thread, calendar. No more switching between 4 apps.' },
+      { title: 'Show Renewal Autopilot', body: 'This is the thing I want you to remember. Every renewal client has a status. For each one with Autopilot on, the system sends the campaign, collects their preferences form, and generates a new quote. You just review and approve.' },
+      { title: 'Show quoting', body: 'ACA, STM, Life, Ancillary, Indemnity - all quoted side by side. Pull from HealthSherpa or EDE directly. One-click to send the proposal.' },
+      { title: 'Handle objections and close', body: 'What questions do you have? [Pause.] Based on what you saw today, what would need to be true for this to be a yes?' }
+    ]
+  },
+  objections: {
+    name: 'Objection Handling Script',
+    type: 'objections',
+    steps: [
+      { title: '"Too expensive"', body: 'What are you paying right now for your CRM, quoting tool, SMS app, and enrollment platform combined? Most agents are at $200-400/month. AgentNav replaces all of it for $79. And if you close one more deal a month because nothing slipped through OEP, it pays for itself.' },
+      { title: '"Need to think about it"', body: 'Totally fair. What specifically is the part you want to think through? Is it the price, the timing, or something you want to verify?' },
+      { title: '"Happy with what we have"', body: 'What does your OEP process look like right now? [Let them answer.] How many clients did you lose last November because they fell through? That is what Renewal Autopilot eliminates.' },
+      { title: '"Need to talk to my partner"', body: 'Of course. Can we get them on a quick call together this week? I would rather answer both your questions at once than play telephone.' },
+      { title: '"Not the right time"', body: 'When is? [Get a specific date.] The agents who switch before OEP go in with Autopilot already configured. The ones who wait go through another brutal November manually.' }
+    ]
+  }
+};
+
+// ── LIBRARY STRUCTURE ─────────────────────────────────────────────────
+var SE_SECTIONS = [
+  { key: 'before',     label: 'Before The Call',    types: ['coldcall','discovery'] },
+  { key: 'onthecall',  label: 'On The Call',         types: ['demo','closing','onboarding'] },
+  { key: 'reference',  label: 'Reference',           types: ['objections','battlecards','talktracks'] },
+  { key: 'custom',     label: 'My Scripts',          types: ['custom'] },
+];
+
+var SE_TYPE_LABELS = {
+  coldcall:'📞 Cold Call', discovery:'🔍 Discovery Call', demo:'🖥️ Demo Meeting',
+  closing:'🏆 Closing Meeting', onboarding:'🚀 Onboarding Meeting',
+  objections:'🛡️ Objection Handling', battlecards:'✕ Battle Cards',
+  talktracks:'💬 Talk Track', custom:'✏️ Custom'
+};
+
+var SE_AI_SUGGESTIONS = {
+  coldcall:    ['Rewrite step 1 to be more conversational', 'Make the pitch shorter and punchier', 'Add a line for when they say they are happy with their current setup'],
+  discovery:   ['Write 3 follow-up questions for step 2', 'Add a qualifying question about agency size', 'Make the agenda-setting line more natural'],
+  demo:        ['Rewrite the Renewal Autopilot step for a solo agent', 'Add a line to use when they compare us to EZLynx', 'Write a closing line that creates urgency without pressure'],
+  objections:  ['Write a response for when they mention HawkSoft', 'Make the price objection response shorter', 'Add a response for when they say they are not ready until after OEP'],
+  custom:      ['Improve the flow of this script', 'Make this more conversational', 'Add an opening line']
+};
+
+// ── LOAD / SAVE ───────────────────────────────────────────────────────
+function seLoad() {
+  try { _seScripts = JSON.parse(localStorage.getItem('se-scripts') || '[]'); } catch(e) { _seScripts = []; }
+}
+
+function sePersist() {
+  localStorage.setItem('se-scripts', JSON.stringify(_seScripts));
+  // Supabase sync if connected
+  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
+  if (sb && typeof _currentUser !== 'undefined' && _currentUser) {
+    sb.from('se_scripts').upsert({ user_id: _currentUser.id, data: JSON.stringify(_seScripts), updated_at: new Date().toISOString() }).then(function(){});
+  }
+}
+
+// ── RENDER LIBRARY ────────────────────────────────────────────────────
+function seRenderLib() {
+  var list = document.getElementById('se-lib-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  SE_SECTIONS.forEach(function(sec) {
+    var scripts = _seScripts.filter(function(s) {
+      if (sec.key === 'custom') return s.type === 'custom';
+      return sec.types.indexOf(s.type) >= 0;
+    });
+    if (scripts.length === 0 && sec.key !== 'custom') return;
+
+    var grp = document.createElement('div');
+    grp.className = 'se-lib-group';
+
+    var lbl = document.createElement('div');
+    lbl.className = 'se-lib-label';
+    lbl.textContent = sec.label;
+    grp.appendChild(lbl);
+
+    // Template shortcuts for empty sections
+    if (scripts.length === 0 && sec.key === 'custom') {
+      var empty = document.createElement('div');
+      empty.style.cssText = 'padding:6px 14px 10px;font-size:11px;color:#a1a1aa;font-style:italic;';
+      empty.textContent = 'No custom scripts yet.';
+      grp.appendChild(empty);
+    }
+
+    scripts.forEach(function(script) {
+      var hasContent = script.steps && script.steps.some(function(st) { return st.body && st.body.trim(); });
+      var item = document.createElement('button');
+      item.className = 'se-script-item' + (_seCurrentId === script.id ? ' active' : '') + (hasContent ? ' has-content' : '');
+      item.onclick = function() { seOpenScript(script.id); };
+
+      var dot = document.createElement('span');
+      dot.className = 'se-script-dot';
+
+      var inner = document.createElement('span');
+      inner.className = 'se-script-item-inner';
+      inner.textContent = script.name || 'Untitled';
+
+      var del = document.createElement('button');
+      del.className = 'se-item-del';
+      del.innerHTML = '✕';
+      del.title = 'Delete';
+      del.onclick = function(e) { e.stopPropagation(); seDeleteById(script.id); };
+
+      item.appendChild(dot);
+      item.appendChild(inner);
+      item.appendChild(del);
+      grp.appendChild(item);
+    });
+
+    // Template loader section
+    if (sec.key !== 'custom') {
+      var availTemplates = Object.keys(SE_TEMPLATES).filter(function(k) {
+        return sec.types.indexOf(k) >= 0;
+      });
+      var existing = scripts.map(function(s){ return s.id; });
+      var templateItems = availTemplates.filter(function(t) {
+        return !_seScripts.some(function(s){ return s._template === t; });
+      });
+      if (templateItems.length > 0) {
+        var hr = document.createElement('hr');
+        hr.className = 'se-template-divider';
+        grp.appendChild(hr);
+        templateItems.forEach(function(tKey) {
+          var tBtn = document.createElement('button');
+          tBtn.className = 'se-script-item';
+          tBtn.onclick = function() { seLoadTemplate(tKey); };
+          var tDot = document.createElement('span');
+          tDot.className = 'se-script-dot';
+          tDot.style.background = '#d4d4d8';
+          var tInner = document.createElement('span');
+          tInner.className = 'se-script-item-inner';
+          tInner.style.color = '#a1a1aa';
+          tInner.textContent = '+ Use ' + (SE_TEMPLATES[tKey].name || tKey);
+          tBtn.appendChild(tDot);
+          tBtn.appendChild(tInner);
+          grp.appendChild(tBtn);
+        });
+      }
+    }
+
+    list.appendChild(grp);
+  });
+}
+
+// ── OPEN / NEW / DELETE SCRIPT ────────────────────────────────────────
+function seOpenScript(id) {
+  if (_seDirty) { if (!confirm('You have unsaved changes. Discard them?')) return; }
+  _seCurrentId = id;
+  _seDirty = false;
+  var script = _seScripts.find(function(s){ return s.id === id; });
+  if (!script) return;
+  seRenderEditor(script);
+  seRenderLib();
+  seUpdateAIPanel(script);
+}
+
+function seNewScript() {
+  var id = 'script_' + Date.now();
+  var script = { id: id, name: 'New Script', type: 'custom', steps: [{ title: 'Step 1', body: '' }] };
+  _seScripts.push(script);
+  sePersist();
+  seRenderLib();
+  seOpenScript(id);
+  setTimeout(function() {
+    var nameEl = document.getElementById('se-script-name');
+    if (nameEl) { nameEl.focus(); nameEl.select(); }
+  }, 50);
+}
+
+function seLoadTemplate(tKey) {
+  var tmpl = SE_TEMPLATES[tKey];
+  if (!tmpl) return;
+  var id = 'script_' + Date.now();
+  var script = {
+    id: id,
+    name: tmpl.name,
+    type: tmpl.type,
+    _template: tKey,
+    steps: tmpl.steps.map(function(s) { return { title: s.title, body: s.body }; })
+  };
+  _seScripts.push(script);
+  sePersist();
+  seRenderLib();
+  seOpenScript(id);
+}
+
+function seDeleteById(id) {
+  if (!confirm('Delete this script?')) return;
+  _seScripts = _seScripts.filter(function(s){ return s.id !== id; });
+  if (_seCurrentId === id) {
+    _seCurrentId = null;
+    _seDirty = false;
+    seShowEmpty();
+  }
+  sePersist();
+  seRenderLib();
+}
+
+function seDeleteScript() {
+  if (_seCurrentId) seDeleteById(_seCurrentId);
+}
+
+// ── RENDER EDITOR ─────────────────────────────────────────────────────
+function seRenderEditor(script) {
+  var editorPanel = document.getElementById('se-editor-panel');
+  var emptyPanel = document.getElementById('se-empty-panel');
+  if (editorPanel) editorPanel.style.display = 'flex';
+  if (emptyPanel) emptyPanel.style.display = 'none';
+
+  var nameEl = document.getElementById('se-script-name');
+  var typeEl = document.getElementById('se-script-type');
+  if (nameEl) nameEl.value = script.name || '';
+  if (typeEl) typeEl.value = script.type || 'custom';
+
+  seRenderSteps(script.steps || []);
+  seUpdateStepCount(script.steps || []);
+  document.getElementById('se-save-status').textContent = '';
+}
+
+function seShowEmpty() {
+  var editorPanel = document.getElementById('se-editor-panel');
+  var emptyPanel = document.getElementById('se-empty-panel');
+  if (editorPanel) editorPanel.style.display = 'none';
+  if (emptyPanel) emptyPanel.style.display = 'flex';
+}
+
+function seRenderSteps(steps) {
+  var list = document.getElementById('se-steps-list');
+  if (!list) return;
+  list.innerHTML = '';
+  steps.forEach(function(step, i) {
+    list.appendChild(seCreateStepEl(step, i));
+  });
+}
+
+function seCreateStepEl(step, idx) {
+  var div = document.createElement('div');
+  div.className = 'se-step';
+  div.draggable = true;
+
+  var head = document.createElement('div');
+  head.className = 'se-step-head';
+
+  var num = document.createElement('div');
+  num.className = 'se-step-num';
+  num.textContent = idx + 1;
+
+  var titleInput = document.createElement('input');
+  titleInput.className = 'se-step-title-input';
+  titleInput.type = 'text';
+  titleInput.value = step.title || '';
+  titleInput.placeholder = 'Step name...';
+  titleInput.oninput = seMarkDirty;
+
+  var drag = document.createElement('span');
+  drag.className = 'se-step-drag';
+  drag.innerHTML = '⠿';
+  drag.title = 'Drag to reorder';
+
+  var del = document.createElement('button');
+  del.className = 'se-step-del';
+  del.innerHTML = '✕';
+  del.title = 'Remove step';
+  del.onclick = function() {
+    div.remove();
+    seRenumberSteps();
+    seMarkDirty();
+  };
+
+  head.appendChild(num);
+  head.appendChild(titleInput);
+  head.appendChild(drag);
+  head.appendChild(del);
+
+  var ta = document.createElement('textarea');
+  ta.className = 'se-step-body-ta';
+  ta.placeholder = 'Write this step...';
+  ta.value = step.body || '';
+  ta.oninput = seMarkDirty;
+
+  div.appendChild(head);
+  div.appendChild(ta);
+
+  // Drag-and-drop reorder
+  div.addEventListener('dragstart', function(e) {
+    e.dataTransfer.effectAllowed = 'move';
+    div.style.opacity = '0.4';
+    window._seDragEl = div;
+  });
+  div.addEventListener('dragend', function() {
+    div.style.opacity = '';
+    window._seDragEl = null;
+    seRenumberSteps();
+    seMarkDirty();
+  });
+  div.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    if (window._seDragEl && window._seDragEl !== div) {
+      var list = div.parentNode;
+      var items = Array.from(list.children);
+      var dragIdx = items.indexOf(window._seDragEl);
+      var hoverIdx = items.indexOf(div);
+      if (dragIdx < hoverIdx) list.insertBefore(window._seDragEl, div.nextSibling);
+      else list.insertBefore(window._seDragEl, div);
+    }
+  });
+
+  return div;
+}
+
+function seRenumberSteps() {
+  var list = document.getElementById('se-steps-list');
+  if (!list) return;
+  list.querySelectorAll('.se-step').forEach(function(step, i) {
+    var num = step.querySelector('.se-step-num');
+    if (num) num.textContent = i + 1;
+  });
+  seUpdateStepCount(seCollectSteps());
+}
+
+function seUpdateStepCount(steps) {
+  var el = document.getElementById('se-step-count');
+  if (el) el.textContent = steps.length + ' step' + (steps.length !== 1 ? 's' : '');
+}
+
+function seAddStep() {
+  var list = document.getElementById('se-steps-list');
+  if (!list) return;
+  var idx = list.children.length;
+  list.appendChild(seCreateStepEl({ title: 'Step ' + (idx+1), body: '' }, idx));
+  seMarkDirty();
+  seUpdateStepCount(seCollectSteps());
+  // Scroll new step into view
+  list.lastChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── COLLECT / SAVE ────────────────────────────────────────────────────
+function seCollectSteps() {
+  var list = document.getElementById('se-steps-list');
+  if (!list) return [];
+  return Array.from(list.querySelectorAll('.se-step')).map(function(div) {
+    return {
+      title: (div.querySelector('.se-step-title-input') || {}).value || '',
+      body:  (div.querySelector('.se-step-body-ta') || {}).value || ''
+    };
+  });
+}
+
+function seMarkDirty() {
+  _seDirty = true;
+  var status = document.getElementById('se-save-status');
+  if (status) status.textContent = '● Unsaved changes';
+  if (status) status.style.color = '#f59e0b';
+  clearTimeout(_seAutoSaveTimer);
+  _seAutoSaveTimer = setTimeout(seSave, 2000);
+}
+
+function seSave() {
+  if (!_seCurrentId) return;
+  var script = _seScripts.find(function(s){ return s.id === _seCurrentId; });
+  if (!script) return;
+  var nameEl = document.getElementById('se-script-name');
+  var typeEl = document.getElementById('se-script-type');
+  script.name = nameEl ? nameEl.value.trim() || 'Untitled' : script.name;
+  script.type = typeEl ? typeEl.value : script.type;
+  script.steps = seCollectSteps();
+  script.updatedAt = new Date().toISOString();
+  sePersist();
+  _seDirty = false;
+  var status = document.getElementById('se-save-status');
+  if (status) { status.textContent = '✓ Saved'; status.style.color = '#10b981'; }
+  seRenderLib();
+  if (typeof showToast === 'function') showToast('Script saved!');
+}
+
+function seCopyAll() {
+  var steps = seCollectSteps();
+  var text = steps.map(function(s, i) {
+    return 'Step ' + (i+1) + (s.title ? ': ' + s.title : '') + '\n' + s.body;
+  }).join('\n\n');
+  navigator.clipboard.writeText(text.trim()).then(function() {
+    if (typeof showToast === 'function') showToast('Copied!');
+  });
+}
+
+// ── AI PANEL ──────────────────────────────────────────────────────────
+function seUpdateAIPanel(script) {
+  var ctx = document.getElementById('se-ai-context');
+  var sugg = document.getElementById('se-ai-suggestions');
+  var suggList = document.getElementById('se-ai-suggestion-list');
+  if (ctx) ctx.textContent = 'Coaching for: ' + (SE_TYPE_LABELS[script.type] || script.name);
+  if (sugg) sugg.style.display = 'block';
+  if (suggList) {
+    suggList.innerHTML = '';
+    var prompts = SE_AI_SUGGESTIONS[script.type] || SE_AI_SUGGESTIONS['custom'];
+    prompts.forEach(function(p) {
+      var btn = document.createElement('button');
+      btn.style.cssText = 'width:100%;text-align:left;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:7px 10px;font-size:11px;color:rgba(255,255,255,0.7);cursor:pointer;font-family:inherit;line-height:1.5;';
+      btn.textContent = p;
+      btn.onmouseover = function(){ this.style.background='rgba(99,102,241,0.2)'; };
+      btn.onmouseout = function(){ this.style.background='rgba(255,255,255,0.06)'; };
+      btn.onclick = function() {
+        var input = document.getElementById('se-ai-input');
+        if (input) { input.value = p; input.focus(); }
+      };
+      suggList.appendChild(btn);
+    });
+  }
+}
+
+async function seAskAI() {
+  var inputEl = document.getElementById('se-ai-input');
+  var messagesEl = document.getElementById('se-ai-messages');
+  if (!inputEl || !messagesEl) return;
+  var question = inputEl.value.trim();
+  if (!question) return;
+
+  var script = _seScripts.find(function(s){ return s.id === _seCurrentId; });
+  var scriptContext = script ? 'Script name: ' + script.name + '\nType: ' + (SE_TYPE_LABELS[script.type]||script.type) + '\nSteps:\n' + seCollectSteps().map(function(s,i){ return (i+1)+'. '+s.title+': '+s.body; }).join('\n') : '';
+
+  // Add user message bubble
+  var userMsg = document.createElement('div');
+  userMsg.style.cssText = 'background:rgba(99,102,241,0.2);border-radius:8px;padding:8px 10px;font-size:12px;color:#fff;line-height:1.5;';
+  userMsg.textContent = question;
+  messagesEl.appendChild(userMsg);
+  inputEl.value = '';
+
+  // Add loading bubble
+  var loadMsg = document.createElement('div');
+  loadMsg.style.cssText = 'background:rgba(255,255,255,0.05);border-radius:8px;padding:8px 10px;font-size:12px;color:rgba(255,255,255,0.5);';
+  loadMsg.textContent = '...';
+  messagesEl.appendChild(loadMsg);
+  loadMsg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  try {
+    var systemPrompt = 'You are an elite sales coach for AgentNav, a health insurance broker platform. You help sales reps write and improve their call scripts. Be direct, specific, and give word-for-word suggestions when asked. Keep responses concise and actionable.';
+    if (scriptContext) systemPrompt += '\n\nCurrent script being edited:\n' + scriptContext;
+
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 600,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: question }]
+      })
+    });
+    var data = await res.json();
+    var text = (data.content && data.content[0] && data.content[0].text) || 'Sorry, could not get a response.';
+    loadMsg.textContent = text;
+    loadMsg.style.color = 'rgba(255,255,255,0.8)';
+  } catch(err) {
+    loadMsg.textContent = 'Error: ' + err.message;
+    loadMsg.style.color = '#fca5a5';
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────
+function initScriptEditor() {
+  seLoad();
+  seRenderLib();
+  // If no scripts, show empty state
+  if (_seScripts.length === 0) {
+    seShowEmpty();
+  } else {
+    seOpenScript(_seScripts[0].id);
+  }
 }
 
 // ── OBJECTION TAB SWITCHER ────────────────────────────────────────────
@@ -8528,6 +9280,7 @@ var _origSS3 = showSection;
 showSection = function(id, btn) {
   _origSS3(id, btn);
   if (id === 'myscripts') setTimeout(renderMyScriptsCollection, 50);
+  if (id === 'scripteditor') setTimeout(initScriptEditor, 50);
   if (id === 'admin') setTimeout(function() { switchAdminTab('scripts'); }, 50);
   if (id === 'pricing') setTimeout(calcUniversal, 50);
   var scriptSections = ['pitches','coldcall','discovery','demo','closing','onboarding','objections','battlecards','talktracks'];
