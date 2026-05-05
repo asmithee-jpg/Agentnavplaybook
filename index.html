@@ -360,5 +360,436 @@ window.showSection = function(id, btn) {
 console.log('[PATCH] All 4 fixes applied.');
 
 </script>
+<script>
+// ============================================================
+// PATCH 2 — Pricing fix + Commission Plan (admin-only)
+// Include after app.js and after patch1 (fixes_patch.js)
+// ============================================================
+
+// ── FIX: Correct pricing logic ───────────────────────────────
+// Solo: 1 agent = $79, 2 agents = $79×2 = $158, 3 = $237
+// Small Agency: 4–9 agents = $247 flat, +$60/additional agent above 4
+//   (small includes 1 assistant; extras +$15/mo)
+// Large Agency: 10+ agents = $597 flat, +$55/additional above 10
+//   (large includes 2 assistants; extras +$10/mo)
+window.calcUniversal = function() {
+  var agents  = Math.max(0, parseInt((document.getElementById('univ-agents')  || {value:'1'}).value) || 0);
+  var assts   = Math.max(0, parseInt((document.getElementById('univ-assistants') || {value:'0'}).value) || 0);
+
+  var monthly = 0, planName = '', planDesc = '', breakdown = '';
+  var includedAssts = 0;
+
+  if (agents === 0) {
+    planName = 'Enter agents above'; planDesc = ''; breakdown = '';
+  } else if (agents === 1) {
+    // Solo: flat $79, assistants $25/ea (none included)
+    monthly = 79 + assts * 25;
+    planName = 'Independent Agent';
+    planDesc = '1 agent';
+    breakdown = '$79 flat' + (assts ? ' + ' + assts + ' asst' + (assts>1?'s':'') + ' @ $25' : '');
+    includedAssts = 0;
+  } else if (agents <= 3) {
+    // Still solo pricing: $79 per agent
+    monthly = agents * 79 + assts * 25;
+    planName = 'Independent Agent';
+    planDesc = agents + ' agents @ $79/ea';
+    breakdown = agents + ' × $79' + (assts ? ' + ' + assts + ' asst' + (assts>1?'s':'') + ' @ $25' : '');
+    includedAssts = 0;
+  } else if (agents <= 9) {
+    // Small Agency: $247 base (covers 4 agents, 1 asst included)
+    // Extra agents 5-9: +$60/ea; extra assts above 1 included: +$15/ea
+    var extraAgents = Math.max(0, agents - 4);
+    includedAssts = 1;
+    var extraAssts = Math.max(0, assts - includedAssts);
+    monthly = 247 + extraAgents * 60 + extraAssts * 15;
+    planName = 'Small Agency';
+    planDesc = agents + ' agents (1 asst included)';
+    breakdown = '$247 base' +
+      (extraAgents ? ' + ' + extraAgents + ' extra agent' + (extraAgents>1?'s':'') + ' @ $60' : '') +
+      (extraAssts  ? ' + ' + extraAssts + ' extra asst' + (extraAssts>1?'s':'') + ' @ $15'  : '');
+  } else {
+    // Large Agency: $597 base (covers 10 agents, 2 assts included)
+    // Extra agents: +$55/ea; extra assts above 2: +$10/ea
+    var extraAgentsL = Math.max(0, agents - 10);
+    includedAssts = 2;
+    var extraAsstsL = Math.max(0, assts - includedAssts);
+    monthly = 597 + extraAgentsL * 55 + extraAsstsL * 10;
+    planName = 'Large Agency';
+    planDesc = agents + ' agents (2 assts included)';
+    breakdown = '$597 base' +
+      (extraAgentsL ? ' + ' + extraAgentsL + ' extra agent' + (extraAgentsL>1?'s':'') + ' @ $55' : '') +
+      (extraAsstsL  ? ' + ' + extraAsstsL + ' extra asst' + (extraAsstsL>1?'s':'') + ' @ $10'  : '');
+  }
+
+  var annual    = Math.round(monthly * 12 * 0.8);
+  var savings   = Math.round(monthly * 12 * 0.2);
+  var totalPpl  = agents + assts;
+  var perPerson = totalPpl > 0 ? Math.round(monthly / totalPpl) : 0;
+
+  var set = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
+  set('univ-plan-name',   planName);
+  set('univ-plan-desc',   planDesc);
+  set('univ-monthly',     monthly  > 0 ? '$' + monthly.toLocaleString()  : '—');
+  set('univ-annual',      annual   > 0 ? '$' + annual.toLocaleString() + '/yr' : '—');
+  set('univ-per-person',  perPerson > 0 ? '$' + perPerson : '—');
+  set('univ-savings',     savings  > 0 ? 'Save $' + savings.toLocaleString() : '—');
+  set('univ-breakdown',   breakdown);
+
+  // Also update pricing tier table to reflect real rules
+  var tiersEl = document.getElementById('univ-tiers-display');
+  if (tiersEl) tiersEl.innerHTML =
+    '<span style="font-size:11.5px;color:#52525b;">1 agent</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$79/mo flat</span>' +
+    '<span style="font-size:11.5px;color:#52525b;">2–3 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$79/agent/mo</span>' +
+    '<span style="font-size:11.5px;color:#52525b;">4–9 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$247 base + $60/extra agent</span>' +
+    '<span style="font-size:11.5px;color:#52525b;">10+ agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$597 base + $55/extra agent</span>';
+};
+
+// Trigger on load
+document.addEventListener('DOMContentLoaded', function() { calcUniversal(); });
+
+// ── COMMISSION PLAN — hidden to everyone except asmithee ─────
+var COMMISSION_EMAIL = 'asmithee@insurewithcompass.com';
+
+function isCommissionUser() {
+  return typeof _currentUser !== 'undefined' && _currentUser && _currentUser.email === COMMISSION_EMAIL;
+}
+
+function checkCommissionAccess() {
+  var wrap = document.getElementById('nav-commission-wrap');
+  if (wrap) wrap.style.display = isCommissionUser() ? 'block' : 'none';
+}
+
+// Inject nav item
+document.addEventListener('DOMContentLoaded', function() {
+  var adminWrap = document.getElementById('nav-admin-wrap');
+  if (adminWrap) {
+    var commWrap = document.createElement('div');
+    commWrap.id = 'nav-commission-wrap';
+    commWrap.style.cssText = 'display:none;padding:0 10px 6px;';
+    commWrap.innerHTML = '<button class="nav-item" data-section="commission" onclick="showSection(\'commission\',this)" style="width:100%;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);color:#6ee7b7;"><span class="nav-icon">💰</span>Commission Plan</button>';
+    adminWrap.parentNode.insertBefore(commWrap, adminWrap);
+  }
+
+  // Inject section HTML
+  var mainEl = document.querySelector('main') || document.getElementById('section-admin');
+  if (mainEl && mainEl.parentNode) {
+    var commSection = document.createElement('div');
+    commSection.className = 'section';
+    commSection.id = 'section-commission';
+    commSection.innerHTML = buildCommissionHTML();
+    mainEl.parentNode.insertBefore(commSection, mainEl);
+  }
+
+  checkCommissionAccess();
+});
+
+// Re-check on auth changes
+var _origOnLogin_comm = typeof onUserLoggedIn !== 'undefined' ? onUserLoggedIn : function(){};
+onUserLoggedIn = function(user) {
+  if (typeof _origOnLogin_comm === 'function') _origOnLogin_comm(user);
+  checkCommissionAccess();
+};
+
+function buildCommissionHTML() {
+  return `
+  <div class="page-header">
+    <div class="page-label" style="color:#10b981;">Private · You Only</div>
+    <h1>💰 Commission Plan</h1>
+    <p>Model your income across solo agents, small agencies, and large agencies — monthly recurring or annual lump sum.</p>
+  </div>
+  <div class="content" style="max-width:1100px;">
+
+    <!-- Rate reference card -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;">
+      <div style="background:linear-gradient(135deg,#0f0f17,#1a1a2e);border:1px solid rgba(99,102,241,0.3);border-radius:12px;padding:18px;">
+        <div style="font-size:9px;font-weight:700;color:#6366f1;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:6px;">Solo Agent</div>
+        <div style="font-size:32px;font-weight:800;color:#fff;line-height:1;">11%</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:4px;">of $79/mo per agent</div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.08);">
+          <span style="font-size:13px;font-weight:700;color:#a5b4fc;">$8.69/agent/mo</span>
+          <span style="font-size:11px;color:rgba(255,255,255,0.4);"> recurring</span>
+        </div>
+      </div>
+      <div style="background:linear-gradient(135deg,#0f1a14,#0a2218);border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:18px;">
+        <div style="font-size:9px;font-weight:700;color:#10b981;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:6px;">Small Agency</div>
+        <div style="font-size:32px;font-weight:800;color:#fff;line-height:1;">10%</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:4px;">of monthly plan price</div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.08);">
+          <span style="font-size:13px;font-weight:700;color:#6ee7b7;">$24.70+/mo</span>
+          <span style="font-size:11px;color:rgba(255,255,255,0.4);"> recurring</span>
+        </div>
+      </div>
+      <div style="background:linear-gradient(135deg,#1a1000,#2a1800);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:18px;">
+        <div style="font-size:9px;font-weight:700;color:#f59e0b;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:6px;">Large Agency</div>
+        <div style="font-size:32px;font-weight:800;color:#fff;line-height:1;">8%</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:4px;">of monthly plan price</div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.08);">
+          <span style="font-size:13px;font-weight:700;color:#fcd34d;">$47.76+/mo</span>
+          <span style="font-size:11px;color:rgba(255,255,255,0.4);"> recurring</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pipeline builder -->
+    <div style="background:#fff;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;margin-bottom:24px;">
+      <div style="padding:16px 20px;border-bottom:1px solid #e4e4e7;background:linear-gradient(135deg,rgba(16,185,129,0.06),rgba(99,102,241,0.04));">
+        <div style="font-size:10px;font-weight:700;color:#10b981;letter-spacing:0.14em;text-transform:uppercase;">Pipeline Builder</div>
+        <div style="font-size:12px;color:#71717a;margin-top:2px;">Enter how many of each you expect to close. Toggle monthly vs annual.</div>
+      </div>
+      <div style="padding:20px;">
+        <!-- Billing toggle -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+          <span style="font-size:13px;font-weight:600;color:#09090b;">Billing type:</span>
+          <div style="display:flex;background:#f4f4f5;border-radius:8px;padding:3px;gap:2px;">
+            <button id="comm-monthly-btn" onclick="setCommBilling('monthly')" style="padding:6px 14px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:#6366f1;color:#fff;">Monthly</button>
+            <button id="comm-annual-btn"  onclick="setCommBilling('annual')"  style="padding:6px 14px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:#71717a;">Annual (lump sum)</button>
+          </div>
+          <span id="comm-billing-note" style="font-size:11px;color:#71717a;">Recurring every month</span>
+        </div>
+
+        <!-- Inputs grid -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;">
+
+          <!-- Solo agents -->
+          <div style="border:1.5px solid #e4e4e7;border-radius:10px;padding:14px;position:relative;">
+            <div style="position:absolute;top:10px;right:10px;background:#eef2ff;color:#6366f1;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:0.1em;">11%</div>
+            <div style="font-size:12px;font-weight:700;color:#09090b;margin-bottom:10px;">Solo Agents</div>
+            <label style="font-size:10px;color:#71717a;display:block;margin-bottom:4px;">Number of agents</label>
+            <input id="comm-solo" type="number" min="0" value="0" oninput="calcCommission()"
+              style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:18px;font-weight:700;color:#09090b;outline:none;box-sizing:border-box;"
+              onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
+            <div style="margin-top:8px;font-size:11px;color:#71717a;">Each = $79/mo plan</div>
+          </div>
+
+          <!-- Small agencies -->
+          <div style="border:1.5px solid #e4e4e7;border-radius:10px;padding:14px;position:relative;">
+            <div style="position:absolute;top:10px;right:10px;background:#ecfdf5;color:#10b981;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:0.1em;">10%</div>
+            <div style="font-size:12px;font-weight:700;color:#09090b;margin-bottom:10px;">Small Agencies</div>
+            <label style="font-size:10px;color:#71717a;display:block;margin-bottom:4px;">Number of agencies</label>
+            <input id="comm-small" type="number" min="0" value="0" oninput="calcCommission()"
+              style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:18px;font-weight:700;color:#09090b;outline:none;box-sizing:border-box;"
+              onfocus="this.style.borderColor='#10b981'" onblur="this.style.borderColor='#e4e4e7'">
+            <label style="font-size:10px;color:#71717a;display:block;margin-bottom:4px;margin-top:8px;">Avg agents per agency</label>
+            <input id="comm-small-agents" type="number" min="4" max="9" value="4" oninput="calcCommission()"
+              style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:6px 10px;font-size:14px;font-weight:600;color:#09090b;outline:none;box-sizing:border-box;"
+              onfocus="this.style.borderColor='#10b981'" onblur="this.style.borderColor='#e4e4e7'">
+          </div>
+
+          <!-- Large agencies -->
+          <div style="border:1.5px solid #e4e4e7;border-radius:10px;padding:14px;position:relative;">
+            <div style="position:absolute;top:10px;right:10px;background:#fffbeb;color:#f59e0b;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:0.1em;">8%</div>
+            <div style="font-size:12px;font-weight:700;color:#09090b;margin-bottom:10px;">Large Agencies</div>
+            <label style="font-size:10px;color:#71717a;display:block;margin-bottom:4px;">Number of agencies</label>
+            <input id="comm-large" type="number" min="0" value="0" oninput="calcCommission()"
+              style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:18px;font-weight:700;color:#09090b;outline:none;box-sizing:border-box;"
+              onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='#e4e4e7'">
+            <label style="font-size:10px;color:#71717a;display:block;margin-bottom:4px;margin-top:8px;">Avg agents per agency</label>
+            <input id="comm-large-agents" type="number" min="10" value="10" oninput="calcCommission()"
+              style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:6px 10px;font-size:14px;font-weight:600;color:#09090b;outline:none;box-sizing:border-box;"
+              onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='#e4e4e7'">
+          </div>
+        </div>
+
+        <!-- Results -->
+        <div id="comm-results" style="background:linear-gradient(135deg,#0f0f17,#141424);border-radius:12px;padding:20px;">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+            <div style="text-align:center;">
+              <div style="font-size:9px;font-weight:700;color:#6366f1;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">Solo Comm.</div>
+              <div id="comm-solo-out" style="font-size:22px;font-weight:800;color:#fff;">$0</div>
+              <div id="comm-solo-label" style="font-size:10px;color:rgba(255,255,255,0.4);">/mo</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:9px;font-weight:700;color:#10b981;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">Small Comm.</div>
+              <div id="comm-small-out" style="font-size:22px;font-weight:800;color:#fff;">$0</div>
+              <div id="comm-small-label" style="font-size:10px;color:rgba(255,255,255,0.4);">/mo</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:9px;font-weight:700;color:#f59e0b;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">Large Comm.</div>
+              <div id="comm-large-out" style="font-size:22px;font-weight:800;color:#fff;">$0</div>
+              <div id="comm-large-label" style="font-size:10px;color:rgba(255,255,255,0.4);">/mo</div>
+            </div>
+            <div style="text-align:center;border-left:1px solid rgba(255,255,255,0.1);padding-left:12px;">
+              <div style="font-size:9px;font-weight:700;color:#a78bfa;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">Total</div>
+              <div id="comm-total-out" style="font-size:28px;font-weight:800;color:#a78bfa;line-height:1;">$0</div>
+              <div id="comm-total-label" style="font-size:10px;color:rgba(255,255,255,0.4);">/mo</div>
+            </div>
+          </div>
+          <div id="comm-breakdown" style="font-size:11px;color:rgba(255,255,255,0.35);text-align:center;line-height:1.8;"></div>
+          <!-- Annual projection bar -->
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.08);">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:11px;color:rgba(255,255,255,0.4);">Annual projection (if monthly billing)</span>
+              <span id="comm-annual-proj" style="font-size:16px;font-weight:700;color:#6ee7b7;">$0/yr</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Goal reverse calculator -->
+    <div style="background:#fff;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;">
+      <div style="padding:16px 20px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;">
+        <div style="font-size:10px;font-weight:700;color:#6366f1;letter-spacing:0.14em;text-transform:uppercase;">Goal Calculator</div>
+        <div style="font-size:12px;color:#71717a;margin-top:2px;">Set a monthly income target — see exactly how many closes you need.</div>
+      </div>
+      <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#09090b;display:block;margin-bottom:6px;">Monthly income goal</label>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:18px;font-weight:700;color:#6366f1;">$</span>
+            <input id="comm-goal" type="number" min="0" value="2000" oninput="calcGoal()"
+              style="flex:1;border:1.5px solid #e4e4e7;border-radius:8px;padding:10px 12px;font-size:20px;font-weight:700;color:#09090b;outline:none;"
+              onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'">
+            <span style="font-size:13px;color:#71717a;">/mo</span>
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:#71717a;">
+            Annual equivalent: <strong id="comm-goal-annual" style="color:#09090b;">$24,000</strong>
+          </div>
+        </div>
+        <div id="comm-goal-results" style="background:#f8f8fa;border-radius:10px;padding:14px;">
+          <div style="font-size:11px;font-weight:700;color:#09090b;margin-bottom:10px;">To hit that goal you need:</div>
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#fff;border-radius:7px;border:1px solid #e4e4e7;">
+              <span style="font-size:12px;color:#52525b;">Solo agents only <span style="font-size:10px;color:#6366f1;">(11%)</span></span>
+              <span id="goal-solo-count" style="font-size:14px;font-weight:800;color:#6366f1;">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#fff;border-radius:7px;border:1px solid #e4e4e7;">
+              <span style="font-size:12px;color:#52525b;">Small agencies only <span style="font-size:10px;color:#10b981;">(10%)</span></span>
+              <span id="goal-small-count" style="font-size:14px;font-weight:800;color:#10b981;">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#fff;border-radius:7px;border:1px solid #e4e4e7;">
+              <span style="font-size:12px;color:#52525b;">Large agencies only <span style="font-size:10px;color:#f59e0b;">(8%)</span></span>
+              <span id="goal-large-count" style="font-size:14px;font-weight:800;color:#f59e0b;">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#eef2ff;border-radius:7px;border:1px solid #c7d2fe;">
+              <span style="font-size:12px;color:#52525b;">Mixed <span style="font-size:10px;color:#6366f1;">(2 solo + 3 small + 1 large)</span></span>
+              <span id="goal-mixed-out" style="font-size:13px;font-weight:700;color:#6366f1;">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>`;
+}
+
+var _commBilling = 'monthly';
+
+function setCommBilling(type) {
+  _commBilling = type;
+  var mb = document.getElementById('comm-monthly-btn');
+  var ab = document.getElementById('comm-annual-btn');
+  var note = document.getElementById('comm-billing-note');
+  if (mb) { mb.style.background = type === 'monthly' ? '#6366f1' : 'transparent'; mb.style.color = type === 'monthly' ? '#fff' : '#71717a'; }
+  if (ab) { ab.style.background = type === 'annual'  ? '#6366f1' : 'transparent'; ab.style.color = type === 'annual'  ? '#fff' : '#71717a'; }
+  if (note) note.textContent = type === 'annual' ? 'Full year upfront (one-time payment)' : 'Recurring every month';
+  calcCommission();
+}
+
+function getSmallMonthly(numAgents) {
+  // Small: $247 base + $60 per agent above 4
+  var n = Math.max(4, Math.min(9, numAgents));
+  return 247 + Math.max(0, n - 4) * 60;
+}
+
+function getLargeMonthly(numAgents) {
+  // Large: $597 base + $55 per agent above 10
+  var n = Math.max(10, numAgents);
+  return 597 + Math.max(0, n - 10) * 55;
+}
+
+function fmt(n) { return '$' + Math.round(n).toLocaleString(); }
+
+function calcCommission() {
+  var soloCount  = Math.max(0, parseInt(document.getElementById('comm-solo')  ?.value || 0));
+  var smallCount = Math.max(0, parseInt(document.getElementById('comm-small') ?.value || 0));
+  var largeCount = Math.max(0, parseInt(document.getElementById('comm-large') ?.value || 0));
+  var smallAgents = Math.max(4, Math.min(9, parseInt(document.getElementById('comm-small-agents')?.value || 4)));
+  var largeAgents = Math.max(10, parseInt(document.getElementById('comm-large-agents')?.value || 10));
+
+  var soloMonthly  = soloCount  * 79;
+  var smallMonthly = smallCount * getSmallMonthly(smallAgents);
+  var largeMonthly = largeCount * getLargeMonthly(largeAgents);
+
+  var soloComm, smallComm, largeComm, label;
+
+  if (_commBilling === 'annual') {
+    // Annual: full year * rate as one lump sum
+    soloComm  = soloMonthly  * 12 * 0.11;
+    smallComm = smallMonthly * 12 * 0.10;
+    largeComm = largeMonthly * 12 * 0.08;
+    label = 'lump sum';
+  } else {
+    soloComm  = soloMonthly  * 0.11;
+    smallComm = smallMonthly * 0.10;
+    largeComm = largeMonthly * 0.08;
+    label = '/mo';
+  }
+
+  var total = soloComm + smallComm + largeComm;
+
+  var set = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
+  set('comm-solo-out',   fmt(soloComm));
+  set('comm-small-out',  fmt(smallComm));
+  set('comm-large-out',  fmt(largeComm));
+  set('comm-total-out',  fmt(total));
+  ['comm-solo-label','comm-small-label','comm-large-label','comm-total-label'].forEach(function(id){ set(id, label); });
+
+  // Annual projection (always monthly basis × 12)
+  var annualProj = (soloMonthly * 0.11 + smallMonthly * 0.10 + largeMonthly * 0.08) * 12;
+  set('comm-annual-proj', fmt(annualProj) + '/yr');
+
+  // Breakdown text
+  var lines = [];
+  if (soloCount)  lines.push(soloCount + ' solo agent' + (soloCount>1?'s':'') + ' × $79 × 11%' + (_commBilling==='annual'?' × 12 mo':''));
+  if (smallCount) lines.push(smallCount + ' small agenc' + (smallCount>1?'ies':'y') + ' @ ' + fmt(getSmallMonthly(smallAgents)) + '/mo × 10%' + (_commBilling==='annual'?' × 12 mo':''));
+  if (largeCount) lines.push(largeCount + ' large agenc' + (largeCount>1?'ies':'y') + ' @ ' + fmt(getLargeMonthly(largeAgents)) + '/mo × 8%' + (_commBilling==='annual'?' × 12 mo':''));
+  set('comm-breakdown', lines.join(' · ') || 'Enter values above to see your commission');
+}
+
+function calcGoal() {
+  var goal = Math.max(0, parseFloat(document.getElementById('comm-goal')?.value || 0));
+  var set = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
+
+  set('comm-goal-annual', fmt(goal * 12));
+
+  // Solo only: $79 × 11% = $8.69/agent/mo
+  var soloPerUnit = 79 * 0.11;
+  var soloNeeded = goal > 0 ? Math.ceil(goal / soloPerUnit) : '—';
+  set('goal-solo-count', goal > 0 ? soloNeeded + ' agents' : '—');
+
+  // Small only: $247 × 10% = $24.70/agency/mo
+  var smallPerUnit = 247 * 0.10;
+  var smallNeeded = goal > 0 ? Math.ceil(goal / smallPerUnit) : '—';
+  set('goal-small-count', goal > 0 ? smallNeeded + ' agencies' : '—');
+
+  // Large only: $597 × 8% = $47.76/agency/mo
+  var largePerUnit = 597 * 0.08;
+  var largeNeeded = goal > 0 ? Math.ceil(goal / largePerUnit) : '—';
+  set('goal-large-count', goal > 0 ? largeNeeded + ' agencies' : '—');
+
+  // Mixed: 2 solo + 3 small + 1 large
+  var mixedComm = 2 * soloPerUnit + 3 * smallPerUnit + 1 * largePerUnit;
+  if (goal > 0) {
+    var mixedSets = Math.ceil(goal / mixedComm);
+    var mixedOut = (mixedSets*2) + ' solo, ' + (mixedSets*3) + ' small, ' + mixedSets + ' large';
+    set('goal-mixed-out', mixedOut);
+  } else {
+    set('goal-mixed-out', '—');
+  }
+}
+
+// Hook showSection to init goal calc on first visit
+var _origSS_comm = window.showSection;
+window.showSection = function(id, btn) {
+  _origSS_comm(id, btn);
+  if (id === 'commission') {
+    setTimeout(function() { calcCommission(); calcGoal(); }, 50);
+  }
+};
+
+console.log('[PATCH 2] Pricing fix + Commission Plan loaded.');
+
+</script>
 </body>
 </html>
