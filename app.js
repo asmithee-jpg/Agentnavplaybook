@@ -377,7 +377,8 @@ function initScriptEditor(){
 window.scrollTo(0,0);
 var sec=document.getElementById('section-scripteditor');
 if(sec){
-  sec.style.cssText='padding:0!important;margin:0!important;overflow:hidden!important;min-height:100vh!important;display:flex!important;flex-direction:column!important;';
+  sec.style.cssText='padding:0!important;margin:0!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;';
+  sec.style.height='100vh';
 }
 var root=document.getElementById('se-root');
 if(root){root.style.cssText='display:grid!important;grid-template-columns:220px 1fr 280px;height:100vh;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;font-size:13px;';}
@@ -456,7 +457,7 @@ var _origSS3=showSection;showSection=function(id,btn){
 // Clear scripteditor inline styles before switching so they dont bleed
 if(id!=='scripteditor'){
   var seEl=document.getElementById('section-scripteditor');
-  if(seEl){seEl.style.cssText='';}
+  if(seEl){seEl.style.cssText='';seEl.style.height='';seEl.style.minHeight='';}
 }
 _origSS3(id,btn);
 // Always scroll main to top
