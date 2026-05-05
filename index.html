@@ -62,5 +62,303 @@
 </div><div class="section" id="section-myscripts"><div class="page-header"><div class="page-label">Script Library</div><h1>Script Library</h1><p>All your saved scripts organized by type. Click <strong>View in Script Library →</strong> from any section to jump here. Edit directly or click Edit to go to that section.</p></div><div class="content" style="max-width:860px;"><div class="nba-bar"><span class="nba-label">&#9997;&#65039; Your Playbook</span><div class="nba-actions"><button class="nba-btn primary" onclick="saveAllMyScripts()">&#9729; Save All</button></div></div><div style="margin-top:24px;margin-bottom:8px;"><div style="font-family:'DM Mono',monospace;font-size:9px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#6366f1;margin-bottom:4px;">📞 On The Call</div><div style="height:2px;background:linear-gradient(90deg,#6366f1,transparent);border-radius:2px;margin-bottom:16px;"></div></div><div id="myscripts-oncall" style="display:flex;flex-direction:column;gap:10px;"></div><div style="margin-top:28px;margin-bottom:8px;"><div style="font-family:'DM Mono',monospace;font-size:9px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#10b981;margin-bottom:4px;">🛡️ Reference</div><div style="height:2px;background:linear-gradient(90deg,#10b981,transparent);border-radius:2px;margin-bottom:16px;"></div></div><div id="myscripts-reference" style="display:flex;flex-direction:column;gap:10px;"></div></div>
 </div><div class="section" id="section-admin"><div class="page-header"><div class="page-label">Admin Only</div><h1>Admin Panel</h1><p>Set default scripts for all reps. Content saves to Supabase and is team-wide.</p></div><div class="content" style="max-width:1000px;"><div style="display:flex;border-bottom:2px solid #e4e4e7;margin-bottom:22px;overflow-x:auto;" id="admin-tab-bar"><button onclick="switchAdminTab('scripts')" id="atab-scripts" class="admin-tab atab-active">&#128222; Scripts</button><button onclick="switchAdminTab('reference')" id="atab-reference" class="admin-tab">&#128737; Reference</button><button onclick="switchAdminTab('competition')" id="atab-competition" class="admin-tab">&#127919; Competition</button><button onclick="switchAdminTab('pricing')" id="atab-pricing" class="admin-tab">&#128196; Pricing</button><button onclick="switchAdminTab('reps')" id="atab-reps" class="admin-tab">&#128100; Reps</button></div><div id="apanel-scripts"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;"><div class="aedit-card"><div class="aedit-label">Cold Call Default</div><textarea id="afield-coldcall" class="aedit-ta" rows="7" placeholder="Default cold call script for all reps..."></textarea><button onclick="saveAField('coldcall')" class="aedit-btn">Save</button></div><div class="aedit-card"><div class="aedit-label">Discovery Call Default</div><textarea id="afield-discovery" class="aedit-ta" rows="7"></textarea><button onclick="saveAField('discovery')" class="aedit-btn">Save</button></div><div class="aedit-card"><div class="aedit-label">Demo Meeting Default</div><textarea id="afield-demo" class="aedit-ta" rows="7"></textarea><button onclick="saveAField('demo')" class="aedit-btn">Save</button></div><div class="aedit-card"><div class="aedit-label">Closing Meeting Default</div><textarea id="afield-closing" class="aedit-ta" rows="7"></textarea><button onclick="saveAField('closing')" class="aedit-btn">Save</button></div><div class="aedit-card"><div class="aedit-label">Onboarding Default</div><textarea id="afield-onboarding" class="aedit-ta" rows="7"></textarea><button onclick="saveAField('onboarding')" class="aedit-btn">Save</button></div><div class="aedit-card"><div class="aedit-label">Talk Tracks Default</div><textarea id="afield-talktracks" class="aedit-ta" rows="7"></textarea><button onclick="saveAField('talktracks')" class="aedit-btn">Save</button></div></div></div><div id="apanel-reference" style="display:none;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;"><div class="aedit-card"><div class="aedit-label">Objection Handling Default</div><textarea id="afield-objections" class="aedit-ta" rows="10"></textarea><button onclick="saveAField('objections')" class="aedit-btn">Save</button></div><div class="aedit-card"><div class="aedit-label">Battle Cards Default</div><textarea id="afield-battlecards" class="aedit-ta" rows="10"></textarea><button onclick="saveAField('battlecards')" class="aedit-btn">Save</button></div><div class="aedit-card" style="grid-column:span 2;"><div class="aedit-label">Elevator Pitches Default</div><textarea id="afield-pitches" class="aedit-ta" rows="7"></textarea><button onclick="saveAField('pitches')" class="aedit-btn">Save</button></div></div></div><div id="apanel-competition" style="display:none;"><div class="aedit-card"><div class="aedit-label">Competition Intel</div><textarea id="afield-competition" class="aedit-ta" rows="16" placeholder="## EZLynx&#10;- Strength: ...&#10;- Weakness: ...&#10;- We win when: ..."></textarea><button onclick="saveAField('competition')" class="aedit-btn">Save</button></div></div><div id="apanel-pricing" style="display:none;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;"><div class="aedit-card"><div class="aedit-label">Custom Plan Prices</div><div style="display:flex;flex-direction:column;gap:8px;"><div style="display:flex;align-items:center;gap:8px;"><label style="font-size:13px;font-weight:600;color:#09090b;min-width:120px;">Solo Agent</label><span>$</span><input id="aprice-solo" type="text" value="79" style="width:65px;border:1.5px solid #e4e4e7;border-radius:7px;padding:6px 9px;font-size:13px;font-weight:700;outline:none;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><span style="color:#71717a;font-size:12px;">/mo</span></div><div style="display:flex;align-items:center;gap:8px;"><label style="font-size:13px;font-weight:600;color:#09090b;min-width:120px;">Small Agency</label><span>$</span><input id="aprice-small" type="text" value="247" style="width:65px;border:1.5px solid #e4e4e7;border-radius:7px;padding:6px 9px;font-size:13px;font-weight:700;outline:none;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><span style="color:#71717a;font-size:12px;">/mo</span></div><div style="display:flex;align-items:center;gap:8px;"><label style="font-size:13px;font-weight:600;color:#09090b;min-width:120px;">Large Agency</label><span>$</span><input id="aprice-large" type="text" value="597" style="width:65px;border:1.5px solid #e4e4e7;border-radius:7px;padding:6px 9px;font-size:13px;font-weight:700;outline:none;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><span style="color:#71717a;font-size:12px;">/mo</span></div></div><button onclick="saveAdminPrices()" class="aedit-btn" style="margin-top:4px;">Save Prices</button></div><div class="aedit-card"><div class="aedit-label">Promotions / Notes</div><textarea id="afield-pricing-notes" class="aedit-ta" rows="6" placeholder="Current promos or notes for the team..."></textarea><button onclick="saveAField('pricing-notes')" class="aedit-btn">Save</button></div></div></div><div id="apanel-reps" style="display:none;"><div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;"><div style="padding:13px 18px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;display:flex;align-items:center;justify-content:space-between;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;">Team Members</div><button onclick="loadAdminReps()" style="font-size:12px;font-weight:600;color:#6366f1;background:none;border:none;cursor:pointer;">&#8635; Refresh</button></div><div id="admin-reps-list" style="padding:16px 18px;"><div style="padding:30px;text-align:center;color:#71717a;font-size:13px;">Click Refresh to load team data.</div></div></div></div></div>
 </div>
-<script src="app.js"></script></body>
+<script src="app.js"></script><script>
+// ============================================================
+// PATCH FILE — 4 Bug Fixes
+// Apply by including this AFTER app.js in index.html
+// ============================================================
+
+// ── FIX 1: Left panel label "Library" → "Script Editor" ─────
+// (Already correct in source at line 44: "Script Editor" span)
+// If any runtime code overwrites it, patch here:
+document.addEventListener('DOMContentLoaded', function() {
+  var libLabel = document.querySelector('#se-root [style*="uppercase"][style*="text-transform"]');
+  if (libLabel && libLabel.textContent.trim() === 'Library') {
+    libLabel.textContent = 'Script Editor';
+  }
+});
+
+// ── FIX 2: Drag reorder collapses steps ─────────────────────
+// Override seMakeStep to preserve textarea height on dragend
+var _origSeMakeStep = window.seMakeStep;
+window.seMakeStep = function(st, idx) {
+  var div = document.createElement('div');
+  div.style.cssText = 'background:#f8f8fa;border:1.5px solid #e4e4e7;border-radius:10px;overflow:hidden;';
+  div.draggable = true;
+
+  var head = document.createElement('div');
+  head.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #e4e4e7;background:#fff;';
+
+  var num = document.createElement('div');
+  num.style.cssText = 'width:22px;height:22px;border-radius:50%;background:#6366f1;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+  num.textContent = idx + 1;
+
+  var ti = document.createElement('input');
+  ti.type = 'text';
+  ti.value = st.title || '';
+  ti.placeholder = 'Step name...';
+  ti.style.cssText = 'flex:1;border:none;background:none;font-size:13px;font-weight:600;color:#09090b;font-family:inherit;outline:none;';
+  ti.oninput = seMarkDirty;
+
+  var drag = document.createElement('span');
+  drag.textContent = ':::';
+  drag.style.cssText = 'cursor:grab;color:#d4d4d8;font-size:14px;padding:0 2px;user-select:none;';
+
+  var del = document.createElement('button');
+  del.textContent = 'x';
+  del.style.cssText = 'background:none;border:none;color:#d4d4d8;font-size:12px;cursor:pointer;padding:2px 4px;border-radius:3px;';
+  del.onclick = function() { div.remove(); seRenumber(); seMarkDirty(); };
+
+  head.append(num, ti, drag, del);
+
+  var ta = document.createElement('textarea');
+  ta.value = st.body || '';
+  ta.placeholder = 'Write this step...';
+  ta.style.cssText = 'width:100%;min-height:80px;border:none;background:none;padding:10px 12px;font-size:13px;color:#52525b;font-family:inherit;resize:vertical;outline:none;line-height:1.65;box-sizing:border-box;';
+  ta.oninput = seMarkDirty;
+
+  div.append(head, ta);
+
+  // ── DRAG FIX: snapshot and restore textarea heights ──────
+  div.addEventListener('dragstart', function(e) {
+    e.dataTransfer.effectAllowed = 'move';
+    div.style.opacity = '.4';
+    seDragEl = div;
+    // Snapshot ALL textarea heights in the list before drag moves things
+    var list = document.getElementById('se-steps-list');
+    if (list) {
+      Array.from(list.querySelectorAll('textarea')).forEach(function(t) {
+        t._savedHeight = t.style.height || '';
+        t._savedValue = t.value;
+      });
+    }
+  });
+
+  div.addEventListener('dragend', function() {
+    div.style.opacity = '';
+    seDragEl = null;
+    // Restore textarea heights and values after DOM reorder
+    var list = document.getElementById('se-steps-list');
+    if (list) {
+      Array.from(list.querySelectorAll('textarea')).forEach(function(t) {
+        if (t._savedHeight !== undefined) t.style.height = t._savedHeight;
+        if (t._savedValue !== undefined && t.value === '') t.value = t._savedValue;
+      });
+    }
+    seRenumber();
+    seMarkDirty();
+  });
+
+  div.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    if (seDragEl && seDragEl !== div) {
+      var items = Array.from(div.parentNode.children);
+      if (items.indexOf(seDragEl) < items.indexOf(div))
+        div.parentNode.insertBefore(seDragEl, div.nextSibling);
+      else
+        div.parentNode.insertBefore(seDragEl, div);
+    }
+  });
+
+  return div;
+};
+
+// ── FIX 3: Save navigates to Script Library ─────────────────
+var _origSeSave = window.seSave;
+window.seSave = function() {
+  if (!seCurrentId) return;
+  var s = seScripts.find(function(x) { return x.id === seCurrentId; });
+  if (!s) return;
+  var n = document.getElementById('se-script-name');
+  var t = document.getElementById('se-script-type');
+  var newType = t ? t.value : s.type;
+  var newName = n ? n.value.trim() || '' : s.name;
+  var defaults = ['My Script', 'New Script', 'Untitled'];
+  var typeNames = { coldcall: 'Cold Call Script', discovery: 'Discovery Call Script', demo: 'Demo Meeting Script', closing: 'Closing Meeting Script', onboarding: 'Onboarding Meeting Script', objections: 'Objection Handling Script', battlecards: 'Battle Card', talktracks: 'Talk Track', custom: 'My Script' };
+  if (!newName || defaults.indexOf(newName) >= 0) {
+    newName = typeNames[newType] || 'My Script';
+    if (n) n.value = newName;
+  }
+  s.name = newName;
+  s.type = newType;
+  s.steps = seCollectSteps();
+  s.updatedAt = new Date().toISOString();
+  sePersist();
+  seDirty = false;
+  var st = document.getElementById('se-save-status');
+  if (st) { st.textContent = '✓ Saved'; st.style.color = '#10b981'; }
+  seRenderLib();
+  if (typeof showToast === 'function') showToast('Script saved!');
+  // ── NAVIGATE TO SCRIPT LIBRARY ──
+  setTimeout(function() {
+    if (typeof showSection === 'function') {
+      showSection('scriptlibrary', null);
+      // Update active nav item manually
+      document.querySelectorAll('.nav-item').forEach(function(navBtn) {
+        navBtn.classList.remove('active');
+        if (navBtn.getAttribute('onclick') && navBtn.getAttribute('onclick').indexOf("'scriptlibrary'") !== -1) {
+          navBtn.classList.add('active');
+        }
+      });
+    }
+  }, 300);
+};
+
+// ── FIX 4: Script Library — horizontal category tabs (not vertical scroll) ─
+var _origRenderScriptLibrary = window.renderScriptLibrary;
+window.renderScriptLibrary = function() {
+  var container = document.getElementById('scriptlibrary-content');
+  if (!container) return;
+  seLoad();
+  container.innerHTML = '';
+
+  var LIBRARY_CATS = [
+    { label: 'Cold Call', type: 'coldcall', icon: '📞', color: '#6366f1' },
+    { label: 'Discovery', type: 'discovery', icon: '🔍', color: '#8b5cf6' },
+    { label: 'Demo', type: 'demo', icon: '🖥️', color: '#06b6d4' },
+    { label: 'Closing', type: 'closing', icon: '🏆', color: '#f59e0b' },
+    { label: 'Onboarding', type: 'onboarding', icon: '🚀', color: '#10b981' },
+    { label: 'Objections', type: 'objections', icon: '🛡️', color: '#ef4444' },
+    { label: 'Battle Cards', type: 'battlecards', icon: '⚔️', color: '#ec4899' },
+    { label: 'Talk Tracks', type: 'talktracks', icon: '💬', color: '#14b8a6' },
+    { label: 'Custom', type: 'custom', icon: '✏️', color: '#a1a1aa' },
+  ];
+
+  // Build tab bar
+  var tabBar = document.createElement('div');
+  tabBar.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px;border-bottom:2px solid #e4e4e7;padding-bottom:0;overflow-x:auto;';
+
+  var panelWrap = document.createElement('div');
+  panelWrap.style.cssText = 'min-height:200px;';
+
+  var activeCat = null;
+
+  function renderPanel(cat) {
+    panelWrap.innerHTML = '';
+    var scripts = seScripts.filter(function(s) { return s.type === cat.type; });
+
+    // Header row
+    var hdr = document.createElement('div');
+    hdr.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:16px;';
+    hdr.innerHTML = '<div style="width:36px;height:36px;border-radius:10px;background:' + cat.color + '18;display:flex;align-items:center;justify-content:center;font-size:18px;">' + cat.icon + '</div>'
+      + '<div>'
+      + '<div style="font-size:15px;font-weight:700;color:#09090b;">' + cat.label + ' Scripts</div>'
+      + '<div style="font-size:12px;color:#a1a1aa;">' + scripts.length + ' script' + (scripts.length !== 1 ? 's' : '') + '</div>'
+      + '</div>'
+      + '<button onclick="showSection(\'scripteditor\',null);setTimeout(function(){seNewScriptOfType(\'' + cat.type + '\');},150);" style="margin-left:auto;padding:8px 14px;background:' + cat.color + ';color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ New ' + cat.label + '</button>';
+    panelWrap.appendChild(hdr);
+
+    if (!scripts.length) {
+      var empty = document.createElement('div');
+      empty.style.cssText = 'text-align:center;padding:48px 20px;color:#a1a1aa;border:2px dashed #e4e4e7;border-radius:12px;';
+      empty.innerHTML = '<div style="font-size:32px;margin-bottom:10px;">' + cat.icon + '</div>'
+        + '<div style="font-size:14px;font-weight:600;color:#71717a;margin-bottom:6px;">No ' + cat.label + ' scripts yet</div>'
+        + '<div style="font-size:13px;margin-bottom:16px;">Create your first script to see it here.</div>'
+        + '<button onclick="showSection(\'scripteditor\',null);setTimeout(function(){seNewScriptOfType(\'' + cat.type + '\');},150);" style="background:' + cat.color + ';color:#fff;border:none;border-radius:7px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">+ Create ' + cat.label + ' Script</button>';
+      panelWrap.appendChild(empty);
+      return;
+    }
+
+    var grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;';
+
+    scripts.forEach(function(s) {
+      var card = document.createElement('div');
+      card.style.cssText = 'background:#fff;border:1.5px solid #e4e4e7;border-radius:10px;padding:16px;cursor:pointer;transition:border-color 0.15s,box-shadow 0.15s;';
+      card.onmouseover = function() { this.style.borderColor = cat.color; this.style.boxShadow = '0 4px 12px ' + cat.color + '22'; };
+      card.onmouseout = function() { this.style.borderColor = '#e4e4e7'; this.style.boxShadow = ''; };
+
+      var steps = s.steps || [];
+      var hasContent = steps.some(function(st) { return st.body && st.body.trim(); });
+      var preview = steps.length ? steps[0].title : 'No steps yet';
+
+      card.innerHTML = '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">'
+        + '<div style="font-size:14px;font-weight:700;color:#09090b;flex:1;">' + s.name + '</div>'
+        + '<div style="width:8px;height:8px;border-radius:50%;background:' + (hasContent ? cat.color : '#e4e4e7') + ';margin-top:4px;flex-shrink:0;"></div>'
+        + '</div>'
+        + '<div style="font-size:12px;color:#71717a;margin-bottom:12px;">' + steps.length + ' step' + (steps.length !== 1 ? 's' : '') + ' · ' + (hasContent ? 'Has content' : 'Empty') + '</div>'
+        + '<div style="font-size:12px;color:#a1a1aa;font-style:italic;margin-bottom:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + preview + '</div>'
+        + '<div style="display:flex;gap:6px;">'
+        + '<button onclick="event.stopPropagation();showSection(\'scripteditor\',null);setTimeout(function(){seOpenScript(\'' + s.id + '\');},150);" style="flex:1;padding:7px;background:' + cat.color + ';color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Edit</button>'
+        + '<button onclick="event.stopPropagation();seLoad();seScripts=seScripts.filter(function(x){return x.id!==\'' + s.id + '\'});sePersist();renderScriptLibrary();" style="padding:7px 10px;background:#fff;color:#ef4444;border:1.5px solid #fca5a5;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Delete</button>'
+        + '</div>';
+
+      card.onclick = function() {
+        showSection('scripteditor', null);
+        setTimeout(function() { seOpenScript(s.id); }, 150);
+      };
+      grid.appendChild(card);
+    });
+
+    panelWrap.appendChild(grid);
+  }
+
+  // Determine which tabs have scripts
+  var catsWithScripts = LIBRARY_CATS.filter(function(c) {
+    return seScripts.some(function(s) { return s.type === c.type; });
+  });
+  var allCats = LIBRARY_CATS; // show all tabs regardless
+
+  allCats.forEach(function(cat, i) {
+    var tab = document.createElement('button');
+    var scriptCount = seScripts.filter(function(s) { return s.type === cat.type; }).length;
+    tab.style.cssText = 'padding:9px 14px;font-size:12px;font-weight:600;border:none;border-bottom:2.5px solid transparent;background:none;cursor:pointer;font-family:inherit;color:#71717a;white-space:nowrap;transition:all 0.12s;display:flex;align-items:center;gap:5px;margin-bottom:-2px;';
+    tab.innerHTML = '<span>' + cat.icon + '</span><span>' + cat.label + '</span>'
+      + (scriptCount ? '<span style="background:' + cat.color + '18;color:' + cat.color + ';font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;">' + scriptCount + '</span>' : '');
+
+    tab.onclick = function() {
+      // Deactivate all
+      Array.from(tabBar.children).forEach(function(tb) {
+        tb.style.borderBottomColor = 'transparent';
+        tb.style.color = '#71717a';
+      });
+      // Activate this tab
+      tab.style.borderBottomColor = cat.color;
+      tab.style.color = cat.color;
+      activeCat = cat;
+      renderPanel(cat);
+    };
+
+    // Activate first tab by default
+    if (i === 0) {
+      tab.style.borderBottomColor = cat.color;
+      tab.style.color = cat.color;
+      activeCat = cat;
+    }
+
+    tabBar.appendChild(tab);
+  });
+
+  container.appendChild(tabBar);
+  container.appendChild(panelWrap);
+
+  // Render first tab
+  if (activeCat) renderPanel(activeCat);
+
+  // If nothing at all
+  if (seScripts.length === 0) {
+    panelWrap.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#a1a1aa;">'
+      + '<div style="font-size:40px;margin-bottom:14px;">📝</div>'
+      + '<div style="font-size:16px;font-weight:700;color:#71717a;margin-bottom:8px;">No scripts yet</div>'
+      + '<div style="font-size:13px;margin-bottom:20px;">Create scripts in the Script Editor and they\'ll appear here.</div>'
+      + '<button onclick="showSection(\'scripteditor\',null);" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Open Script Editor →</button>'
+      + '</div>';
+  }
+};
+
+// Re-hook showSection so scriptlibrary always re-renders
+var _origSS_patch = window.showSection;
+window.showSection = function(id, btn) {
+  _origSS_patch(id, btn);
+  if (id === 'scriptlibrary') {
+    setTimeout(function() {
+      if (typeof renderScriptLibrary === 'function') renderScriptLibrary();
+    }, 50);
+  }
+};
+
+console.log('[PATCH] All 4 fixes applied.');
+
+</script>
+</body>
 </html>
