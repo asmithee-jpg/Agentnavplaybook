@@ -374,14 +374,6 @@ function seCopyAll(){var steps=seCollectSteps();var text=steps.map(function(s,i)
 function seUpdateAI(s){var ctx=document.getElementById('se-ai-ctx');var sl=document.getElementById('se-sugg-list');if(ctx)ctx.textContent='Coaching: '+(SE_TYPE_LABELS[s.type]||s.name);if(!sl)return;sl.innerHTML='';var suggs=SE_SUGGESTIONS[s.type]||SE_SUGGESTIONS.custom;suggs.forEach(function(p){var btn=document.createElement('button');btn.style.cssText='width:100%;text-align:left;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:7px 10px;font-size:11px;color:rgba(255,255,255,.6);cursor:pointer;font-family:inherit;line-height:1.5;display:block;margin-bottom:5px;';btn.textContent=p;btn.onclick=function(){var inp=document.getElementById('se-ai-input');if(inp){inp.value=p;inp.focus()}};sl.appendChild(btn);});}
 async function seAskAI(){var inp=document.getElementById('se-ai-input');var msgs=document.getElementById('se-ai-msgs');if(!inp||!msgs)return;var q=inp.value.trim();if(!q)return;var s=seScripts.find(function(x){return x.id===seCurrentId});var ctx=s?'Script: '+s.name+' ('+s.type+')\nSteps:\n'+seCollectSteps().map(function(st,i){return(i+1)+'. '+st.title+': '+st.body}).join('\n'):'';var uDiv=document.createElement('div');uDiv.style.cssText='background:rgba(99,102,241,.2);border-radius:8px;padding:8px 10px;font-size:12px;color:#c7d2fe;line-height:1.5;';uDiv.textContent=q;msgs.appendChild(uDiv);inp.value='';var bDiv=document.createElement('div');bDiv.style.cssText='background:rgba(255,255,255,.06);border-radius:8px;padding:8px 10px;font-size:12px;color:rgba(255,255,255,.75);line-height:1.6;';bDiv.textContent='...';msgs.appendChild(bDiv);bDiv.scrollIntoView({behavior:'smooth',block:'nearest'});try{var sys='You are an elite sales coach for AgentNav, a health insurance broker platform. Help reps write and improve call scripts. Be direct and give word-for-word suggestions.';if(ctx)sys+='\n\nCurrent script:\n'+ctx;var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,system:sys,messages:[{role:'user',content:q}]})});var d=await r.json();bDiv.textContent=d.content&&d.content[0]?d.content[0].text:'Could not get response.';}catch(e){bDiv.textContent='Error: '+e.message;bDiv.style.color='#fca5a5';}}
 function initScriptEditor(){
-window.scrollTo(0,0);
-var sec=document.getElementById('section-scripteditor');
-if(sec){
-  sec.style.cssText='padding:0!important;margin:0!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;';
-  sec.style.height='100vh';
-}
-var root=document.getElementById('se-root');
-if(root){root.style.cssText='display:grid!important;grid-template-columns:220px 1fr 280px;height:100vh;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;font-size:13px;';}
 var fab=document.querySelector('.coach-fab');
 if(fab)fab.style.display='none';
 seLoad();seRenderLib();
@@ -454,20 +446,10 @@ y+=6;if(discount){doc.setFillColor(255,251,235);doc.roundedRect(18,y,W-36,13,3,3
 doc.setFillColor(238,242,255);doc.roundedRect(18,y,W-36,30,4,4,'F');doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(99,102,241);doc.text('RECOMMENDED PLAN',26,y+7);doc.setFont('helvetica','bold');doc.setFontSize(16);doc.setTextColor(9,9,11);doc.text(planName,26,y+16);doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(82,82,91);doc.text(agents+' agents + '+assts+' assistants',26,y+23);doc.setFont('helvetica','bold');doc.setFontSize(26);doc.setTextColor(99,102,241);doc.text('$'+monthly.toLocaleString(),W-20,y+18,{align:'right'});doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(82,82,91);doc.text('/month',W-20,y+25,{align:'right'});y+=38;var rows=[['Monthly','$'+monthly.toLocaleString()+'/mo'],['Annual (20% off)','$'+annual.toLocaleString()+'/yr'],['Per Person','$'+perPerson+'/person'],['Contract','Month-to-month, cancel anytime']];rows.forEach(function(row,i){if(i%2===0){doc.setFillColor(248,248,250);doc.rect(18,y-3,W-36,9,'F');}doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(82,82,91);doc.text(row[0],22,y+2);doc.setFont('helvetica','bold');doc.setTextColor(9,9,11);doc.text(row[1],W-22,y+2,{align:'right'});y+=9;});y+=6;doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(9,9,11);doc.text("What's Included",18,y);y+=7;['ACA,STM,Life,Ancillary & Indemnity','Full CRM with household tracking','Renewal Autopilot OEP automation','SMS with dedicated agent number','HealthSherpa & EDE integration','Policy tracker & reconciliation','Google Calendar sync','No annual contract required'].forEach(function(f,i){var col=i%2,row=Math.floor(i/2),fx=18+col*(W-36)/2,fy=y+row*8;doc.setFillColor(16,185,129);doc.circle(fx+2,fy-0.5,1,'F');doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(82,82,91);doc.text(f.length>44?f.slice(0,44)+'...':f,fx+6,fy);});y+=Math.ceil(8/2)*8+8;if(notes){doc.setFillColor(255,251,235);doc.roundedRect(18,y,W-36,13,3,3,'F');doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(120,80,0);doc.text('NOTE: ',22,y+6);doc.setFont('helvetica','normal');doc.setTextColor(82,60,0);doc.text(notes.slice(0,80),36,y+6);y+=18;}
 doc.setFillColor(248,248,250);doc.rect(0,279.4-20,W,20,'F');doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(140,140,160);doc.text('Prepared by: '+rep,18,279.4-11);doc.text('agentnav.com',18,279.4-5);doc.save('AgentNav-Quote-'+prospect.replace(/[^a-z0-9]/gi,'-')+'.pdf');showToast('PDF downloaded!');}
 var _origSS3=showSection;showSection=function(id,btn){
-// Clear scripteditor inline styles before switching so they dont bleed
-if(id!=='scripteditor'){
-  var seEl=document.getElementById('section-scripteditor');
-  if(seEl){seEl.style.cssText='';seEl.style.height='';seEl.style.minHeight='';}
-}
 _origSS3(id,btn);
-// Always scroll main to top
-var mainEl=document.querySelector('.main');
-if(mainEl){mainEl.scrollTop=0;}
-document.documentElement.scrollTop=0;
-document.body.scrollTop=0;
+window.scrollTo(0,0);
 var fab=document.querySelector('.coach-fab');
-if(fab)fab.style.display='';
-if(id==='scripteditor'){if(fab)fab.style.display='none';}
+if(fab)fab.style.display=id==='scripteditor'?'none':'';
 if(id==='myscripts')setTimeout(renderMyScriptsCollection,50);
 if(id==='scripteditor')setTimeout(initScriptEditor,50);
 if(id==='scriptlibrary')setTimeout(renderScriptLibrary,50);
