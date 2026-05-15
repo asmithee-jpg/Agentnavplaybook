@@ -1,8 +1,6 @@
 // netlify/functions/hubspot.js
 // Proxies HubSpot API calls server-side using HUBSPOT_API_KEY
 
-const fetch = require('node-fetch');
-
 const HS_BASE = 'https://api.hubapi.com';
 const API_KEY = process.env.HUBSPOT_API_KEY;
 
