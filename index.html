@@ -5176,5 +5176,1228 @@ window.setChartRange = function(r) {
 console.log('[SDR METRICS] Conversion funnel + day analysis loaded.');
 
 </script>
+<script>
+// ============================================================
+// HubSpot Dashboard Integration
+// Pulls deals, pipeline, contacts from HubSpot via Netlify proxy
+// ============================================================
+
+// ── HubSpot API helper ───────────────────────────────────────
+function hsCall(action, params, cb) {
+  var url = '/.netlify/functions/hubspot?action=' + action;
+  if (params) {
+    Object.keys(params).forEach(function(k) {
+      url += '&' + k + '=' + encodeURIComponent(params[k]);
+    });
+  }
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) { cb(null, data); })
+    .catch(function(e) { cb(e.message, null); });
+}
+
+// ── Map HubSpot stage labels to our pipeline stages ──────────
+function mapHSStage(label) {
+  var l = (label || '').toLowerCase();
+  if (l.includes('appoint') || l.includes('demo') || l.includes('meeting') || l.includes('scheduled')) return 'Demo Booked';
+  if (l.includes('proposal') || l.includes('sent') || l.includes('quote'))  return 'Proposal Sent';
+  if (l.includes('won') || l.includes('closed won'))  return 'Closed Won';
+  if (l.includes('lost') || l.includes('closed lost')) return 'Closed Lost';
+  if (l.includes('qualified') || l.includes('connect') || l.includes('contact')) return 'Prospecting';
+  return label || 'Prospecting';
+}
+
+// ── Sync HubSpot pipeline into _dash.pipeline ────────────────
+window.syncHubSpotPipeline = function(cb) {
+  hsCall('pipeline-summary', {}, function(err, data) {
+    if (err || !data || !data.deals) {
+      if (cb) cb(err || 'No data');
+      return;
+    }
+
+    // Convert HubSpot deals to our format
+    var deals = data.deals.map(function(d) {
+      // Try to determine size from amount
+      var size = 'solo';
+      if (d.amount >= 500) size = 'large';
+      else if (d.amount >= 200) size = 'small';
+
+      return {
+        id:       'd-' + d.id,
+        name:     d.name,
+        state:    '',   // HubSpot deals don't have state by default
+        size:     size,
+        stage:    mapHSStage(d.stage),
+        amount:   d.amount,
+        notes:    '',
+        hsId:     d.id,
+        added:    d.created || new Date().toISOString()
+      };
+    });
+
+    _dash.pipeline = deals;
+    _dash.hsLastSync = new Date().toISOString();
+    dashSave();
+    if (cb) cb(null, deals);
+  });
+};
+
+// ── HubSpot panel in Overview tab ────────────────────────────
+function buildHubSpotSyncCard() {
+  var lastSync = _dash.hsLastSync
+    ? 'Last synced ' + new Date(_dash.hsLastSync).toLocaleTimeString('en-US', {hour:'numeric',minute:'2-digit'})
+    : 'Not synced yet';
+
+  return '<div style="background:linear-gradient(135deg,#ff7a59,#ff5c35);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">'
+    + '<div style="display:flex;align-items:center;gap:10px;">'
+    + '<div style="width:32px;height:32px;background:rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">🔗</div>'
+    + '<div>'
+    + '<div style="font-size:13px;font-weight:700;color:#fff;">HubSpot Connected</div>'
+    + '<div style="font-size:11px;color:rgba(255,255,255,0.7);" id="hs-sync-status">' + lastSync + '</div>'
+    + '</div></div>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button onclick="doHSSyncPipeline()" id="hs-sync-btn" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);border-radius:7px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">↻ Sync Pipeline</button>'
+    + '<button onclick="openHSContactSearch()" style="background:#fff;color:#ff5c35;border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Search Contacts</button>'
+    + '</div></div>';
+}
+
+window.doHSSyncPipeline = function() {
+  var btn = document.getElementById('hs-sync-btn');
+  var status = document.getElementById('hs-sync-status');
+  if (btn) { btn.textContent = 'Syncing...'; btn.disabled = true; }
+  if (status) status.textContent = 'Syncing from HubSpot...';
+
+  syncHubSpotPipeline(function(err, deals) {
+    if (err) {
+      if (status) status.textContent = 'Sync failed: ' + err;
+      if (btn) { btn.textContent = '↻ Sync Pipeline'; btn.disabled = false; }
+      return;
+    }
+    if (status) status.textContent = 'Synced ' + deals.length + ' deals · ' + new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    if (btn) { btn.textContent = '↻ Sync Pipeline'; btn.disabled = false; }
+    // Refresh pipeline card
+    var pipeList = document.getElementById('dash-pipeline-list');
+    if (pipeList) pipeList.innerHTML = buildPipelineHTML();
+    if (typeof showToast === 'function') showToast('Synced ' + deals.length + ' deals from HubSpot!');
+  });
+};
+
+// ── HubSpot Contact Search Modal ─────────────────────────────
+window.openHSContactSearch = function() {
+  var old = document.getElementById('hs-contact-modal');
+  if (old) old.remove();
+
+  var ov = document.createElement('div');
+  ov.id = 'hs-contact-modal';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+
+  ov.innerHTML = '<div style="background:#fff;border-radius:14px;padding:24px;width:580px;max-width:95vw;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+    + '<div style="font-size:16px;font-weight:800;color:#09090b;">HubSpot Contacts</div>'
+    + '<button onclick="document.getElementById(\'hs-contact-modal\').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#a1a1aa;">&#x2715;</button>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;margin-bottom:16px;">'
+    + '<input id="hs-search-input" type="text" placeholder="Search by name or company..." '
+    + 'style="flex:1;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;" '
+    + 'onkeydown="if(event.key===\'Enter\') doHSSearch()">'
+    + '<button onclick="doHSSearch()" style="background:#ff5c35;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Search</button>'
+    + '</div>'
+    + '<div id="hs-results" style="min-height:100px;">'
+    + '<div style="text-align:center;padding:40px;color:#a1a1aa;font-size:13px;">Search for a contact to see their HubSpot data</div>'
+    + '</div>'
+    + '</div>';
+
+  document.body.appendChild(ov);
+  ov.onclick = function(e) { if (e.target === ov) ov.remove(); };
+  setTimeout(function() { var i = document.getElementById('hs-search-input'); if (i) i.focus(); }, 50);
+};
+
+window.doHSSearch = function() {
+  var inp = document.getElementById('hs-search-input');
+  var results = document.getElementById('hs-results');
+  if (!inp || !results) return;
+  var q = inp.value.trim();
+  if (!q) return;
+
+  results.innerHTML = '<div style="text-align:center;padding:30px;color:#a1a1aa;font-size:13px;">Searching HubSpot...</div>';
+
+  hsCall('contacts', { search: q }, function(err, data) {
+    if (err || !data) {
+      results.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:16px;">Error: ' + (err || 'No response') + '</div>';
+      return;
+    }
+    var contacts = data.contacts || [];
+    if (!contacts.length) {
+      results.innerHTML = '<div style="text-align:center;padding:30px;color:#a1a1aa;font-size:13px;">No contacts found for "' + q + '"</div>';
+      return;
+    }
+
+    results.innerHTML = '<div style="font-size:11px;color:#a1a1aa;margin-bottom:8px;">' + contacts.length + ' result' + (contacts.length!==1?'s':'') + '</div>'
+      + '<div style="display:flex;flex-direction:column;gap:8px;">'
+      + contacts.map(function(c) {
+          var statusColor = c.status === 'customer' ? '#10b981' : c.status === 'lead' ? '#6366f1' : '#a1a1aa';
+          return '<div style="background:#f8f8fa;border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;">'
+            + '<div style="width:36px;height:36px;border-radius:50%;background:#ff5c35;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0;">'
+            + (c.name ? c.name[0].toUpperCase() : '?') + '</div>'
+            + '<div style="flex:1;min-width:0;">'
+            + '<div style="font-size:13px;font-weight:700;color:#09090b;">' + c.name + '</div>'
+            + '<div style="font-size:11px;color:#71717a;">' + (c.company ? c.company + ' · ' : '') + (c.email || '') + '</div>'
+            + '<div style="font-size:11px;color:#71717a;">' + (c.state ? c.state + ' · ' : '') + (c.phone || '') + '</div>'
+            + '</div>'
+            + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
+            + '<span style="font-size:10px;font-weight:700;color:' + statusColor + ';background:' + statusColor + '18;padding:2px 8px;border-radius:10px;">' + (c.status || 'contact') + '</span>'
+            + '<button onclick="useHSContact(' + JSON.stringify(c).replace(/"/g,"'") + ')" style="background:#6366f1;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Use as Prospect</button>'
+            + '</div>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+  });
+};
+
+window.useHSContact = function(contact) {
+  // Set as current prospect context
+  if (!_dash.prospect) _dash.prospect = {};
+  _dash.prospect.name  = contact.name + (contact.company ? ' — ' + contact.company : '');
+  _dash.prospect.state = contact.state || _dash.prospect.state || '';
+  dashSave();
+
+  // Update prospect card inputs if visible
+  var nameInp = document.getElementById('dash-prospect-name');
+  var stateEl = document.getElementById('dash-state-select');
+  if (nameInp) nameInp.value = _dash.prospect.name;
+  if (stateEl && contact.state) stateEl.value = contact.state;
+
+  // Close modal
+  var modal = document.getElementById('hs-contact-modal');
+  if (modal) modal.remove();
+
+  if (typeof showToast === 'function') showToast('Prospect set to ' + contact.name);
+};
+
+// ── Inject HubSpot sync card into Overview pane ──────────────
+var _origRSD_hs = window.renderSalesDashboard;
+window.renderSalesDashboard = function() {
+  _origRSD_hs();
+  // Inject HubSpot card at top of pane0
+  var pane0 = document.getElementById('dash-pane-0');
+  if (pane0) {
+    var hsCard = document.createElement('div');
+    hsCard.innerHTML = buildHubSpotSyncCard();
+    pane0.insertBefore(hsCard.firstChild, pane0.firstChild);
+  }
+  // Auto-sync on first load if never synced
+  if (!_dash.hsLastSync) {
+    setTimeout(function() { doHSSyncPipeline(); }, 1000);
+  }
+};
+
+// ── Add HubSpot deals tab to Deals pane ──────────────────────
+var _origSwitchChartPane_hs = window.switchChartPane;
+window.switchChartPane = function(key) {
+  _origSwitchChartPane_hs(key);
+  if (key === 'deals') {
+    // Add a sync button to deals pane
+    var dealsPane = document.getElementById('cp-deals');
+    if (dealsPane && !document.getElementById('hs-deals-sync-bar')) {
+      var bar = document.createElement('div');
+      bar.id = 'hs-deals-sync-bar';
+      bar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:10px 14px;background:linear-gradient(135deg,#fff5f2,#fff);border:1px solid #ffd6cc;border-radius:10px;';
+      bar.innerHTML = '<div style="font-size:12px;color:#71717a;">Pipeline data from <strong style="color:#ff5c35;">HubSpot</strong></div>'
+        + '<button onclick="doHSSyncPipeline()" style="background:#ff5c35;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">↻ Re-sync</button>';
+      dealsPane.insertBefore(bar, dealsPane.firstChild);
+    }
+  }
+};
+
+console.log('[HUBSPOT] Dashboard integration loaded.');
+
+</script>
+<script>
+// ============================================================
+// PATCH — Call Log + Pickup Tracking + Date Range Picker
+// ============================================================
+
+// ── DATE RANGE STATE ─────────────────────────────────────────
+var _dateRange = { preset: 'week', from: null, to: null };
+
+function getDateRangeDates() {
+  var now = new Date();
+  var from, to = new Date(now);
+  var p = _dateRange.preset;
+
+  if (p === 'today') {
+    from = new Date(now); from.setHours(0,0,0,0);
+  } else if (p === 'yesterday') {
+    from = new Date(now); from.setDate(from.getDate()-1); from.setHours(0,0,0,0);
+    to   = new Date(from); to.setHours(23,59,59,999);
+  } else if (p === 'week') {
+    from = new Date(now); from.setDate(from.getDate()-7);
+  } else if (p === 'lastweek') {
+    from = new Date(now); from.setDate(from.getDate()-14);
+    to   = new Date(now); to.setDate(to.getDate()-7);
+  } else if (p === '2weeks') {
+    from = new Date(now); from.setDate(from.getDate()-14);
+  } else if (p === '3weeks') {
+    from = new Date(now); from.setDate(from.getDate()-21);
+  } else if (p === 'month') {
+    from = new Date(now); from.setDate(from.getDate()-30);
+  } else if (p === 'lastmonth') {
+    from = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    to   = new Date(now.getFullYear(), now.getMonth(), 0);
+  } else if (p === 'quarter') {
+    from = new Date(now); from.setDate(from.getDate()-90);
+  } else if (p === 'year') {
+    from = new Date(now); from.setFullYear(from.getFullYear()-1);
+  } else if (p === 'custom') {
+    from = _dateRange.from ? new Date(_dateRange.from) : new Date(now);
+    to   = _dateRange.to   ? new Date(_dateRange.to)   : new Date(now);
+  } else {
+    from = new Date(now); from.setDate(from.getDate()-7);
+  }
+
+  // Build array of date strings in range
+  var dates = [];
+  var cur = new Date(from);
+  cur.setHours(12,0,0,0);
+  var toDate = new Date(to);
+  toDate.setHours(23,59,59,999);
+  while (cur <= toDate) {
+    dates.push(cur.toISOString().split('T')[0]);
+    cur.setDate(cur.getDate()+1);
+  }
+  return dates;
+}
+
+// Override getActivityDates to use new range
+window.getActivityDates = function() {
+  return getDateRangeDates();
+};
+
+// ── DATE RANGE DROPDOWN HTML ─────────────────────────────────
+function buildRangeDropdown() {
+  var PRESETS = [
+    { v:'today',     l:'Today' },
+    { v:'yesterday', l:'Yesterday' },
+    { v:'week',      l:'This Week' },
+    { v:'lastweek',  l:'Last Week' },
+    { v:'2weeks',    l:'Last 2 Weeks' },
+    { v:'3weeks',    l:'Last 3 Weeks' },
+    { v:'month',     l:'This Month' },
+    { v:'lastmonth', l:'Last Month' },
+    { v:'quarter',   l:'Last Quarter (90d)' },
+    { v:'year',      l:'This Year' },
+    { v:'custom',    l:'Custom Range...' }
+  ];
+  var current = PRESETS.filter(function(p){ return p.v === _dateRange.preset; })[0];
+  var label = current ? current.l : 'This Week';
+
+  return '<div style="position:relative;display:inline-block;">'
+    + '<select id="chart-range-select" onchange="applyDateRange(this.value)" '
+    + 'style="padding:6px 28px 6px 12px;border-radius:8px;border:1.5px solid #e4e4e7;background:#fff;font-size:12px;font-weight:600;color:#09090b;font-family:inherit;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;">'
+    + PRESETS.map(function(p){
+        return '<option value="'+p.v+'"'+(_dateRange.preset===p.v?' selected':'')+'>'+p.l+'</option>';
+      }).join('')
+    + '</select>'
+    + '<div style="position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;font-size:10px;color:#71717a;">▼</div>'
+    + '</div>'
+    // Custom range inputs (shown only when custom selected)
+    + '<div id="custom-range-inputs" style="display:'+((_dateRange.preset==='custom')?'inline-flex':'none')+';align-items:center;gap:6px;margin-left:8px;">'
+    + '<input type="date" id="range-from" value="'+(_dateRange.from||'')+'" onchange="applyCustomRange()" '
+    + 'style="border:1.5px solid #e4e4e7;border-radius:6px;padding:5px 8px;font-size:12px;font-family:inherit;outline:none;">'
+    + '<span style="font-size:11px;color:#71717a;">to</span>'
+    + '<input type="date" id="range-to" value="'+(_dateRange.to||'')+'" onchange="applyCustomRange()" '
+    + 'style="border:1.5px solid #e4e4e7;border-radius:6px;padding:5px 8px;font-size:12px;font-family:inherit;outline:none;">'
+    + '</div>';
+}
+
+window.applyDateRange = function(preset) {
+  _dateRange.preset = preset;
+  var customInputs = document.getElementById('custom-range-inputs');
+  if (customInputs) customInputs.style.display = preset === 'custom' ? 'inline-flex' : 'none';
+  if (preset !== 'custom') refreshActiveCharts();
+};
+
+window.applyCustomRange = function() {
+  var from = document.getElementById('range-from');
+  var to   = document.getElementById('range-to');
+  if (from) _dateRange.from = from.value;
+  if (to)   _dateRange.to   = to.value;
+  if (_dateRange.from && _dateRange.to) refreshActiveCharts();
+};
+
+function refreshActiveCharts() {
+  var active = ['activity','deals','demos','showrate'].filter(function(k){
+    var p = document.getElementById('cp-'+k); return p && p.style.display !== 'none';
+  })[0] || 'activity';
+  loadChartJS(function() {
+    if (active === 'activity') {
+      renderActivityChart();
+      renderDemosByStateChart();
+      renderHotzoneChart();
+      // Refresh hotzone slots panel
+      var slots = document.getElementById('hotzone-slots-panel');
+      if (slots) {
+        var inner = slots.querySelector('div:last-child');
+        if (inner) inner.innerHTML = buildHotzoneSlots();
+      }
+      // Refresh top cards
+      var top = document.getElementById('hotzone-top-cards');
+      if (top) top.innerHTML = buildTopHourCards();
+      // Refresh SDR section
+      var sdr = document.getElementById('sdr-metrics-section');
+      if (sdr) { sdr.innerHTML = buildSDRMetricsHTML(); renderFunnelChart(); }
+    }
+    if (active === 'deals') { renderClosesChart(); renderPipelineChart(); }
+  });
+}
+
+// ── Override buildAndShowCharts to use dropdown ───────────────
+var _origBACS_range = window.buildAndShowCharts;
+window.buildAndShowCharts = function() {
+  _origBACS_range();
+  // Replace the old range buttons with the dropdown
+  var titleRow = document.getElementById('chart-title');
+  if (titleRow && titleRow.parentNode) {
+    var rangeHolder = titleRow.parentNode.querySelector('div:last-child');
+    if (rangeHolder) rangeHolder.innerHTML = buildRangeDropdown();
+  }
+};
+
+// ── CALL LOG DATA STRUCTURE ───────────────────────────────────
+// Each activityLog entry extended with:
+// pickups_by_hour: { 9: 3, 10: 5 }  — answered calls per hour
+// demos_by_hour:   { 9: 1, 14: 2 }  — demos booked per hour
+// voicemails_by_hour: { 9: 2 }
+
+// ── Override dashIncrP to track call time ────────────────────
+var _origDashIncrP_cl = window.dashIncrP;
+window.dashIncrP = function(key) {
+  _origDashIncrP_cl(key);
+  if (key === 'calls') {
+    // Open quick call log after incrementing
+    openQuickCallLog();
+  }
+};
+window.dashIncrement = window.dashIncrP;
+
+// ── Quick call log popup ──────────────────────────────────────
+window.openQuickCallLog = function() {
+  var old = document.getElementById('quick-call-log');
+  if (old) old.remove();
+
+  var panel = document.createElement('div');
+  panel.id = 'quick-call-log';
+  panel.style.cssText = 'position:fixed;bottom:80px;right:24px;background:#0f0f17;border:1px solid rgba(99,102,241,0.4);border-radius:12px;padding:16px;width:280px;z-index:8888;box-shadow:0 8px 32px rgba(0,0,0,0.4);';
+
+  var hour = new Date().getHours();
+  var h12  = hour > 12 ? hour-12 : (hour===0?12:hour);
+  var ampm = hour < 12 ? 'am' : 'pm';
+
+  panel.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
+    + '<div style="font-size:12px;font-weight:700;color:#fff;">Quick Call Log <span style="font-size:10px;color:rgba(255,255,255,0.4);">'+h12+ampm+'</span></div>'
+    + '<button onclick="document.getElementById(\'quick-call-log\').remove()" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:16px;cursor:pointer;padding:0;">&#x2715;</button>'
+    + '</div>'
+    + '<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:10px;">What happened on this call?</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">'
+    + '<button onclick="logCallOutcome(\'pickup\')" style="background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);border-radius:8px;padding:10px 8px;font-size:12px;font-weight:700;color:#6ee7b7;cursor:pointer;font-family:inherit;">✓ Picked Up</button>'
+    + '<button onclick="logCallOutcome(\'voicemail\')" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:10px 8px;font-size:12px;font-weight:700;color:#a5b4fc;cursor:pointer;font-family:inherit;">📬 Voicemail</button>'
+    + '<button onclick="logCallOutcome(\'noanswer\')" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px 8px;font-size:12px;font-weight:700;color:rgba(255,255,255,0.5);cursor:pointer;font-family:inherit;">📵 No Answer</button>'
+    + '<button onclick="logCallOutcome(\'demo\')" style="background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);border-radius:8px;padding:10px 8px;font-size:12px;font-weight:700;color:#fcd34d;cursor:pointer;font-family:inherit;">🎯 Demo Set!</button>'
+    + '</div>'
+    + '<button onclick="document.getElementById(\'quick-call-log\').remove()" style="width:100%;background:none;border:none;color:rgba(255,255,255,0.3);font-size:11px;cursor:pointer;font-family:inherit;padding:4px;">Skip</button>';
+
+  document.body.appendChild(panel);
+
+  // Auto-dismiss after 8 seconds
+  setTimeout(function() {
+    var p = document.getElementById('quick-call-log');
+    if (p) p.remove();
+  }, 8000);
+};
+
+window.logCallOutcome = function(outcome) {
+  var hour  = new Date().getHours();
+  var today = new Date().toISOString().split('T')[0];
+  if (!_dash.activityLog) _dash.activityLog = [];
+  var entry = _dash.activityLog.filter(function(e){ return e.date === today; })[0];
+  if (!entry) { entry = {date:today,calls:0,demos:0,closes:0}; _dash.activityLog.push(entry); }
+
+  if (!entry.pickups_by_hour)   entry.pickups_by_hour   = {};
+  if (!entry.voicemails_by_hour) entry.voicemails_by_hour = {};
+  if (!entry.demos_by_hour)     entry.demos_by_hour     = {};
+  if (!entry.noanswer_by_hour)  entry.noanswer_by_hour  = {};
+
+  if (outcome === 'pickup') {
+    entry.pickups_by_hour[hour]   = (entry.pickups_by_hour[hour]   || 0) + 1;
+  } else if (outcome === 'voicemail') {
+    entry.voicemails_by_hour[hour] = (entry.voicemails_by_hour[hour] || 0) + 1;
+  } else if (outcome === 'noanswer') {
+    entry.noanswer_by_hour[hour]  = (entry.noanswer_by_hour[hour]  || 0) + 1;
+  } else if (outcome === 'demo') {
+    entry.pickups_by_hour[hour]   = (entry.pickups_by_hour[hour]   || 0) + 1;
+    entry.demos_by_hour[hour]     = (entry.demos_by_hour[hour]     || 0) + 1;
+    // Also increment demos counter
+    entry.demos = (entry.demos || 0) + 1;
+    _dash.activity.demos = (_dash.activity.demos || 0) + 1;
+    var dInp = document.getElementById('gact-demos');
+    if (dInp) dInp.value = parseInt(dInp.value||0) + 1;
+  }
+
+  dashSave();
+  var panel = document.getElementById('quick-call-log');
+  if (panel) {
+    var labels = { pickup:'✓ Logged', voicemail:'📬 Logged', noanswer:'📵 Logged', demo:'🎯 Demo set!' };
+    panel.innerHTML = '<div style="text-align:center;padding:16px;">'
+      + '<div style="font-size:24px;margin-bottom:8px;">'+(outcome==='demo'?'🎯':'✓')+'</div>'
+      + '<div style="font-size:14px;font-weight:700;color:#fff;">'+(labels[outcome]||'Logged')+'</div>'
+      + '</div>';
+    setTimeout(function(){ if(panel.parentNode) panel.remove(); }, 1500);
+  }
+};
+
+// ── Enhanced hotzone with pickup rate ────────────────────────
+function buildEnhancedHotzoneData() {
+  var dates = getDateRangeDates();
+  var hourCalls    = {}, hourPickups = {}, hourDemos = {}, hourVoicemail = {};
+  for (var h=7; h<=19; h++) { hourCalls[h]=0; hourPickups[h]=0; hourDemos[h]=0; hourVoicemail[h]=0; }
+
+  var log = _dash.activityLog || [];
+  log.forEach(function(entry) {
+    if (dates.indexOf(entry.date) === -1) return;
+    if (entry.calls_by_hour) Object.keys(entry.calls_by_hour).forEach(function(h){
+      var hr=parseInt(h); if(hr>=7&&hr<=19) hourCalls[hr]+=(entry.calls_by_hour[h]||0);
+    });
+    if (entry.pickups_by_hour) Object.keys(entry.pickups_by_hour).forEach(function(h){
+      var hr=parseInt(h); if(hr>=7&&hr<=19) hourPickups[hr]+=(entry.pickups_by_hour[h]||0);
+    });
+    if (entry.demos_by_hour) Object.keys(entry.demos_by_hour).forEach(function(h){
+      var hr=parseInt(h); if(hr>=7&&hr<=19) hourDemos[hr]+=(entry.demos_by_hour[h]||0);
+    });
+    if (entry.voicemails_by_hour) Object.keys(entry.voicemails_by_hour).forEach(function(h){
+      var hr=parseInt(h); if(hr>=7&&hr<=19) hourVoicemail[hr]+=(entry.voicemails_by_hour[h]||0);
+    });
+  });
+
+  var hours  = Object.keys(hourCalls).map(Number).sort(function(a,b){return a-b;});
+  var labels = hours.map(function(h){ var a=h<12?'am':'pm'; var h12=h>12?h-12:(h===0?12:h); return h12+a; });
+  var maxCalls = Math.max.apply(null,Object.values(hourCalls))||1;
+
+  // Best pickup rate hour (min 2 calls)
+  var bestPickupHour = null, bestPickupRate = 0;
+  hours.forEach(function(h){
+    if (hourCalls[h] >= 2) {
+      var rate = hourPickups[h] / hourCalls[h];
+      if (rate > bestPickupRate) { bestPickupRate = rate; bestPickupHour = h; }
+    }
+  });
+
+  // Best demo booking hour
+  var bestDemoHour = hours.reduce(function(best,h){ return hourDemos[h]>(hourDemos[best]||0)?h:best; }, hours[0]);
+
+  return {
+    hours, labels, hourCalls, hourPickups, hourDemos, hourVoicemail,
+    maxCalls, bestPickupHour, bestPickupRate, bestDemoHour,
+    topHours: hours.slice().sort(function(a,b){return hourCalls[b]-hourCalls[a];}).slice(0,3).filter(function(h){return hourCalls[h]>0;})
+  };
+}
+
+// Override renderHotzoneChart with enhanced version
+window.renderHotzoneChart = function() {
+  if (typeof destroyChart === 'function') destroyChart('hotzone');
+  var canvas = document.getElementById('chart-hotzone');
+  if (!canvas || !window.Chart) return;
+
+  var d = buildEnhancedHotzoneData();
+  var hasPickups = d.hours.some(function(h){ return d.hourPickups[h] > 0; });
+
+  var datasets = [{
+    label: 'Calls',
+    data: d.hours.map(function(h){ return d.hourCalls[h]; }),
+    backgroundColor: d.hours.map(function(h){
+      var p = d.maxCalls > 0 ? d.hourCalls[h]/d.maxCalls : 0;
+      return p>=0.8?'#f59e0b':p>=0.5?'#6366f1':'#c7d2fe';
+    }),
+    borderRadius: 5, borderSkipped: false
+  }];
+
+  if (hasPickups) {
+    datasets.push({
+      label: 'Pickups',
+      data: d.hours.map(function(h){ return d.hourPickups[h]; }),
+      backgroundColor: '#10b98188',
+      borderRadius: 5, borderSkipped: false
+    });
+    datasets.push({
+      label: 'Demos Set',
+      data: d.hours.map(function(h){ return d.hourDemos[h]; }),
+      backgroundColor: '#f59e0b',
+      borderRadius: 5, borderSkipped: false
+    });
+  }
+
+  if (typeof _charts !== 'undefined') {
+    _charts['hotzone'] = new Chart(canvas, {
+      type: 'bar',
+      data: { labels: d.labels, datasets: datasets },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: hasPickups, position: 'bottom', labels: { font:{size:11}, boxWidth:12, padding:10 }},
+          tooltip: {
+            callbacks: {
+              afterBody: function(items) {
+                var h = d.hours[items[0].dataIndex];
+                var calls = d.hourCalls[h], picks = d.hourPickups[h], dems = d.hourDemos[h];
+                var lines = [];
+                if (calls > 0 && picks > 0) lines.push('Pickup rate: ' + Math.round(picks/calls*100) + '%');
+                if (dems > 0 && picks > 0)  lines.push('Demo rate: '   + Math.round(dems/picks*100)  + '% of pickups');
+                return lines;
+              }
+            }
+          }
+        },
+        scales: {
+          y: { beginAtZero:true, ticks:{stepSize:1}, grid:{color:'#f4f4f5'} },
+          x: { grid:{display:false}, ticks:{font:{size:11}} }
+        }
+      }
+    });
+  }
+
+  // Update slots and insight cards
+  var slotsEl = document.getElementById('hotzone-slots-panel');
+  if (slotsEl) {
+    var inner = slotsEl.querySelectorAll('div');
+    if (inner.length > 1) inner[inner.length-1].innerHTML = buildEnhancedSlots(d);
+  }
+  var topEl = document.getElementById('hotzone-top-cards');
+  if (topEl) topEl.innerHTML = buildEnhancedTopCards(d);
+};
+
+function buildEnhancedSlots(d) {
+  var slots=[{l:'Early Morning',h:[7,8],e:'🌅'},{l:'Morning',h:[9,10,11],e:'☀️'},{l:'Midday',h:[12,13],e:'🕛'},{l:'Afternoon',h:[14,15,16],e:'🌤️'},{l:'Late Day',h:[17,18,19],e:'🌇'}];
+  var totalCalls = d.hours.reduce(function(s,h){return s+d.hourCalls[h];},0);
+  var hasPickupData = d.hours.some(function(h){ return d.hourPickups[h]>0; });
+
+  return slots.map(function(slot){
+    var sc=slot.h.reduce(function(s,h){return s+(d.hourCalls[h]||0);},0);
+    var sp=slot.h.reduce(function(s,h){return s+(d.hourPickups[h]||0);},0);
+    var sd=slot.h.reduce(function(s,h){return s+(d.hourDemos[h]||0);},0);
+    var pct=totalCalls>0?Math.round(sc/totalCalls*100):0;
+    var pickupRate=sc>0&&hasPickupData?Math.round(sp/sc*100):null;
+    return '<div style="margin-bottom:10px;">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
+      +'<span style="font-size:13px;">'+slot.e+'</span>'
+      +'<span style="font-size:12px;font-weight:600;color:#09090b;flex:1;">'+slot.l+'</span>'
+      +'<span style="font-size:11px;font-weight:700;color:#09090b;">'+sc+' calls</span>'
+      +(pickupRate!==null?'<span style="font-size:10px;color:#10b981;font-weight:700;">'+pickupRate+'% ans</span>':'')
+      +(sd>0?'<span style="font-size:10px;color:#f59e0b;font-weight:700;">'+sd+' demos</span>':'')
+      +'</div>'
+      +'<div style="background:#f4f4f5;border-radius:20px;height:6px;overflow:hidden;">'
+      +'<div style="background:'+(pct>=30?'#10b981':pct>=20?'#6366f1':'#e4e4e7')+';height:6px;border-radius:20px;width:'+pct+'%;"></div>'
+      +'</div></div>';
+  }).join('');
+}
+
+function buildEnhancedTopCards(d) {
+  var hasPickupData = d.hours.some(function(h){ return d.hourPickups[h]>0; });
+  var medals=['🥇','🥈','🥉'], colors=['#f59e0b','#6366f1','#10b981'];
+  var cards = '';
+
+  // Top call hours
+  if (d.topHours.length) {
+    cards += '<div style="margin-bottom:12px;">'
+      +'<div style="font-size:10px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">🔥 Most Calls</div>'
+      +'<div style="display:grid;grid-template-columns:repeat('+d.topHours.length+',1fr);gap:8px;">'
+      +d.topHours.map(function(h,i){
+        var a=h<12?'am':'pm',h12=h>12?h-12:(h===0?12:h);
+        var pr=d.hourCalls[h]>0&&d.hourPickups[h]>0?Math.round(d.hourPickups[h]/d.hourCalls[h]*100):null;
+        return '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:10px;padding:10px;text-align:center;">'
+          +'<div style="font-size:16px;margin-bottom:2px;">'+medals[i]+'</div>'
+          +'<div style="font-size:18px;font-weight:800;color:'+colors[i]+';">'+h12+a+'</div>'
+          +'<div style="font-size:10px;color:#71717a;">'+d.hourCalls[h]+' calls</div>'
+          +(pr!==null?'<div style="font-size:10px;color:#10b981;font-weight:700;">'+pr+'% ans</div>':'')
+          +'</div>';
+      }).join('')+'</div></div>';
+  }
+
+  // Best pickup rate hour
+  if (hasPickupData && d.bestPickupHour !== null) {
+    var h=d.bestPickupHour, a=h<12?'am':'pm', h12=h>12?h-12:(h===0?12:h);
+    cards += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'
+      +'<div style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #a7f3d0;border-radius:10px;padding:10px 12px;">'
+      +'<div style="font-size:9px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Best Pickup Rate</div>'
+      +'<div style="font-size:20px;font-weight:800;color:#065f46;">'+h12+a+'</div>'
+      +'<div style="font-size:10px;color:#047857;">'+Math.round(d.bestPickupRate*100)+'% answer rate</div>'
+      +'</div>';
+
+    // Best demo booking hour
+    if (d.bestDemoHour !== null && d.hourDemos[d.bestDemoHour] > 0) {
+      var dh=d.bestDemoHour, da=dh<12?'am':'pm', dh12=dh>12?dh-12:(dh===0?12:dh);
+      cards += '<div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;border-radius:10px;padding:10px 12px;">'
+        +'<div style="font-size:9px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Most Demos Set</div>'
+        +'<div style="font-size:20px;font-weight:800;color:#92400e;">'+dh12+da+'</div>'
+        +'<div style="font-size:10px;color:#b45309;">'+d.hourDemos[d.bestDemoHour]+' demos booked</div>'
+        +'</div>';
+    }
+    cards += '</div>';
+  }
+
+  if (!cards) cards = '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;font-size:12px;color:#92400e;">Press + Calls and log each outcome to build hotzone data. After a few days you\'ll see your best hours for pickups and demo sets.</div>';
+
+  return cards;
+}
+
+// Override buildHotzoneChartData for backward compat
+window.buildHotzoneChartData = function() {
+  var d = buildEnhancedHotzoneData();
+  return { labels:d.labels, values:d.hours.map(function(h){return d.hourCalls[h];}), hours:d.hours, hourData:d.hourCalls, topHours:d.topHours, maxVal:d.maxCalls };
+};
+
+// Override buildHotzoneSlots to use enhanced
+window.buildHotzoneSlots = function() {
+  return buildEnhancedSlots(buildEnhancedHotzoneData());
+};
+window.buildTopHourCards = function() {
+  return buildEnhancedTopCards(buildEnhancedHotzoneData());
+};
+
+console.log('[CALL LOG + DATE RANGE] Loaded.');
+
+</script>
+<script>
+// ============================================================
+// COMMISSION PLANNER + SALES GOAL PLANNER + NAV HIDE
+// ============================================================
+
+// ── 1. NAV HIDE/SHOW for Commission Plan ─────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    var wrap = document.getElementById('nav-commission-wrap');
+    if (!wrap) return;
+
+    // Find the button inside
+    var btn = wrap.querySelector('button.nav-item');
+    if (!btn) return;
+
+    // Create a wrapper row with toggle
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:0 10px 6px;';
+
+    // Clone the nav button but make it narrower
+    btn.style.flex = '1';
+    var parent = btn.parentNode;
+
+    // Add hide toggle button
+    var hideBtn = document.createElement('button');
+    hideBtn.id = 'comm-hide-toggle';
+    hideBtn.title = 'Hide from view';
+    hideBtn.style.cssText = 'background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);color:#6ee7b7;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;';
+    hideBtn.innerHTML = '👁';
+    hideBtn.onclick = function(e) {
+      e.stopPropagation();
+      toggleCommissionVisibility();
+    };
+
+    row.appendChild(btn);
+    row.appendChild(hideBtn);
+    wrap.innerHTML = '';
+    wrap.appendChild(row);
+  }, 600);
+});
+
+var _commHidden = false;
+window.toggleCommissionVisibility = function() {
+  _commHidden = !_commHidden;
+  var btn = document.querySelector('#nav-commission-wrap .nav-item');
+  var eye = document.getElementById('comm-hide-toggle');
+  var sec = document.getElementById('section-commission');
+
+  if (_commHidden) {
+    // Replace text with dots, add visual indicator
+    if (btn) { btn._origHTML = btn.innerHTML; btn.innerHTML = '<span class="nav-icon">💰</span>••••••••••••••'; btn.style.opacity='0.4'; btn.style.filter='blur(3px)'; }
+    if (eye) eye.innerHTML = '🔒';
+    if (sec) sec.style.filter = 'blur(8px)';
+    if (typeof showToast === 'function') showToast('Commission Plan hidden — click 🔒 to restore');
+  } else {
+    if (btn && btn._origHTML) { btn.innerHTML = btn._origHTML; btn.style.opacity=''; btn.style.filter=''; }
+    if (eye) eye.innerHTML = '👁';
+    if (sec) sec.style.filter = '';
+    if (typeof showToast === 'function') showToast('Commission Plan visible');
+  }
+};
+
+// ── 2. HELPERS ────────────────────────────────────────────────
+function getWorkingDaysLeft() {
+  var now = new Date();
+  var lastDay = new Date(now.getFullYear(), now.getMonth()+1, 0);
+  var count = 0;
+  var cur = new Date(now); cur.setDate(cur.getDate()+1);
+  while (cur <= lastDay) {
+    var dow = cur.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+    cur.setDate(cur.getDate()+1);
+  }
+  return count;
+}
+
+function getWorkingDaysInMonth(offset) {
+  // offset: 0 = this month, 1 = next month
+  var now = new Date();
+  var y = now.getFullYear(), m = now.getMonth() + offset;
+  var first = new Date(y, m, 1), last = new Date(y, m+1, 0);
+  var count = 0, cur = new Date(first);
+  while (cur <= last) {
+    var dow = cur.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+    cur.setDate(cur.getDate()+1);
+  }
+  return count;
+}
+
+function getMonthName(offset) {
+  var now = new Date();
+  return new Date(now.getFullYear(), now.getMonth()+offset, 1)
+    .toLocaleDateString('en-US', {month:'long', year:'numeric'});
+}
+
+function getQuarterMonths() {
+  var m = new Date().getMonth();
+  var qStart = Math.floor(m/3)*3;
+  return [qStart, qStart+1, qStart+2];
+}
+
+function fmtMo(n) { return '$'+Math.round(n).toLocaleString()+'/mo'; }
+function fmtDol(n) { return '$'+Math.round(n).toLocaleString(); }
+
+function getMyRates() {
+  var r = typeof getRates === 'function' ? getRates() : {solo:0.11, small:0.10, large:0.08};
+  return r;
+}
+
+function getSmallMo(agents) { return 247 + Math.max(0, (agents||4)-4)*60; }
+function getLargeMo(agents) { return 597 + Math.max(0, (agents||10)-10)*55; }
+
+// Get actual conversion rates from activity log
+function getMyConversionRates() {
+  var log = (_dash && _dash.activityLog) ? _dash.activityLog : [];
+  var calls=0, demos=0, closes=0;
+  var cutoff = new Date(); cutoff.setDate(cutoff.getDate()-30);
+  log.forEach(function(e) {
+    if (new Date(e.date+'T12:00:00') >= cutoff) {
+      calls  += e.calls  || 0;
+      demos  += e.demos  || 0;
+      closes += e.closes || 0;
+    }
+  });
+  return {
+    callToDemo:  calls>0  ? demos/calls   : 0.018,  // default 1.8%
+    demoToClose: demos>0  ? closes/demos  : 0.40,   // default 40%
+    callsPerDemo: demos>0 ? Math.round(calls/demos) : 55,
+    callsPerClose: closes>0 ? Math.round(calls/closes) : 137,
+    hasRealData: calls > 20
+  };
+}
+
+// ── 3. COMMISSION PLANNER (replaces goal calculator) ─────────
+window.buildCommissionHTML = function() {
+  return '<div class="page-header">'
+    + '<div class="page-label" style="color:#10b981;">Private \u00b7 You Only</div>'
+    + '<h1>Commission Plan</h1>'
+    + '<p>Income planner: set your goal, see exactly what you need to close — this month, next month, this quarter, annually.</p>'
+    + '</div>'
+    + '<div class="content" style="max-width:1100px;">'
+
+    // Contract type toggle
+    + '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">'
+    + '<div style="font-size:13px;font-weight:700;color:#09090b;">Contract Type:</div>'
+    + '<div style="display:flex;background:#f4f4f5;border-radius:8px;padding:3px;gap:2px;">'
+    + '<button id="comm-mrr-btn" onclick="setContractType(\'mrr\')" style="padding:7px 18px;border-radius:6px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:#6366f1;color:#fff;">Monthly (MRR)</button>'
+    + '<button id="comm-arr-btn" onclick="setContractType(\'arr\')" style="padding:7px 18px;border-radius:6px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:#71717a;">Annual (ARR)</button>'
+    + '</div>'
+    + '<div id="comm-contract-note" style="font-size:12px;color:#71717a;">Recurring monthly commission</div>'
+    + '<div id="comm-arr-badge" style="display:none;background:#10b981;color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;margin-left:auto;">\uD83D\uDCB0 Full year paid upfront</div>'
+    + '</div>'
+
+    // Rate cards
+    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">'
+    + buildRateCard('solo',  '#6366f1', 'Solo Agent Rate',   11, '$79/mo per agent')
+    + buildRateCard('small', '#10b981', 'Small Agency Rate', 10, 'of monthly plan price')
+    + buildRateCard('large', '#f59e0b', 'Large Agency Rate',  8, 'of monthly plan price')
+    + '</div>'
+
+    // ── INCOME PLANNER ──
+    + '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;margin-bottom:20px;">'
+    + '<div style="padding:16px 20px;border-bottom:1px solid #e4e4e7;background:linear-gradient(135deg,rgba(99,102,241,0.06),rgba(16,185,129,0.04));">'
+    + '<div style="font-size:10px;font-weight:700;color:#6366f1;letter-spacing:0.14em;text-transform:uppercase;">Income Planner</div>'
+    + '<div style="font-size:12px;color:#71717a;margin-top:2px;">Set your income goal — see exactly what you need to close across every time period</div>'
+    + '</div>'
+    + '<div style="padding:20px;">'
+
+    // Goal input
+    + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding:16px;background:#f8f8fa;border-radius:10px;">'
+    + '<div style="font-size:13px;font-weight:700;color:#09090b;">Monthly Income Goal</div>'
+    + '<div style="display:flex;align-items:center;gap:6px;margin-left:auto;">'
+    + '<span style="font-size:18px;font-weight:700;color:#6366f1;">$</span>'
+    + '<input id="planner-goal" type="number" value="2000" min="0" oninput="renderPlanner()" '
+    + 'style="width:120px;border:1.5px solid #e4e4e7;border-radius:8px;padding:8px 12px;font-size:20px;font-weight:700;color:#09090b;font-family:inherit;outline:none;text-align:center;" '
+    + 'onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'#e4e4e7\'">'
+    + '<span style="font-size:13px;color:#71717a;">/mo</span>'
+    + '</div>'
+    + '</div>'
+
+    // Planner output
+    + '<div id="planner-output"></div>'
+    + '</div></div>'
+
+    // Pipeline builder (existing)
+    + '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;margin-bottom:20px;">'
+    + '<div style="padding:16px 20px;border-bottom:1px solid #e4e4e7;background:linear-gradient(135deg,rgba(16,185,129,0.06),rgba(99,102,241,0.04));">'
+    + '<div style="font-size:10px;font-weight:700;color:#10b981;letter-spacing:0.14em;text-transform:uppercase;">Pipeline Builder</div>'
+    + '<div style="font-size:12px;color:#71717a;margin-top:2px;">Enter how many of each you expect to close.</div>'
+    + '</div>'
+    + '<div style="padding:20px;">'
+    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;">'
+    + buildPipelineInput('solo',  '#6366f1', 'Solo Agents',    '$79/mo per agent', '11%')
+    + buildPipelineInput('small', '#10b981', 'Small Agencies', 'avg agents/agency', '10%')
+    + buildPipelineInput('large', '#f59e0b', 'Large Agencies', 'avg agents/agency', '8%')
+    + '</div>'
+
+    // Results
+    + '<div id="comm-results" style="background:linear-gradient(135deg,#0f0f17,#141424);border-radius:12px;padding:20px;">'
+    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">'
+    + commResultCell('Solo Comm.',  'comm-solo-out',  'comm-solo-label',  '#6366f1')
+    + commResultCell('Small Comm.', 'comm-small-out', 'comm-small-label', '#10b981')
+    + commResultCell('Large Comm.', 'comm-large-out', 'comm-large-label', '#f59e0b')
+    + commResultCell('Total',       'comm-total-out', 'comm-total-label', '#a78bfa', true)
+    + '</div>'
+    + '<div id="comm-breakdown" style="font-size:11px;color:rgba(255,255,255,0.35);text-align:center;line-height:1.8;"></div>'
+    + '<div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;">'
+    + '<span style="font-size:11px;color:rgba(255,255,255,0.4);" id="comm-projection-label">Annual projection (monthly billing)</span>'
+    + '<span id="comm-annual-proj" style="font-size:16px;font-weight:700;color:#6ee7b7;">$0/yr</span>'
+    + '</div></div>'
+    + '</div></div>'
+
+    + '</div>'; // end .content
+};
+
+function buildRateCard(key, color, label, defaultRate, sub) {
+  var bg = { solo:'linear-gradient(135deg,#0f0f17,#1a1a2e)', small:'linear-gradient(135deg,#0f1a14,#0a2218)', large:'linear-gradient(135deg,#1a1000,#2a1800)' }[key];
+  var border = { solo:'rgba(99,102,241,0.3)', small:'rgba(16,185,129,0.3)', large:'rgba(245,158,11,0.3)' }[key];
+  return '<div style="background:'+bg+';border:1px solid '+border+';border-radius:12px;padding:18px;">'
+    + '<div style="font-size:9px;font-weight:700;color:'+color+';letter-spacing:0.14em;text-transform:uppercase;margin-bottom:8px;">'+label+'</div>'
+    + '<div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">'
+    + '<input id="rate-'+key+'" type="number" min="1" max="100" value="'+defaultRate+'" step="0.5" oninput="saveRates();calcCommission();renderPlanner();" '
+    + 'style="width:64px;background:rgba(255,255,255,0.08);border:1px solid '+border+';border-radius:7px;padding:6px 8px;font-size:24px;font-weight:800;color:#fff;outline:none;text-align:center;font-family:inherit;">'
+    + '<span style="font-size:28px;font-weight:800;color:#fff;">%</span>'
+    + '</div>'
+    + '<div style="font-size:11px;color:rgba(255,255,255,0.4);">'+sub+'</div>'
+    + '<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.08);">'
+    + '<span id="rate-'+key+'-preview" style="font-size:13px;font-weight:700;color:'+color+';">Loading...</span>'
+    + '</div></div>';
+}
+
+function buildPipelineInput(key, color, label, sub, badge) {
+  var smallExtra = key === 'small' ? '<label style="font-size:10px;color:#71717a;display:block;margin-bottom:4px;margin-top:8px;">Avg agents per agency</label><input id="comm-'+key+'-agents" type="number" min="4" max="9" value="4" oninput="calcCommission()" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:6px 10px;font-size:14px;font-weight:600;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor=\''+color+'\'" onblur="this.style.borderColor=\'#e4e4e7\'">' : '';
+  var largeExtra = key === 'large' ? '<label style="font-size:10px;color:#71717a;display:block;margin-bottom:4px;margin-top:8px;">Avg agents per agency</label><input id="comm-'+key+'-agents" type="number" min="10" value="10" oninput="calcCommission()" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:6px 10px;font-size:14px;font-weight:600;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor=\''+color+'\'" onblur="this.style.borderColor=\'#e4e4e7\'">' : '';
+  return '<div style="border:1.5px solid #e4e4e7;border-radius:10px;padding:14px;position:relative;">'
+    + '<div id="rate-'+key+'-badge" style="position:absolute;top:10px;right:10px;background:'+color+'18;color:'+color+';font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;">'+badge+'</div>'
+    + '<div style="font-size:12px;font-weight:700;color:#09090b;margin-bottom:10px;">'+label+'</div>'
+    + '<label style="font-size:10px;color:#71717a;display:block;margin-bottom:4px;">Number of closes</label>'
+    + '<input id="comm-'+key+'" type="number" min="0" value="0" oninput="calcCommission()" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:18px;font-weight:700;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor=\''+color+'\'" onblur="this.style.borderColor=\'#e4e4e7\'">'
+    + '<div style="margin-top:8px;font-size:11px;color:#71717a;">'+sub+'</div>'
+    + smallExtra + largeExtra
+    + '</div>';
+}
+
+function commResultCell(label, outId, labelId, color, big) {
+  return '<div style="text-align:center;">'
+    + '<div style="font-size:9px;font-weight:700;color:'+color+';letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">'+label+'</div>'
+    + '<div id="'+outId+'" style="font-size:'+(big?'28':'22')+'px;font-weight:800;color:'+(big?color:'#fff')+';line-height:1;">$0</div>'
+    + '<div id="'+labelId+'" style="font-size:10px;color:rgba(255,255,255,0.4);">/mo</div>'
+    + '</div>';
+}
+
+// ── RENDER PLANNER ────────────────────────────────────────────
+window.renderPlanner = function() {
+  var goalEl = document.getElementById('planner-goal');
+  var out    = document.getElementById('planner-output');
+  if (!goalEl || !out) return;
+
+  var monthlyGoal = Math.max(0, parseFloat(goalEl.value) || 0);
+  if (!monthlyGoal) { out.innerHTML = '<div style="text-align:center;padding:20px;color:#a1a1aa;font-size:13px;">Enter a monthly income goal above</div>'; return; }
+
+  var r    = getMyRates();
+  var conv = getMyConversionRates();
+  var ct   = typeof _contractType !== 'undefined' ? _contractType : 'mrr';
+
+  // Commission per close for each type
+  var soloPerClose  = ct==='arr' ? 79*12*r.solo   : 79*r.solo;
+  var smallPerClose = ct==='arr' ? 247*12*r.small  : 247*r.small;
+  var largePerClose = ct==='arr' ? 597*12*r.large  : 597*r.large;
+
+  // Working days
+  var daysLeftThisMonth  = getWorkingDaysLeft();
+  var daysNextMonth      = getWorkingDaysInMonth(1);
+  var qMonths            = getQuarterMonths();
+  var qWorkingDays       = qMonths.reduce(function(s,m){ var d=new Date(); return s+getWorkingDaysInMonth(m-d.getMonth()); }, 0);
+
+  // Closes needed to hit monthly goal (assuming mixed = 40% solo, 40% small, 20% large)
+  function closesNeeded(goal, perClose) { return perClose > 0 ? Math.ceil(goal/perClose) : '∞'; }
+  function callsNeeded(closes) { return closes === '∞' ? '∞' : Math.ceil(closes * conv.callsPerClose); }
+  function callsPerDay(calls, days) { return calls === '∞' || days <= 0 ? '∞' : Math.ceil(calls/days); }
+
+  // Already closed this month from dashboard
+  var alreadyClosed = (_dash && _dash.activity) ? (_dash.activity.closes||0) : 0;
+  var commAlready = alreadyClosed * soloPerClose; // rough estimate
+  var remainingGoal = Math.max(0, monthlyGoal - commAlready);
+  var onTrack = commAlready >= monthlyGoal;
+
+  function planRow(label, goal, days, highlight) {
+    var soloC  = closesNeeded(goal, soloPerClose);
+    var smallC = closesNeeded(goal, smallPerClose);
+    var largeC = closesNeeded(goal, largePerClose);
+    var calls  = callsNeeded(typeof soloC === 'number' ? Math.ceil(soloC*0.5+smallC*0.3+largeC*0.2) : soloC);
+    var cpd    = callsPerDay(calls, days);
+
+    return '<div style="background:'+(highlight?'linear-gradient(135deg,rgba(99,102,241,0.08),rgba(16,185,129,0.04))':'#f8f8fa')+';border:1px solid '+(highlight?'rgba(99,102,241,0.2)':'#e4e4e7')+';border-radius:10px;padding:14px 16px;margin-bottom:10px;">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
+      + '<div style="font-size:13px;font-weight:700;color:#09090b;">'+label+'</div>'
+      + '<div style="font-size:12px;font-weight:700;color:#6366f1;">'+fmtDol(goal)+(ct==='arr'?' lump sum':'/mo')+'</div>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">'
+      + planCell('Solo closes', typeof soloC==='number'?soloC:soloC, '#6366f1', '$'+Math.round(soloPerClose)+'/close')
+      + planCell('Small closes', typeof smallC==='number'?smallC:smallC, '#10b981', '$'+Math.round(smallPerClose)+'/close')
+      + planCell('Large closes', typeof largeC==='number'?largeC:largeC, '#f59e0b', '$'+Math.round(largePerClose)+'/close')
+      + planCell('Calls needed', calls, '#8b5cf6', cpd+' calls/day')
+      + '</div>'
+      + (days > 0 ? '<div style="font-size:10px;color:#a1a1aa;margin-top:8px;">'+days+' working days</div>' : '')
+      + '</div>';
+  }
+
+  function planCell(label, value, color, sub) {
+    return '<div style="text-align:center;background:#fff;border-radius:8px;padding:8px 4px;">'
+      + '<div style="font-size:18px;font-weight:800;color:'+color+';">'+value+'</div>'
+      + '<div style="font-size:9px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.08em;margin:2px 0;">'+label+'</div>'
+      + '<div style="font-size:9px;color:#a1a1aa;">'+sub+'</div>'
+      + '</div>';
+  }
+
+  // Annual contract push section
+  var annualBonus = monthlyGoal * 12 * 0.15; // rough: converting 15% to annual adds ~15% upfront
+  var soloAnnual  = 79*12*r.solo;
+  var smallAnnual = 247*12*r.small;
+  var largeAnnual = 597*12*r.large;
+
+  // Pace tracker
+  var paceHTML = '';
+  if (alreadyClosed > 0) {
+    var daysElapsed = getWorkingDaysInMonth(0) - daysLeftThisMonth;
+    var pace = daysElapsed > 0 ? (alreadyClosed / daysElapsed) : 0;
+    var projected = pace * getWorkingDaysInMonth(0);
+    var projectedComm = projected * soloPerClose;
+    var paceColor = projectedComm >= monthlyGoal ? '#10b981' : projectedComm >= monthlyGoal*0.7 ? '#f59e0b' : '#ef4444';
+    var paceLabel = projectedComm >= monthlyGoal ? '✓ On track' : projectedComm >= monthlyGoal*0.7 ? '⚠ Behind pace' : '✕ Off track';
+    paceHTML = '<div style="background:'+paceColor+'18;border:1px solid '+paceColor+'33;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">'
+      + '<div>'
+      + '<div style="font-size:12px;font-weight:700;color:'+paceColor+';">'+paceLabel+'</div>'
+      + '<div style="font-size:11px;color:#71717a;margin-top:2px;">'+alreadyClosed+' closes logged · projected '+Math.round(projected)+' this month → '+fmtDol(projectedComm)+'</div>'
+      + '</div>'
+      + '<div style="font-size:20px;font-weight:800;color:'+paceColor+';">'+Math.round(projectedComm/monthlyGoal*100)+'%</div>'
+      + '</div>';
+  }
+
+  out.innerHTML = paceHTML
+
+    // This month (remaining)
+    + (daysLeftThisMonth > 0 ? planRow('🎯 This Month — Remaining ('+daysLeftThisMonth+' days left)', remainingGoal, daysLeftThisMonth, true) : '')
+
+    // Next month
+    + planRow('📅 Next Month — ' + getMonthName(1), monthlyGoal, daysNextMonth, false)
+
+    // Quarter
+    + planRow('📊 This Quarter — 3 months', monthlyGoal*3, qWorkingDays, false)
+
+    // Annual
+    + planRow('🏆 Annual Goal — 12 months', monthlyGoal*12, getWorkingDaysInMonth(0)*12, false)
+
+    // Annual contract push
+    + '<div style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #a7f3d0;border-radius:10px;padding:16px;margin-bottom:10px;">'
+    + '<div style="font-size:12px;font-weight:700;color:#065f46;margin-bottom:10px;">💡 Annual Contract Push</div>'
+    + '<div style="font-size:12px;color:#047857;margin-bottom:10px;">Every time you convert a monthly close to annual, you get the full year upfront. Here\'s what that means:</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'
+    + annualPushCard('Solo signs annual',  soloAnnual,  79*r.solo,  '#6366f1', 12)
+    + annualPushCard('Small signs annual', smallAnnual, 247*r.small, '#10b981', 12)
+    + annualPushCard('Large signs annual', largeAnnual, 597*r.large, '#f59e0b', 12)
+    + '</div></div>'
+
+    // One more close
+    + '<div style="background:#f8f8fa;border-radius:10px;padding:14px 16px;">'
+    + '<div style="font-size:11px;font-weight:700;color:#09090b;margin-bottom:8px;">⚡ One More Close = Real Money</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'
+    + oneMoreCard('Solo Agent', soloPerClose, 79*r.solo, ct, '#6366f1')
+    + oneMoreCard('Small Agency', smallPerClose, 247*r.small, ct, '#10b981')
+    + oneMoreCard('Large Agency', largePerClose, 597*r.large, ct, '#f59e0b')
+    + '</div></div>';
+
+  // Update conv rates note
+  if (!conv.hasRealData) {
+    out.innerHTML += '<div style="margin-top:12px;font-size:11px;color:#a1a1aa;text-align:center;">Calls needed calculated at default rates (1.8% call→demo, 40% demo→close). Log more activity to use your real rates.</div>';
+  } else {
+    out.innerHTML += '<div style="margin-top:12px;font-size:11px;color:#10b981;text-align:center;">✓ Using your real conversion rates: '+Math.round(conv.callToDemo*100*10)/10+'% call→demo, '+Math.round(conv.demoToClose*100)+'% demo→close</div>';
+  }
+};
+
+function annualPushCard(label, annualComm, monthlyComm, color, months) {
+  var extra = annualComm - monthlyComm;
+  return '<div style="background:#fff;border-radius:8px;padding:10px;text-align:center;">'
+    + '<div style="font-size:10px;color:#71717a;margin-bottom:4px;">'+label+'</div>'
+    + '<div style="font-size:18px;font-weight:800;color:'+color+';">'+fmtDol(annualComm)+'</div>'
+    + '<div style="font-size:10px;color:#047857;margin-top:2px;">+'+fmtDol(extra)+' vs monthly</div>'
+    + '</div>';
+}
+
+function oneMoreCard(label, perClose, monthlyRec, ct, color) {
+  return '<div style="background:#fff;border-radius:8px;padding:10px;text-align:center;">'
+    + '<div style="font-size:10px;color:#71717a;margin-bottom:4px;">'+label+'</div>'
+    + '<div style="font-size:18px;font-weight:800;color:'+color+';">'+fmtDol(perClose)+'</div>'
+    + '<div style="font-size:10px;color:#a1a1aa;margin-top:2px;">'+(ct==='arr'?'upfront one-time':fmtMo(monthlyRec)+' recurring')+'</div>'
+    + '</div>';
+}
+
+// ── 4. SALES DASHBOARD GOAL PLANNER (no commission) ──────────
+function buildGoalPlannerSection() {
+  var conv = getMyConversionRates();
+
+  return '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;margin-bottom:20px;">'
+    + '<div style="padding:14px 18px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;display:flex;align-items:center;justify-content:space-between;">'
+    + '<div><div style="font-size:10px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:0.12em;">Goal Planner</div>'
+    + '<div style="font-size:11px;color:#71717a;margin-top:1px;">Set a close target — see the calls and demos needed to get there</div></div>'
+    + (conv.hasRealData ? '<span style="font-size:10px;color:#10b981;font-weight:600;">✓ Using your real rates</span>' : '<span style="font-size:10px;color:#a1a1aa;">Using default rates</span>')
+    + '</div>'
+    + '<div style="padding:16px 18px;">'
+
+    // Conversion rates row
+    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;padding:12px;background:#f8f8fa;border-radius:10px;">'
+    + '<div style="text-align:center;">'
+    + '<div style="font-size:9px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Call → Demo Rate</div>'
+    + '<input id="gp-call-demo" type="number" value="'+Math.round(conv.callToDemo*1000)/10+'" min="0.1" max="100" step="0.1" oninput="updateGoalPlanner()" '
+    + 'style="width:70px;border:1.5px solid #e4e4e7;border-radius:6px;padding:5px 8px;font-size:16px;font-weight:700;color:#6366f1;text-align:center;font-family:inherit;outline:none;">'
+    + '<span style="font-size:12px;color:#6366f1;">%</span>'
+    + '</div>'
+    + '<div style="text-align:center;">'
+    + '<div style="font-size:9px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Demo → Close Rate</div>'
+    + '<input id="gp-demo-close" type="number" value="'+Math.round(conv.demoToClose*100)+'" min="1" max="100" step="1" oninput="updateGoalPlanner()" '
+    + 'style="width:70px;border:1.5px solid #e4e4e7;border-radius:6px;padding:5px 8px;font-size:16px;font-weight:700;color:#10b981;text-align:center;font-family:inherit;outline:none;">'
+    + '<span style="font-size:12px;color:#10b981;">%</span>'
+    + '</div>'
+    + '<div style="text-align:center;">'
+    + '<div style="font-size:9px;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Calls per Demo</div>'
+    + '<div style="font-size:20px;font-weight:800;color:#8b5cf6;" id="gp-calls-per-demo">'+conv.callsPerDemo+'</div>'
+    + '</div>'
+    + '</div>'
+
+    // Goal input row
+    + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">'
+    + '<div style="font-size:13px;font-weight:700;color:#09090b;">Monthly Close Target:</div>'
+    + '<input id="gp-close-target" type="number" value="3" min="1" oninput="updateGoalPlanner()" '
+    + 'style="width:60px;border:1.5px solid #6366f1;border-radius:8px;padding:7px 10px;font-size:18px;font-weight:700;color:#6366f1;text-align:center;font-family:inherit;outline:none;">'
+    + '<span style="font-size:13px;color:#71717a;">closes/month</span>'
+    + '</div>'
+
+    // Plan output
+    + '<div id="gp-output"></div>'
+    + '</div></div>';
+}
+
+window.updateGoalPlanner = function() {
+  var gpOut = document.getElementById('gp-output');
+  if (!gpOut) return;
+
+  var callDemoRate  = (parseFloat((document.getElementById('gp-call-demo')  || {value:'1.8'}).value) || 1.8) / 100;
+  var demoCloseRate = (parseFloat((document.getElementById('gp-demo-close') || {value:'40'}).value)  || 40)  / 100;
+  var closeTarget   = Math.max(1, parseInt((document.getElementById('gp-close-target') || {value:'3'}).value) || 3);
+
+  var demosNeeded  = demoCloseRate > 0 ? Math.ceil(closeTarget / demoCloseRate) : '?';
+  var callsNeeded  = callDemoRate  > 0 && typeof demosNeeded === 'number' ? Math.ceil(demosNeeded / callDemoRate) : '?';
+  var daysLeft     = getWorkingDaysLeft();
+  var callsPerDay  = typeof callsNeeded === 'number' && daysLeft > 0 ? Math.ceil(callsNeeded / daysLeft) : '?';
+
+  // Quarterly + annual
+  var qCloses  = closeTarget * 3;
+  var qDemos   = typeof demosNeeded==='number' ? demosNeeded*3 : '?';
+  var qCalls   = typeof callsNeeded==='number' ? callsNeeded*3 : '?';
+  var yrCloses = closeTarget * 12;
+  var yrDemos  = typeof demosNeeded==='number' ? demosNeeded*12 : '?';
+  var yrCalls  = typeof callsNeeded==='number' ? callsNeeded*12 : '?';
+
+  // Update calls per demo display
+  var cpd = document.getElementById('gp-calls-per-demo');
+  if (cpd && typeof demosNeeded==='number' && typeof callsNeeded==='number')
+    cpd.textContent = demosNeeded > 0 ? Math.round(callsNeeded/demosNeeded) : '—';
+
+  var alreadyClosed = (_dash && _dash.activity) ? (_dash.activity.closes||0) : 0;
+  var remaining = Math.max(0, closeTarget - alreadyClosed);
+  var remainDemos = demoCloseRate>0&&remaining>0 ? Math.ceil(remaining/demoCloseRate) : 0;
+  var remainCalls = callDemoRate>0&&remainDemos>0 ? Math.ceil(remainDemos/callDemoRate) : 0;
+  var remainCPD   = daysLeft>0&&remainCalls>0 ? Math.ceil(remainCalls/daysLeft) : 0;
+
+  function gpRow(label, closes, demos, calls, cpd, highlight) {
+    return '<div style="background:'+(highlight?'#eef2ff':'#f8f8fa')+';border:1px solid '+(highlight?'#c7d2fe':'#e4e4e7')+';border-radius:10px;padding:12px 14px;margin-bottom:8px;">'
+      + '<div style="font-size:12px;font-weight:700;color:#09090b;margin-bottom:8px;">'+label+'</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">'
+      + gpCell(closes, 'Closes', '#6366f1')
+      + gpCell(demos, 'Demos', '#10b981')
+      + gpCell(calls, 'Calls', '#8b5cf6')
+      + gpCell(cpd, 'Per Day', '#f59e0b')
+      + '</div></div>';
+  }
+
+  function gpCell(val, label, color) {
+    return '<div style="text-align:center;background:#fff;border-radius:6px;padding:8px 4px;">'
+      + '<div style="font-size:18px;font-weight:800;color:'+color+';">'+val+'</div>'
+      + '<div style="font-size:9px;color:#a1a1aa;text-transform:uppercase;letter-spacing:0.08em;margin-top:1px;">'+label+'</div>'
+      + '</div>';
+  }
+
+  gpOut.innerHTML =
+    (alreadyClosed > 0 ? gpRow('🎯 Remaining This Month ('+daysLeft+'d left)', remaining, remainDemos, remainCalls, remainCPD, true) : '')
+    + gpRow('📅 Monthly Target', closeTarget, demosNeeded, callsNeeded, callsPerDay, false)
+    + gpRow('📊 Quarterly Target', qCloses, qDemos, qCalls, typeof qCalls==='number'?Math.ceil(qCalls/(getWorkingDaysInMonth(0)*3)):'?', false)
+    + gpRow('🏆 Annual Target', yrCloses, yrDemos, yrCalls, typeof yrCalls==='number'?Math.ceil(yrCalls/(getWorkingDaysInMonth(0)*12)):'?', false);
+};
+
+// Inject goal planner into Sales Dashboard Overview pane
+var _origRSD_planner = window.renderSalesDashboard;
+window.renderSalesDashboard = function() {
+  _origRSD_planner();
+  var pane0 = document.getElementById('dash-pane-0');
+  if (pane0) {
+    var gpDiv = document.createElement('div');
+    gpDiv.innerHTML = buildGoalPlannerSection();
+    pane0.appendChild(gpDiv.firstChild);
+    updateGoalPlanner();
+  }
+};
+
+// Trigger planner render on commission section show
+var _origShowSection_planner = window.showSection;
+window.showSection = function(id, btn) {
+  _origShowSection_planner(id, btn);
+  if (id === 'commission') {
+    setTimeout(function() {
+      var sec = document.getElementById('section-commission');
+      if (sec && typeof buildCommissionHTML === 'function') {
+        sec.innerHTML = buildCommissionHTML();
+        if (typeof loadRates === 'function') loadRates();
+        setTimeout(renderPlanner, 100);
+      }
+    }, 50);
+  }
+};
+
+console.log('[PLANNER] Commission planner + Goal planner + Nav hide loaded.');
+
+</script>
 </body>
 </html>
