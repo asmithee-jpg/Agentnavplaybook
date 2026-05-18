@@ -4818,7 +4818,7 @@ window.saveDemoEntry=function(editId,addPipeline){
   if(!_dash.demos) _dash.demos=[];
   var demo={name:n.value.trim(),state:s?s.value:'',size:z?z.value:'',scheduledDate:d?d.value:'',status:st?st.value:'booked',notes:nt?nt.value.trim():'',id:editId||('demo-'+Date.now()),bookedDate:new Date().toISOString().split('T')[0]};
   if(editId){var idx=-1;_dash.demos.forEach(function(x,i){if(x.id===editId) idx=i;});if(idx>=0){demo.id=editId;demo.bookedDate=_dash.demos[idx].bookedDate||demo.bookedDate;_dash.demos[idx]=demo;}}
-  else{_dash.demos.push(demo);if(addPipeline){if(!_dash.pipeline) _dash.pipeline=[];_dash.pipeline.push({name:demo.name,state:demo.state,size:demo.size,stage:'Demo Booked',notes:demo.notes,added:new Date().toISOString()});}}
+  else{_dash.demos.push(demo);if(addPipeline){ window.openDealFromDemo(demo); }}
   dashSave();
   var m=document.getElementById('dm-modal');if(m) m.remove();
   switchChartPane('demos');
@@ -7186,6 +7186,161 @@ window.renderGoalsBoard = function(container) {
     if(typeof updateGoalPlanner==='function') setTimeout(updateGoalPlanner,50);
   }, 20);
 };
+
+
+// ── Deal conversion modal from demo tracker ───────────────────────────────
+window.openDealFromDemo = function(demo) {
+  var STAGES = ['Demo Booked','Demo Showed','Proposal Sent','Closed Won','Closed Lost'];
+  var ov = document.createElement('div');
+  ov.id = 'deal-from-demo-modal';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;';
+  var today = new Date();
+  var nextMonth = new Date(today); nextMonth.setMonth(nextMonth.getMonth()+1);
+  var defClose = nextMonth.toISOString().split('T')[0];
+
+  ov.innerHTML = '<div style="background:#fff;border-radius:14px;padding:24px;width:460px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">'
+    +'<div><div style="font-size:16px;font-weight:800;color:#09090b;">Add to Pipeline</div>'
+    +'<div style="font-size:12px;color:#71717a;margin-top:2px;">'+demo.name+'</div></div>'
+    +'<button onclick="document.getElementById(\'deal-from-demo-modal\').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#a1a1aa;">&#x2715;</button></div>'
+
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">'
+    // Stage
+    +'<div><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Deal Stage</label>'
+    +'<select id="dfd-stage" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;cursor:pointer;">'
+    +STAGES.map(function(s){ return '<option value="'+s+'"'+(s==='Demo Booked'?' selected':'')+'>'+s+'</option>'; }).join('')
+    +'</select></div>'
+    // Close date
+    +'<div><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Expected Close Date</label>'
+    +'<input id="dfd-close" type="date" value="'+defClose+'" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"></div>'
+    // Agents
+    +'<div><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Est. Agents / Seats</label>'
+    +'<input id="dfd-agents" type="number" min="1" value="1" placeholder="e.g. 5" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"></div>'
+    // Value
+    +'<div><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Est. Monthly Value ($)</label>'
+    +'<input id="dfd-value" type="number" min="0" value="79" placeholder="e.g. 395" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"></div>'
+    +'</div>'
+    // Contract type
+    +'<div style="background:#f8f8fa;border-radius:10px;padding:12px;margin-bottom:16px;">'
+    +'<label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:8px;">Contract Type</label>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<label style="flex:1;display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;background:#fff;border:1.5px solid #6366f1;border-radius:8px;">'
+    +'<input type="radio" name="dfd-contract" value="monthly" checked style="accent-color:#6366f1;">'
+    +'<div><div style="font-size:12px;font-weight:700;color:#6366f1;">Monthly</div><div style="font-size:10px;color:#a1a1aa;">Recurring MRR</div></div></label>'
+    +'<label style="flex:1;display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;background:#fff;border:1.5px solid #e4e4e7;border-radius:8px;">'
+    +'<input type="radio" name="dfd-contract" value="annual" style="accent-color:#6366f1;">'
+    +'<div><div style="font-size:12px;font-weight:700;color:#09090b;">Annual</div><div style="font-size:10px;color:#a1a1aa;">Upfront ARR</div></div></label>'
+    +'</div></div>'
+    // Notes
+    +'<div style="margin-bottom:16px;"><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Notes</label>'
+    +'<textarea id="dfd-notes" rows="2" placeholder="Key talking points, objections, next steps..." style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;">'+demo.notes+'</textarea></div>'
+    // Buttons
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;">'
+    +'<button onclick="document.getElementById(\'deal-from-demo-modal\').remove()" style="padding:9px 18px;border-radius:8px;border:1.5px solid #e4e4e7;background:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#71717a;">Skip</button>'
+    +'<button onclick="window.saveDealFromDemo(\''+demo.id+'\')" style="padding:9px 18px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Add to Pipeline</button>'
+    +'</div></div>';
+
+  document.body.appendChild(ov);
+  ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+};
+
+window.saveDealFromDemo = function(demoId) {
+  var stage    = (document.getElementById('dfd-stage')   ||{}).value || 'Demo Booked';
+  var closeDate= (document.getElementById('dfd-close')   ||{}).value || '';
+  var agents   = parseInt((document.getElementById('dfd-agents') ||{}).value) || 1;
+  var value    = parseFloat((document.getElementById('dfd-value')||{}).value) || 79;
+  var notes    = (document.getElementById('dfd-notes')   ||{}).value || '';
+  var radios   = document.querySelectorAll('input[name="dfd-contract"]');
+  var contract = 'monthly';
+  radios.forEach(function(r){ if(r.checked) contract=r.value; });
+
+  // Find the demo
+  var demo = (_dash.demos||[]).filter(function(d){ return d.id===demoId; })[0] || {};
+
+  if (!_dash.pipeline) _dash.pipeline = [];
+  _dash.pipeline.push({
+    id:       'deal-'+Date.now(),
+    name:     demo.name || 'Unknown',
+    state:    demo.state || '',
+    size:     demo.size  || '',
+    stage:    stage,
+    closeDate:closeDate,
+    agents:   agents,
+    value:    value,
+    contract: contract,
+    notes:    notes,
+    added:    new Date().toISOString()
+  });
+
+  dashSave();
+  document.getElementById('deal-from-demo-modal').remove();
+
+  // Show confirmation
+  if (typeof showToast === 'function') {
+    showToast('Added to pipeline \u2014 ' + stage);
+  } else {
+    alert('Added to pipeline!');
+  }
+
+  // Refresh dashboard pipeline if visible
+  if (typeof renderSalesDashboard === 'function') {
+    var sec = document.getElementById('section-dashboard');
+    if (sec && sec.classList.contains('active')) renderSalesDashboard();
+  }
+};
+
+// ── HubSpot search contacts → add to demo tracker ────────────────────────
+// Enhance the contact search result to include "Add to Demo" button
+var _origRenderHSContacts = window.renderHSContactResults;
+window.renderHSContactResults = function(contacts) {
+  if (typeof _origRenderHSContacts === 'function') _origRenderHSContacts(contacts);
+  // After rendering, add "Add to Demo" button to each contact row
+  setTimeout(function() {
+    var rows = document.querySelectorAll('.hs-contact-row');
+    rows.forEach(function(row) {
+      if (row.querySelector('.hs-add-demo-btn')) return; // already added
+      var name    = row.getAttribute('data-name')  || '';
+      var company = row.getAttribute('data-company')|| '';
+      var email   = row.getAttribute('data-email') || '';
+      var btn = document.createElement('button');
+      btn.className = 'hs-add-demo-btn';
+      btn.textContent = '+ Demo';
+      btn.style.cssText = 'background:rgba(99,102,241,0.1);color:#6366f1;border:1px solid rgba(99,102,241,0.2);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;margin-left:6px;';
+      btn.onclick = function(e) {
+        e.stopPropagation();
+        // Pre-fill demo modal with contact info
+        if (typeof openDemoModal === 'function') {
+          openDemoModal(null);
+          setTimeout(function() {
+            var nameInp = document.getElementById('dm-n');
+            if (nameInp) nameInp.value = company || name;
+          }, 60);
+        }
+      };
+      // Add to action area of row
+      var actions = row.querySelector('.hs-contact-actions') || row;
+      actions.appendChild(btn);
+    });
+  }, 100);
+};
+
+// ── Show rate inputs — use 'change' not 'oninput' for instant update ──────
+// The goal planner inputs fire on every keystroke; debounce them
+(function() {
+  var _debouncedUpdateGP = null;
+  window._debouncedUpdateGoalPlanner = function() {
+    if (_debouncedUpdateGP) clearTimeout(_debouncedUpdateGP);
+    _debouncedUpdateGP = setTimeout(function() {
+      if (typeof updateGoalPlanner === 'function') updateGoalPlanner();
+    }, 150);
+  };
+})();
+
+// ── ARR in 12-month projector ─────────────────────────────────────────────
+// calcMonthlyProjection already has proj-ent-m1..m12 for Enterprise MRR
+// We need a separate ARR row that tracks lump-sum commissions
+// Add a toggle in the projector header to show ARR deals per month
+window._projARR = window._projARR || {};
 
 
   console.log('[FINAL] All fixes loaded.');
