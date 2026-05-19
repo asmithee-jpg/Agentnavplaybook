@@ -3202,11 +3202,12 @@ window.dashLoad = function(callback) {
       if (d.prospect) _dash.prospect = d.prospect;
       // Save back to localStorage as cache
       localStorage.setItem('sales-dashboard', JSON.stringify(_dash));
-      // Re-render if on dashboard overview (not if Charts tab is open)
+      // Re-render if on dashboard overview (not if Charts tab is open, and not if a modal is open)
       var sec = document.getElementById('section-dashboard');
       var pane1 = document.getElementById('dash-pane-1');
       var chartsOpen = pane1 && pane1.style.display !== 'none';
-      if (sec && sec.classList.contains('active') && !chartsOpen) {
+      var modalOpen = document.getElementById('dash-deal-modal') || document.getElementById('deal-from-demo-modal');
+      if (sec && sec.classList.contains('active') && !chartsOpen && !modalOpen) {
         if (typeof renderSalesDashboard === 'function') renderSalesDashboard();
       }
     });
@@ -3387,7 +3388,14 @@ window.dashSaveDeal = function(editIdx) {
   var modal = document.getElementById('dash-deal-modal');
   if (modal) modal.remove();
 
-  renderSalesDashboard();
+  // Refresh just the pipeline list in-place — avoids triggering a full re-render loop
+  var pipeList = document.getElementById('dash-pipeline-list');
+  if (pipeList && typeof buildPipelineHTML === 'function') {
+    pipeList.innerHTML = buildPipelineHTML();
+  } else {
+    // Fallback: full re-render only if pipeline card isn't rendered yet
+    renderSalesDashboard();
+  }
   if (typeof showToast === 'function') showToast(typeof editIdx === 'number' ? 'Deal updated!' : 'Deal added!');
 };
 
@@ -4193,7 +4201,9 @@ function buildStatTile(label, value, color) {
 window.renderSalesDashboard = function() {
   var container = document.getElementById('dashboard-content');
   if (!container) return;
-  dashLoad();
+  // NOTE: do NOT call dashLoad() here — it would create an infinite loop
+  // (dashLoad's Supabase callback calls renderSalesDashboard again)
+  // Data is already in _dash from the initial load on section open.
   container.innerHTML = '';
 
   var tabBar = document.createElement('div');
@@ -5177,7 +5187,10 @@ window.dashAskAI = function() {
 
 window.dashDeleteDeal = function(idx) {
   if (!confirm('Remove this deal?')) return;
-  _dash.pipeline.splice(idx, 1); dashSave(); renderSalesDashboard();
+  _dash.pipeline.splice(idx, 1); dashSave();
+  var pipeList = document.getElementById('dash-pipeline-list');
+  if (pipeList && typeof buildPipelineHTML === 'function') pipeList.innerHTML = buildPipelineHTML();
+  else renderSalesDashboard();
 };
 
 </script>
@@ -7485,7 +7498,9 @@ window.saveDealFromDemo = function(demoId) {
   }
 
   // Refresh dashboard pipeline if visible
-  if (typeof renderSalesDashboard === 'function') {
+  var pipeList = document.getElementById('dash-pipeline-list');
+  if (pipeList && typeof buildPipelineHTML === 'function') pipeList.innerHTML = buildPipelineHTML();
+  else if (typeof renderSalesDashboard === 'function') {
     var sec = document.getElementById('section-dashboard');
     if (sec && sec.classList.contains('active')) renderSalesDashboard();
   }
