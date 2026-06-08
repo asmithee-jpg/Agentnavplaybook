@@ -713,9 +713,9 @@ window.seMakeStep = function(st, idx) {
   return div;
 };
 
-// ── FIX 3: Save navigates to Script Library ─────────────────
+// ── FIX 3: Save stays in Script Editor (auto-save calls seSave every 2s) ──
 var _origSeSave = window.seSave;
-window.seSave = function() {
+window.seSave = function(goToLibrary) {
   if (!seCurrentId) return;
   var s = seScripts.find(function(x) { return x.id === seCurrentId; });
   if (!s) return;
@@ -739,19 +739,19 @@ window.seSave = function() {
   if (st) { st.textContent = '✓ Saved'; st.style.color = '#10b981'; }
   seRenderLib();
   if (typeof showToast === 'function') showToast('Script saved!');
-  // ── NAVIGATE TO SCRIPT LIBRARY ──
-  setTimeout(function() {
-    if (typeof showSection === 'function') {
-      showSection('scriptlibrary', null);
-      // Update active nav item manually
-      document.querySelectorAll('.nav-item').forEach(function(navBtn) {
-        navBtn.classList.remove('active');
-        if (navBtn.getAttribute('onclick') && navBtn.getAttribute('onclick').indexOf("'scriptlibrary'") !== -1) {
-          navBtn.classList.add('active');
-        }
-      });
-    }
-  }, 300);
+  if (goToLibrary) {
+    setTimeout(function() {
+      if (typeof showSection === 'function') {
+        showSection('scriptlibrary', null);
+        document.querySelectorAll('.nav-item').forEach(function(navBtn) {
+          navBtn.classList.remove('active');
+          if (navBtn.getAttribute('onclick') && navBtn.getAttribute('onclick').indexOf("'scriptlibrary'") !== -1) {
+            navBtn.classList.add('active');
+          }
+        });
+      }
+    }, 300);
+  }
 };
 
 // ── FIX 4: Script Library — horizontal category tabs (not vertical scroll) ─
@@ -1768,10 +1768,9 @@ window.seShowEditor = function(s) {
   if (langEl) langEl.value = s.lang || 'en';
 };
 
-// ── PATCH seSave to persist lang field ──────────────────────
+// ── PATCH seSave to persist lang field (stay in editor on auto-save) ──
 var _origSeSave_lang = window.seSave;
-window.seSave = function() {
-  // Run original save logic first, then add lang
+window.seSave = function(goToLibrary) {
   if (!seCurrentId) return;
   var s = seScripts.find(function(x){ return x.id === seCurrentId; });
   if (!s) return;
@@ -1803,17 +1802,18 @@ window.seSave = function() {
   seRenderLib();
   if (typeof showToast === 'function') showToast('Script saved!');
 
-  // Navigate to Script Library
-  setTimeout(function() {
-    if (typeof showSection === 'function') {
-      showSection('scriptlibrary', null);
-      document.querySelectorAll('.nav-item').forEach(function(nb) {
-        nb.classList.remove('active');
-        if (nb.getAttribute('onclick') && nb.getAttribute('onclick').indexOf("'scriptlibrary'") !== -1)
-          nb.classList.add('active');
-      });
-    }
-  }, 300);
+  if (goToLibrary) {
+    setTimeout(function() {
+      if (typeof showSection === 'function') {
+        showSection('scriptlibrary', null);
+        document.querySelectorAll('.nav-item').forEach(function(nb) {
+          nb.classList.remove('active');
+          if (nb.getAttribute('onclick') && nb.getAttribute('onclick').indexOf("'scriptlibrary'") !== -1)
+            nb.classList.add('active');
+        });
+      }
+    }, 300);
+  }
 };
 
 // ── PATCH seNewScriptOfType to default lang='en' ─────────────
@@ -8284,9 +8284,15 @@ function anTimeAgo(d){ if(!d) return ''; var diff=Date.now()-new Date(d).getTime
 function anColor(str){ if(!str) return '#6366f1'; var h=0; for(var i=0;i<str.length;i++) h=(h*31+str.charCodeAt(i))%360; var c=['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#14b8a6','#f97316']; return c[Math.abs(Math.floor(h/40))%c.length]; }
 
 // ── Supabase load/save ────────────────────────────────────────
+function anNormalizeLeads(arr){
+  if(!Array.isArray(arr)) return [];
+  if(arr.length && Array.isArray(arr[0]) && !arr[0].id) return arr.reduce(function(flat, item){ return flat.concat(item); }, []);
+  return arr;
+}
+
 AN.load = function(cb){
   var sb = typeof getSupabase==='function'?getSupabase():null;
-  try { AN.leads = JSON.parse(localStorage.getItem('an-crm-leads')||'[]'); } catch(e){ AN.leads=[]; }
+  try { AN.leads = anNormalizeLeads(JSON.parse(localStorage.getItem('an-crm-leads')||'[]')); } catch(e){ AN.leads=[]; }
   if(!sb||!_currentUser){ if(cb) cb(); return; }
   AN.isAdmin = _currentUser.email === 'asmithee@insurewithcompass.com';
   AN.currentRepEmail = _currentUser.email;
@@ -8294,22 +8300,53 @@ AN.load = function(cb){
 
   var q = sb.from('an_leads').select('*');
   if(!AN.isAdmin) q = q.eq('rep_email', AN.currentRepEmail);
-  q.order('created_at',{ascending:false}).then(function(r){
-    if(r.data&&r.data.length){
-      AN.leads = r.data.map(function(row){ var d=row.data||row; d._repEmail=row.rep_email; return d; });
-      localStorage.setItem('an-crm-leads',JSON.stringify(AN.leads));
+  q.order('updated_at',{ascending:false}).then(function(r){
+    if(r.data && r.data.length){
+      var merged = [];
+      r.data.forEach(function(row){
+        var leads = Array.isArray(row.data) ? row.data : (row.data ? [row.data] : []);
+        leads.forEach(function(d){
+          if(!d || typeof d !== 'object') return;
+          var lead = Object.assign({}, d);
+          lead._repEmail = row.rep_email || lead._repEmail;
+          if(!lead.id) lead.id = 'l-' + Date.now() + '-' + merged.length;
+          merged.push(lead);
+        });
+      });
+      if(merged.length){
+        AN.leads = merged;
+        localStorage.setItem('an-crm-leads', JSON.stringify(AN.leads));
+      }
     }
     if(cb) cb();
-  }).catch(function(){ if(cb) cb(); });
+  }).catch(function(err){
+    console.warn('[CRM] Supabase load failed, using local cache:', err);
+    if(cb) cb();
+  });
 };
 
-AN.save = function(){
-  localStorage.setItem('an-crm-leads',JSON.stringify(AN.leads));
+AN.save = function(cb){
+  if(!Array.isArray(AN.leads)) AN.leads = [];
+  localStorage.setItem('an-crm-leads', JSON.stringify(AN.leads));
   var sb = typeof getSupabase==='function'?getSupabase():null;
-  if(!sb||!_currentUser) return;
-  var mine = AN.leads.filter(function(l){ return !l._repEmail||l._repEmail===AN.currentRepEmail; })
-    .map(function(l){ var c=Object.assign({},l); delete c._repEmail; return c; });
-  sb.from('an_leads').upsert({user_id:_currentUser.id,rep_email:AN.currentRepEmail,data:mine,updated_at:new Date().toISOString()},{onConflict:'user_id'}).then(function(){});
+  if(!sb||!_currentUser){ if(cb) cb(true, null, 'local'); return; }
+  var repEmail = AN.currentRepEmail || _currentUser.email;
+  var mine = AN.leads.filter(function(l){ return !l._repEmail || l._repEmail === repEmail; })
+    .map(function(l){ var c = Object.assign({}, l); delete c._repEmail; return c; });
+  sb.from('an_leads').upsert({
+    user_id: _currentUser.id,
+    rep_email: repEmail,
+    data: mine,
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'user_id' }).then(function(r){
+    if(r.error){
+      console.error('[CRM] Supabase save error:', r.error);
+      if(cb) cb(false, r.error, 'cloud');
+    } else if(cb) cb(true, null, 'cloud');
+  }).catch(function(err){
+    console.error('[CRM] Supabase save failed:', err);
+    if(cb) cb(false, err, 'cloud');
+  });
 };
 
 // ── Filter leads ──────────────────────────────────────────────
@@ -8787,92 +8824,436 @@ window.anReassign = function(id){
   if(lead){ lead._repEmail=email.trim().toLowerCase(); AN.save(); renderLeadsTable(); if(typeof showToast==='function') showToast('Reassigned'); }
 };
 
-// ── CSV Import ────────────────────────────────────────────────
-var AN_CSV_MAP = {'First Name':'firstName','Last Name':'lastName','Company Name':'company','Email Address':'email','Phone Number':'phone','State/Region':'state','Lifecycle Stage':'_status','firstname':'firstName','lastname':'lastName','company':'company','email':'email','phone':'phone','state':'state','mobilephone':'phone'};
+// ── CSV Import (with column mapping + Supabase save) ──────────
+var AN_IMPORT_FIELDS = [
+  { key:'firstName', label:'First Name' },
+  { key:'lastName', label:'Last Name' },
+  { key:'company', label:'Company' },
+  { key:'title', label:'Title / Role' },
+  { key:'email', label:'Email' },
+  { key:'phone', label:'Phone' },
+  { key:'state', label:'State' },
+  { key:'status', label:'Status / Lifecycle' },
+  { key:'source', label:'Source' },
+  { key:'notes', label:'Notes' },
+  { key:'nextFollowUp', label:'Next Follow-Up' }
+];
+
+var AN_CSV_ALIASES = {
+  firstname: 'firstName', 'first name': 'firstName', fname: 'firstName', givenname: 'firstName',
+  lastname: 'lastName', 'last name': 'lastName', lname: 'lastName', surname: 'lastName',
+  company: 'company', 'company name': 'company', organization: 'company', account: 'company', accountname: 'company',
+  title: 'title', jobtitle: 'title', 'job title': 'title', role: 'title',
+  email: 'email', 'email address': 'email', emailaddress: 'email', workemail: 'email',
+  phone: 'phone', 'phone number': 'phone', mobilephone: 'phone', mobile: 'phone', cell: 'phone', workphone: 'phone',
+  state: 'state', 'state/region': 'state', region: 'state', province: 'state',
+  status: 'status', 'lifecycle stage': 'status', lifecyclestage: 'status', leadstatus: 'status', stage: 'status',
+  source: 'source', leadsource: 'source', 'lead source': 'source',
+  notes: 'notes', description: 'notes', comments: 'notes',
+  nextfollowup: 'nextFollowUp', 'next follow-up': 'nextFollowUp', 'follow up date': 'nextFollowUp'
+};
+
+var _anImportRaw = null;
+var _anPending = [];
+
+function anNormHeader(h){
+  return (h || '').replace(/^\uFEFF/, '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function anGuessField(header){
+  var norm = anNormHeader(header);
+  if(AN_CSV_ALIASES[norm]) return AN_CSV_ALIASES[norm];
+  var compact = norm.replace(/ /g, '');
+  if(AN_CSV_ALIASES[compact]) return AN_CSV_ALIASES[compact];
+  return '';
+}
+
+function csvLine(line){
+  var r = [], c = '', q = false;
+  for(var i = 0; i < line.length; i++){
+    var ch = line[i];
+    if(ch === '"'){ q = !q; }
+    else if(ch === ',' && !q){ r.push(c); c = ''; }
+    else { c += ch; }
+  }
+  r.push(c);
+  return r.map(function(v){ return v.replace(/^"|"$/g, '').replace(/""/g, '"').trim(); });
+}
+
+function anParseCSVText(text){
+  var clean = (text || '').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  var lines = clean.split('\n').filter(function(l){ return l.trim(); });
+  if(lines.length < 2) return null;
+  var headers = csvLine(lines[0]);
+  var rows = [];
+  for(var i = 1; i < lines.length; i++){
+    var vals = csvLine(lines[i]);
+    if(!vals.length || vals.every(function(v){ return !v.trim(); })) continue;
+    rows.push(vals);
+  }
+  return { headers: headers, rows: rows };
+}
+
+function anBuildImportMapping(headers){
+  var mapping = {};
+  var used = {};
+  AN_IMPORT_FIELDS.forEach(function(field){
+    mapping[field.key] = -1;
+  });
+  headers.forEach(function(h, idx){
+    var guess = anGuessField(h);
+    if(guess && mapping[guess] === -1 && !used[idx]){
+      mapping[guess] = idx;
+      used[idx] = true;
+    }
+  });
+  return mapping;
+}
+
+function anRenderImportMapping(){
+  if(!_anImportRaw) return;
+  var wrap = document.getElementById('an-import-mapping');
+  var stats = document.getElementById('an-import-stats');
+  var preview = document.getElementById('an-import-preview');
+  var confirmBtn = document.getElementById('an-import-confirm');
+  if(!wrap || !stats) return;
+
+  var headers = _anImportRaw.headers;
+  var mapping = anGetImportMapping();
+  var mappedCount = AN_IMPORT_FIELDS.filter(function(f){ return mapping[f.key] >= 0; }).length;
+  var sampleContacts = anBuildContactsFromMapping(mapping, 3);
+  var allContacts = anBuildContactsFromMapping(mapping);
+  _anPending = allContacts;
+
+  function fieldOpts(selectedIdx){
+    return '<option value="-1"'+(selectedIdx===-1?' selected':'')+'>— Skip —</option>'
+      + headers.map(function(h, i){
+        return '<option value="'+i+'"'+(selectedIdx===i?' selected':'')+'">'+anEsc(h)+'</option>';
+      }).join('');
+  }
+
+  wrap.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:10px;">Match your CSV columns</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;max-height:220px;overflow-y:auto;padding-right:4px;">'
+    + AN_IMPORT_FIELDS.map(function(field){
+      var val = mapping[field.key];
+      return '<div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">'+field.label+'</label>'
+        +'<select data-import-field="'+field.key+'" onchange="anImportMappingChanged()" style="width:100%;border:1.5px solid var(--divider);border-radius:7px;padding:7px 9px;font-size:12px;background:var(--card-bg);color:var(--text-primary);font-family:var(--sans);">'
+        + fieldOpts(val)
+        +'</select></div>';
+    }).join('')
+    +'</div>';
+
+  var classified = anClassifyImportBatch(allContacts);
+  var dupes = classified.duplicates.length;
+  var valid = classified.newOnes.length + dupes;
+
+  stats.innerHTML = '<strong style="color:'+(mappedCount ? '#10b981' : '#f59e0b')+';">'
+    +(mappedCount ? '✅ ' : '⚠️ ')+allContacts.length+' rows found · '+mappedCount+' fields mapped · '+valid+' importable</strong>'
+    +(dupes ? ' · <span style="color:#f59e0b;">'+dupes+' possible duplicate'+(dupes!==1?'s':'')+' — you\'ll confirm before import</span>' : '')
+    +'<br><span style="font-size:12px;color:var(--text-muted);">Preview: '
+    +(sampleContacts.length ? sampleContacts.map(function(c){
+      return (c.firstName||'')+(c.lastName?' '+c.lastName:'')+(c.company?' ('+c.company+')':'');
+    }).join(', ') : 'Map at least one column to see preview')
+    +'</span>';
+
+  if(preview) preview.style.display = 'block';
+  if(confirmBtn){
+    confirmBtn.disabled = valid === 0;
+    confirmBtn.style.opacity = valid === 0 ? '0.5' : '1';
+    confirmBtn.textContent = valid ? ('Import '+valid+' Contact'+(valid!==1?'s':'')) : 'Map columns to import';
+  }
+}
+
+window.anImportMappingChanged = function(){
+  anRenderImportMapping();
+};
+
+function anGetImportMapping(){
+  var mapping = {};
+  AN_IMPORT_FIELDS.forEach(function(field){
+    var sel = document.querySelector('[data-import-field="'+field.key+'"]');
+    mapping[field.key] = sel ? parseInt(sel.value, 10) : -1;
+  });
+  if(!_anImportRaw) return mapping;
+  var hasMapped = false;
+  Object.keys(mapping).forEach(function(k){ if(mapping[k] >= 0) hasMapped = true; });
+  if(!hasMapped) return anBuildImportMapping(_anImportRaw.headers);
+  return mapping;
+}
+
+function anMapStatus(val){
+  var lv = (val || '').toLowerCase();
+  if(lv.includes('customer') || lv.includes('won') || lv.includes('closed won')) return 'won';
+  if(lv.includes('demo') || lv.includes('meeting')) return 'demo';
+  if(lv.includes('proposal') || lv.includes('quote')) return 'proposal';
+  if(lv.includes('lost')) return 'lost';
+  if(lv.includes('nurture')) return 'nurture';
+  if(lv.includes('lead') || lv.includes('new')) return 'new';
+  if(lv) return 'contacted';
+  return 'new';
+}
+
+function anBuildContactsFromMapping(mapping, limit){
+  if(!_anImportRaw) return [];
+  var contacts = [];
+  var repEmail = AN.currentRepEmail || (typeof _currentUser !== 'undefined' && _currentUser ? _currentUser.email : '');
+  var max = typeof limit === 'number' ? Math.min(limit, _anImportRaw.rows.length) : _anImportRaw.rows.length;
+
+  for(var i = 0; i < max; i++){
+    var vals = _anImportRaw.rows[i];
+    var c = {
+      id: 'l-' + Date.now() + '-' + i + '-' + Math.random().toString(36).slice(2, 6),
+      callLog: [],
+      created: new Date().toISOString(),
+      updated: new Date().toISOString(),
+      source: 'CSV Import',
+      status: 'new',
+      _repEmail: repEmail
+    };
+    AN_IMPORT_FIELDS.forEach(function(field){
+      var idx = mapping[field.key];
+      if(idx < 0) return;
+      var v = (vals[idx] || '').trim();
+      if(!v) return;
+      if(field.key === 'status') c.status = anMapStatus(v);
+      else c[field.key] = v;
+    });
+    if(!c.lastName && c.firstName){
+      var parts = c.firstName.split(' ');
+      if(parts.length > 1){ c.firstName = parts[0]; c.lastName = parts.slice(1).join(' '); }
+    }
+    if(!c.firstName && !c.lastName && !c.email && !c.company) continue;
+    if(!c.firstName && !c.lastName) c.firstName = c.email ? c.email.split('@')[0] : 'Unknown';
+    contacts.push(c);
+  }
+  return contacts;
+}
 
 window.anOpenImport = function(){
-  var old=document.getElementById('an-import-modal'); if(old) old.remove();
-  var m=document.createElement('div');
-  m.id='an-import-modal';
-  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
-  m.innerHTML='<div style="background:var(--card-bg);border-radius:14px;padding:26px;width:500px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div style="font-size:17px;font-weight:800;color:var(--text-primary);">Import from HubSpot CSV</div>'
+  var old = document.getElementById('an-import-modal');
+  if(old) old.remove();
+  _anImportRaw = null;
+  _anPending = [];
+
+  var m = document.createElement('div');
+  m.id = 'an-import-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
+  m.innerHTML = '<div style="background:var(--card-bg);border-radius:14px;padding:26px;width:720px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div style="font-size:17px;font-weight:800;color:var(--text-primary);">Import Contacts from CSV</div>'
     +'<button onclick="document.getElementById(\'an-import-modal\').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);">✕</button></div>'
-    +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">In HubSpot: Contacts → Export → Export all → Download CSV</div>'
-    +'<div id="an-drop-zone" style="border:2px dashed var(--divider);border-radius:12px;padding:36px;text-align:center;cursor:pointer;transition:all 0.15s;margin-bottom:14px;" '
+    +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Upload a HubSpot, Apollo, or any contact CSV. You\'ll match columns before importing. Data saves locally and syncs to Supabase when signed in.</div>'
+    +'<div id="an-drop-zone" style="border:2px dashed var(--divider);border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all 0.15s;margin-bottom:14px;" '
     +'onclick="document.getElementById(\'an-file-input\').click()" '
     +'ondragover="event.preventDefault();this.style.borderColor=\'#6366f1\';this.style.background=\'rgba(99,102,241,0.04)\'" '
     +'ondragleave="this.style.borderColor=\'var(--divider)\';this.style.background=\'transparent\'" '
     +'ondrop="event.preventDefault();anHandleDrop(event);">'
     +'<div style="font-size:32px;margin-bottom:8px;">📂</div>'
     +'<div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">Drop CSV here or click to browse</div>'
-    +'<div style="font-size:12px;color:var(--text-muted);">HubSpot Contact Export format supported</div>'
+    +'<div style="font-size:12px;color:var(--text-muted);">.csv files only</div>'
     +'</div>'
-    +'<input type="file" id="an-file-input" accept=".csv" style="display:none;" onchange="anHandleFileInput(this)">'
+    +'<input type="file" id="an-file-input" accept=".csv,text/csv" style="display:none;" onchange="anHandleFileInput(this)">'
     +'<div id="an-import-preview" style="display:none;">'
     +'<div id="an-import-stats" style="background:var(--body-bg);border-radius:8px;padding:12px;margin-bottom:12px;font-size:13px;color:var(--text-secondary);"></div>'
+    +'<div id="an-import-mapping" style="margin-bottom:14px;"></div>'
     +'<div style="display:flex;gap:8px;justify-content:flex-end;">'
     +'<button onclick="document.getElementById(\'an-import-modal\').remove()" style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--divider);background:transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--text-secondary);">Cancel</button>'
     +'<button id="an-import-confirm" onclick="anConfirmImport()" style="padding:9px 18px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);">Import Contacts</button>'
     +'</div></div></div>';
   document.body.appendChild(m);
-  m.onclick=function(e){ if(e.target===m) m.remove(); };
+  m.onclick = function(e){ if(e.target === m) m.remove(); };
 };
 
-var _anPending=[];
-window.anHandleDrop=function(e){ var f=e.dataTransfer.files[0]; if(f) anParseCSV(f); };
-window.anHandleFileInput=function(inp){ if(inp.files[0]) anParseCSV(inp.files[0]); };
+window.anHandleDrop = function(e){
+  e.preventDefault();
+  var zone = document.getElementById('an-drop-zone');
+  if(zone){ zone.style.borderColor = 'var(--divider)'; zone.style.background = 'transparent'; }
+  var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if(f) anParseCSV(f);
+};
+
+window.anHandleFileInput = function(inp){
+  if(inp && inp.files && inp.files[0]) anParseCSV(inp.files[0]);
+};
 
 function anParseCSV(file){
-  var r=new FileReader();
-  r.onload=function(e){
-    var lines=e.target.result.split('\n').filter(function(l){ return l.trim(); });
-    if(lines.length<2) return;
-    var headers=csvLine(lines[0]);
-    var contacts=[];
-    for(var i=1;i<lines.length;i++){
-      var vals=csvLine(lines[i]);
-      if(!vals.length||vals.every(function(v){ return !v.trim(); })) continue;
-      var c={id:'l-'+Date.now()+'-'+i,callLog:[],created:new Date().toISOString(),updated:new Date().toISOString(),source:'HubSpot Import',status:'new',_repEmail:AN.currentRepEmail};
-      headers.forEach(function(h,hi){
-        var f=AN_CSV_MAP[h.trim()]||AN_CSV_MAP[h.trim().toLowerCase()];
-        if(!f) return;
-        var v=(vals[hi]||'').trim();
-        if(!v) return;
-        if(f==='_status'){ var lv=v.toLowerCase(); c.status=lv.includes('customer')||lv.includes('won')?'won':lv.includes('lead')?'new':'contacted'; }
-        else { c[f]=v; }
-      });
-      if(!c.lastName&&c.firstName){ var p=c.firstName.split(' '); if(p.length>1){ c.firstName=p[0]; c.lastName=p.slice(1).join(' '); } }
-      if(!c.firstName&&!c.lastName) c.firstName='Unknown';
-      contacts.push(c);
+  if(!file) return;
+  var zone = document.getElementById('an-drop-zone');
+  if(zone) zone.innerHTML = '<div style="font-size:14px;color:var(--text-muted);">Reading '+anEsc(file.name)+'...</div>';
+
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var parsed = anParseCSVText(e.target.result);
+    if(!parsed || !parsed.rows.length){
+      if(typeof showToast === 'function') showToast('Could not read CSV — need a header row and at least one contact');
+      if(zone) zone.innerHTML = '<div style="font-size:14px;font-weight:700;color:#ef4444;">Could not parse file</div><div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Try exporting again as CSV with headers</div>';
+      return;
     }
-    _anPending=contacts;
-    var dupes=contacts.filter(function(c){ return AN.leads.some(function(x){ return x.email&&c.email&&x.email.toLowerCase()===c.email.toLowerCase(); }); }).length;
-    var stats=document.getElementById('an-import-stats');
-    var preview=document.getElementById('an-import-preview');
-    var drop=document.getElementById('an-drop-zone');
-    if(stats) stats.innerHTML='<strong style="color:#10b981;">✅ '+contacts.length+' contacts ready</strong>'+(dupes?' · '+dupes+' may be duplicates':'')+'<br><span style="font-size:12px;color:var(--text-muted);">'+contacts.slice(0,3).map(function(c){ return (c.firstName||'')+(c.lastName?' '+c.lastName:'')+(c.company?' ('+c.company+')':''); }).join(', ')+'</span>';
-    if(preview) preview.style.display='block';
-    if(drop){ drop.style.borderColor='#10b981'; drop.style.background='rgba(16,185,129,0.04)'; drop.innerHTML='<div style="font-size:24px;margin-bottom:6px;">✅</div><div style="font-size:14px;font-weight:700;color:#10b981;">'+contacts.length+' contacts ready</div>'; }
+    _anImportRaw = parsed;
+    if(zone){
+      zone.style.borderColor = '#10b981';
+      zone.style.background = 'rgba(16,185,129,0.04)';
+      zone.innerHTML = '<div style="font-size:24px;margin-bottom:6px;">✅</div><div style="font-size:14px;font-weight:700;color:#10b981;">'+parsed.rows.length+' rows loaded</div><div style="font-size:12px;color:var(--text-muted);margin-top:4px;">'+anEsc(file.name)+'</div>';
+    }
+    anRenderImportMapping();
   };
-  r.readAsText(file);
+  reader.onerror = function(){
+    if(typeof showToast === 'function') showToast('Failed to read file');
+  };
+  reader.readAsText(file);
 }
 
-function csvLine(line){ var r=[],c='',q=false; for(var i=0;i<line.length;i++){ var ch=line[i]; if(ch==='"'){ q=!q; }else if(ch===','&&!q){ r.push(c); c=''; }else{ c+=ch; } } r.push(c); return r; }
+function anContactLabel(c){
+  return ((c.firstName||'')+' '+(c.lastName||'')).trim() || c.email || c.company || 'Unknown';
+}
 
-window.anConfirmImport=function(){
-  if(!_anPending.length) return;
-  var added=0,skipped=0;
-  _anPending.forEach(function(c){
-    var dupe=AN.leads.some(function(x){ return x.email&&c.email&&x.email.toLowerCase()===c.email.toLowerCase(); });
-    if(dupe){ skipped++; return; }
-    AN.leads.unshift(c); added++;
+function anFindDuplicateMatches(c){
+  if(!Array.isArray(AN.leads)) return [];
+  var cName = ((c.firstName||'')+' '+(c.lastName||'')).trim().toLowerCase();
+  var cEmail = (c.email||'').toLowerCase();
+  var cPhone = (c.phone||'').replace(/\D/g,'');
+  var cCo = (c.company||'').trim().toLowerCase();
+  return AN.leads.filter(function(x){
+    if(cEmail && x.email && cEmail === x.email.toLowerCase()) return true;
+    if(cPhone && x.phone && cPhone === x.phone.replace(/\D/g,'')) return true;
+    var xName = ((x.firstName||'')+' '+(x.lastName||'')).trim().toLowerCase();
+    if(cName && xName && cName === xName && cCo && x.company && cCo === x.company.toLowerCase()) return true;
+    return false;
   });
-  _anPending=[];
-  AN.save();
-  document.getElementById('an-import-modal').remove();
-  if(typeof showToast==='function') showToast('Imported '+added+' leads'+(skipped?' ('+skipped+' skipped)':''));
-  renderLeadsTable();
+}
+
+function anClassifyImportBatch(contacts){
+  var duplicates = [], newOnes = [];
+  contacts.forEach(function(c){
+    var matches = anFindDuplicateMatches(c);
+    if(matches.length) duplicates.push({ contact: c, matches: matches });
+    else newOnes.push(c);
+  });
+  return { duplicates: duplicates, newOnes: newOnes };
+}
+
+function anSyncCompaniesFromLeads(){
+  if(typeof coSave !== 'function' || typeof AN === 'undefined' || !AN.leads) return;
+  var companies = (typeof _coData !== 'undefined' && _coData.length) ? _coData.slice() : [];
+  try { if(!companies.length) companies = JSON.parse(localStorage.getItem('agentnav-companies')||'[]'); } catch(e){}
+  var compMap = {};
+  companies.forEach(function(c){ compMap[coNormName(c.name)] = c; });
+  var changed = false;
+  AN.leads.forEach(function(l){
+    var cn = (l.company||'').trim();
+    if(!cn) return;
+    var key = coNormName(cn);
+    if(!compMap[key]){
+      companies.push({ id:'co-'+Date.now()+'-'+Math.random().toString(36).slice(2,6), name:cn, industry:'Insurance Agency', notes:'', website:'', lifecycleStage:'', created:new Date().toISOString() });
+      compMap[key] = companies[companies.length-1];
+      changed = true;
+    }
+    l.companyId = compMap[key].id;
+  });
+  if(changed) coSave(companies);
+}
+
+function anExecuteImport(contacts, opts){
+  opts = opts || { skipDupes:true, updateDupes:false, importAnyway:false };
+  if(!Array.isArray(AN.leads)) AN.leads = anNormalizeLeads(AN.leads);
+  var added = 0, skipped = 0, updated = 0;
+
+  contacts.forEach(function(c){
+    var matches = anFindDuplicateMatches(c);
+    if(matches.length){
+      if(opts.updateDupes){
+        var existing = matches[0];
+        ['firstName','lastName','company','email','phone','state','status','source','notes','title','size'].forEach(function(f){
+          if(c[f]) existing[f] = c[f];
+        });
+        existing.updated = new Date().toISOString();
+        updated++;
+        return;
+      }
+      if(opts.importAnyway){
+        AN.leads.unshift(c);
+        added++;
+        return;
+      }
+      skipped++;
+      return;
+    }
+    AN.leads.unshift(c);
+    added++;
+  });
+
+  _anPending = [];
+  _anImportRaw = null;
+  anSyncCompaniesFromLeads();
+
+  AN.save(function(ok, err, where){
+    var importModal = document.getElementById('an-import-modal');
+    var dupeModal = document.getElementById('an-dupe-modal');
+    if(importModal) importModal.remove();
+    if(dupeModal) dupeModal.remove();
+    var msg = '';
+    if(added) msg += 'Imported '+added+' contact'+(added!==1?'s':'');
+    if(updated) msg += (msg?' · ':'')+'Updated '+updated;
+    if(skipped) msg += (msg?' · ':'')+'Skipped '+skipped+' duplicate'+(skipped!==1?'s':'');
+    if(!msg) msg = 'No contacts imported';
+    if(where === 'cloud' && ok) msg += ' · saved to cloud';
+    else if(where === 'cloud' && !ok) msg += ' · saved locally (cloud sync failed)';
+    else if(where === 'local') msg += ' · saved locally (sign in to sync)';
+    if(typeof showToast === 'function') showToast(msg);
+    if(!ok && err) console.error('[CRM] Import save error:', err);
+    renderLeadsTable();
+    if(typeof coRender === 'function'){
+      var coSec = document.getElementById('section-companies');
+      if(coSec && coSec.style.display !== 'none') coRender();
+    }
+  });
+}
+
+window.anShowDuplicateReview = function(classified){
+  var old = document.getElementById('an-dupe-modal');
+  if(old) old.remove();
+
+  var m = document.createElement('div');
+  m.id = 'an-dupe-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
+  var rows = classified.duplicates.slice(0, 8).map(function(d){
+    var match = d.matches[0];
+    var reason = d.contact.email && match.email && d.contact.email.toLowerCase() === match.email.toLowerCase() ? 'Same email'
+      : 'Same name at same company';
+    return '<div style="padding:10px 12px;border:1px solid var(--divider);border-radius:8px;margin-bottom:8px;background:var(--body-bg);">'
+      +'<div style="font-size:13px;font-weight:700;color:var(--text-primary);">'+anEsc(anContactLabel(d.contact))+'</div>'
+      +'<div style="font-size:11px;color:#f59e0b;margin-top:2px;">'+reason+' — matches existing: '+anEsc(anContactLabel(match))+(match.company?' @ '+anEsc(match.company):'')+'</div>'
+      +'</div>';
+  }).join('');
+
+  m.innerHTML = '<div style="background:var(--card-bg);border-radius:14px;padding:24px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.35);">'
+    +'<div style="font-size:17px;font-weight:800;color:var(--text-primary);margin-bottom:6px;">⚠️ '+classified.duplicates.length+' Possible Duplicate'+(classified.duplicates.length!==1?'s':'')+'</div>'
+    +'<div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;">These contacts look like ones you already have. Choose what to do before importing <strong>'+(classified.newOnes.length + classified.duplicates.length)+'</strong> total contacts.</div>'
+    +'<div style="max-height:240px;overflow-y:auto;margin-bottom:16px;">'+rows+(classified.duplicates.length>8?'<div style="font-size:12px;color:var(--text-muted);padding:8px;">+' +(classified.duplicates.length-8)+' more...</div>':'')+'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:8px;">'
+    +'<button onclick="anExecuteImport(_anPending,{skipDupes:true,updateDupes:false,importAnyway:false})" style="padding:11px 16px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);">Skip duplicates — import '+classified.newOnes.length+' new only</button>'
+    +'<button onclick="anExecuteImport(_anPending,{skipDupes:false,updateDupes:true,importAnyway:false})" style="padding:11px 16px;border-radius:8px;border:1.5px solid #10b981;background:rgba(16,185,129,0.08);color:#10b981;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);">Update existing records with CSV data</button>'
+    +'<button onclick="anExecuteImport(_anPending,{skipDupes:false,updateDupes:false,importAnyway:true})" style="padding:11px 16px;border-radius:8px;border:1.5px solid #f59e0b;background:rgba(245,158,11,0.08);color:#b45309;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);">Import all anyway (keep duplicates)</button>'
+    +'<button onclick="document.getElementById(\'an-dupe-modal\').remove()" style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--divider);background:transparent;color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);">Cancel</button>'
+    +'</div></div>';
+  document.body.appendChild(m);
+  m.onclick = function(e){ if(e.target === m) m.remove(); };
+};
+
+window.anConfirmImport = function(){
+  var btn = document.getElementById('an-import-confirm');
+  var mapping = anGetImportMapping();
+  _anPending = anBuildContactsFromMapping(mapping);
+  if(!_anPending.length){
+    if(typeof showToast === 'function') showToast('Map at least one column (name, email, or company) before importing');
+    return;
+  }
+  var classified = anClassifyImportBatch(_anPending);
+  if(classified.duplicates.length > 0){
+    anShowDuplicateReview(classified);
+    return;
+  }
+  if(btn){ btn.disabled = true; btn.textContent = 'Importing...'; }
+  setTimeout(function(){ anExecuteImport(_anPending, { skipDupes:true, updateDupes:false, importAnyway:false }); }, 30);
 };
 
 // ── SDR Commission Calc ───────────────────────────────────────
@@ -12101,7 +12482,8 @@ console.log('[HOME DASHBOARD] Rendered successfully.');
 .an-onboard-btn:hover { transform: translateY(-1px); }
 
 /* ── Companies view ─────────────────────────────────────── */
-#co-root { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; min-height: 100vh; background: #f7f7f9; display: flex; }
+#co-root { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; min-height: calc(100vh - 60px); height: calc(100vh - 60px); background: #f7f7f9; display: flex; overflow: hidden; }
+#co-detail-pane { flex: 1; min-width: 0; }
 #co-list-pane { width: 340px; flex-shrink: 0; background: #fff; border-right: 1px solid #e9e9ef; display: flex; flex-direction: column; }
 #co-detail-pane { flex: 1; overflow-y: auto; }
 .co-list-header { padding: 18px 16px 12px; border-bottom: 1px solid #f0f0f5; display: flex; align-items: center; gap: 8px; }
@@ -12383,6 +12765,52 @@ function coColor(name) { var h=0; for(var i=0;i<name.length;i++) h=(h*31+name.ch
 
 var _coSelected = null; // currently open company id
 
+function coNormName(n){ return (n||'').trim().toLowerCase(); }
+
+function coGetLeadsForCompany(coName){
+  if(typeof AN === 'undefined' || !AN.leads) return [];
+  return AN.leads.filter(function(l){ return l.company && coNormName(l.company) === coNormName(coName); });
+}
+
+function coLeadMRR(l){
+  if(l.oppMRR) return l.oppMRR;
+  var sz = (typeof AN_SIZES !== 'undefined') ? AN_SIZES.find(function(s){ return s.id === l.size; }) : null;
+  return sz ? sz.price : 0;
+}
+
+function coGetCompanyStats(coName, co){
+  var leads = coGetLeadsForCompany(coName);
+  var won = leads.filter(function(l){ return l.status === 'won'; });
+  var pipeline = leads.filter(function(l){ return ['demo','showed','proposal','won'].indexOf(l.status) >= 0; });
+  var activeMRR = won.reduce(function(s,l){ return s + coLeadMRR(l); }, 0);
+  var pipelineMRR = pipeline.reduce(function(s,l){ return s + (coLeadMRR(l) || 79); }, 0);
+  var primaryPlan = '—';
+  if(won.length){
+    var top = won.slice().sort(function(a,b){ return coLeadMRR(b) - coLeadMRR(a); })[0];
+    var psz = AN_SIZES.find(function(s){ return s.id === top.size; });
+    primaryPlan = psz ? (psz.label + ' · $' + psz.price + '/mo') : ('$' + coLeadMRR(top) + '/mo');
+  } else if(pipeline.length){
+    var pt = pipeline[0];
+    var psz2 = AN_SIZES.find(function(s){ return s.id === pt.size; });
+    primaryPlan = psz2 ? (psz2.label + ' (pipeline)') : 'In pipeline';
+  }
+  var lifecycle = co && co.lifecycleStage ? co.lifecycleStage
+    : (won.length ? 'Customer' : pipeline.length ? 'Opportunity' : leads.length ? 'Lead' : 'Unknown');
+  var reps = {};
+  leads.forEach(function(l){ if(l._repEmail) reps[l._repEmail] = true; });
+  var ownerEmail = (co && co.ownerEmail) || Object.keys(reps)[0] || '';
+  return {
+    leads: leads, won: won, pipeline: pipeline,
+    activeUsers: won.length,
+    activeMRR: activeMRR,
+    pipelineMRR: pipelineMRR,
+    primaryPlan: primaryPlan,
+    lifecycle: lifecycle,
+    ownerEmail: ownerEmail,
+    totalContacts: leads.length
+  };
+}
+
 function coRender() {
   var sec = document.getElementById('section-companies');
   if (!sec) return;
@@ -12402,7 +12830,7 @@ function coRender() {
         var cn = (l.company || '').trim();
         if (cn && !compMap[cn.toLowerCase()]) {
           compMap[cn.toLowerCase()] = true;
-          companies.push({ id:'co-'+Date.now()+'-'+Math.random().toString(36).slice(2), name:cn, industry:'', notes:'', created:new Date().toISOString() });
+          companies.push({ id:'co-'+Date.now()+'-'+Math.random().toString(36).slice(2), name:cn, industry:'Insurance Agency', website:'', lifecycleStage:'', notes:'', created:new Date().toISOString() });
           changed = true;
         }
       });
@@ -12427,46 +12855,35 @@ function coListPane(companies, selected) {
     +companies.map(function(co) {
       var active = selected && co.id === selected.id;
       // Count leads for this company
-      var leadCount = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.filter(function(l){ return l.company && l.company.toLowerCase()===co.name.toLowerCase(); }).length : 0;
-      var wonCount  = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.filter(function(l){ return l.company && l.company.toLowerCase()===co.name.toLowerCase() && l.status==='won'; }).length : 0;
+      var stats = coGetCompanyStats(co.name, co);
       return '<div class="co-company-row'+(active?' active':'')+'" onclick="coSelect(\''+co.id+'\')">'
         +'<div class="co-co-avatar" style="background:'+coColor(co.name)+';">'+co.name.charAt(0).toUpperCase()+'</div>'
         +'<div style="flex:1;min-width:0;">'
         +'<div class="co-co-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+coEsc(co.name)+'</div>'
-        +'<div class="co-co-meta">'+(co.industry||'Insurance Agency')+' · '+leadCount+' contact'+(leadCount!==1?'s':'')+(wonCount?' · '+wonCount+' won':'')+'</div>'
+        +'<div class="co-co-meta">'+stats.totalContacts+' contact'+(stats.totalContacts!==1?'s':'')+(stats.activeUsers?' · '+stats.activeUsers+' signed up':'')+(stats.activeMRR?' · $'+stats.activeMRR+'/mo':'')+'</div>'
         +'</div>'
-        +(wonCount ? '<span class="co-co-badge" style="background:#dcfce7;color:#16a34a;">✓ Client</span>' : '')
+        +(stats.activeUsers ? '<span class="co-co-badge" style="background:#dcfce7;color:#16a34a;">✓ '+stats.activeUsers+' user'+(stats.activeUsers!==1?'s':'')+'</span>' : (stats.totalContacts ? '<span class="co-co-badge" style="background:#eef2ff;color:#6366f1;">'+stats.lifecycle+'</span>' : ''))
         +'</div>';
     }).join('')
     +'</div></div>';
 }
 
 function coDetailPane(co, allCompanies) {
-  if (!co) return '<div id="co-detail-pane" style="display:flex;align-items:center;justify-content:center;color:#a1a1aa;font-size:14px;"><div style="text-align:center;"><div style="font-size:40px;margin-bottom:12px;">🏢</div>Select a company to view details</div></div>';
+  if (!co) return '<div id="co-detail-pane" style="display:flex;align-items:center;justify-content:center;color:#a1a1aa;font-size:14px;flex:1;"><div style="text-align:center;"><div style="font-size:40px;margin-bottom:12px;">🏢</div>Select a company to view details</div></div>';
 
-  // Get all leads for this company
-  var leads = (typeof AN !== 'undefined' && AN.leads)
-    ? AN.leads.filter(function(l){ return l.company && l.company.toLowerCase()===co.name.toLowerCase(); })
-    : [];
-
+  var stats = coGetCompanyStats(co.name, co);
+  var leads = stats.leads.slice();
   var statusColors = { new:'#6366f1', contacted:'#f59e0b', demo:'#8b5cf6', showed:'#10b981', proposal:'#06b6d4', won:'#22c55e', lost:'#ef4444', nurture:'#a1a1aa' };
   var statusLabels = { new:'New', contacted:'Contacted', demo:'Demo Set', showed:'Showed', proposal:'Proposal', won:'Won', lost:'Lost', nurture:'Nurture' };
-
-  // Decision maker detection
   var dmTitles = ['owner','ceo','president','founder','director','vp','principal','partner','manager'];
-  var decisionMakers = leads.filter(function(l) {
-    var t = (l.title||'').toLowerCase();
-    return dmTitles.some(function(dt){ return t.indexOf(dt)>=0; });
-  });
-  var hasDecisionMaker = decisionMakers.length > 0;
-
-  // Insight: enough individual contacts = pitch the whole agency
-  var wonContacts = leads.filter(function(l){ return l.status==='won'; });
+  var wonContacts = stats.won;
   var showAgencyPitch = wonContacts.length >= 3;
   var showGroupOppty  = leads.length >= 5 && !showAgencyPitch;
-
-  // Sort leads: DMs first, then by status
   var statusOrder = { won:0, proposal:1, showed:2, demo:3, contacted:4, new:5, nurture:6, lost:7 };
+  var ownerName = stats.ownerEmail && typeof anGetRepName === 'function' ? anGetRepName(stats.ownerEmail) : (stats.ownerEmail ? stats.ownerEmail.split('@')[0] : 'Unassigned');
+  var totalCalls = leads.reduce(function(sum,l){ return sum + (l.callLog||[]).length; }, 0);
+  var opps = stats.pipeline;
+
   leads.sort(function(a,b) {
     var aIsDM = dmTitles.some(function(t){ return (a.title||'').toLowerCase().indexOf(t)>=0; });
     var bIsDM = dmTitles.some(function(t){ return (b.title||'').toLowerCase().indexOf(t)>=0; });
@@ -12474,98 +12891,121 @@ function coDetailPane(co, allCompanies) {
     return (statusOrder[a.status]||5) - (statusOrder[b.status]||5);
   });
 
-  // Total call activity
-  var totalCalls = leads.reduce(function(sum,l){ return sum + (l.callLog||[]).length; }, 0);
+  var allCalls = [];
+  leads.forEach(function(l){
+    (l.callLog||[]).forEach(function(c){
+      allCalls.push({ date:c.date, time:c.time, outcome:c.outcome, notes:c.notes, contact:((l.firstName||'')+' '+(l.lastName||'')).trim() });
+    });
+  });
+  allCalls.sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
 
-  return '<div id="co-detail-pane" style="padding:28px 32px;">'
+  function keyRow(label, val, editableId, coField){
+    if(editableId){
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f5;gap:10px;">'
+        +'<span style="font-size:12px;color:#71717a;flex-shrink:0;">'+label+'</span>'
+        +'<input id="'+editableId+'" type="text" value="'+coEsc(val||'')+'" placeholder="Add..." onblur="coSaveField(\''+co.id+'\',\''+coField+'\',this.value)" style="border:none;border-bottom:1px solid #e4e4e7;padding:2px 4px;font-size:12.5px;font-weight:600;color:#09090b;background:transparent;outline:none;text-align:right;min-width:120px;max-width:180px;" onfocus="this.style.borderColor=\'#6366f1\'">'
+        +'</div>';
+    }
+    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f5;">'
+      +'<span style="font-size:12px;color:#71717a;">'+label+'</span>'
+      +'<span style="font-size:12.5px;font-weight:700;color:#09090b;text-align:right;">'+val+'</span></div>';
+  }
 
-    // Header
-    +'<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">'
-    +'<div style="display:flex;align-items:center;gap:16px;">'
-    +'<div style="width:56px;height:56px;border-radius:14px;background:'+coColor(co.name)+';display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:#fff;">'+co.name.charAt(0).toUpperCase()+'</div>'
-    +'<div>'
-    +'<div style="font-size:22px;font-weight:800;color:#09090b;margin-bottom:2px;">'+coEsc(co.name)+'</div>'
-    +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
-    +'<input id="co-industry-edit" type="text" value="'+coEsc(co.industry||'')+'" placeholder="Industry / Type..." onblur="coSaveField(\''+co.id+'\',\'industry\',this.value)" style="border:none;border-bottom:1.5px solid #e4e4e7;padding:2px 4px;font-size:13px;color:#71717a;background:transparent;outline:none;min-width:160px;" onfocus="this.style.borderColor=\'#6366f1\'" onblur2="this.style.borderColor=\'#e4e4e7\'">'
-    +'</div></div></div>'
-    +'<div style="display:flex;gap:8px;">'
-    +'<button onclick="coAddContact(\''+co.id+'\')" style="background:#6366f1;color:#fff;border:none;border-radius:9px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">+ Add Contact</button>'
-    +'<button onclick="coDeleteCompany(\''+co.id+'\')" style="background:#fef2f2;color:#ef4444;border:1px solid #fecaca;border-radius:9px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Delete</button>'
+  return '<div id="co-detail-pane" style="display:flex;flex:1;overflow:hidden;min-height:0;">'
+
+    // ── LEFT: Company profile + key info (HubSpot-style) ──
+    +'<div style="width:300px;flex-shrink:0;border-right:1px solid #e9e9ef;background:#fff;padding:20px;overflow-y:auto;">'
+    +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">'
+    +'<div style="width:48px;height:48px;border-radius:12px;background:'+coColor(co.name)+';display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;">'+co.name.charAt(0).toUpperCase()+'</div>'
+    +'<div style="flex:1;min-width:0;"><div style="font-size:17px;font-weight:800;color:#09090b;">'+coEsc(co.name)+'</div>'
+    +'<input id="co-website-edit" type="text" value="'+coEsc(co.website||'')+'" placeholder="website.com" onblur="coSaveField(\''+co.id+'\',\'website\',this.value)" style="border:none;font-size:12px;color:#6366f1;background:transparent;outline:none;width:100%;margin-top:2px;" onfocus="this.style.borderColor=\'#6366f1\'">'
+    +'</div></div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;">'
+    +'<button onclick="coAddContact(\''+co.id+'\')" style="padding:6px 12px;border-radius:20px;border:1px solid #e4e4e7;background:#fff;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;">📝 Note</button>'
+    +'<button onclick="coAddContact(\''+co.id+'\')" style="padding:6px 12px;border-radius:20px;border:1px solid #e4e4e7;background:#fff;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;">📞 Call</button>'
+    +'<button onclick="coAddContact(\''+co.id+'\')" style="padding:6px 12px;border-radius:20px;border:1px solid #e4e4e7;background:#fff;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;">👤 Contact</button>'
+    +'</div>'
+    +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#a1a1aa;margin-bottom:8px;">Key Information</div>'
+    + keyRow('Company owner', ownerName)
+    + keyRow('Lifecycle stage', stats.lifecycle, 'co-lifecycle-edit', 'lifecycleStage')
+    + keyRow('Signed up users', stats.activeUsers ? stats.activeUsers+' using AgentNav' : 'None yet')
+    + keyRow('Active plan', stats.primaryPlan)
+    + keyRow('Active MRR', stats.activeMRR ? '$'+stats.activeMRR+'/mo' : '—')
+    + keyRow('Pipeline MRR', stats.pipelineMRR ? '$'+stats.pipelineMRR+'/mo' : '—')
+    + keyRow('Total contacts', stats.totalContacts)
+    + keyRow('Industry', co.industry||'Insurance Agency', 'co-industry-edit', 'industry')
+    +'</div>'
+
+    // ── CENTER: Activity feed ──
+    +'<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;background:#f7f7f9;min-width:0;">'
+    +'<div style="padding:14px 20px;border-bottom:1px solid #e9e9ef;background:#fff;display:flex;gap:0;">'
+    +'<button style="padding:10px 16px;border:none;border-bottom:2px solid #6366f1;font-size:13px;font-weight:700;color:#6366f1;background:transparent;cursor:pointer;font-family:inherit;">Activities</button>'
+    +'<button style="padding:10px 16px;border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;color:#a1a1aa;background:transparent;cursor:pointer;font-family:inherit;">Contacts ('+leads.length+')</button>'
+    +'</div>'
+    +(showAgencyPitch ? '<div style="margin:14px 20px 0;background:linear-gradient(135deg,#fef9c3,#fef3c7);border:1.5px solid #fde68a;border-radius:10px;padding:12px 14px;font-size:12px;color:#92400e;"><strong>Agency opportunity:</strong> '+wonContacts.length+' users signed up — consider an enterprise pitch.</div>' : '')
+    +'<div style="flex:1;overflow-y:auto;padding:16px 20px;">'
+    +(allCalls.length ? allCalls.slice(0,20).map(function(c){
+      return '<div style="background:#fff;border:1px solid #e9e9ef;border-radius:10px;padding:14px;margin-bottom:10px;">'
+        +'<div style="font-size:12px;font-weight:700;color:#6366f1;margin-bottom:4px;">'+(c.outcome||'Call').charAt(0).toUpperCase()+(c.outcome||'call').slice(1)+' with '+coEsc(c.contact)+'</div>'
+        +'<div style="font-size:11px;color:#a1a1aa;">'+coEsc(c.date)+(c.time?' · '+c.time:'')+'</div>'
+        +(c.notes?'<div style="font-size:12.5px;color:#52525b;margin-top:8px;line-height:1.5;">'+coEsc(c.notes)+'</div>':'')
+        +'</div>';
+    }).join('') : '<div style="text-align:center;padding:48px;color:#a1a1aa;"><div style="font-size:32px;margin-bottom:10px;">📋</div>No activity yet — log a call from a contact.</div>')
     +'</div></div>'
 
-    // Insight banner
-    +(showAgencyPitch
-      ? '<div style="background:linear-gradient(135deg,#fef9c3,#fef3c7);border:1.5px solid #fde68a;border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">'
-        +'<span style="font-size:24px;">💡</span>'
-        +'<div><div style="font-size:13px;font-weight:700;color:#92400e;">Agency-Level Opportunity Detected</div>'
-        +'<div style="font-size:12px;color:#a16207;margin-top:2px;">You\'ve won '+wonContacts.length+' individual contacts at '+coEsc(co.name)+'. This agency might be ready for an enterprise pitch — reach out to the decision-maker about a team plan.</div>'
-        +'</div>'
-        +'<button onclick="showSection(\'opportunities\',null)" style="background:#f59e0b;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">Create Opp →</button>'
-        +'</div>'
-      : showGroupOppty
-      ? '<div style="background:linear-gradient(135deg,#eef2ff,#f5f3ff);border:1.5px solid #c7d2fe;border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">'
-        +'<span style="font-size:24px;">🎯</span>'
-        +'<div><div style="font-size:13px;font-weight:700;color:#3730a3;">Consider an Enterprise Pitch</div>'
-        +'<div style="font-size:12px;color:#4338ca;margin-top:2px;">'+leads.length+' contacts reached at '+coEsc(co.name)+'. If they\'re a multi-agent agency, this could be a group deal worth pitching at the company level.</div>'
-        +'</div></div>'
-      : '')
+    // ── RIGHT: Associated records ──
+    +'<div style="width:280px;flex-shrink:0;border-left:1px solid #e9e9ef;background:#fff;padding:16px;overflow-y:auto;">'
 
-    // Stats row
-    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;">'
-    +coStatCard(leads.length, 'Contacts', '#6366f1')
-    +coStatCard(leads.filter(function(l){return l.status==='won';}).length, 'Won', '#22c55e')
-    +coStatCard(totalCalls, 'Total Calls', '#f59e0b')
-    +coStatCard(hasDecisionMaker?'✓':'—', 'DM Reached', hasDecisionMaker?'#10b981':'#d4d4d8')
+    // Contacts widget
+    +'<div style="margin-bottom:20px;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
+    +'<span style="font-size:12px;font-weight:700;color:#09090b;">Contacts ('+leads.length+')</span>'
+    +'<button onclick="coAddContact(\''+co.id+'\')" style="font-size:11px;font-weight:700;color:#6366f1;background:none;border:none;cursor:pointer;font-family:inherit;">+ Add</button>'
+    +'</div>'
+    +(leads.length ? leads.slice(0,6).map(function(l){
+      var name = ((l.firstName||'')+' '+(l.lastName||'')).trim() || 'Unknown';
+      var stCol = statusColors[l.status] || '#a1a1aa';
+      var isSignedUp = l.status === 'won';
+      return '<div onclick="typeof anOpenLeadPanel===\'function\'?anOpenLeadPanel(\''+l.id+'\'):anOpenLead&&anOpenLead(\''+l.id+'\')" style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;cursor:pointer;margin-bottom:4px;" onmouseover="this.style.background=\'#f4f4ff\'" onmouseout="this.style.background=\'transparent\'">'
+        +'<div style="width:28px;height:28px;border-radius:50%;background:'+stCol+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;">'+name.charAt(0).toUpperCase()+'</div>'
+        +'<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:600;color:#09090b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+coEsc(name)+'</div>'
+        +'<div style="font-size:10.5px;color:#a1a1aa;">'+(isSignedUp?'✓ Signed up · ':'')+(l.email||l.phone||'')+'</div></div></div>';
+    }).join('') + (leads.length>6?'<div style="font-size:11px;color:#6366f1;padding:6px 8px;cursor:pointer;">View all '+leads.length+' contacts →</div>':'')
+      : '<div style="font-size:12px;color:#a1a1aa;padding:8px 0;">No contacts — import CSV or add manually.</div>')
     +'</div>'
 
-    // Contacts hierarchy
-    +'<div style="background:#fff;border:1px solid #e9e9ef;border-radius:12px;margin-bottom:20px;overflow:hidden;">'
-    +'<div style="padding:14px 18px;border-bottom:1px solid #f0f0f5;display:flex;align-items:center;justify-content:space-between;">'
-    +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#7c7c8e;">Contacts &amp; Hierarchy</div>'
-    +'<div style="font-size:11px;color:#a1a1aa;">DMs shown first</div>'
+    // Deals / pricing widget
+    +'<div style="margin-bottom:20px;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
+    +'<span style="font-size:12px;font-weight:700;color:#09090b;">Deals ('+opps.length+')</span>'
+    +'<button onclick="showSection(\'opportunities\',null)" style="font-size:11px;font-weight:700;color:#6366f1;background:none;border:none;cursor:pointer;font-family:inherit;">+ Add</button>'
     +'</div>'
-    +(leads.length===0
-      ? '<div style="padding:32px;text-align:center;color:#a1a1aa;font-size:13px;"><div style="font-size:28px;margin-bottom:8px;">👤</div>No contacts yet.<br><button onclick="coAddContact(\''+co.id+'\')" style="margin-top:12px;background:#6366f1;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ Add Contact</button></div>'
-      : '<div style="padding:0 18px;">'
-        +leads.map(function(l) {
-          var name = ((l.firstName||'')+' '+(l.lastName||'')).trim() || 'Unknown';
-          var stCol = statusColors[l.status] || '#a1a1aa';
-          var stLbl = statusLabels[l.status] || l.status;
-          var isDM = dmTitles.some(function(t){ return (l.title||'').toLowerCase().indexOf(t)>=0; });
-          var lastCall = (l.callLog&&l.callLog.length) ? l.callLog.slice().sort(function(a,b){return b.date.localeCompare(a.date);})[0] : null;
-          return '<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f5f5f8;">'
-            +(isDM?'<div style="position:relative;flex-shrink:0;"><div style="width:36px;height:36px;border-radius:50%;background:'+stCol+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;">'+name.charAt(0).toUpperCase()+'</div><span style="position:absolute;bottom:-2px;right:-2px;width:14px;height:14px;background:#f59e0b;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;border:2px solid #fff;" title="Decision Maker">⭐</span></div>'
-              :'<div style="width:36px;height:36px;border-radius:50%;background:'+stCol+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;">'+name.charAt(0).toUpperCase()+'</div>')
-            +'<div style="flex:1;min-width:0;">'
-            +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
-            +'<span style="font-size:13px;font-weight:700;color:#09090b;">'+coEsc(name)+'</span>'
-            +(isDM?'<span style="font-size:10px;font-weight:700;background:#fff7ed;color:#f59e0b;border-radius:4px;padding:1px 6px;">DM</span>':'')
-            +'</div>'
-            +'<div style="font-size:11.5px;color:#9999aa;margin-top:1px;">'
-            +(l.title ? coEsc(l.title)+' · ' : '')
-            +(l.email ? coEsc(l.email)+' · ' : '')
-            +(l.phone ? coEsc(l.phone) : '')
-            +'</div>'
-            +(lastCall ? '<div style="font-size:11px;color:#b0b0c0;margin-top:1px;">Last contact: '+lastCall.date+' — '+(lastCall.outcome||'call')+'</div>' : '<div style="font-size:11px;color:#e4e4e7;">No calls logged</div>')
-            +'</div>'
-            +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">'
-            +'<span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:'+stCol+'18;color:'+stCol+';">'+coEsc(stLbl)+'</span>'
-            +'<div style="display:flex;gap:5px;">'
-            +'<button onclick="openMobileCallMode&&openMobileCallMode(\''+l.id+'\')" style="background:#ecfdf5;color:#10b981;border:1px solid #a7f3d0;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;" title="Call">📞</button>'
-            +'<button onclick="anOpenLeadModal&&anOpenLeadModal(\''+l.id+'\')" style="background:#eef2ff;color:#6366f1;border:1px solid #c7d2fe;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;" title="Edit lead">✏️</button>'
-            +'</div></div></div>';
-        }).join('')
-        +'</div>')
+    +(opps.length ? opps.slice(0,4).map(function(o){
+      var mrr = coLeadMRR(o) || 79;
+      var stCol = statusColors[o.status] || '#6366f1';
+      return '<div style="border:1px solid #e9e9ef;border-radius:8px;padding:10px;margin-bottom:6px;border-left:3px solid '+stCol+';">'
+        +'<div style="font-size:12px;font-weight:700;color:#09090b;">'+coEsc(((o.firstName||'')+' '+(o.lastName||'')).trim())+'</div>'
+        +'<div style="font-size:11px;color:#71717a;margin-top:2px;">$'+mrr+'/mo · '+coEsc(statusLabels[o.status]||o.status)+'</div></div>';
+    }).join('') : '<div style="font-size:12px;color:#a1a1aa;line-height:1.5;">Track revenue opportunities for this company.</div>')
     +'</div>'
+
+    // Pricing summary
+    +'<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);border-radius:10px;padding:14px;color:#fff;">'
+    +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.45);margin-bottom:8px;">Company Revenue</div>'
+    +'<div style="font-size:24px;font-weight:900;letter-spacing:-1px;">$'+(stats.activeMRR||stats.pipelineMRR||0)+'<span style="font-size:13px;font-weight:600;opacity:0.5;">/mo</span></div>'
+    +'<div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:6px;line-height:1.5;">'
+    +(stats.activeUsers ? stats.activeUsers+' user'+(stats.activeUsers!==1?'s':'')+' signed up' : 'No signed-up users yet')
+    +(stats.primaryPlan !== '—' ? ' · '+stats.primaryPlan : '')
+    +'</div></div>'
 
     // Notes
-    +'<div style="background:#fff;border:1px solid #e9e9ef;border-radius:12px;margin-bottom:20px;overflow:hidden;">'
-    +'<div style="padding:14px 18px;border-bottom:1px solid #f0f0f5;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#7c7c8e;">Company Notes &amp; Strategy</div>'
-    +'<div style="padding:14px 18px;">'
-    +'<textarea id="co-notes-ta" rows="4" placeholder="Notes about this agency — pain points, key contacts, pricing discussions, strategy..." onblur="coSaveField(\''+co.id+'\',\'notes\',this.value)" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;color:#09090b;" onfocus="this.style.borderColor=\'#6366f1\'" onblur2="this.style.borderColor=\'#e4e4e7\'">'+coEsc(co.notes||'')+'</textarea>'
-    +'</div></div>'
+    +'<div style="margin-top:16px;">'
+    +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#a1a1aa;margin-bottom:6px;">Notes</div>'
+    +'<textarea id="co-notes-ta" rows="3" placeholder="Strategy, pricing notes..." onblur="coSaveField(\''+co.id+'\',\'notes\',this.value)" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:8px 10px;font-size:12px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;color:#09090b;">'+coEsc(co.notes||'')+'</textarea>'
+    +'<button onclick="coDeleteCompany(\''+co.id+'\')" style="margin-top:10px;width:100%;background:#fef2f2;color:#ef4444;border:1px solid #fecaca;border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Remove Company</button>'
+    +'</div>'
 
-    +'</div>';
+    +'</div></div>';
 }
 
 function coStatCard(val, label, color) {
@@ -12595,7 +13035,7 @@ window.coNewCompany = function() {
   var name = prompt('Company name:');
   if (!name || !name.trim()) return;
   var companies = _coData.slice();
-  var co = { id:'co-'+Date.now(), name:name.trim(), industry:'', notes:'', created:new Date().toISOString() };
+  var co = { id:'co-'+Date.now(), name:name.trim(), industry:'Insurance Agency', website:'', lifecycleStage:'', notes:'', created:new Date().toISOString() };
   companies.unshift(co);
   _coSelected = co.id;
   coSave(companies, function() { coRender(); });
@@ -12653,13 +13093,15 @@ window.coDeleteCompany = function(coId) {
   coSave(companies, function() { coRender(); });
 };
 
-// Wire Companies into showSection
+// Wire Companies into showSection — load leads from Supabase first
 var _origShowSection_co = window.showSection;
 window.showSection = function(id, btn) {
   if (typeof _origShowSection_co === 'function') _origShowSection_co(id, btn);
   if (id === 'companies') {
     setTimeout(function() {
-      coLoad(function() { coRender(); });
+      var renderCo = function() { coLoad(function() { coRender(); }); };
+      if (typeof AN !== 'undefined' && typeof AN.load === 'function') AN.load(renderCo);
+      else renderCo();
     }, 60);
   }
 };
@@ -12778,7 +13220,7 @@ window.openCompanyDetail = function(companyName) {
     // Key info
     +'<div style="margin-bottom:18px;">'
     +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Key Information</div>'
-    +[['Contacts',leads.length],['Open Deals',opps.filter(function(o){return o.status!=='won'&&o.status!=='lost';}).length],['Closed Won',opps.filter(function(o){return o.status==='won';}).length],['Pipeline MRR','$'+opps.reduce(function(s,o){return s+(o.oppMRR||(AN_SIZES.find(function(x){return x.id===o.size;})||{price:79}).price);},0)+'/mo']]
+    +[['Contacts',leads.length],['Signed Up Users',leads.filter(function(l){return l.status==='won';}).length],['Active Plan',(function(){var w=leads.filter(function(l){return l.status==='won';});if(!w.length)return'—';var sz=AN_SIZES.find(function(s){return s.id===w[0].size;});return sz?sz.label+' $'+sz.price+'/mo':'$'+(w[0].oppMRR||79)+'/mo';})()],['Pipeline MRR','$'+opps.reduce(function(s,o){return s+(o.oppMRR||(AN_SIZES.find(function(x){return x.id===o.size;})||{price:79}).price);},0)+'/mo']]
     .map(function(r){ return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--divider);">'
       +'<span style="font-size:12.5px;color:var(--text-muted);">'+r[0]+'</span>'
       +'<span style="font-size:12.5px;font-weight:700;color:var(--text-primary);">'+r[1]+'</span>'
