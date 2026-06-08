@@ -8433,7 +8433,13 @@ var AN_SIZES = [
   { id:'enterprise', label:'Enterprise',    price:0   }
 ];
 
-var AN_SOURCES = ['Cold Call','HubSpot Import','Referral','Apollo','LinkedIn','Event','Inbound','Other'];
+var AN_SOURCES = ['Cold Call','HubSpot Import','Referral','Apollo','LinkedIn','Event','Inbound','CSV Import','Other'];
+
+function anBuildSourceDatalist(){
+  return '<datalist id="an-source-list">'+AN_SOURCES.map(function(s){
+    return '<option value="'+anEsc(s)+'">';
+  }).join('')+'</datalist>';
+}
 
 function anStatus(id){
   var legacy = { demo:'booked_demo', showed:'showed', proposal:'proposal' };
@@ -8582,7 +8588,7 @@ AN.filtered = function(){
       if(!l.nextFollowUp) return false;
     } else if(AN.currentFilter!=='all' && l.status!==AN.currentFilter) return false;
     if(q){
-      var hay = (l.firstName+l.lastName+l.company+l.email+l.phone+l.state).toLowerCase();
+      var hay = (l.firstName+l.lastName+l.company+l.email+l.phone+l.state+(l.title||'')+(l.source||'')+(l.notes||'')).toLowerCase();
       var qDigits = q.replace(/\D/g,'');
       var phoneDigits = anDigitsPhone(l.phone);
       if(!hay.includes(q) && !(qDigits && phoneDigits && phoneDigits.includes(qDigits))) return false;
@@ -8751,6 +8757,7 @@ function renderLeadsTable(){
       +'<td style="padding:10px 12px;" onclick="event.stopPropagation()"><input type="checkbox" class="lead-cb" data-id="'+lead.id+'"'+(AN.selectedIds.indexOf(lead.id)>=0?' checked':'')+' onchange="anToggleSelect(\''+lead.id+'\',this.checked)" style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;"></td>'
       +'<td style="padding:10px 12px;min-width:140px;">'
       +'<div style="font-size:13.5px;font-weight:700;color:var(--text-primary);">'+anEsc((lead.firstName||'')+' '+(lead.lastName||''))+'</div>'
+      +(lead.title?'<div style="font-size:11px;color:var(--text-muted);">'+anEsc(lead.title)+'</div>':'')
       +(lead.email?'<div style="font-size:11.5px;color:var(--text-muted);">'+anEsc(lead.email)+'</div>':'')
       +'</td>'
       +'<td style="padding:10px 12px;font-size:13px;color:var(--text-secondary);">'+anEsc(lead.company||'—')+'</td>'
@@ -8830,7 +8837,6 @@ window.anOpenLead = function(id){
   var st = anStatus(lead.status||'new');
   var STATUS_OPTS = anStatusesFor(lead).map(function(s){ return '<option value="'+s.id+'"'+(lead.status===s.id?' selected':'')+'>'+s.label+'</option>'; }).join('');
   var SIZE_OPTS   = '<option value="">Size...</option>'+AN_SIZES.map(function(s){ return '<option value="'+s.id+'"'+(lead.size===s.id?' selected':'')+'>'+s.label+'</option>'; }).join('');
-  var SOURCE_OPTS = '<option value="">Source...</option>'+AN_SOURCES.map(function(s){ return '<option value="'+s+'"'+(lead.source===s?' selected':'')+'>'+s+'</option>'; }).join('');
   var STATE_OPTS  = '<option value="">State...</option>'+['Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan','Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey','New Mexico','New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania','Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont','Virginia','Washington','West Virginia','Wisconsin','Wyoming'].map(function(s){ return '<option value="'+s+'"'+(lead.state===s?' selected':'')+'>'+s+'</option>'; }).join('');
 
   var callLog = (lead.callLog||[]).slice().sort(function(a,b){ return b.date.localeCompare(a.date); });
@@ -8876,13 +8882,18 @@ window.anOpenLead = function(id){
     +anField('First Name','alf-fn',lead.firstName||'','text')
     +anField('Last Name','alf-ln',lead.lastName||'','text')
     +anField('Company','alf-co',lead.company||'','text')
+    +anField('Title / Role','alf-title',lead.title||'','text')
     +anField('Email','alf-em',lead.email||'','email')
     +anField('Phone','alf-ph',lead.phone||'','tel')
     +'<div><label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">State</label><select id="alf-st" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13.5px;color:var(--text-primary);background:var(--card-bg);outline:none;font-family:var(--sans);">'+STATE_OPTS+'</select></div>'
     +'<div><label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">Size</label><select id="alf-sz" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13.5px;color:var(--text-primary);background:var(--card-bg);outline:none;font-family:var(--sans);">'+SIZE_OPTS+'</select></div>'
     +'<div><label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">Status</label><select id="alf-sta" onchange="injectDemoScheduler(AN.leads.find(function(l){return l.id===\''+lead.id+'\'}),this)" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13.5px;color:var(--text-primary);background:var(--card-bg);outline:none;font-family:var(--sans);">'+STATUS_OPTS+'</select></div>'
-    +'<div><label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">Source</label><select id="alf-src" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13.5px;color:var(--text-primary);background:var(--card-bg);outline:none;font-family:var(--sans);">'+SOURCE_OPTS+'</select></div>'
+    +'<div><label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">Source</label>'
+    +'<input id="alf-src" list="an-source-list" value="'+anEsc(lead.source||'')+'" placeholder="e.g. Apollo, Referral, HubSpot..." style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13.5px;color:var(--text-primary);background:var(--card-bg);outline:none;font-family:var(--sans);box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'"></div>'
     +anField('Next Follow-Up','alf-fu',lead.nextFollowUp||'','date')
+    +'<div style="grid-column:1/-1;"><label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">Notes</label>'
+    +'<textarea id="alf-notes" rows="4" placeholder="Imported notes, pain points, context..." style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:10px 12px;font-size:13.5px;color:var(--text-primary);background:var(--card-bg);outline:none;resize:vertical;font-family:var(--sans);line-height:1.6;box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'">'+anEsc(lead.notes||'')+'</textarea></div>'
+    +anBuildSourceDatalist()
     +'<div id="alf-demo-wrap" style="grid-column:1/-1;display:none;"></div>'
     +'<div style="grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px;padding-top:8px;border-top:1px solid var(--divider);">'
     +'<button onclick="document.getElementById(\'an-lead-modal\').remove()" style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--divider);background:transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--text-secondary);">Cancel</button>'
@@ -8930,9 +8941,11 @@ window.anSaveLead = function(id){
   if(!lead) return;
   var g = function(eid){ var el=document.getElementById(eid); return el?el.value:''; };
   lead.firstName=g('alf-fn'); lead.lastName=g('alf-ln'); lead.company=g('alf-co');
-  lead.email=g('alf-em'); lead.phone=anNormalizePhone(g('alf-ph')); lead.state=g('alf-st');
+  lead.title=g('alf-title'); lead.email=g('alf-em'); lead.phone=anNormalizePhone(g('alf-ph')); lead.state=g('alf-st');
   lead.size=g('alf-sz'); lead.status=g('alf-sta'); lead.source=g('alf-src');
-  lead.nextFollowUp=g('alf-fu'); lead.updated=new Date().toISOString();
+  lead.nextFollowUp=g('alf-fu');
+  var notesEl=document.getElementById('alf-notes'); if(notesEl) lead.notes=notesEl.value;
+  lead.updated=new Date().toISOString();
   AN.save(); renderLeadsTable();
   document.getElementById('an-lead-modal').remove();
   if(typeof showToast==='function') showToast('Lead saved');
@@ -9043,7 +9056,7 @@ window.anSaveCall = function(leadId){
 
 // ── New lead ──────────────────────────────────────────────────
 window.anNewLead = function(){
-  var blank={id:'l-'+Date.now(),firstName:'',lastName:'',company:'',email:'',phone:'',state:'',size:'',source:'',status:'new',callLog:[],notes:'',_repEmail:AN.currentRepEmail,created:new Date().toISOString(),updated:new Date().toISOString()};
+  var blank={id:'l-'+Date.now(),firstName:'',lastName:'',company:'',title:'',email:'',phone:'',state:'',size:'',source:'',status:'new',callLog:[],notes:'',nextFollowUp:'',_repEmail:AN.currentRepEmail,created:new Date().toISOString(),updated:new Date().toISOString()};
   AN.leads.unshift(blank);
   AN.save();
   // Always open the full edit modal for new leads (not the side panel)
@@ -9265,16 +9278,35 @@ var AN_CSV_ALIASES = {
   company: 'company', 'company name': 'company', organization: 'company', account: 'company', accountname: 'company',
   'organization name': 'company', organizationname: 'company', accountname: 'company', employer: 'company',
   title: 'title', jobtitle: 'title', 'job title': 'title', role: 'title', 'person title': 'title',
+  'title role': 'title', job: 'title', position: 'title', 'contact title': 'title', designation: 'title',
   email: 'email', 'email address': 'email', emailaddress: 'email', workemail: 'email',
   'work email': 'email', 'primary email': 'email', primaryemail: 'email', 'contact email': 'email',
   phone: 'phone', 'phone number': 'phone', mobilephone: 'phone', mobile: 'phone', cell: 'phone', workphone: 'phone',
   'work phone': 'phone', 'mobile phone': 'phone', 'direct phone': 'phone', 'contact phone': 'phone',
   state: 'state', 'state/region': 'state', region: 'state', province: 'state', 'state region': 'state',
   status: 'status', 'lifecycle stage': 'status', lifecyclestage: 'status', leadstatus: 'status', stage: 'status',
-  source: 'source', leadsource: 'source', 'lead source': 'source',
-  notes: 'notes', description: 'notes', comments: 'notes',
-  nextfollowup: 'nextFollowUp', 'next follow-up': 'nextFollowUp', 'follow up date': 'nextFollowUp'
+  source: 'source', leadsource: 'source', 'lead source': 'source', 'original source': 'source',
+  'record source': 'source', 'contact source': 'source', 'latest source': 'source',
+  notes: 'notes', description: 'notes', comments: 'notes', 'contact notes': 'notes',
+  'associated note': 'notes', 'note body': 'notes', memo: 'notes', 'last activity': 'notes',
+  nextfollowup: 'nextFollowUp', 'next follow-up': 'nextFollowUp', 'follow up date': 'nextFollowUp',
+  'next follow up': 'nextFollowUp', 'follow-up date': 'nextFollowUp', 'followup date': 'nextFollowUp',
+  'next activity date': 'nextFollowUp', 'task due date': 'nextFollowUp', 'reminder date': 'nextFollowUp'
 };
+
+function anParseImportDate(val){
+  if(!val) return '';
+  var s = String(val).trim();
+  if(!s) return '';
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  var slash = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if(slash){
+    return slash[3] + '-' + String(slash[1]).padStart(2, '0') + '-' + String(slash[2]).padStart(2, '0');
+  }
+  var d = new Date(s);
+  if(!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+  return s;
+}
 
 var _anImportRaw = null;
 var _anPending = [];
@@ -9428,7 +9460,11 @@ window.anUpdateImportStats = function(){
       : '')
     +'<div style="font-size:12px;color:var(--text-muted);padding-top:6px;border-top:1px solid var(--divider);">Preview: '
     +(sampleContacts.length ? sampleContacts.map(function(c){
-      return (c.firstName||'')+(c.lastName?' '+c.lastName:'')+(c.company?' ('+c.company+')':'');
+      var label = (c.firstName||'')+(c.lastName?' '+c.lastName:'');
+      if(c.title) label += ' · '+c.title;
+      if(c.company) label += ' ('+c.company+')';
+      if(c.source) label += ' ['+c.source+']';
+      return label;
     }).join(', ') : 'Map at least one identity field to see preview')
     +'</div>';
 
@@ -9554,10 +9590,10 @@ function anBuildContactsFromMapping(mapping, limit){
       callLog: [],
       created: new Date().toISOString(),
       updated: new Date().toISOString(),
-      source: 'CSV Import',
       status: 'new',
       _repEmail: repEmail
     };
+    var mappedSource = false;
     AN_IMPORT_FIELDS.forEach(function(field){
       var idx = mapping[field.key];
       if(idx < 0) return;
@@ -9565,8 +9601,11 @@ function anBuildContactsFromMapping(mapping, limit){
       if(!v) return;
       if(field.key === 'status') c.status = anMapStatus(v);
       else if(field.key === 'phone') c.phone = anNormalizePhone(v);
+      else if(field.key === 'nextFollowUp') c.nextFollowUp = anParseImportDate(v);
+      else if(field.key === 'source'){ c.source = v; mappedSource = true; }
       else c[field.key] = v;
     });
+    if(!c.source) c.source = mappedSource ? '' : 'CSV Import';
     if(!c.lastName && c.firstName){
       var parts = c.firstName.split(' ');
       if(parts.length > 1){ c.firstName = parts[0]; c.lastName = parts.slice(1).join(' '); }
@@ -9714,7 +9753,7 @@ function anExecuteImport(contacts, opts){
     if(matches.length){
       if(opts.updateDupes){
         var existing = matches[0];
-        ['firstName','lastName','company','email','phone','state','status','source','notes','title','size'].forEach(function(f){
+        ['firstName','lastName','company','title','email','phone','state','status','source','notes','nextFollowUp','size'].forEach(function(f){
           if(c[f]) existing[f] = c[f];
         });
         existing.updated = new Date().toISOString();
@@ -10185,6 +10224,7 @@ window.anOpenLeadPanel = function(leadId) {
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">'
       +'<div>'
       +'<div style="font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.4px;">'+anEsc((lead.firstName||'')+' '+(lead.lastName||''))+'</div>'
+      +(lead.title?'<div style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:2px;">'+anEsc(lead.title)+'</div>':'')
       +(lead.company?'<div style="font-size:13px;color:rgba(255,255,255,0.5);margin-top:2px;">'+anEsc(lead.company)+'</div>':'')
       +'</div>'
       +'<div style="display:flex;gap:7px;align-items:center;">'
@@ -10213,16 +10253,17 @@ window.anOpenLeadPanel = function(leadId) {
       +'<div style="background:var(--body-bg);border-radius:10px;padding:14px;margin-bottom:14px;">'
       +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:10px;">Contact Details</div>'
       +[
-        ['📧 Email', lead.email],
+        ['💼 Title / Role', lead.title, null],
+        ['📧 Email', lead.email, lead.email ? 'mailto:'+lead.email : null],
         ['📞 Phone', lead.phone ? anPhoneDisplay(lead.phone) : '', lead.phone ? 'tel:'+anTelPhone(lead.phone) : null],
         ['📍 State', lead.state, null],
         ['🏢 Size', sz?sz.label:'—', null],
         ['🔗 Source', lead.source, null],
-        ['📅 Follow Up', lead.nextFollowUp?anDate(lead.nextFollowUp):'—', null],
+        ['📅 Next Follow-Up', lead.nextFollowUp?anDate(lead.nextFollowUp):'—', null],
         ['🔄 Status', st.label, null],
         ['⏱ Last Contact', anTimeAgo(lead.lastContactDate||lead.created), null],
         ['📆 Created', anDate(lead.created), null]
-      ].filter(function(r){return r[1];}).map(function(row){
+      ].filter(function(r){return r[1] && r[1] !== '—';}).map(function(row){
         var val = row[2]
           ? '<a href="'+row[2]+'" style="font-size:12.5px;font-weight:600;color:#6366f1;text-decoration:none;">'+anEsc(row[1])+'</a>'
           : '<span style="font-size:12.5px;font-weight:600;color:var(--text-primary);text-align:right;max-width:60%;word-break:break-word;">'+anEsc(row[1])+'</span>';
@@ -10320,6 +10361,7 @@ window.anRenderCallSessionLeadPanel = function(leadId) {
     +'<div>'
     +'<div style="font-size:10px;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">'+modeLabel+' Profile</div>'
     +'<div style="font-size:17px;font-weight:800;color:#fff;letter-spacing:-0.4px;">'+anEsc((lead.firstName || '') + ' ' + (lead.lastName || ''))+'</div>'
+    +(lead.title ? '<div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:2px;">'+anEsc(lead.title)+'</div>' : '')
     +(lead.company ? '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px;">'+anEsc(lead.company)+'</div>' : '')
     +'</div>'
     +'<div style="display:flex;gap:6px;align-items:center;">'
@@ -10342,12 +10384,13 @@ window.anRenderCallSessionLeadPanel = function(leadId) {
     +'<div style="background:var(--body-bg);border-radius:10px;padding:12px;margin-bottom:12px;">'
     +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Contact</div>'
     +[
+      ['💼 Title / Role', lead.title, null],
       ['📧 Email', lead.email, lead.email ? 'mailto:'+lead.email : null],
       ['📞 Phone', anPhoneDisplay(lead.phone), lead.phone ? 'tel:'+anTelPhone(lead.phone) : null],
       ['📍 State', lead.state, null],
       ['🏢 Size', sz ? sz.label : null, null],
       ['🔗 Source', lead.source, null],
-      ['📅 Follow Up', lead.nextFollowUp ? anDate(lead.nextFollowUp) : null, null],
+      ['📅 Next Follow-Up', lead.nextFollowUp ? anDate(lead.nextFollowUp) : null, null],
       ['⏱ Last Contact', anTimeAgo(lead.lastContactDate || lead.created), null]
     ].filter(function(r){ return r[1]; }).map(function(row){
       var val = row[2]
@@ -14699,7 +14742,7 @@ window.logCallForCompany = function(companyName) {
 
 // New lead pre-filled with company
 window.anNewLeadForCompany = function(companyName) {
-  var blank={id:'l-'+Date.now(),firstName:'',lastName:'',company:companyName,email:'',phone:'',state:'',size:'',source:'',status:'new',callLog:[],notes:'',_repEmail:AN.currentRepEmail,created:new Date().toISOString(),updated:new Date().toISOString()};
+  var blank={id:'l-'+Date.now(),firstName:'',lastName:'',company:companyName,title:'',email:'',phone:'',state:'',size:'',source:'',status:'new',callLog:[],notes:'',nextFollowUp:'',_repEmail:AN.currentRepEmail,created:new Date().toISOString(),updated:new Date().toISOString()};
   AN.leads.unshift(blank);
   AN.save();
   anOpenLeadPanel(blank.id);
