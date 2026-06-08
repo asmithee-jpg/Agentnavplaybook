@@ -8579,33 +8579,6 @@ window.repViewSave = function() {
   if (typeof showToast === 'function') showToast('Rep view settings saved!');
 };
 
-// ── Inject Rep View Panel into Admin section ──────────────────
-var _origShowSection_admin = window.showSection;
-
-window.showSection = function(id, btn) {
-  _origShowSection_admin(id, btn);
-  if (id === 'admin') {
-    setTimeout(function() {
-      // Only show for admin user
-      if (!_currentUser || _currentUser.email !== ADMIN_EMAIL) return;
-
-      var sec = document.getElementById('section-admin');
-      if (!sec) return;
-
-      // Check if rep view panel already injected
-      if (document.getElementById('rep-view-panel')) return;
-
-      loadRepViews();
-      var panel = document.createElement('div');
-      panel.id = 'rep-view-panel';
-      panel.style.cssText = 'padding:0 44px 32px;';
-      panel.innerHTML = buildRepViewPanel();
-      sec.appendChild(panel);
-    }, 200);
-  }
-};
-
-console.log('[REP VIEW CONTROL] Loaded.');
 
 </script>
 
@@ -17808,220 +17781,7 @@ console.log('[COMPANIES + ONBOARDING + MSGS + SIDEBAR] All patches loaded.');
 // COMPANY VIEW — HubSpot-style with contacts, deals, activity
 // ============================================================
 
-window.showCompanyView = function() {
-  var sec = document.getElementById('crm-content');
-  if (!sec) return;
 
-  var filtered = AN.filtered();
-  var companies = {};
-  filtered.forEach(function(l) {
-    var co = (l.company || '(No Company)').trim();
-    if (!companies[co]) companies[co] = { leads: [], deals: [] };
-    companies[co].leads.push(l);
-  });
-
-  // Company list view
-  sec.innerHTML = '<div style="padding:8px 0;">'
-    + Object.keys(companies).sort().map(function(co) {
-        var c = companies[co];
-        var leads = c.leads;
-        var wonDeals = leads.filter(function(l){ return l.status==='won'; }).length;
-        var oppMRR = leads.filter(function(l){ return l.isOpportunity||['demo','showed','proposal','won'].indexOf(l.status)>=0; })
-          .reduce(function(s,l){ return s+(l.oppMRR||(AN_SIZES.find(function(x){return x.id===l.size;})||{price:79}).price); },0);
-        var col = anColor(co);
-        var initial = co[0].toUpperCase();
-        return '<div style="background:var(--card-bg);border:1px solid var(--divider);border-radius:12px;margin-bottom:10px;overflow:hidden;cursor:pointer;" '
-          +'onclick="openCompanyDetail(\''+co.replace(/'/g,"\\'")+'\')">'
-          +'<div style="padding:14px 18px;display:flex;align-items:center;gap:14px;" onmouseover="this.style.background=\'var(--body-bg)\'" onmouseout="this.style.background=\'transparent\'">'
-          +'<div style="width:40px;height:40px;border-radius:10px;background:'+col+'18;border:2px solid '+col+'33;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:'+col+';flex-shrink:0;">'+initial+'</div>'
-          +'<div style="flex:1;min-width:0;">'
-          +'<div style="font-size:14.5px;font-weight:700;color:var(--text-primary);">'+anEsc(co)+'</div>'
-          +'<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">'+leads.length+' contact'+(leads.length!==1?'s':'')+(oppMRR?' · $'+oppMRR+'/mo pipeline':'')+'</div>'
-          +'</div>'
-          +'<div style="display:flex;gap:6px;flex-wrap:wrap;">'
-          +Object.entries(leads.reduce(function(acc,l){var s=l.status||'new';acc[s]=(acc[s]||0)+1;return acc;},{})).map(function(e){
-            var st=anStatus(e[0]); return '<span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">'+st.label+' '+e[1]+'</span>';
-          }).join('')
-          +'</div>'
-          +'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--text-muted);flex-shrink:0;"><path d="M9 18l6-6-6-6"/></svg>'
-          +'</div></div>';
-      }).join('')
-    + (Object.keys(companies).length===0?'<div style="text-align:center;padding:48px;color:var(--text-muted);">No companies found</div>':'')
-    +'</div>';
-};
-
-window.openCompanyDetail = function(companyName) {
-  window._anCurrentCompanyName = companyName;
-  var leads = AN.leads.filter(function(l){ return (l.company||'(No Company)').trim()===companyName; });
-  if (!AN.isAdmin) leads = leads.filter(function(l){ return !l._repEmail||l._repEmail===AN.currentRepEmail; });
-
-  var opps = leads.filter(function(l){ return l.isOpportunity||['demo','showed','proposal','won','lost'].indexOf(l.status)>=0; });
-  var col  = anColor(companyName);
-
-  // Build activity feed from all call logs across contacts
-  var allCalls = [];
-  leads.forEach(function(l){
-    (l.callLog||[]).forEach(function(c){
-      allCalls.push(Object.assign({},c,{contactName:(l.firstName||'')+' '+(l.lastName||''),leadId:l.id}));
-    });
-  });
-  allCalls.sort(function(a,b){ return b.date.localeCompare(a.date); });
-
-  var callColors={pickup:'#10b981',demo:'#f59e0b',voicemail:'#6366f1',noanswer:'#a1a1aa'};
-  var callIcons={pickup:'☎️',demo:'🎯',voicemail:'📬',noanswer:'📵'};
-
-  var sec = document.getElementById('crm-content');
-  sec.innerHTML = '<div style="display:flex;gap:0;height:100%;min-height:600px;">'
-
-    // ── LEFT PANEL: company info ──────────────────────────────
-    +'<div style="width:300px;flex-shrink:0;border-right:1px solid var(--divider);padding:20px;overflow-y:auto;">'
-    +'<button onclick="showCompanyView()" style="display:flex;align-items:center;gap:5px;background:none;border:none;color:var(--text-muted);font-size:12.5px;font-weight:600;cursor:pointer;padding:0;margin-bottom:16px;font-family:var(--sans);">← Companies</button>'
-    +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">'
-    +'<div style="width:48px;height:48px;border-radius:12px;background:'+col+'18;border:2px solid '+col+'33;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:'+col+';">'+companyName[0].toUpperCase()+'</div>'
-    +'<div><div style="font-size:17px;font-weight:800;color:var(--text-primary);">'+anEsc(companyName)+'</div>'
-    +'<div style="font-size:12px;color:var(--text-muted);">'+leads.length+' contact'+(leads.length!==1?'s':'')+'</div></div>'
-    +'</div>'
-
-    // Key info
-    +'<div style="margin-bottom:18px;">'
-    +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Key Information</div>'
-    +(function(){
-      var ownerCounts = {};
-      leads.forEach(function(l){ if(l._repEmail) ownerCounts[l._repEmail]=(ownerCounts[l._repEmail]||0)+1; });
-      var topOwner = Object.keys(ownerCounts).sort(function(a,b){ return ownerCounts[b]-ownerCounts[a]; })[0] || '';
-      var canCo = AN.isAdmin || (typeof anGetMyRole==='function' && anGetMyRole()==='ae') || leads.some(function(l){ return typeof anCanReassignOwner==='function' && anCanReassignOwner(l); });
-      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--divider);">'
-        +'<span style="font-size:12.5px;color:var(--text-muted);">Company Owner</span>'
-        +(canCo
-          ? '<button type="button" onclick="anOpenOwnerPicker({companyName:\''+companyName.replace(/'/g,"\\'")+'\'})" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);">'+anEsc(topOwner?anGetRepName(topOwner):'Assign owner')+' ▾</button>'
-          : '<span style="font-size:12.5px;font-weight:700;color:var(--text-primary);">'+anEsc(topOwner?anGetRepName(topOwner):'—')+'</span>')
-        +'</div>';
-    })()
-    +[['Contacts',leads.length],['Signed Up Users',leads.filter(function(l){return l.status==='won';}).length],['Active Plan',(function(){var w=leads.filter(function(l){return l.status==='won';});if(!w.length)return'—';var sz=AN_SIZES.find(function(s){return s.id===w[0].size;});return sz?sz.label+' $'+sz.price+'/mo':'$'+(w[0].oppMRR||79)+'/mo';})()],['Pipeline MRR','$'+opps.reduce(function(s,o){return s+(o.oppMRR||(AN_SIZES.find(function(x){return x.id===o.size;})||{price:79}).price);},0)+'/mo']]
-    .map(function(r){ return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--divider);">'
-      +'<span style="font-size:12.5px;color:var(--text-muted);">'+r[0]+'</span>'
-      +'<span style="font-size:12.5px;font-weight:700;color:var(--text-primary);">'+r[1]+'</span>'
-      +'</div>'; }).join('')
-    +'</div>'
-
-    // Contacts list
-    +'<div style="margin-bottom:18px;">'
-    +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">'
-    +'<span>Contacts ('+leads.length+')</span>'
-    +'<button onclick="anNewLeadForCompany(\''+anEsc(companyName)+'\')" style="font-size:11px;font-weight:700;color:#6366f1;background:none;border:none;cursor:pointer;font-family:var(--sans);">+ Add</button>'
-    +'</div>'
-    +leads.map(function(l){
-      var st=anStatus(l.status||'new');
-      return '<div onclick="anOpenLeadPanel(\''+l.id+'\')" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;cursor:pointer;margin-bottom:4px;" onmouseover="this.style.background=\'var(--body-bg)\'" onmouseout="this.style.background=\'transparent\'">'
-        +'<div style="width:30px;height:30px;border-radius:50%;background:'+anColor(l.firstName+l.lastName)+'22;border:1.5px solid '+anColor(l.firstName+l.lastName)+'44;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:'+anColor(l.firstName+l.lastName)+';flex-shrink:0;">'+((l.firstName||'?')[0].toUpperCase())+'</div>'
-        +'<div style="flex:1;min-width:0;">'
-        +'<div style="font-size:13px;font-weight:600;color:var(--text-primary);">'+anEsc((l.firstName||'')+' '+(l.lastName||''))+'</div>'
-        +(l.email?'<div style="font-size:11px;color:var(--text-muted);">'+anEsc(l.email)+'</div>':'')
-        +(l._repEmail?'<div onclick="event.stopPropagation();anOpenOwnerPicker({leadId:\''+l.id+'\'})" style="font-size:10px;color:#b45309;margin-top:2px;cursor:pointer;" title="Change owner">👤 '+anEsc(anGetRepName(l._repEmail))+' ▾</div>':'')
-        +'</div>'
-        +'<span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap;">'+st.label+'</span>'
-        +'</div>';
-    }).join('')
-    +'</div></div>'
-
-    // ── MAIN PANEL: activities + deals ────────────────────────
-    +'<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">'
-
-    // Action bar
-    +'<div style="padding:14px 20px;border-bottom:1px solid var(--divider);display:flex;gap:8px;background:var(--body-bg);">'
-    +'<button onclick="anNewLeadForCompany(\''+anEsc(companyName)+'\')" style="display:flex;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;border:1.5px solid var(--divider);background:var(--card-bg);font-size:12.5px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:var(--sans);">👤 Add Contact</button>'
-    +'<button onclick="createDealForCompany(\''+anEsc(companyName)+'\')" style="display:flex;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;border:none;background:#6366f1;font-size:12.5px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--sans);">💎 Create Deal</button>'
-    +'<button onclick="logCallForCompany(\''+anEsc(companyName)+'\')" style="display:flex;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;border:1.5px solid var(--divider);background:var(--card-bg);font-size:12.5px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:var(--sans);">📞 Log Call</button>'
-    +'</div>'
-
-    // Tabs
-    +'<div style="display:flex;gap:0;border-bottom:1px solid var(--divider);padding:0 20px;background:var(--card-bg);">'
-    +'<button id="co-tab-activity" onclick="coSwitchTab(\'activity\')" style="padding:11px 16px;border:none;border-bottom:2px solid #6366f1;font-size:13px;font-weight:700;color:#6366f1;background:transparent;cursor:pointer;font-family:var(--sans);">All Activities</button>'
-    +'<button id="co-tab-deals" onclick="coSwitchTab(\'deals\')" style="padding:11px 16px;border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;color:var(--text-muted);background:transparent;cursor:pointer;font-family:var(--sans);">Deals ('+opps.length+')</button>'
-    +'<button id="co-tab-contacts" onclick="coSwitchTab(\'contacts\')" style="padding:11px 16px;border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;color:var(--text-muted);background:transparent;cursor:pointer;font-family:var(--sans);">Contacts ('+leads.length+')</button>'
-    +'</div>'
-
-    +'<div style="flex:1;overflow-y:auto;">'
-
-    // Activities pane
-    +'<div id="co-pane-activity" style="padding:20px;">'
-    +(allCalls.length ? allCalls.map(function(c){
-      var col2=callColors[c.outcome]||'#a1a1aa';
-      var d = new Date(c.date+'T'+(c.time||'12:00'));
-      var dateStr = d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+(c.time?' · '+c.time:'');
-      return '<div style="display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--divider);">'
-        +'<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;width:48px;">'
-        +'<div style="width:36px;height:36px;border-radius:50%;background:'+col2+'18;border:2px solid '+col2+'44;display:flex;align-items:center;justify-content:center;font-size:15px;">'+(callIcons[c.outcome]||'📞')+'</div>'
-        +'<div style="flex:1;width:2px;background:var(--divider);min-height:20px;border-radius:2px;"></div>'
-        +'</div>'
-        +'<div style="flex:1;padding-bottom:8px;">'
-        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">'
-        +'<div>'
-        +'<span style="font-size:13px;font-weight:700;color:'+col2+';">'+(c.outcome||'Call').charAt(0).toUpperCase()+(c.outcome||'call').slice(1)+'</span>'
-        +'<span style="font-size:12px;color:var(--text-muted);margin-left:8px;">with '+anEsc(c.contactName)+'</span>'
-        +'</div>'
-        +'<span style="font-size:11.5px;color:var(--text-muted);">'+dateStr+'</span>'
-        +'</div>'
-        +(c.duration?'<div style="font-size:11.5px;color:var(--text-muted);margin-bottom:4px;">Duration: '+c.duration+' min</div>':'')
-        +(c.notes?'<div style="font-size:13px;color:var(--text-secondary);background:var(--body-bg);border-radius:8px;padding:10px 12px;line-height:1.6;">'+anEsc(c.notes)+'</div>':'')
-        +'</div></div>';
-    }).join('')
-    : '<div style="text-align:center;padding:48px 20px;color:var(--text-muted);">'
-      +'<div style="font-size:36px;margin-bottom:12px;">📋</div>'
-      +'<div style="font-size:14px;font-weight:600;margin-bottom:6px;">No activity yet</div>'
-      +'<div style="font-size:12px;">Log a call to start tracking activity for this company</div>'
-      +'</div>')
-    +'</div>'
-
-    // Deals pane
-    +'<div id="co-pane-deals" style="padding:20px;display:none;">'
-    +(opps.length ? opps.map(function(opp){
-      var st=anStatus(opp.status||'demo');
-      var mrr=opp.oppMRR||(AN_SIZES.find(function(x){return x.id===opp.size;})||{price:79}).price;
-      var arr=Math.round(mrr*12*0.80);
-      return '<div onclick="anOpenOppDetail(\''+opp.id+'\')" style="background:var(--card-bg);border:1px solid var(--divider);border-radius:10px;padding:16px;margin-bottom:10px;cursor:pointer;border-left:3px solid '+st.color+';" onmouseover="this.style.boxShadow=\'0 4px 14px rgba(0,0,0,0.08)\'" onmouseout="this.style.boxShadow=\'none\'">'
-        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">'
-        +'<div>'
-        +'<div style="font-size:14px;font-weight:700;color:var(--text-primary);">'+anEsc((opp.firstName||'')+' '+(opp.lastName||''))+'</div>'
-        +'<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">'+(opp.oppContract||'monthly')+' · '+((opp.size&&AN_SIZES.find(function(s){return s.id===opp.size;}))||{label:'Solo'}).label+'</div>'
-        +'</div>'
-        +'<span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:700;">'+st.label+'</span>'
-        +'</div>'
-        +'<div style="display:flex;gap:16px;">'
-        +'<div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px;">MRR</div><div style="font-size:15px;font-weight:800;color:#6366f1;">$'+mrr+'</div></div>'
-        +'<div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px;">1-Yr ARR</div><div style="font-size:15px;font-weight:800;color:#10b981;">$'+arr+'</div></div>'
-        +(opp.oppCloseDate?'<div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px;">Close Date</div><div style="font-size:13px;font-weight:600;color:var(--text-primary);">'+anDate(opp.oppCloseDate)+'</div></div>':'')
-        +(opp.oppNotes?'<div style="flex:1;"><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px;">Notes</div><div style="font-size:12px;color:var(--text-secondary);">'+anEsc(opp.oppNotes.slice(0,80))+(opp.oppNotes.length>80?'…':'')+'</div></div>':'')
-        +'</div></div>';
-    }).join('')
-    : '<div style="text-align:center;padding:48px 20px;color:var(--text-muted);">'
-      +'<div style="font-size:36px;margin-bottom:12px;">💎</div>'
-      +'<div style="font-size:14px;font-weight:600;margin-bottom:10px;">No deals yet</div>'
-      +'<button onclick="createDealForCompany(\''+anEsc(companyName)+'\')" style="background:#6366f1;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--sans);">+ Create First Deal</button>'
-      +'</div>')
-    +'</div>'
-
-    // Contacts pane
-    +'<div id="co-pane-contacts" style="padding:20px;display:none;">'
-    + leads.map(function(l){
-        var st=anStatus(l.status||'new');
-        return '<div onclick="anOpenLeadPanel(\''+l.id+'\')" style="background:var(--card-bg);border:1px solid var(--divider);border-radius:10px;padding:14px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:14px;" onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.06)\'" onmouseout="this.style.boxShadow=\'none\'">'
-          +'<div style="width:38px;height:38px;border-radius:50%;background:'+anColor((l.firstName||'')+(l.lastName||''))+'22;border:2px solid '+anColor((l.firstName||'')+(l.lastName||''))+'44;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:'+anColor((l.firstName||'')+(l.lastName||''))+';flex-shrink:0;">'+((l.firstName||'?')[0].toUpperCase())+'</div>'
-          +'<div style="flex:1;min-width:0;">'
-          +'<div style="font-size:13.5px;font-weight:700;color:var(--text-primary);">'+anEsc((l.firstName||'')+' '+(l.lastName||''))+'</div>'
-          +'<div style="font-size:12px;color:var(--text-muted);">'+(l.email||'')+(l.phone?' · '+anFormatPhone(l.phone):'')+'</div>'
-          +'</div>'
-          +'<div style="text-align:right;">'
-          +'<span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">'+st.label+'</span>'
-          +'<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">'+(l.callLog&&l.callLog.length?l.callLog.length+' call'+(l.callLog.length!==1?'s':''):'No calls')+'</div>'
-          +'</div>'
-          +'<button onclick="event.stopPropagation();anLogCall(\''+l.id+'\')" style="background:#ecfdf5;color:#10b981;border:1px solid #a7f3d0;border-radius:6px;padding:5px 9px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);">📞</button>'
-          +'</div>';
-      }).join('')
-    +'</div>'
-
-    +'</div></div></div>';
-};
 
 window.coSwitchTab = function(tab) {
   ['activity','deals','contacts'].forEach(function(t){
@@ -18032,54 +17792,10 @@ window.coSwitchTab = function(tab) {
 };
 
 // Create deal from company page
-window.createDealForCompany = function(companyName) {
-  // Find first contact at this company to convert
-  var lead = AN.leads.find(function(l){ return (l.company||'').trim()===companyName; });
-  if (lead) {
-    anConvertToOpportunity(lead.id);
-  } else {
-    if (typeof showToast==='function') showToast('Add a contact to this company first');
-  }
-};
 
 // Log call for any contact at company (shows picker if multiple)
-window.logCallForCompany = function(companyName) {
-  var leads = AN.leads.filter(function(l){ return (l.company||'').trim()===companyName; });
-  if (leads.length===1) { anLogCall(leads[0].id); return; }
-  if (!leads.length) { if(typeof showToast==='function') showToast('No contacts at this company'); return; }
-
-  // Show contact picker
-  var old=document.getElementById('co-call-picker'); if(old) old.remove();
-  var m=document.createElement('div');
-  m.id='co-call-picker';
-  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;';
-  m.innerHTML='<div style="background:var(--card-bg);border-radius:14px;padding:22px;width:380px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">'
-    +'<div style="font-size:15px;font-weight:800;color:var(--text-primary);">Log a Call — '+anEsc(companyName)+'</div>'
-    +'<button onclick="document.getElementById(\'co-call-picker\').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);">✕</button>'
-    +'</div>'
-    +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Select a contact:</div>'
-    +leads.map(function(l){
-      return '<button onclick="document.getElementById(\'co-call-picker\').remove();anLogCall(\''+l.id+'\')" '
-        +'style="width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;border:1.5px solid var(--divider);background:var(--card-bg);margin-bottom:6px;cursor:pointer;font-family:var(--sans);" '
-        +'onmouseover="this.style.borderColor=\'#6366f1\'" onmouseout="this.style.borderColor=\'var(--divider)\'">'
-        +'<div style="width:30px;height:30px;border-radius:50%;background:#6366f118;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#6366f1;flex-shrink:0;">'+((l.firstName||'?')[0].toUpperCase())+'</div>'
-        +'<div style="flex:1;text-align:left;"><div style="font-size:13px;font-weight:600;color:var(--text-primary);">'+anEsc((l.firstName||'')+' '+(l.lastName||''))+'</div>'
-        +(l.phone?'<div style="font-size:11px;color:var(--text-muted);">'+anEsc(anFormatPhone(l.phone))+'</div>':'')
-        +'</div></button>';
-    }).join('')
-    +'</div>';
-  document.body.appendChild(m);
-  m.onclick=function(e){if(e.target===m)m.remove();};
-};
 
 // New lead pre-filled with company
-window.anNewLeadForCompany = function(companyName) {
-  var blank={id:'l-'+Date.now(),firstName:'',lastName:'',company:companyName,title:'',email:'',phone:'',state:'',size:'',source:'',status:'new',callLog:[],notes:'',nextFollowUp:'',_repEmail:AN.currentRepEmail,created:new Date().toISOString(),updated:new Date().toISOString()};
-  AN.leads.unshift(blank);
-  AN.save();
-  anOpenLeadPanel(blank.id);
-};
 
 console.log('[COMPANY VIEW] HubSpot-style company detail loaded.');
 
@@ -20015,6 +19731,955 @@ body.an-section-crm .coach-fab{bottom:78px;right:32px;}
     if(user) setTimeout(window.anRestoreLastSection, 500);
   };
 })();
+</script>
+<script>
+// ============================================================
+// COMPANIES v3 — List · Kanban · Detail views
+// Companies have their own stage, separate from lead statuses
+// ============================================================
+
+// ── Company data store ────────────────────────────────────────
+var CO_STAGES = [
+  { id:'prospecting', label:'Prospecting',      color:'#6366f1' },
+  { id:'demo',        label:'Demo Scheduled',   color:'#8b5cf6' },
+  { id:'proposal',    label:'Proposal Out',     color:'#f59e0b' },
+  { id:'negotiating', label:'Negotiating',      color:'#06b6d4' },
+  { id:'won',         label:'Closed Won',       color:'#10b981' },
+  { id:'lost',        label:'Not Interested',   color:'#a1a1aa' }
+];
+
+function coStage(id){ return CO_STAGES.find(function(s){return s.id===id;})||CO_STAGES[0]; }
+
+function getCoData(name){
+  try{ var a=JSON.parse(localStorage.getItem('an-co-data')||'{}'); return a[name]||{stage:'prospecting',industry:'',notes:'',website:'',createdAt:new Date().toISOString()}; }
+  catch(e){ return {stage:'prospecting'}; }
+}
+function saveCoData(name,data){
+  try{ var a=JSON.parse(localStorage.getItem('an-co-data')||'{}'); a[name]=Object.assign(getCoData(name),data); localStorage.setItem('an-co-data',JSON.stringify(a)); }
+  catch(e){}
+}
+function getAllCos(){
+  var cos={};
+  AN.leads.forEach(function(l){
+    if(!AN.isAdmin && l._repEmail && l._repEmail!==AN.currentRepEmail) return;
+    var name=(l.company||'').trim(); if(!name) return;
+    if(!cos[name]) cos[name]={leads:[],calls:0,mrr:0,won:0};
+    cos[name].leads.push(l);
+    cos[name].calls += (l.callLog||[]).length;
+    if(l.status==='won'){ cos[name].won++; cos[name].mrr+=(l.oppMRR||(AN_SIZES.find(function(x){return x.id===l.size;})||{price:79}).price); }
+    if(l.isOpportunity&&l.status!=='won') cos[name].mrr+=(l.oppMRR||(AN_SIZES.find(function(x){return x.id===l.size;})||{price:79}).price);
+  });
+  return cos;
+}
+
+var _coView = 'list'; // list | kanban
+var _coSearch = '';
+var _coActiveCompany = null;
+
+// ── MAIN RENDER ───────────────────────────────────────────────
+window.showCompanyView = function(){
+  var sec = document.getElementById('crm-content');
+  if(!sec) return;
+
+  var cos = getAllCos();
+  var names = Object.keys(cos).sort();
+
+  sec.style.cssText = 'display:flex;flex-direction:column;height:calc(100vh - 160px);overflow:hidden;';
+  sec.innerHTML =
+
+    // ── Top toolbar ───────────────────────────────────────────
+    '<div style="background:var(--card-bg);border-bottom:1px solid var(--divider);padding:10px 18px;display:flex;align-items:center;gap:10px;flex-shrink:0;">'
+    // Search
+    +'<div style="position:relative;flex:0 0 240px;">'
+    +'<input id="co-search-inp" type="text" placeholder="Search companies..." oninput="_coSearch=this.value;renderCoView()" '
+    +'style="width:100%;padding:7px 10px 7px 30px;border:1.5px solid var(--divider);border-radius:8px;font-size:12.5px;color:var(--text-primary);background:var(--body-bg);outline:none;font-family:var(--sans);box-sizing:border-box;" '
+    +'onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'">'
+    +'<span style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text-muted);">🔍</span>'
+    +'</div>'
+    // Stage filter
+    +'<select id="co-stage-filter" onchange="renderCoView()" style="padding:7px 10px;border:1.5px solid var(--divider);border-radius:8px;font-size:12.5px;color:var(--text-primary);background:var(--body-bg);outline:none;font-family:var(--sans);">'
+    +'<option value="">All Stages</option>'
+    +CO_STAGES.map(function(s){return '<option value="'+s.id+'">'+s.label+'</option>';}).join('')
+    +'</select>'
+    +'<span id="co-count" style="font-size:12px;color:var(--text-muted);"></span>'
+    +'<div style="flex:1;"></div>'
+    // View toggle
+    +'<div style="display:flex;background:var(--body-bg);border:1.5px solid var(--divider);border-radius:8px;padding:2px;gap:1px;">'
+    +'<button id="co-btn-list" onclick="_coView=\'list\';renderCoView()" style="padding:5px 12px;border-radius:6px;border:none;font-size:12px;cursor:pointer;font-family:var(--sans);background:#6366f1;color:#fff;font-weight:600;">☰ List</button>'
+    +'<button id="co-btn-kanban" onclick="_coView=\'kanban\';renderCoView()" style="padding:5px 12px;border-radius:6px;border:none;font-size:12px;cursor:pointer;font-family:var(--sans);background:transparent;color:var(--text-muted);">⬛ Board</button>'
+    +'</div>'
+    +'<button onclick="openNewCompanyModal()" style="padding:7px 16px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans);display:flex;align-items:center;gap:5px;box-shadow:0 2px 8px rgba(99,102,241,0.3);">+ Add Company</button>'
+    +'</div>'
+
+    // ── Content area ──────────────────────────────────────────
+    +'<div id="co-view-body" style="flex:1;overflow:auto;"></div>';
+
+  renderCoView();
+};
+
+window.renderCoView = function(){
+  var cos = getAllCos();
+  var q = _coSearch.toLowerCase();
+  var stageFilter = (document.getElementById('co-stage-filter')||{}).value||'';
+  var viewBtn = document.getElementById('co-btn-'+_coView);
+  document.querySelectorAll('#co-btn-list,#co-btn-kanban').forEach(function(b){ b.style.background='transparent'; b.style.color='var(--text-muted)'; b.style.fontWeight='500'; });
+  if(viewBtn){ viewBtn.style.background='#6366f1'; viewBtn.style.color='#fff'; viewBtn.style.fontWeight='600'; }
+
+  var names = Object.keys(cos).filter(function(n){
+    if(q && !n.toLowerCase().includes(q)) return false;
+    if(stageFilter && getCoData(n).stage!==stageFilter) return false;
+    return true;
+  }).sort();
+
+  var countEl = document.getElementById('co-count');
+  if(countEl) countEl.textContent = names.length+' '+(names.length===1?'company':'companies');
+
+  var body = document.getElementById('co-view-body');
+  if(!body) return;
+
+  if(_coView==='kanban'){ body.innerHTML = buildCoKanban(cos, names); initCoDragDrop(); }
+  else { body.innerHTML = buildCoList(cos, names); }
+};
+
+// ── LIST VIEW ─────────────────────────────────────────────────
+function buildCoList(cos, names){
+  if(!names.length) return '<div style="text-align:center;padding:64px;color:var(--text-muted);"><div style="font-size:40px;margin-bottom:12px;">🏢</div><div style="font-size:15px;font-weight:700;margin-bottom:6px;">No companies yet</div><div style="font-size:13px;">Import contacts with a company name or click + Add Company</div></div>';
+
+  var th = function(label){ return '<th style="padding:9px 14px;text-align:left;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);border-bottom:2px solid var(--divider);white-space:nowrap;">'+label+'</th>'; };
+
+  var rows = names.map(function(name,i){
+    var c   = cos[name];
+    var cd  = getCoData(name);
+    var st  = coStage(cd.stage||'prospecting');
+    var col = anColor(name);
+    var lastCall = null;
+    c.leads.forEach(function(l){ (l.callLog||[]).forEach(function(cl){ if(!lastCall||cl.date>lastCall.date) lastCall=cl; }); });
+    var rowBg = i%2===0?'transparent':'rgba(0,0,0,0.012)';
+
+    return '<tr style="border-bottom:1px solid var(--divider);background:'+rowBg+';cursor:pointer;transition:background 0.1s;" '
+      +'onclick="openCompanyDetail(\''+name.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\');" '
+      +'onmouseover="this.style.background=\'rgba(99,102,241,0.04)\'" onmouseout="this.style.background=\''+rowBg+'\'">'
+      // Name
+      +'<td style="padding:11px 14px;">'
+      +'<div style="display:flex;align-items:center;gap:10px;">'
+      +'<div style="width:32px;height:32px;border-radius:8px;background:'+col+'18;border:1.5px solid '+col+'33;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:'+col+';flex-shrink:0;">'+name[0].toUpperCase()+'</div>'
+      +'<div>'
+      +'<div style="font-size:13.5px;font-weight:700;color:var(--text-primary);">'+anEsc(name)+'</div>'
+      +(cd.industry?'<div style="font-size:11.5px;color:var(--text-muted);">'+anEsc(cd.industry)+'</div>':'')
+      +'</div></div></td>'
+      // Stage
+      +'<td style="padding:11px 14px;"><span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap;">'+st.label+'</span></td>'
+      // Contacts
+      +'<td style="padding:11px 14px;font-size:13px;color:var(--text-secondary);text-align:center;">'+c.leads.length+'</td>'
+      // Total calls
+      +'<td style="padding:11px 14px;font-size:13px;color:var(--text-secondary);text-align:center;">'+c.calls+'</td>'
+      // Pipeline MRR
+      +'<td style="padding:11px 14px;">'+(c.mrr?'<span style="font-size:13px;font-weight:700;color:#10b981;">$'+c.mrr+'/mo</span>':'<span style="color:var(--text-muted);font-size:12px;">—</span>')+'</td>'
+      // Won
+      +'<td style="padding:11px 14px;text-align:center;">'+(c.won?'<span style="font-size:13px;font-weight:700;color:#10b981;">'+c.won+'</span>':'<span style="color:var(--text-muted);font-size:12px;">0</span>')+'</td>'
+      // Last activity
+      +'<td style="padding:11px 14px;font-size:12px;color:var(--text-muted);">'+(lastCall?anTimeAgo(lastCall.date):'—')+'</td>'
+      // Actions
+      +'<td style="padding:11px 14px;" onclick="event.stopPropagation()">'
+      +'<div style="display:flex;gap:5px;">'
+      +'<button onclick="openCoStageDropdown(\''+anEsc(name)+'\',this)" style="padding:4px 8px;border-radius:6px;background:var(--body-bg);border:1px solid var(--divider);font-size:11px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:var(--sans);" title="Change stage">↕ Stage</button>'
+      +'<button onclick="logCallForCompany(\''+anEsc(name)+'\')" style="padding:4px 8px;border-radius:6px;background:#ecfdf5;border:1px solid #a7f3d0;font-size:11.5px;cursor:pointer;" title="Log call">📞</button>'
+      +'</div></td>'
+      +'</tr>';
+  }).join('');
+
+  return '<table style="width:100%;border-collapse:collapse;font-size:13.5px;">'
+    +'<thead><tr>'
+    +th('Company')+th('Stage')+th('Contacts')+th('Calls')+th('Pipeline MRR')+th('Won')+th('Last Activity')+th('Actions')
+    +'</tr></thead><tbody>'+rows+'</tbody></table>'
+    +'<div style="padding:10px 14px;font-size:12px;color:var(--text-muted);">'+names.length+' companies</div>';
+}
+
+// ── KANBAN VIEW ───────────────────────────────────────────────
+function buildCoKanban(cos, names){
+  var cols = CO_STAGES.map(function(stage){
+    var stageNames = names.filter(function(n){ return (getCoData(n).stage||'prospecting')===stage.id; });
+    var stageMRR   = stageNames.reduce(function(s,n){ return s+(cos[n]?cos[n].mrr:0); },0);
+
+    var cards = stageNames.map(function(name){
+      var c   = cos[name];
+      var col = anColor(name);
+      var lastCall = null;
+      (c?c.leads:[]).forEach(function(l){ (l.callLog||[]).forEach(function(cl){ if(!lastCall||cl.date>lastCall.date) lastCall=cl; }); });
+      return '<div class="co-card" data-name="'+anEsc(name)+'" draggable="true" '
+        +'onclick="openCompanyDetail(\''+name.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\');" '
+        +'style="background:var(--card-bg);border:1px solid var(--divider);border-radius:10px;padding:13px;margin-bottom:8px;cursor:pointer;border-left:3px solid '+stage.color+';transition:box-shadow 0.15s,transform 0.15s;" '
+        +'onmouseover="this.style.boxShadow=\'0 4px 14px rgba(0,0,0,0.1)\';this.style.transform=\'translateY(-1px)\'" '
+        +'onmouseout="this.style.boxShadow=\'none\';this.style.transform=\'none\'">'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+        +'<div style="width:28px;height:28px;border-radius:7px;background:'+col+'18;border:1.5px solid '+col+'33;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:'+col+';flex-shrink:0;">'+name[0].toUpperCase()+'</div>'
+        +'<div style="font-size:13px;font-weight:700;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">'+anEsc(name)+'</div>'
+        +'</div>'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;">'
+        +'<div style="font-size:11.5px;color:var(--text-muted);">'+((c?c.leads.length:0))+' contacts · '+((c?c.calls:0))+' calls</div>'
+        +((c&&c.mrr)?'<div style="font-size:12.5px;font-weight:800;color:'+stage.color+';">$'+c.mrr+'/mo</div>':'')
+        +'</div>'
+        +(lastCall?'<div style="font-size:10.5px;color:var(--text-muted);margin-top:5px;padding-top:5px;border-top:1px solid var(--divider);">⏱ '+anTimeAgo(lastCall.date)+'</div>':'')
+        +'</div>';
+    }).join('');
+
+    return '<div class="co-col" data-stage="'+stage.id+'" '
+      +'style="flex:0 0 210px;background:var(--body-bg);border-radius:10px;padding:12px;">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
+      +'<div style="display:flex;align-items:center;gap:6px;">'
+      +'<span style="width:8px;height:8px;border-radius:50%;background:'+stage.color+';"></span>'
+      +'<span style="font-size:12.5px;font-weight:700;color:var(--text-primary);">'+stage.label+'</span>'
+      +'<span style="background:var(--card-bg);border:1px solid var(--divider);border-radius:10px;padding:1px 7px;font-size:11px;color:var(--text-muted);">'+stageNames.length+'</span>'
+      +'</div>'
+      +(stageMRR?'<span style="font-size:11px;font-weight:700;color:'+stage.color+';">$'+stageMRR+'/mo</span>':'')
+      +'</div>'
+      +(cards||'<div style="text-align:center;padding:20px 8px;color:var(--text-muted);font-size:12px;">No companies</div>')
+      +'</div>';
+  }).join('');
+
+  return '<div style="display:flex;gap:10px;padding:16px;overflow-x:auto;min-height:400px;">'+cols+'</div>';
+}
+
+// Drag and drop for kanban
+function initCoDragDrop(){
+  var _drag = null;
+  document.querySelectorAll('.co-card').forEach(function(card){
+    card.addEventListener('dragstart',function(e){ _drag=card.dataset.name; card.style.opacity='0.4'; e.dataTransfer.effectAllowed='move'; });
+    card.addEventListener('dragend',function(){ card.style.opacity='1'; });
+  });
+  document.querySelectorAll('.co-col').forEach(function(col){
+    col.addEventListener('dragover',function(e){ e.preventDefault(); col.style.background='rgba(99,102,241,0.07)'; col.style.outline='2px dashed rgba(99,102,241,0.3)'; });
+    col.addEventListener('dragleave',function(){ col.style.background=''; col.style.outline=''; });
+    col.addEventListener('drop',function(e){
+      e.preventDefault(); col.style.background=''; col.style.outline='';
+      if(!_drag) return;
+      var newStage=col.dataset.stage;
+      saveCoData(_drag,{stage:newStage});
+      renderCoView();
+      if(typeof showToast==='function') showToast('Moved to '+coStage(newStage).label);
+      _drag=null;
+    });
+  });
+}
+
+// Quick stage change from list actions
+window.openCoStageDropdown = function(name, btn){
+  var old=document.getElementById('co-stage-dd'); if(old) old.remove();
+  var rect=btn.getBoundingClientRect();
+  var dd=document.createElement('div');
+  dd.id='co-stage-dd';
+  dd.style.cssText='position:fixed;top:'+(rect.bottom+4)+'px;left:'+rect.left+'px;background:var(--card-bg);border:1px solid var(--divider);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:9999;min-width:180px;overflow:hidden;';
+  dd.innerHTML = CO_STAGES.map(function(s){
+    return '<button onclick="saveCoData(\''+anEsc(name)+'\',{stage:\''+s.id+'\'});document.getElementById(\'co-stage-dd\').remove();renderCoView();" '
+      +'style="width:100%;padding:9px 14px;border:none;background:transparent;text-align:left;font-size:13px;font-family:var(--sans);color:var(--text-primary);cursor:pointer;display:flex;align-items:center;gap:8px;" '
+      +'onmouseover="this.style.background=\'var(--body-bg)\'" onmouseout="this.style.background=\'transparent\'">'
+      +'<span style="width:8px;height:8px;border-radius:50%;background:'+s.color+';flex-shrink:0;"></span>'+s.label+'</button>';
+  }).join('');
+  document.body.appendChild(dd);
+  setTimeout(function(){ document.addEventListener('click',function h(e){if(!dd.contains(e.target)){dd.remove();document.removeEventListener('click',h);}},true); },50);
+};
+
+// ── COMPANY DETAIL (right-side panel) ─────────────────────────
+window.openCompanyDetail = function(name){
+  _coActiveCompany = name;
+  var leads = AN.leads.filter(function(l){ return (l.company||'').trim()===name; });
+  if(!AN.isAdmin) leads=leads.filter(function(l){return !l._repEmail||l._repEmail===AN.currentRepEmail;});
+  var cd  = getCoData(name);
+  var col = anColor(name);
+  var st  = coStage(cd.stage||'prospecting');
+  var opps = leads.filter(function(l){return l.isOpportunity||['demo','showed','proposal','won','lost'].indexOf(l.status)>=0;});
+  var totalMRR = opps.reduce(function(s,o){return s+(o.oppMRR||(AN_SIZES.find(function(x){return x.id===o.size;})||{price:79}).price);},0);
+  var totalCalls = leads.reduce(function(s,l){return s+(l.callLog||[]).length;},0);
+  var dmReached = leads.filter(function(l){return (l.callLog||[]).some(function(c){return c.outcome==='pickup'||c.outcome==='demo';});}).length;
+  var allCalls=[]; leads.forEach(function(l){(l.callLog||[]).forEach(function(c){allCalls.push(Object.assign({},c,{_cname:(l.firstName||'')+' '+(l.lastName||''),_lid:l.id}));});});
+  allCalls.sort(function(a,b){return (b.date+(b.time||'')).localeCompare(a.date+(a.time||''));});
+  var callColors={pickup:'#10b981',demo:'#f59e0b',voicemail:'#6366f1',noanswer:'#a1a1aa'};
+  var callIcons={pickup:'☎️',demo:'🎯',voicemail:'📬',noanswer:'📵'};
+
+  // Open as a sliding right panel
+  var old=document.getElementById('co-detail-panel'); if(old){ old.style.transform='translateX(100%)'; setTimeout(function(){old.remove();},200); }
+  var panel=document.createElement('div');
+  panel.id='co-detail-panel';
+  panel.style.cssText='position:fixed;top:0;right:0;width:860px;max-width:92vw;height:100vh;background:var(--body-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.18);z-index:8000;display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);';
+
+  var STATUS_OPTS = CO_STAGES.map(function(s){return '<option value="'+s.id+'"'+(cd.stage===s.id?' selected':'')+'>'+s.label+'</option>';}).join('');
+
+  panel.innerHTML =
+    // ── Header bar ───────────────────────────────────────────
+    '<div style="background:var(--card-bg);border-bottom:1px solid var(--divider);padding:14px 22px;display:flex;align-items:center;gap:14px;flex-shrink:0;">'
+    +'<div style="width:42px;height:42px;border-radius:10px;background:'+col+'18;border:2px solid '+col+'33;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:900;color:'+col+';flex-shrink:0;">'+name[0].toUpperCase()+'</div>'
+    +'<div style="flex:1;min-width:0;">'
+    +'<div style="font-size:18px;font-weight:800;color:var(--text-primary);letter-spacing:-0.4px;">'+anEsc(name)+'</div>'
+    +'<input id="co-det-industry" value="'+anEsc(cd.industry||'')+'" placeholder="Industry / Type..." onblur="saveCoData(\''+anEsc(name)+'\',{industry:this.value})" style="border:none;background:transparent;font-size:12.5px;color:var(--text-muted);outline:none;font-family:var(--sans);padding:0;width:220px;">'
+    +'</div>'
+    +'<div style="display:flex;align-items:center;gap:8px;">'
+    +'<select onchange="saveCoData(\''+anEsc(name)+'\',{stage:this.value});renderCoView();" style="border:1.5px solid '+st.color+'44;background:'+st.color+'14;color:'+st.color+';border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;outline:none;font-family:var(--sans);cursor:pointer;">'+STATUS_OPTS+'</select>'
+    +'<button onclick="anNewLeadForCompany(\''+anEsc(name)+'\')" style="padding:7px 14px;border:1.5px solid var(--divider);border-radius:8px;background:var(--card-bg);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:var(--sans);">+ Contact</button>'
+    +'<button onclick="createDealForCompany(\''+anEsc(name)+'\')" style="padding:7px 14px;border:none;border-radius:8px;background:#6366f1;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--sans);">+ Deal</button>'
+    +'<button onclick="document.getElementById(\'co-detail-panel\').style.transform=\'translateX(100%)\';setTimeout(function(){document.getElementById(\'co-detail-panel\').remove();},260);" style="background:rgba(0,0,0,0.06);border:none;width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;color:var(--text-muted);">✕</button>'
+    +'</div></div>'
+
+    // ── Stats ─────────────────────────────────────────────────
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--divider);background:var(--card-bg);flex-shrink:0;">'
+    +[{l:'Contacts',v:leads.length,c:'#6366f1'},{l:'Won',v:opps.filter(function(o){return o.status==='won';}).length,c:'#10b981'},{l:'Total Calls',v:totalCalls,c:'#f59e0b'},{l:'DM Reached',v:dmReached,c:'#8b5cf6'}]
+    .map(function(s,i){return '<div style="padding:14px 18px;text-align:center;border-right:'+(i<3?'1px solid var(--divider)':'none')+';"><div style="font-size:24px;font-weight:900;color:'+s.c+';letter-spacing:-1px;line-height:1;">'+s.v+'</div><div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.13em;color:var(--text-muted);margin-top:4px;">'+s.l+'</div></div>';}).join('')
+    +'</div>'
+
+    // ── Action bar ────────────────────────────────────────────
+    +'<div style="background:var(--card-bg);border-bottom:1px solid var(--divider);padding:10px 20px;display:flex;gap:7px;flex-shrink:0;">'
+    +'<button onclick="logCallForCompany(\''+anEsc(name)+'\')" style="display:flex;align-items:center;gap:5px;padding:6px 13px;border:1.5px solid var(--divider);border-radius:7px;background:var(--card-bg);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:var(--sans);">📞 Log Call</button>'
+    +'<button onclick="saveCoData(\''+anEsc(name)+'\',{});coTab(\'notes\')" style="display:flex;align-items:center;gap:5px;padding:6px 13px;border:1.5px solid var(--divider);border-radius:7px;background:var(--card-bg);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:var(--sans);">📝 Note</button>'
+    +'<button onclick="createDealForCompany(\''+anEsc(name)+'\')" style="display:flex;align-items:center;gap:5px;padding:6px 13px;border:1px solid rgba(99,102,241,0.3);border-radius:7px;background:rgba(99,102,241,0.08);font-size:12px;font-weight:700;color:#6366f1;cursor:pointer;font-family:var(--sans);">💎 Deal</button>'
+    +'</div>'
+
+    // ── Two-column body ───────────────────────────────────────
+    +'<div style="display:grid;grid-template-columns:1fr 290px;flex:1;overflow:hidden;">'
+
+    // Main: activity feed + tabs
+    +'<div style="display:flex;flex-direction:column;border-right:1px solid var(--divider);overflow:hidden;">'
+    +'<div style="display:flex;gap:0;border-bottom:1px solid var(--divider);background:var(--card-bg);padding:0 20px;flex-shrink:0;">'
+    +['activity','calls','notes'].map(function(t,i){
+      var labels={activity:'All Activities ('+allCalls.length+')',calls:'Calls',notes:'Notes'};
+      return '<button id="cot-'+t+'" onclick="coTab(\''+t+'\')" style="padding:10px 14px;border:none;border-bottom:2px solid '+(i===0?'#6366f1':'transparent')+';font-size:12.5px;font-weight:'+(i===0?'700':'600')+';color:'+(i===0?'#6366f1':'var(--text-muted)')+';background:transparent;cursor:pointer;font-family:var(--sans);">'+labels[t]+'</button>';
+    }).join('')
+    +'</div>'
+    +'<div style="flex:1;overflow-y:auto;">'
+    // Activity
+    +'<div id="cop-activity" style="padding:0 20px 20px;">'
+    +(allCalls.length?allCalls.map(function(c,i){
+      var col2=callColors[c.outcome]||'#a1a1aa';
+      var ds=anDate(c.date)+(c.time?' · '+c.time:'');
+      return '<div style="display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--divider);">'
+        +'<div style="display:flex;flex-direction:column;align-items:center;width:34px;flex-shrink:0;">'
+        +'<div style="width:32px;height:32px;border-radius:50%;background:'+col2+'15;border:2px solid '+col2+'44;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;">'+(callIcons[c.outcome]||'📞')+'</div>'
+        +(i<allCalls.length-1?'<div style="width:2px;flex:1;background:var(--divider);margin-top:3px;border-radius:2px;min-height:12px;"></div>':'')
+        +'</div>'
+        +'<div style="flex:1;">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">'
+        +'<div><span style="font-size:13px;font-weight:700;color:'+col2+';">'+(c.outcome||'call').charAt(0).toUpperCase()+(c.outcome||'call').slice(1)+'</span>'
+        +'<span style="font-size:12px;color:var(--text-muted);margin-left:7px;">with <strong style="color:var(--text-primary);">'+anEsc(c._cname)+'</strong></span></div>'
+        +'<span style="font-size:11px;color:var(--text-muted);">'+ds+(c.duration?' · '+c.duration+'m':'')+'</span>'
+        +'</div>'
+        +(c.notes?'<div style="font-size:13px;color:var(--text-secondary);background:var(--body-bg);border-radius:8px;padding:9px 12px;line-height:1.65;border:1px solid var(--divider);">'+anEsc(c.notes)+'</div>':'')
+        +'</div></div>';
+    }).join('')
+    :'<div style="padding:40px;text-align:center;color:var(--text-muted);"><div style="font-size:30px;margin-bottom:10px;">📋</div><div style="font-size:13.5px;font-weight:600;margin-bottom:5px;">No activity yet</div><div style="font-size:12px;">Log a call to start tracking</div></div>')
+    +'</div>'
+    // Calls tab
+    +'<div id="cop-calls" style="display:none;padding:16px 20px;">'
+    +(allCalls.length?allCalls.map(function(c){var col2=callColors[c.outcome]||'#a1a1aa'; return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--divider);">'+'<div style="width:26px;height:26px;border-radius:50%;background:'+col2+'15;border:1.5px solid '+col2+'44;display:flex;align-items:center;justify-content:center;font-size:12px;">'+(callIcons[c.outcome]||'📞')+'</div><div style="flex:1;"><div style="font-size:12.5px;font-weight:600;color:var(--text-primary);">'+anEsc(c._cname)+'</div><div style="font-size:11px;color:var(--text-muted);">'+anDate(c.date)+(c.duration?' · '+c.duration+'m':'')+'</div>'+( c.notes?'<div style="font-size:12px;color:var(--text-secondary);">'+anEsc(c.notes)+'</div>':'')+'</div><span style="font-size:11px;font-weight:700;color:'+col2+';">'+(c.outcome||'').charAt(0).toUpperCase()+(c.outcome||'').slice(1)+'</span></div>'; }).join(''):'<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:12.5px;">No calls yet</div>')
+    +'</div>'
+    // Notes tab
+    +'<div id="cop-notes" style="display:none;padding:20px;">'
+    +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:10px;">Company Notes &amp; Strategy</div>'
+    +'<textarea id="co-notes-ta" rows="10" placeholder="Pain points, key contacts, pricing discussions, strategy..." onblur="saveCoData(\''+anEsc(name)+'\',{notes:this.value})" '
+    +'style="width:100%;border:1.5px solid var(--divider);border-radius:9px;padding:13px;font-size:13.5px;color:var(--text-primary);background:var(--card-bg);outline:none;resize:vertical;font-family:var(--sans);line-height:1.7;box-sizing:border-box;" '
+    +'onfocus="this.style.borderColor=\'#6366f1\'" onblur2="this.style.borderColor=\'var(--divider)\'">'+anEsc(cd.notes||'')+'</textarea>'
+    +'</div>'
+    +'</div></div>'
+
+    // Right rail
+    +'<div style="overflow-y:auto;background:var(--card-bg);">'
+    // Contacts
+    +'<div style="border-bottom:1px solid var(--divider);">'
+    +'<div style="padding:11px 15px;display:flex;justify-content:space-between;align-items:center;">'
+    +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.13em;color:var(--text-muted);">Contacts &amp; Hierarchy</div>'
+    +'<span style="font-size:11px;color:var(--text-muted);">DMs shown first</span>'
+    +'</div>'
+    +leads.sort(function(a,b){var ad=(a.callLog||[]).some(function(c){return c.outcome==='pickup'||c.outcome==='demo';}),bd=(b.callLog||[]).some(function(c){return c.outcome==='pickup'||c.outcome==='demo';}); return bd-ad; })
+    .map(function(l){
+      var lc=anColor((l.firstName||'')+(l.lastName||''));
+      var isDM=(l.callLog||[]).some(function(c){return c.outcome==='pickup'||c.outcome==='demo';});
+      var lastC=(l.callLog||[]).slice().sort(function(a,b){return b.date.localeCompare(a.date);})[0];
+      return '<div onclick="anOpenLeadPanel(\''+l.id+'\')" style="padding:9px 15px;border-top:1px solid var(--divider);display:flex;align-items:center;gap:9px;cursor:pointer;" onmouseover="this.style.background=\'var(--body-bg)\'" onmouseout="this.style.background=\'transparent\'">'
+        +'<div style="width:30px;height:30px;border-radius:50%;background:'+lc+'18;border:1.5px solid '+lc+'33;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:'+lc+';flex-shrink:0;">'+((l.firstName||'?')[0].toUpperCase())+'</div>'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-size:12.5px;font-weight:700;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+anEsc((l.firstName||'')+' '+(l.lastName||''))+'</div>'
+        +'<div style="font-size:11px;color:var(--text-muted);">'+(lastC?anTimeAgo(lastC.date):'No calls yet')+'</div>'
+        +'</div>'
+        +(isDM?'<span style="font-size:9.5px;font-weight:700;background:#ecfdf5;color:#10b981;border-radius:4px;padding:2px 6px;flex-shrink:0;">DM</span>':'')
+        +'<div style="display:flex;gap:4px;flex-shrink:0;">'
+        +'<button onclick="event.stopPropagation();anLogCall(\''+l.id+'\')" style="width:24px;height:24px;border-radius:5px;background:var(--body-bg);border:1px solid var(--divider);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Log Call">📞</button>'
+        +'<button onclick="event.stopPropagation();anOpenLeadPanel(\''+l.id+'\')" style="width:24px;height:24px;border-radius:5px;background:var(--body-bg);border:1px solid var(--divider);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="View">✏️</button>'
+        +'</div></div>';
+    }).join('')
+    +'<button onclick="anNewLeadForCompany(\''+anEsc(name)+'\')" style="width:100%;padding:9px;border:none;border-top:1px solid var(--divider);background:transparent;font-size:12px;font-weight:600;color:#6366f1;cursor:pointer;font-family:var(--sans);">+ Add Contact</button>'
+    +'</div>'
+    // Deals
+    +'<div style="border-bottom:1px solid var(--divider);">'
+    +'<div style="padding:11px 15px;display:flex;justify-content:space-between;align-items:center;">'
+    +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.13em;color:var(--text-muted);">Deals ('+opps.length+')</div>'
+    +'<button onclick="createDealForCompany(\''+anEsc(name)+'\')" style="background:none;border:none;font-size:11.5px;font-weight:700;color:#6366f1;cursor:pointer;font-family:var(--sans);">+ Add</button>'
+    +'</div>'
+    +(opps.length?opps.map(function(opp){
+      var st2=anStatus(opp.status||'demo');
+      var mrr=opp.oppMRR||(AN_SIZES.find(function(x){return x.id===opp.size;})||{price:79}).price;
+      return '<div onclick="anOpenOppDetail(\''+opp.id+'\')" style="padding:9px 15px;border-top:1px solid var(--divider);cursor:pointer;" onmouseover="this.style.background=\'var(--body-bg)\'" onmouseout="this.style.background=\'transparent\'">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">'
+        +'<div style="font-size:12.5px;font-weight:700;color:var(--text-primary);">'+anEsc((opp.firstName||'')+' '+(opp.lastName||''))+'</div>'
+        +'<span style="font-size:13px;font-weight:800;color:'+st2.color+';">$'+mrr+'<span style="font-size:10px;color:var(--text-muted);">/mo</span></span>'
+        +'</div>'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;">'
+        +'<span style="background:'+st2.color+'18;color:'+st2.color+';border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700;">'+st2.label+'</span>'
+        +(opp.oppCloseDate?'<span style="font-size:11px;color:var(--text-muted);">'+anDate(opp.oppCloseDate)+'</span>':'')
+        +'</div></div>';
+    }).join(''):'<div style="padding:12px 15px;font-size:12px;color:var(--text-muted);">No deals yet</div>')
+    +'<button onclick="createDealForCompany(\''+anEsc(name)+'\')" style="width:100%;padding:9px;border:none;border-top:1px solid var(--divider);background:transparent;font-size:12px;font-weight:600;color:#6366f1;cursor:pointer;font-family:var(--sans);">+ Create Deal</button>'
+    +'</div>'
+    +(totalMRR?'<div style="padding:14px 15px;">'
+      +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.13em;color:var(--text-muted);margin-bottom:8px;">Pipeline Value</div>'
+      +'<div style="font-size:22px;font-weight:900;color:#6366f1;letter-spacing:-1px;">$'+totalMRR+'<span style="font-size:12px;font-weight:500;color:var(--text-muted);">/mo</span></div>'
+      +'<div style="font-size:12px;color:#10b981;margin-top:2px;font-weight:600;">$'+Math.round(totalMRR*12*0.80)+'/yr annual</div>'
+      +'</div>':'')
+    +'</div>'
+    +'</div></div>';
+
+  document.body.appendChild(panel);
+  setTimeout(function(){ panel.style.transform='translateX(0)'; },10);
+
+  // Close on backdrop click
+  panel.addEventListener('click',function(e){ if(e.target===panel){ panel.style.transform='translateX(100%)'; setTimeout(function(){panel.remove();},260); } });
+};
+
+window.coTab = function(tab){
+  ['activity','calls','notes'].forEach(function(t){
+    var p=document.getElementById('cop-'+t),b=document.getElementById('cot-'+t);
+    if(p) p.style.display=t===tab?'block':'none';
+    if(b){ b.style.borderBottomColor=t===tab?'#6366f1':'transparent'; b.style.color=t===tab?'#6366f1':'var(--text-muted)'; b.style.fontWeight=t===tab?'700':'600'; }
+  });
+};
+
+window.openNewCompanyModal = function(){
+  var name=prompt('Company name:'); if(!name||!name.trim()) return;
+  saveCoData(name.trim(),{stage:'prospecting',createdAt:new Date().toISOString()});
+  var blank={id:'l-'+Date.now(),firstName:'',lastName:'',company:name.trim(),email:'',phone:'',state:'',size:'',source:'',status:'new',callLog:[],_repEmail:AN.currentRepEmail,created:new Date().toISOString(),updated:new Date().toISOString()};
+  AN.leads.unshift(blank); AN.save();
+  showCompanyView();
+  setTimeout(function(){ openCompanyDetail(name.trim()); },200);
+};
+
+window.deleteCompany = function(name){
+  if(!confirm('Delete '+name+'? This removes the company from all contacts.')) return;
+  AN.leads.forEach(function(l){if((l.company||'').trim()===name) l.company='';});
+  AN.save(); showCompanyView();
+  if(typeof showToast==='function') showToast('Company deleted');
+};
+
+window.createDealForCompany = function(name){
+  var lead=AN.leads.find(function(l){return(l.company||'').trim()===name;});
+  if(lead) anConvertToOpportunity(lead.id);
+  else if(typeof showToast==='function') showToast('Add a contact to this company first');
+};
+
+window.logCallForCompany = function(name){
+  var leads=AN.leads.filter(function(l){return(l.company||'').trim()===name;});
+  if(leads.length===1){anLogCall(leads[0].id);return;}
+  if(!leads.length){if(typeof showToast==='function') showToast('No contacts at this company');return;}
+  var old=document.getElementById('co-call-picker');if(old)old.remove();
+  var m=document.createElement('div');m.id='co-call-picker';m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10002;display:flex;align-items:center;justify-content:center;';
+  m.innerHTML='<div style="background:var(--card-bg);border-radius:14px;padding:22px;width:360px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><div style="font-size:15px;font-weight:800;color:var(--text-primary);">Log a Call</div>'
+    +'<button onclick="document.getElementById(\'co-call-picker\').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);">✕</button></div>'
+    +'<div style="font-size:11.5px;color:var(--text-muted);margin-bottom:10px;">Select contact at '+anEsc(name)+'</div>'
+    +leads.map(function(l){return '<button onclick="document.getElementById(\'co-call-picker\').remove();anLogCall(\''+l.id+'\')" style="width:100%;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--divider);background:var(--card-bg);margin-bottom:6px;cursor:pointer;font-family:var(--sans);" onmouseover="this.style.borderColor=\'#6366f1\'" onmouseout="this.style.borderColor=\'var(--divider)\'"><div style="width:28px;height:28px;border-radius:50%;background:#6366f118;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#6366f1;">'+((l.firstName||'?')[0].toUpperCase())+'</div><div style="flex:1;text-align:left;"><div style="font-size:13px;font-weight:600;color:var(--text-primary);">'+anEsc((l.firstName||'')+' '+(l.lastName||''))+'</div>'+(l.phone?'<div style="font-size:11px;color:var(--text-muted);">'+anEsc(l.phone)+'</div>':'')+'</div></button>';}).join('')
+    +'</div>';
+  document.body.appendChild(m);m.onclick=function(e){if(e.target===m)m.remove();};
+};
+
+window.anNewLeadForCompany = function(name){
+  var blank={id:'l-'+Date.now(),firstName:'',lastName:'',company:name,email:'',phone:'',state:'',size:'',source:'',status:'new',callLog:[],_repEmail:AN.currentRepEmail,created:new Date().toISOString(),updated:new Date().toISOString()};
+  AN.leads.unshift(blank); AN.save(); anOpenLeadPanel(blank.id);
+};
+
+console.log('[COMPANIES v3] List + Kanban + HubSpot detail loaded.');
+
+</script>
+<script>
+// ============================================================
+// REP MANAGEMENT + LEAD ASSIGNMENT FIX
+// 1. Admin can invite reps with email + set their display name
+// 2. Assigned leads sync via rep_email even before first login
+// 3. Rep onboarding: first login prompts set-password flow
+// ============================================================
+
+var AN_ADMIN_EMAIL = typeof AN_CRM_ADMIN_EMAIL !== 'undefined' ? AN_CRM_ADMIN_EMAIL : 'asmithee@insurewithcompass.com';
+
+// ── LEAD ASSIGNMENT FIX ───────────────────────────────────────
+// When admin assigns leads, write them to an_lead_assignments
+// keyed by rep_email. Reps pick them up on next load regardless
+// of whether they've logged in before.
+
+var _origANSyncRepLeads = window.anSyncRepLeadsToCloud || function(){};
+
+window.anSyncRepLeadsToCloud = function(opts, cb) {
+  opts = opts || {}; cb = cb || function(){};
+  var sb = typeof getSupabase==='function' ? getSupabase() : null;
+  if (!sb || !_currentUser || !AN.isAdmin) { cb(); return; }
+
+  // Original sync (needs user_id map)
+  _origANSyncRepLeads(opts, function() {
+    // ALSO write to an_lead_assignments keyed by rep_email
+    // This is the fallback for reps who haven't logged in yet
+    var byRep = {};
+    AN.leads.forEach(function(l) {
+      if (!l || !l._repEmail) return;
+      var em = l._repEmail.toLowerCase();
+      if (!em || em === AN_ADMIN_EMAIL.toLowerCase()) return;
+      if (!byRep[em]) byRep[em] = [];
+      var copy = Object.assign({}, l);
+      delete copy._repEmail;
+      byRep[em].push(copy);
+    });
+
+    var upserts = Object.keys(byRep).map(function(em) {
+      return { rep_email: em, data: byRep[em], updated_at: new Date().toISOString() };
+    });
+
+    if (!upserts.length) { cb(); return; }
+
+    // Upsert to an_lead_assignments
+    sb.from('an_lead_assignments')
+      .upsert(upserts, { onConflict: 'rep_email' })
+      .then(function(r) {
+        if (r.error) console.warn('[CRM] Lead assignment sync warning:', r.error.message);
+        else console.log('[CRM] Lead assignments synced for', upserts.length, 'reps');
+        cb();
+      })
+      .catch(function(e) { console.warn('[CRM] Lead assignment error:', e); cb(); });
+  });
+};
+
+// Patch AN.load for reps — also check an_lead_assignments
+var _origANFinishCloudLoad = window.anFinishCloudLeadLoad;
+window.anFinishCloudLeadLoad = function(sb, cb) {
+  if (!sb || !_currentUser) { if(cb) cb(); return; }
+  var repEmail = (_currentUser.email || '').toLowerCase();
+  var isAdmin  = repEmail === AN_ADMIN_EMAIL.toLowerCase();
+
+  // Call original load
+  if (typeof _origANFinishCloudLoad === 'function') {
+    _origANFinishCloudLoad(sb, function() {
+      if (isAdmin) { if(cb) cb(); return; }
+      // After normal load, also merge from an_lead_assignments
+      sb.from('an_lead_assignments')
+        .select('data, updated_at')
+        .eq('rep_email', repEmail)
+        .then(function(r) {
+          if (r.data && r.data[0] && r.data[0].data) {
+            var assigned = r.data[0].data;
+            if (assigned.length) {
+              assigned.forEach(function(l) { l._repEmail = repEmail; });
+              var existing = AN.leads || [];
+              var existingIds = existing.map(function(l){ return l.id; });
+              var newLeads = assigned.filter(function(l){ return existingIds.indexOf(l.id) < 0; });
+              if (newLeads.length) {
+                AN.leads = existing.concat(newLeads);
+                AN.invalidateLeadCaches && AN.invalidateLeadCaches();
+                if (typeof anPersistLeadsLocal === 'function') anPersistLeadsLocal(function(){});
+                console.log('[CRM] Merged', newLeads.length, 'assigned leads from admin');
+                if (typeof showToast === 'function') showToast(newLeads.length + ' new leads assigned to you');
+              }
+            }
+          }
+          if (cb) cb();
+        })
+        .catch(function() { if(cb) cb(); });
+    });
+  } else {
+    if(cb) cb();
+  }
+};
+
+// ── REP MANAGEMENT UI ─────────────────────────────────────────
+function buildRepManagementPanel() {
+  var reps = _repViews ? Object.keys(_repViews) : [];
+
+  return '<div id="rep-mgmt-panel" style="margin-top:28px;">'
+    // Header
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'
+    + '<div>'
+    + '<div style="font-size:16px;font-weight:800;color:var(--text-primary);letter-spacing:-0.4px;">Rep Management</div>'
+    + '<div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Invite reps, manage access, and assign leads.</div>'
+    + '</div>'
+    + '<button onclick="openInviteRepModal()" style="padding:8px 16px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);box-shadow:0 2px 8px rgba(99,102,241,0.3);">+ Invite Rep</button>'
+    + '</div>'
+
+    // Rep cards
+    + '<div id="rep-cards-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:24px;">'
+    + (reps.length ? reps.map(function(email) {
+        return buildRepCard(email);
+      }).join('')
+      : '<div style="background:var(--card-bg);border:1.5px dashed var(--divider);border-radius:12px;padding:28px;text-align:center;color:var(--text-muted);">'
+        + '<div style="font-size:24px;margin-bottom:8px;">👥</div>'
+        + '<div style="font-size:13.5px;font-weight:600;margin-bottom:4px;">No reps added yet</div>'
+        + '<div style="font-size:12px;">Click + Invite Rep to get started</div>'
+        + '</div>')
+    + '</div>'
+
+    // Rep View Control
+    + buildRepViewPanel()
+    + '</div>';
+}
+
+function buildRepCard(email) {
+  var name  = email.split('@')[0];
+  var col   = anColor ? anColor(email) : '#6366f1';
+  var views = (_repViews && _repViews[email]) || {};
+  var hidden = (views.hidden || []).length;
+  var leadCount = typeof AN !== 'undefined' ? AN.leads.filter(function(l){ return l._repEmail === email; }).length : 0;
+
+  return '<div style="background:var(--card-bg);border:1px solid var(--divider);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;">'
+    + '<div style="display:flex;align-items:center;gap:10px;">'
+    + '<div style="width:38px;height:38px;border-radius:50%;background:' + col + '18;border:2px solid ' + col + '33;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:' + col + ';flex-shrink:0;">' + name[0].toUpperCase() + '</div>'
+    + '<div style="flex:1;min-width:0;">'
+    + '<div style="font-size:13.5px;font-weight:700;color:var(--text-primary);">' + anEsc(name) + '</div>'
+    + '<div style="font-size:12px;color:var(--text-muted);">' + anEsc(email) + '</div>'
+    + '</div>'
+    + '<button onclick="removeRep(\'' + anEsc(email) + '\')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:4px;" title="Remove rep">✕</button>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    + '<div style="background:var(--body-bg);border-radius:8px;padding:8px;text-align:center;">'
+    + '<div style="font-size:18px;font-weight:800;color:#6366f1;">' + leadCount + '</div>'
+    + '<div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">Leads</div>'
+    + '</div>'
+    + '<div style="background:var(--body-bg);border-radius:8px;padding:8px;text-align:center;">'
+    + '<div style="font-size:18px;font-weight:800;color:' + (hidden > 0 ? '#f59e0b' : '#10b981') + ';">' + (hidden > 0 ? hidden + ' hidden' : 'All') + '</div>'
+    + '<div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">Sections</div>'
+    + '</div>'
+    + '</div>'
+    + '<div style="display:flex;gap:6px;">'
+    + '<button onclick="openAssignLeadsModal(\'' + anEsc(email) + '\')" style="flex:1;padding:6px 0;border:1.5px solid var(--divider);border-radius:7px;background:var(--card-bg);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:var(--sans);">📋 Assign Leads</button>'
+    + '<button onclick="resendInvite(\'' + anEsc(email) + '\')" style="flex:1;padding:6px 0;border:none;border-radius:7px;background:rgba(99,102,241,0.1);font-size:12px;font-weight:700;color:#6366f1;cursor:pointer;font-family:var(--sans);">📧 Resend Invite</button>'
+    + '</div>'
+    + '</div>';
+}
+
+// ── INVITE REP MODAL ──────────────────────────────────────────
+window.openInviteRepModal = function() {
+  var old = document.getElementById('invite-rep-modal'); if (old) old.remove();
+  var m = document.createElement('div');
+  m.id = 'invite-rep-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:10001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+  m.innerHTML = '<div style="background:var(--card-bg);border-radius:16px;width:480px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,0.35);overflow:hidden;">'
+
+    // Header
+    + '<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);padding:22px 26px;display:flex;justify-content:space-between;align-items:center;">'
+    + '<div><div style="font-size:18px;font-weight:800;color:#fff;">Invite a Rep</div>'
+    + '<div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:2px;">They\'ll receive an email to set their password and log in</div>'
+    + '</div>'
+    + '<button onclick="document.getElementById(\'invite-rep-modal\').remove()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px;">✕</button>'
+    + '</div>'
+
+    // Body
+    + '<div style="padding:24px 26px;">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">'
+    + invField('First Name', 'inv-fn', '', 'text', 'e.g. Sarah')
+    + invField('Last Name',  'inv-ln', '', 'text', 'e.g. Johnson')
+    + '</div>'
+    + invField('Work Email', 'inv-email', '', 'email', 'rep@insurewithcompass.com')
+    + '<div style="margin-top:14px;margin-bottom:14px;">'
+    + '<label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">Role</label>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;border:1.5px solid var(--divider);border-radius:8px;cursor:pointer;background:var(--card-bg);">'
+    + '<input type="radio" name="inv-role" value="ae" checked style="accent-color:#6366f1;"> <div><div style="font-size:13px;font-weight:700;color:var(--text-primary);">Account Executive</div><div style="font-size:11px;color:var(--text-muted);">Closes deals, manages pipeline</div></div></label>'
+    + '<label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;border:1.5px solid var(--divider);border-radius:8px;cursor:pointer;background:var(--card-bg);">'
+    + '<input type="radio" name="inv-role" value="sdr" style="accent-color:#6366f1;"> <div><div style="font-size:13px;font-weight:700;color:var(--text-primary);">Sales Dev Rep</div><div style="font-size:11px;color:var(--text-muted);">Prospecting & demo setting</div></div></label>'
+    + '</div></div>'
+
+    // Info box
+    + '<div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.18);border-radius:8px;padding:12px 14px;margin-bottom:18px;">'
+    + '<div style="font-size:12.5px;color:var(--text-primary);line-height:1.7;">'
+    + '📧 <strong>How it works:</strong> Supabase sends the rep an email with a link to set their password. Once they click it and log in, their leads will sync automatically.'
+    + '</div></div>'
+
+    // Error
+    + '<div id="inv-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 13px;font-size:13px;color:#ef4444;margin-bottom:12px;"></div>'
+
+    + '<div style="display:flex;gap:8px;">'
+    + '<button onclick="document.getElementById(\'invite-rep-modal\').remove()" style="flex:1;padding:11px;border-radius:8px;border:1.5px solid var(--divider);background:transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--text-secondary);">Cancel</button>'
+    + '<button id="inv-submit-btn" onclick="submitInviteRep()" style="flex:2;padding:11px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;font-family:var(--sans);box-shadow:0 2px 8px rgba(99,102,241,0.3);">Send Invite 📧</button>'
+    + '</div></div></div>';
+
+  document.body.appendChild(m);
+  m.onclick = function(e) { if(e.target===m) m.remove(); };
+  setTimeout(function(){ var f = document.getElementById('inv-fn'); if(f) f.focus(); }, 50);
+};
+
+function invField(label, id, value, type, placeholder) {
+  return '<div style="margin-bottom:12px;"><label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">' + label + '</label>'
+    + '<input id="' + id + '" type="' + type + '" value="' + anEsc(value) + '" placeholder="' + anEsc(placeholder) + '" '
+    + 'style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13.5px;color:var(--text-primary);background:var(--card-bg);outline:none;font-family:var(--sans);box-sizing:border-box;" '
+    + 'onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'"></div>';
+}
+
+window.submitInviteRep = function() {
+  var fn    = (document.getElementById('inv-fn')?.value||'').trim();
+  var ln    = (document.getElementById('inv-ln')?.value||'').trim();
+  var email = (document.getElementById('inv-email')?.value||'').trim().toLowerCase();
+  var role  = document.querySelector('input[name="inv-role"]:checked')?.value || 'ae';
+  var btn   = document.getElementById('inv-submit-btn');
+  var err   = document.getElementById('inv-error');
+
+  if (!email || !email.includes('@')) {
+    err.textContent = 'Please enter a valid email address';
+    err.style.display = 'block'; return;
+  }
+  err.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
+  if (!sb) { err.textContent = 'Supabase not connected'; err.style.display='block'; btn.disabled=false; btn.textContent='Send Invite 📧'; return; }
+
+  var fullName = [fn, ln].filter(Boolean).join(' ') || email.split('@')[0];
+
+  // Use signUp with email confirmation (Supabase sends magic link / confirmation email)
+  sb.auth.signUp({
+    email: email,
+    password: 'TempPass' + Math.random().toString(36).slice(2,8).toUpperCase() + '!',
+    options: {
+      data: { full_name: fullName, role: role },
+      emailRedirectTo: window.location.origin + window.location.pathname
+    }
+  }).then(function(result) {
+    if (result.error && !result.error.message.includes('already registered')) {
+      err.textContent = result.error.message;
+      err.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Send Invite 📧';
+      return;
+    }
+
+    // Save rep to views system
+    if (!_repViews[email]) _repViews[email] = { hidden: [], role: role, name: fullName };
+    else { _repViews[email].role = role; _repViews[email].name = fullName; }
+    saveRepViews();
+
+    document.getElementById('invite-rep-modal').remove();
+    if (typeof showToast === 'function') showToast('Invite sent to ' + email + ' ✓');
+
+    // Refresh rep cards if visible
+    var panel = document.getElementById('rep-mgmt-panel');
+    if (panel) {
+      var cards = document.getElementById('rep-cards-list');
+      if (cards) {
+        var html = Object.keys(_repViews).map(buildRepCard).join('');
+        cards.innerHTML = html || '<div style="color:var(--text-muted);font-size:13px;">No reps yet</div>';
+      }
+    }
+  }).catch(function(e) {
+    err.textContent = e.message || 'Failed to send invite';
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Send Invite 📧';
+  });
+};
+
+window.resendInvite = function(email) {
+  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
+  if (!sb) { if(typeof showToast==='function') showToast('Supabase not connected'); return; }
+  sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname + '#reset-password'
+  }).then(function(r) {
+    if (r.error) { if(typeof showToast==='function') showToast('Error: ' + r.error.message); }
+    else { if(typeof showToast==='function') showToast('Password reset email sent to ' + email); }
+  });
+};
+
+window.removeRep = function(email) {
+  if (!confirm('Remove ' + email + ' from rep list? Their leads and data stay in the system.')) return;
+  if (_repViews[email]) delete _repViews[email];
+  saveRepViews();
+  var cards = document.getElementById('rep-cards-list');
+  if (cards) {
+    var html = Object.keys(_repViews).map(buildRepCard).join('');
+    cards.innerHTML = html || '<div style="background:var(--body-bg);border-radius:10px;padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">No reps yet. Click + Invite Rep.</div>';
+  }
+  if (typeof showToast === 'function') showToast(email + ' removed');
+};
+
+// ── ASSIGN LEADS TO REP MODAL ─────────────────────────────────
+window.openAssignLeadsModal = function(repEmail) {
+  if (typeof AN === 'undefined') return;
+  var unassigned = AN.leads.filter(function(l){ return !l._repEmail || l._repEmail === AN_ADMIN_EMAIL.toLowerCase(); });
+  var alreadyAssigned = AN.leads.filter(function(l){ return (l._repEmail||'').toLowerCase() === repEmail.toLowerCase(); });
+
+  var old = document.getElementById('assign-leads-modal'); if(old) old.remove();
+  var m = document.createElement('div');
+  m.id = 'assign-leads-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:10001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+
+  m.innerHTML = '<div style="background:var(--card-bg);border-radius:16px;width:560px;max-width:95vw;max-height:80vh;box-shadow:0 24px 80px rgba(0,0,0,0.35);overflow:hidden;display:flex;flex-direction:column;">'
+
+    + '<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);padding:20px 24px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">'
+    + '<div><div style="font-size:17px;font-weight:800;color:#fff;">Assign Leads to ' + anEsc(repEmail.split('@')[0]) + '</div>'
+    + '<div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:2px;">' + alreadyAssigned.length + ' already assigned · ' + unassigned.length + ' unassigned</div>'
+    + '</div>'
+    + '<button onclick="document.getElementById(\'assign-leads-modal\').remove()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px;">✕</button>'
+    + '</div>'
+
+    + '<div style="padding:14px 20px;border-bottom:1px solid var(--divider);display:flex;gap:8px;flex-shrink:0;">'
+    + '<input type="text" placeholder="Search leads..." oninput="filterAssignList(this.value)" '
+    + 'style="flex:1;padding:7px 11px;border:1.5px solid var(--divider);border-radius:7px;font-size:12.5px;color:var(--text-primary);background:var(--body-bg);outline:none;font-family:var(--sans);" '
+    + 'onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'">'
+    + '<button onclick="selectAllAssign()" style="padding:7px 12px;border:1.5px solid var(--divider);border-radius:7px;background:var(--card-bg);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:var(--sans);">Select All</button>'
+    + '</div>'
+
+    + '<div id="assign-list" style="flex:1;overflow-y:auto;padding:8px 20px;">'
+    + (unassigned.length ? unassigned.map(function(l) {
+        return '<label class="assign-row" style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--divider);cursor:pointer;">'
+          + '<input type="checkbox" class="assign-cb" data-id="' + l.id + '" style="width:15px;height:15px;accent-color:#6366f1;cursor:pointer;flex-shrink:0;">'
+          + '<div style="flex:1;min-width:0;">'
+          + '<div style="font-size:13px;font-weight:600;color:var(--text-primary);">' + anEsc((l.firstName||'Unknown')+' '+(l.lastName||'')) + '</div>'
+          + '<div style="font-size:11.5px;color:var(--text-muted);">' + anEsc(l.company||'—') + (l.state?' · '+l.state:'') + (l.size?' · '+l.size:'') + '</div>'
+          + '</div>'
+          + '<span style="font-size:11px;color:var(--text-muted);">' + anTimeAgo(l.created) + '</span>'
+          + '</label>';
+      }).join('')
+      : '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">All leads are already assigned</div>')
+    + '</div>'
+
+    + '<div style="padding:14px 20px;border-top:1px solid var(--divider);display:flex;gap:8px;flex-shrink:0;">'
+    + '<div style="flex:1;font-size:12.5px;color:var(--text-muted);display:flex;align-items:center;"><span id="assign-selected-count">0 selected</span></div>'
+    + '<button onclick="document.getElementById(\'assign-leads-modal\').remove()" style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--divider);background:transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--text-secondary);">Cancel</button>'
+    + '<button onclick="confirmAssignLeads(\'' + anEsc(repEmail) + '\')" style="padding:9px 20px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);box-shadow:0 2px 8px rgba(99,102,241,0.3);">Assign Selected Leads</button>'
+    + '</div></div>';
+
+  document.body.appendChild(m);
+  m.onclick = function(e) { if(e.target===m) m.remove(); };
+
+  // Update count on change
+  m.addEventListener('change', function() {
+    var count = m.querySelectorAll('.assign-cb:checked').length;
+    var el = document.getElementById('assign-selected-count');
+    if (el) el.textContent = count + ' selected';
+  });
+};
+
+window.filterAssignList = function(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.assign-row').forEach(function(row) {
+    var text = row.textContent.toLowerCase();
+    row.style.display = text.includes(q) ? '' : 'none';
+  });
+};
+
+window.selectAllAssign = function() {
+  var cbs = document.querySelectorAll('.assign-cb');
+  var allChecked = Array.from(cbs).every(function(cb){ return cb.checked; });
+  cbs.forEach(function(cb){ cb.checked = !allChecked; });
+  var count = allChecked ? 0 : cbs.length;
+  var el = document.getElementById('assign-selected-count');
+  if (el) el.textContent = count + ' selected';
+};
+
+window.confirmAssignLeads = function(repEmail) {
+  var selected = Array.from(document.querySelectorAll('.assign-cb:checked')).map(function(cb){ return cb.dataset.id; });
+  if (!selected.length) { if(typeof showToast==='function') showToast('Select at least one lead'); return; }
+
+  selected.forEach(function(id) {
+    var lead = AN.leads.find(function(l){ return l.id===id; });
+    if (lead) {
+      lead._repEmail = repEmail.toLowerCase();
+      lead.updated = new Date().toISOString();
+    }
+  });
+
+  AN.save(function() {
+    // Also sync to an_lead_assignments immediately
+    anSyncRepLeadsToCloud({ onlyEmails: [repEmail] }, function(){});
+  });
+
+  document.getElementById('assign-leads-modal').remove();
+  if (typeof showToast === 'function') showToast('Assigned ' + selected.length + ' leads to ' + repEmail.split('@')[0]);
+
+  // Refresh rep card
+  var cards = document.getElementById('rep-cards-list');
+  if (cards) cards.innerHTML = Object.keys(_repViews||{}).map(buildRepCard).join('');
+};
+
+// ── INJECT INTO ADMIN PANEL ───────────────────────────────────
+// Override the admin panel renderer to include rep management
+var _origShowSection_repMgmt = window.showSection;
+window.showSection = function(id, btn) {
+  if (typeof _origShowSection_repMgmt === 'function') _origShowSection_repMgmt(id, btn);
+  if (id === 'admin') {
+    setTimeout(function() {
+      if (!_currentUser || _currentUser.email !== AN_ADMIN_EMAIL) return;
+      var sec = document.getElementById('section-admin');
+      if (!sec) return;
+
+      // Remove old rep view panel if present, rebuild cleanly
+      var old = document.getElementById('rep-view-panel');
+      if (old) old.remove();
+      var old2 = document.getElementById('rep-mgmt-panel');
+      if (old2) old2.remove();
+
+      var panel = document.createElement('div');
+      panel.id = 'rep-view-panel';
+      panel.style.cssText = 'padding:0 44px 32px;';
+      panel.innerHTML = buildRepManagementPanel();
+      sec.appendChild(panel);
+    }, 250);
+  }
+};
+
+// ── SET PASSWORD FLOW for first-time reps ─────────────────────
+// When a rep lands with a password reset token, show a set-password modal
+(function checkPasswordReset() {
+  var hash = window.location.hash || '';
+  var params = new URLSearchParams(hash.replace('#', '?'));
+  var type = params.get('type');
+  if (type === 'recovery' || type === 'invite') {
+    setTimeout(function() {
+      showSetPasswordModal();
+    }, 800);
+  }
+})();
+
+window.showSetPasswordModal = function() {
+  var old = document.getElementById('set-pw-modal'); if(old) old.remove();
+  var m = document.createElement('div');
+  m.id = 'set-pw-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:20000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);';
+  m.innerHTML = '<div style="background:var(--card-bg,#fff);border-radius:18px;width:420px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,0.4);overflow:hidden;">'
+    + '<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);padding:28px 28px 22px;">'
+    + '<div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.5px;margin-bottom:4px;">Welcome to AgentNav 👋</div>'
+    + '<div style="font-size:13px;color:rgba(255,255,255,0.5);">Set your password to get started</div>'
+    + '</div>'
+    + '<div style="padding:24px 28px;">'
+    + '<div style="margin-bottom:14px;"><label style="font-family:var(--mono,monospace);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:#71717a;display:block;margin-bottom:5px;">New Password</label>'
+    + '<input id="set-pw-1" type="password" placeholder="At least 8 characters" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:10px 13px;font-size:14px;outline:none;font-family:inherit;box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'#e4e4e7\'"></div>'
+    + '<div style="margin-bottom:18px;"><label style="font-family:var(--mono,monospace);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:#71717a;display:block;margin-bottom:5px;">Confirm Password</label>'
+    + '<input id="set-pw-2" type="password" placeholder="Re-enter password" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:10px 13px;font-size:14px;outline:none;font-family:inherit;box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'#e4e4e7\'" onkeydown="if(event.key===\'Enter\')confirmSetPassword()">'
+    + '</div>'
+    + '<div id="set-pw-err" style="display:none;color:#ef4444;font-size:12.5px;margin-bottom:12px;background:#fef2f2;padding:8px 12px;border-radius:7px;"></div>'
+    + '<button onclick="confirmSetPassword()" id="set-pw-btn" style="width:100%;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:10px;padding:13px;font-size:14.5px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 4px 16px rgba(99,102,241,0.3);">Set Password & Log In</button>'
+    + '</div></div>';
+  document.body.appendChild(m);
+  setTimeout(function(){ var f=document.getElementById('set-pw-1'); if(f) f.focus(); },100);
+};
+
+window.confirmSetPassword = function() {
+  var p1  = (document.getElementById('set-pw-1')?.value||'').trim();
+  var p2  = (document.getElementById('set-pw-2')?.value||'').trim();
+  var btn = document.getElementById('set-pw-btn');
+  var err = document.getElementById('set-pw-err');
+  if (p1.length < 8) { err.textContent='Password must be at least 8 characters'; err.style.display='block'; return; }
+  if (p1 !== p2) { err.textContent='Passwords don\'t match'; err.style.display='block'; return; }
+  err.style.display='none';
+  btn.disabled=true; btn.textContent='Saving...';
+  var sb = typeof getSupabase==='function'?getSupabase():null;
+  if (!sb) { err.textContent='Not connected'; err.style.display='block'; btn.disabled=false; btn.textContent='Set Password & Log In'; return; }
+  sb.auth.updateUser({ password: p1 }).then(function(r) {
+    if (r.error) { err.textContent=r.error.message; err.style.display='block'; btn.disabled=false; btn.textContent='Set Password & Log In'; return; }
+    // Clear hash
+    window.history.replaceState(null,'',window.location.pathname);
+    document.getElementById('set-pw-modal').remove();
+    if (typeof showToast==='function') showToast('Password set! Welcome to AgentNav ✓');
+  });
+};
+
+console.log('[REP MGMT] Invite flow, lead assignment, set-password loaded.');
+
 </script>
 </body>
 </html>
