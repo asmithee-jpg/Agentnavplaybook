@@ -10115,10 +10115,14 @@ window.anOpenFixFromCSV = function(){
     +'<button onclick="document.getElementById(\'an-fix-csv-modal\').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);">✕</button></div>'
     +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.6;">Upload the <strong>same HubSpot CSV</strong> you imported. We\'ll match existing leads by email / phone / name and replace bad numeric company IDs with real company names — <strong>no re-import needed</strong>.</div>'
     +(junkCount ? '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;font-size:12px;color:#92400e;margin-bottom:14px;"><strong>'+junkCount+'</strong> lead'+(junkCount!==1?'s':'')+' currently have junk company IDs.</div>' : '')
-    +'<div id="an-fix-drop-zone" style="border:2px dashed var(--divider);border-radius:12px;padding:28px;text-align:center;cursor:pointer;margin-bottom:14px;" '
-    +'onclick="document.getElementById(\'an-fix-file-input\').click()">'
+    +'<div id="an-fix-drop-zone" style="border:2px dashed var(--divider);border-radius:12px;padding:28px;text-align:center;cursor:pointer;margin-bottom:14px;transition:all 0.15s;" '
+    +'onclick="document.getElementById(\'an-fix-file-input\').click()" '
+    +'ondragenter="event.preventDefault();event.stopPropagation();this.style.borderColor=\'#f59e0b\';this.style.background=\'rgba(245,158,11,0.06)\'" '
+    +'ondragover="event.preventDefault();event.stopPropagation();this.style.borderColor=\'#f59e0b\';this.style.background=\'rgba(245,158,11,0.06)\'" '
+    +'ondragleave="event.preventDefault();this.style.borderColor=\'var(--divider)\';this.style.background=\'transparent\'" '
+    +'ondrop="event.preventDefault();event.stopPropagation();anHandleFixDrop(event);">'
     +'<div style="font-size:28px;margin-bottom:6px;">🔧</div>'
-    +'<div style="font-size:14px;font-weight:700;color:var(--text-primary);">Drop your CSV here</div>'
+    +'<div style="font-size:14px;font-weight:700;color:var(--text-primary);">Drop your CSV here or click to browse</div>'
     +'<div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Same file you used before (e.g. adrian-fl.csv)</div></div>'
     +'<input type="file" id="an-fix-file-input" accept=".csv,text/csv" style="display:none;" onchange="anHandleFixCsvFile(this)">'
     +'<div id="an-fix-preview" style="display:none;"></div>'
@@ -10128,13 +10132,28 @@ window.anOpenFixFromCSV = function(){
     +'</div></div>';
   document.body.appendChild(m);
   m.onclick = function(e){ if(e.target === m) m.remove(); };
+  var inner = m.firstElementChild;
+  if(inner) inner.onclick = function(e){ e.stopPropagation(); };
 };
 
 var _anFixCsvRaw = null;
 var _anFixCsvMapping = null;
 
+window.anHandleFixDrop = function(e){
+  if(e && e.preventDefault) e.preventDefault();
+  if(e && e.stopPropagation) e.stopPropagation();
+  var zone = document.getElementById('an-fix-drop-zone');
+  if(zone){ zone.style.borderColor = 'var(--divider)'; zone.style.background = 'transparent'; }
+  var f = e && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if(f) anProcessFixCsvFile(f);
+};
+
 window.anHandleFixCsvFile = function(inp){
   var file = inp && inp.files && inp.files[0];
+  if(file) anProcessFixCsvFile(file);
+};
+
+function anProcessFixCsvFile(file){
   if(!file) return;
   var zone = document.getElementById('an-fix-drop-zone');
   if(zone) zone.innerHTML = '<div style="font-size:13px;color:var(--text-muted);">Reading '+anEsc(file.name)+'...</div>';
@@ -10180,8 +10199,12 @@ window.anHandleFixCsvFile = function(inp){
       btn.textContent = preview.matchable ? ('Fix '+preview.matchable+' Company Names') : 'No matches found';
     }
   };
+  reader.onerror = function(){
+    if(zone) zone.innerHTML = '<div style="color:#ef4444;font-weight:700;">Failed to read file — try click to browse</div>';
+    if(typeof showToast === 'function') showToast('Could not read CSV file');
+  };
   reader.readAsText(file);
-};
+}
 
 window.anConfirmFixFromCSV = function(){
   if(!_anFixCsvRaw || !_anFixCsvMapping || _anFixCsvMapping.company < 0){
