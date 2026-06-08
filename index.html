@@ -69,7 +69,7 @@
                 style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:10px 12px;font-size:17px;font-weight:700;color:#09090b;outline:none;box-sizing:border-box;"
                 oninput="calcUniversal()" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div><div><label style="font-size:9px;font-weight:700;color:#71717a;display:block;margin-bottom:6px;letter-spacing:0.12em;text-transform:uppercase;">Assistants</label><input id="univ-assistants" type="text" inputmode="numeric" value="0" placeholder="e.g. 100"
                 style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:10px 12px;font-size:17px;font-weight:700;color:#09090b;outline:none;box-sizing:border-box;"
-                oninput="calcUniversal()" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div></div><div style="background:#eef2ff;border:1.5px solid rgba(99,102,241,0.25);border-radius:10px;padding:14px 16px;margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><div><div style="font-size:14px;font-weight:800;color:#6366f1;" id="univ-plan-name">Independent Agent</div><div style="font-size:11.5px;color:#71717a;margin-top:2px;" id="univ-plan-desc">1 agent &middot; all features</div></div><div style="text-align:right;"><div style="font-size:30px;font-weight:800;color:#6366f1;letter-spacing:-1.5px;line-height:1;" id="univ-monthly">$79</div><div style="font-size:10.5px;color:#71717a;">/month</div></div></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-top:10px;border-top:1px solid rgba(99,102,241,0.15);"><div style="text-align:center;"><div style="font-size:10.5px;color:#71717a;margin-bottom:2px;">Annual (20% off)</div><div style="font-size:13px;font-weight:700;color:#09090b;" id="univ-annual">$854/yr</div></div><div style="text-align:center;"><div style="font-size:10.5px;color:#71717a;margin-bottom:2px;">Per Person/mo</div><div style="font-size:13px;font-weight:700;color:#09090b;" id="univ-per-person">$79</div></div><div style="text-align:center;"><div style="font-size:10.5px;color:#71717a;margin-bottom:2px;">Annual Savings</div><div style="font-size:13px;font-weight:700;color:#10b981;" id="univ-savings">Save $95</div></div></div></div><div style="font-size:10.5px;color:#a1a1aa;margin-bottom:14px;" id="univ-breakdown">Standard plan</div><div style="background:#f8f8fa;border-radius:8px;padding:10px 12px;margin-bottom:14px;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;">Pricing Tiers</div><div style="display:grid;grid-template-columns:auto auto;gap:3px 16px;"><span style="font-size:11.5px;color:#52525b;">1 agent</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$79/mo flat</span><span style="font-size:11.5px;color:#52525b;">2–4 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$247/mo flat</span><span style="font-size:11.5px;color:#52525b;">5–10 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$597/mo flat</span><span style="font-size:11.5px;color:#52525b;">11–50 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$30/agent/mo</span><span style="font-size:11.5px;color:#52525b;">51–100 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$27/agent/mo</span><span style="font-size:11.5px;color:#52525b;">101–200 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$24/agent/mo</span><span style="font-size:11.5px;color:#52525b;">201–500 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$22/agent/mo</span><span style="font-size:11.5px;color:#52525b;">501–10,000 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$20/agent/mo</span><span style="font-size:11.5px;color:#52525b;">10,001–100,000+</span><span style="font-size:11.5px;font-weight:700;color:#6366f1;">Custom &mdash; contact us</span></div></div><button onclick="applyCalcToQuote()" style="width:100%;background:#6366f1;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;margin-bottom:0;">Use This Price in Quote &#8595;</button></div></div><div style="display:flex;flex-direction:column;gap:12px;"><div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.05);"><div style="padding:12px 16px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;">Every Plan Includes</div></div><div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:6px;"><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>ACA, STM, Life, Ancillary &amp; Indemnity</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Full CRM &amp; household tracking</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Renewal Autopilot OEP workflow</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>SMS with dedicated number</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>HealthSherpa &amp; EDE integration</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Google Calendar sync</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Policy tracker &amp; reconciliation</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>No annual contract required</div></div></div><div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.05);"><div style="padding:12px 16px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;">PDF Quote &mdash; Prospect Info</div></div><div style="padding:13px 15px;display:flex;flex-direction:column;gap:8px;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><input id="qb-fname" type="text" placeholder="First Name" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><input id="qb-lname" type="text" placeholder="Last Name" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div><input id="qb-agency" type="text" placeholder="Agency Name" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><input id="qb-email" type="email" placeholder="Email" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><input id="qb-phone" type="tel" placeholder="Phone" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div><input id="qb-repname" type="text" placeholder="Your Name (Rep)" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><input id="qb-notes" type="text" placeholder="Notes (optional)" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><div style="border:1.5px solid #fde68a;border-radius:8px;background:#fffbeb;padding:10px 12px;"><div style="font-size:9px;font-weight:700;color:#92400e;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;">🏷️ Discount (Optional)</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;"><select id="qb-discount-type" onchange="updateDiscountLabel()" style="border:1.5px solid #fde68a;border-radius:6px;padding:6px 8px;font-size:12px;font-weight:600;color:#09090b;background:#fff;outline:none;cursor:pointer;"><option value="">No Discount</option><option value="percent_months">% Off First N Months</option><option value="free_months">Free Month(s)</option><option value="flat_off">Flat $ Off/Month</option><option value="custom">Custom Text</option></select><div id="qb-discount-inputs" style="display:none;"></div></div><div id="qb-discount-preview" style="font-size:11.5px;font-weight:700;color:#f59e0b;min-height:16px;"></div></div><button onclick="generateQuotePDF2()" style="width:100%;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:9px;padding:11px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(99,102,241,0.3);font-family:inherit;">&#128196; Download PDF Quote</button></div></div></div></div></div>
+                oninput="calcUniversal()" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div></div><div style="background:#eef2ff;border:1.5px solid rgba(99,102,241,0.25);border-radius:10px;padding:14px 16px;margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><div><div style="font-size:14px;font-weight:800;color:#6366f1;" id="univ-plan-name">Independent Agent</div><div style="font-size:11.5px;color:#71717a;margin-top:2px;" id="univ-plan-desc">1 agent &middot; all features</div></div><div style="text-align:right;"><div style="font-size:30px;font-weight:800;color:#6366f1;letter-spacing:-1.5px;line-height:1;" id="univ-monthly">$79</div><div style="font-size:10.5px;color:#71717a;">/month</div></div></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-top:10px;border-top:1px solid rgba(99,102,241,0.15);"><div style="text-align:center;"><div style="font-size:10.5px;color:#71717a;margin-bottom:2px;">Annual (20% off)</div><div style="font-size:13px;font-weight:700;color:#09090b;" id="univ-annual">$854/yr</div></div><div style="text-align:center;"><div style="font-size:10.5px;color:#71717a;margin-bottom:2px;">Per Person/mo (20% off)</div><div style="font-size:13px;font-weight:700;color:#09090b;" id="univ-per-person">$63.17</div></div><div style="text-align:center;"><div style="font-size:10.5px;color:#71717a;margin-bottom:2px;">Annual Savings</div><div style="font-size:13px;font-weight:700;color:#10b981;" id="univ-savings">Save $95</div></div></div></div><div style="font-size:10.5px;color:#a1a1aa;margin-bottom:14px;" id="univ-breakdown">Standard plan</div><div style="background:#f8f8fa;border-radius:8px;padding:10px 12px;margin-bottom:14px;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;">Pricing Tiers</div><div style="display:grid;grid-template-columns:auto auto;gap:3px 16px;"><span style="font-size:11.5px;color:#52525b;">1 agent</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$79/mo flat</span><span style="font-size:11.5px;color:#52525b;">2–4 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$247/mo flat</span><span style="font-size:11.5px;color:#52525b;">5–10 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$597/mo flat</span><span style="font-size:11.5px;color:#52525b;">11–50 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$30/agent/mo</span><span style="font-size:11.5px;color:#52525b;">51–100 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$27/agent/mo</span><span style="font-size:11.5px;color:#52525b;">101–200 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$24/agent/mo</span><span style="font-size:11.5px;color:#52525b;">201–500 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$22/agent/mo</span><span style="font-size:11.5px;color:#52525b;">501–10,000 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$20/agent/mo</span><span style="font-size:11.5px;color:#52525b;">10,001–100,000+</span><span style="font-size:11.5px;font-weight:700;color:#6366f1;">Custom &mdash; contact us</span></div></div><button onclick="applyCalcToQuote()" style="width:100%;background:#6366f1;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;margin-bottom:0;">Use This Price in Quote &#8595;</button></div></div><div style="display:flex;flex-direction:column;gap:12px;"><div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.05);"><div style="padding:12px 16px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;">Every Plan Includes</div></div><div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:6px;"><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>ACA, STM, Life, Ancillary &amp; Indemnity</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Full CRM &amp; household tracking</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Renewal Autopilot OEP workflow</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>SMS with dedicated number</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>HealthSherpa &amp; EDE integration</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Google Calendar sync</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Policy tracker &amp; reconciliation</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>No annual contract required</div></div></div><div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.05);"><div style="padding:12px 16px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;">PDF Quote &mdash; Prospect Info</div></div><div style="padding:13px 15px;display:flex;flex-direction:column;gap:8px;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><input id="qb-fname" type="text" placeholder="First Name" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><input id="qb-lname" type="text" placeholder="Last Name" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div><input id="qb-agency" type="text" placeholder="Agency Name" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><input id="qb-email" type="email" placeholder="Email" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><input id="qb-phone" type="tel" placeholder="Phone" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div><input id="qb-repname" type="text" placeholder="Your Name (Rep)" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><input id="qb-notes" type="text" placeholder="Notes (optional)" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><div style="border:1.5px solid #fde68a;border-radius:8px;background:#fffbeb;padding:10px 12px;"><div style="font-size:9px;font-weight:700;color:#92400e;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;">🏷️ Discount (Optional)</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;"><select id="qb-discount-type" onchange="updateDiscountLabel()" style="border:1.5px solid #fde68a;border-radius:6px;padding:6px 8px;font-size:12px;font-weight:600;color:#09090b;background:#fff;outline:none;cursor:pointer;"><option value="">No Discount</option><option value="percent_months">% Off First N Months</option><option value="free_months">Free Month(s)</option><option value="flat_off">Flat $ Off/Month</option><option value="custom">Custom Text</option></select><div id="qb-discount-inputs" style="display:none;"></div></div><div id="qb-discount-preview" style="font-size:11.5px;font-weight:700;color:#f59e0b;min-height:16px;"></div></div><button onclick="generateQuotePDF2()" style="width:100%;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:9px;padding:11px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(99,102,241,0.3);font-family:inherit;">&#128196; Download PDF Quote</button></div></div></div></div></div>
 </div><div class="section" id="section-coldcall"><div class="page-header"><div class="page-label">On The Call</div><h1>Cold Call Guide</h1><p>You have about 8 seconds before someone decides to keep listening or hang up. The goal of a cold call is one thing: earn a conversation, not make a sale.</p></div><div class="nba-bar"><span class="nba-label">⚡ Next Best Action</span><div class="nba-actions"><button class="nba-btn primary" onclick="qaCopy('Hey [Name], this is [Your name] from AgentNav. I'll be quick. We built a platform for health insurance brokers — quoting for ACA, STM, Life, Ancillary, and Indemnity, a full CRM, SMS, and a tool that runs your entire Open Enrollment season without you doing it manually. Does that sound like something worth two minutes?')">📋 Copy Opening Script</button><button class="nba-btn" onclick="openCoach()">🧠 Customize for This Prospect</button><button class="nba-btn" id="btn-guide-coldcall" onclick="openSplitGuide('coldcall',this)" style="background:#0f0f17;color:#fff;border-color:#0f0f17;">📖 Prebuilt Call Guide</button></div></div><div class="myscript-panel" id="msp-coldcall" style="margin:0 auto 6px;"><div class="myscript-header"><div><div class="myscript-title" style="color:#6366f1;">&#9997;&#65039; My Cold Call Script</div><div class="myscript-subtitle">Your cold call. Your words. Your style.</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;"><button onclick="addMSStep('coldcall','')" class="qa-btn" style="border-color:#6366f1;color:#6366f1;white-space:nowrap;">&#43; Step</button><button onclick="loadDefaultMS('coldcall')" class="qa-btn" style="white-space:nowrap;">&#8635; Default</button><button onclick="copyMyScript('coldcall')" class="qa-btn" style="white-space:nowrap;">&#128203; Copy All</button></div></div><div class="myscript-steps" id="mss-coldcall"><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">1</div><input class="myscript-step-title" type="text" value="Opening (0:00–0:15)" placeholder="Step name..." onchange="schedSave('coldcall')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Name, who you are, one-line value. End with a permission question." onchange="schedSave('coldcall')" oninput="schedSave('coldcall')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">2</div><input class="myscript-step-title" type="text" value="Earn the minute (0:15–0:45)" placeholder="Step name..." onchange="schedSave('coldcall')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Ask before you pitch. Discover their pain first." onchange="schedSave('coldcall')" oninput="schedSave('coldcall')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">3</div><input class="myscript-step-title" type="text" value="Connect pain to feature (0:45–1:30)" placeholder="Step name..." onchange="schedSave('coldcall')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Link what they said to ONE AgentNav feature." onchange="schedSave('coldcall')" oninput="schedSave('coldcall')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">4</div><input class="myscript-step-title" type="text" value="Soft pitch (1:30–2:00)" placeholder="Step name..." onchange="schedSave('coldcall')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Brief platform mention. No feature lists." onchange="schedSave('coldcall')" oninput="schedSave('coldcall')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">5</div><input class="myscript-step-title" type="text" value="Close for meeting (2:00–2:30)" placeholder="Step name..." onchange="schedSave('coldcall')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Ask for 15 min. Give a specific time option." onchange="schedSave('coldcall')" oninput="schedSave('coldcall')"></textarea></div></div><div class="myscript-footer"><button onclick="saveMyScript('coldcall')" class="myscript-save-btn" style="background:#6366f1;">&#9729; Save</button><span id="mss-status-coldcall" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span><span style="flex:1;"></span><button onclick="goToMyScript('coldcall')" style="font-size:11px;color:#6366f1;background:none;border:none;cursor:pointer;font-weight:600;padding:0;font-family:inherit;">View in Script Library →</button></div></div><div id="coldcall-guide" style="display:none;"><div class="content"><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">1</div><span class="step-title">The opening — earn 30 more seconds</span></div><span class="step-time">0:00 to 0:15</span></div><div class="step-body"><p>Use their name, say who you are, and get to the point. No one wants small talk from a cold caller.</p><div class="quote-block"><p>"Hey [Name], this is [Your name] from AgentNav. I'll be quick. We built a platform for health insurance brokers — quoting for ACA, STM, Life, Ancillary, and Indemnity, a full CRM, SMS, and a tool that runs your entire Open Enrollment season without you doing it manually. Does that sound like something worth two minutes?"</p><p class="quote-tip">The question at the end matters. It gives them control and respects their time.</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">2</div><span class="step-title">If they say sure, tell me more</span></div><span class="step-time">0:15 to 1:30</span></div><div class="step-body"><p>Ask before you talk. The best thing you can do after they give you a minute is use it to learn about them.</p><div class="quote-block"><p>"Really quick before I pitch you anything. How are you currently managing renewals when OE hits? Like specifically, what does that process look like for your book?"</p><p class="quote-tip">This is your most important question on a cold call. Their answer tells you exactly which pain point to hit.</p></div><p>Listen for the words: manually, spreadsheet, calling everyone myself, some clients fall through, overwhelmed. Any of these is your entry point.</p></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">3</div><span class="step-title">Connect their pain to one specific thing AgentNav does</span></div><span class="step-time">1:30 to 2:30</span></div><div class="step-body"><p>Don't list features. Respond to what they just told you.</p><div class="quote-block"><p>"That's exactly what Renewal Autopilot is built for. It sends the outreach to your clients automatically, tracks who responds, generates updated quotes for ACA, STM, Life, and Ancillary products, and gives you a board where every client has a status. You're not chasing 200 people in November. You're just reviewing what the system surfaced for you."</p><p class="quote-tip">One feature. One pain. One connection. Don't add more.</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">4</div><span class="step-title">Ask for the meeting</span></div><span class="step-time">2:30 to 3:00</span></div><div class="step-body"><p>Don't ask if they want to learn more. Ask for a specific time.</p><div class="quote-block"><p>"I'd love to show you how this looks for a book your size. Do you have 20 minutes this week or next — Thursday afternoon or Friday morning?"</p><p class="quote-tip">Two specific options. Not "are you free sometime?" Give them a choice, not an open invitation to say no.</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">5</div><span class="step-title">If they say no or not now</span></div><span class="step-time">Any point</span></div><div class="step-body"><div class="quote-block"><p>"Totally fair. When does OE stress usually start hitting for your team? I'll follow up right before that so the timing actually makes sense."</p><p class="quote-tip">Never argue. Plant a seed and get permission to come back at the right moment.</p></div></div></div></div></div>
 </div><div class="section" id="section-discovery"><div class="page-header"><div class="page-label">On The Call</div><h1>Discovery Call Guide</h1><p>Discovery is the most important call in the sales process. If you do this right, the demo writes itself and the close is easy. The goal is to understand their world before you say anything about ours.</p></div><div class="content"><div class="dark-banner"><h3>The golden rule of discovery</h3><p>You should be talking about 30 percent of the time. They should be talking 70 percent. If you're the one doing most of the talking, you've already lost the call.</p></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">1</div><span class="step-title">Set the agenda and earn trust early</span></div><span class="step-time">0:00 to 3:00</span></div><div class="step-body"><div class="quote-block"><p>"Thanks for making time. Here's what I was hoping to do today. I want to spend most of this call learning about how you're set up right now, what's working and what isn't. Then if I think AgentNav could actually help, I'll be honest about that. And if it's not a fit I'll tell you that too. Does that work for you?"</p><p class="quote-tip">This sets expectations, positions you as a consultant not a salesperson, and makes them comfortable being honest with you.</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">2</div><span class="step-title">Understand their current setup</span></div><span class="step-time">3:00 to 12:00</span></div><div class="step-body"><p>Work through these questions naturally. Don't read them like a checklist.</p><ul class="numbered-list"><li><div class="li-num">1</div>How big is your agency right now, and is it just you or do you have a team?</li><li><div class="li-num">2</div>What lines of business are you mostly working in? Is it mostly ACA or do you also do STM, Life, Ancillary, Indemnity, or Medicare?</li><li><div class="li-num">3</div>Walk me through what your tech stack looks like today. What tools are you using?</li><li><div class="li-num">4</div>When a new lead comes in, what happens? Where does it go?</li><li><div class="li-num">5</div>How do you handle quoting right now? Are you using a comparative rater or going carrier by carrier?</li><li><div class="li-num">6</div>What does a typical client conversation look like from your side? How do you track what was said?</li><li><div class="li-num">7</div>How do you manage renewals? Walk me through what OE looks like for your team.</li><li><div class="li-num">8</div>What tools are you using for SMS or client communication?</li></ul></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">3</div><span class="step-title">Find the real pain</span></div><span class="step-time">12:00 to 20:00</span></div><div class="step-body"><p>Once you've heard their setup, go deeper on what's breaking. These are the follow-up questions that uncover real buying motivation.</p><ul class="numbered-list"><li><div class="li-num">1</div>What's the most frustrating part of your current setup right now?</li><li><div class="li-num">2</div>Last OE — how many clients did you lose track of or lose entirely?</li><li><div class="li-num">3</div>If you could change one thing about how your team works today, what would it be?</li><li><div class="li-num">4</div>What would make next OE feel different from last year?</li></ul><div class="quote-block"><p>"It sounds like the thing that's really costing you time right now is [their exact words]. Is that fair to say? Because that's actually one of the specific things AgentNav was built to fix."</p><p class="quote-tip">Use their exact words back to them. Don't paraphrase. It shows you listened.</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">4</div><span class="step-title">Set up the demo</span></div><span class="step-time">20:00 to 25:00</span></div><div class="step-body"><div class="quote-block"><p>"Based on what you told me, I want to show you three specific things in the demo — the client record because it sounds like tracking conversations is a problem, Renewal Autopilot because OE is clearly where the pain is, and the quoting flow because going carrier by carrier is eating your time. Does that sound like the right focus?"</p><p class="quote-tip">Name exactly what you'll show and why. This makes the demo feel tailored, not canned.</p></div></div></div></div><div class="myscript-panel" id="msp-discovery" style="margin:0 auto 6px;"><div class="myscript-header"><div><div class="myscript-title" style="color:#6366f1;">&#9997;&#65039; My Discovery Call Script</div><div class="myscript-subtitle">Questions that write the demo for you.</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;"><button onclick="addMSStep('discovery','')" class="qa-btn" style="border-color:#6366f1;color:#6366f1;white-space:nowrap;">&#43; Step</button><button onclick="loadDefaultMS('discovery')" class="qa-btn" style="white-space:nowrap;">&#8635; Default</button><button onclick="copyMyScript('discovery')" class="qa-btn" style="white-space:nowrap;">&#128203; Copy All</button></div></div><div class="myscript-steps" id="mss-discovery"><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">1</div><input class="myscript-step-title" type="text" value="Current setup" placeholder="Step name..." onchange="schedSave('discovery')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="How are they managing quoting, CRM, and renewals today?" onchange="schedSave('discovery')" oninput="schedSave('discovery')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">2</div><input class="myscript-step-title" type="text" value="Where it breaks" placeholder="Step name..." onchange="schedSave('discovery')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="What takes the most time? Where does the process fail?" onchange="schedSave('discovery')" oninput="schedSave('discovery')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">3</div><input class="myscript-step-title" type="text" value="Renewal season" placeholder="Step name..." onchange="schedSave('discovery')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="What does OEP look like for their book? How many clients?" onchange="schedSave('discovery')" oninput="schedSave('discovery')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">4</div><input class="myscript-step-title" type="text" value="Team size & growth" placeholder="Step name..." onchange="schedSave('discovery')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="How many agents, assistants? Growing?" onchange="schedSave('discovery')" oninput="schedSave('discovery')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">5</div><input class="myscript-step-title" type="text" value="Decision process" placeholder="Step name..." onchange="schedSave('discovery')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Who else is involved in choosing a platform?" onchange="schedSave('discovery')" oninput="schedSave('discovery')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">6</div><input class="myscript-step-title" type="text" value="Timeline" placeholder="Step name..." onchange="schedSave('discovery')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="When do they want to be set up by?" onchange="schedSave('discovery')" oninput="schedSave('discovery')"></textarea></div></div><div class="myscript-footer"><button onclick="saveMyScript('discovery')" class="myscript-save-btn" style="background:#6366f1;">&#9729; Save</button><span id="mss-status-discovery" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span><span style="flex:1;"></span><button onclick="goToMyScript('discovery')" style="font-size:11px;color:#6366f1;background:none;border:none;cursor:pointer;font-weight:600;padding:0;font-family:inherit;">View in Script Library →</button></div></div><div id="discovery-guide" style="display:none;"><div class="content"><div class="dark-banner"><h3>The golden rule of discovery</h3><p>You should be talking about 30 percent of the time. They should be talking 70 percent. If you're the one doing most of the talking, you've already lost the call.</p></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">1</div><span class="step-title">Set the agenda and earn trust early</span></div><span class="step-time">0:00 to 3:00</span></div><div class="step-body"><div class="quote-block"><p>"Thanks for making time. Here's what I was hoping to do today. I want to spend most of this call learning about how you're set up right now, what's working and what isn't. Then if I think AgentNav could actually help, I'll be honest about that. And if it's not a fit I'll tell you that too. Does that work for you?"</p><p class="quote-tip">This sets expectations, positions you as a consultant not a salesperson, and makes them comfortable being honest with you.</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">2</div><span class="step-title">Understand their current setup</span></div><span class="step-time">3:00 to 12:00</span></div><div class="step-body"><p>Work through these questions naturally. Don't read them like a checklist.</p><ul class="numbered-list"><li><div class="li-num">1</div>How big is your agency right now, and is it just you or do you have a team?</li><li><div class="li-num">2</div>What lines of business are you mostly working in? Is it mostly ACA or do you also do STM, Life, Ancillary, Indemnity, or Medicare?</li><li><div class="li-num">3</div>Walk me through what your tech stack looks like today. What tools are you using?</li><li><div class="li-num">4</div>When a new lead comes in, what happens? Where does it go?</li><li><div class="li-num">5</div>How do you handle quoting right now? Are you using a comparative rater or going carrier by carrier?</li><li><div class="li-num">6</div>What does a typical client conversation look like from your side? How do you track what was said?</li><li><div class="li-num">7</div>How do you manage renewals? Walk me through what OE looks like for your team.</li><li><div class="li-num">8</div>What tools are you using for SMS or client communication?</li></ul></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">3</div><span class="step-title">Find the real pain</span></div><span class="step-time">12:00 to 20:00</span></div><div class="step-body"><p>Once you've heard their setup, go deeper on what's breaking. These are the follow-up questions that uncover real buying motivation.</p><ul class="numbered-list"><li><div class="li-num">1</div>What's the most frustrating part of your current setup right now?</li><li><div class="li-num">2</div>Last OE — how many clients did you lose track of or lose entirely?</li><li><div class="li-num">3</div>If you could change one thing about how your team works today, what would it be?</li><li><div class="li-num">4</div>What would make next OE feel different from last year?</li></ul><div class="quote-block"><p>"It sounds like the thing that's really costing you time right now is [their exact words]. Is that fair to say? Because that's actually one of the specific things AgentNav was built to fix."</p><p class="quote-tip">Use their exact words back to them. Don't paraphrase. It shows you listened.</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">4</div><span class="step-title">Set up the demo</span></div><span class="step-time">20:00 to 25:00</span></div><div class="step-body"><div class="quote-block"><p>"Based on what you told me, I want to show you three specific things in the demo — the client record because it sounds like tracking conversations is a problem, Renewal Autopilot because OE is clearly where the pain is, and the quoting flow because going carrier by carrier is eating your time. Does that sound like the right focus?"</p><p class="quote-tip">Name exactly what you'll show and why. This makes the demo feel tailored, not canned.</p></div></div></div></div></div>
 </div><div class="section" id="section-demo"><div class="page-header"><div class="page-label">On The Call</div><h1>Demo Meeting Guide</h1><p>A good demo is not a feature tour. It's a story. The client is the main character. AgentNav is what makes their story go better.</p></div><div class="nba-bar"><span class="nba-label">⚡ Next Best Action</span><div class="nba-actions"><button class="nba-btn primary" onclick="openCoach()">🧠 Demo Meeting Coach</button><button class="nba-btn" onclick="qaCopy('A good demo is not a feature tour. It\'s a story. Your client is the main character. AgentNav is what makes their story go better. Focus on Renewal Autopilot first.')">📋 Copy Demo Opener</button><button class="nba-btn" id="btn-guide-demo" onclick="openSplitGuide('demo',this)" style="background:#0f0f17;color:#fff;border-color:#0f0f17;">📖 Prebuilt Guide</button></div></div><div class="content"><div class="dark-banner"><h3>Before you start sharing your screen</h3><p>Spend the first three minutes confirming what you learned in discovery. "Last time we talked you mentioned X was the biggest frustration. Is that still the right thing to focus on today?" This shows you listened and keeps the demo focused on what actually matters to them.</p></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">1</div><span class="step-title">Start with the client record, not the home screen</span></div><span class="step-time">0:00 to 8:00</span></div><div class="step-body"><p>Open a client profile and walk through it like you're looking at a real person. The Rx and medical profile, household members, the FPL, the activity log, the task list. Show them this is not a contact database. It's a complete picture of a human being.</p><div class="quote-block"><p>"This is what your client looks like inside AgentNav. Every piece of information you need before a call is right here. Medical profile, income, family members, what was said last time, what needs to happen next. You never have to dig through emails or notes apps before picking up the phone."</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">2</div><span class="step-title">Show the quoting flow as a continuous story</span></div><span class="step-time">8:00 to 18:00</span></div><div class="step-body"><p>Don't just show the quoting tool. Show how the client data flows in automatically so they never re-enter anything. Build an A, B, C proposal. Show the side-by-side comparison. Show supplemental coverage — STM, Life, Ancillary, Indemnity — getting layered in.</p><div class="quote-block"><p>"Everything you entered in the client profile came with us. No re-entry. Now I'm building three options side by side. Bronze, Silver, and Gold. I can add dental on Option B and a life plan on Option C. When I share this proposal, the client sees exactly what you want them to see."</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">3</div><span class="step-title">Show Renewal Autopilot like it's the main event</span></div><span class="step-time">18:00 to 30:00</span></div><div class="step-body"><p>This is where most demos win or lose. Don't rush past it. Take your time and let them see the full board.</p><div class="quote-block"><p>"This is Renewal Autopilot. Every one of your renewal clients sits on this board with a status. Not Started. Outreach Sent. Responded. Meeting Scheduled. Re-Enrolled. The system sends the outreach automatically. It tracks who responds. It pulls updated quotes. You're not chasing 200 people in November. You're just reviewing what landed in your queue."</p></div><p>Let them react. Ask: "How does your team handle this today?" Get them talking about the gap before you move on.</p></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">4</div><span class="step-title">For small agencies — show team visibility</span></div><span class="step-time">30:00 to 38:00</span></div><div class="step-body"><p>If they have more than one agent, show the team view. This is often where the demo closes itself.</p><div class="quote-block"><p>"Right now you have no idea what your agents are doing without asking them. Here, you can see every agent's pipeline, what they've quoted, what's pending enrollment, and which clients haven't been touched. You don't have to manage by asking. You manage by looking."</p></div><p>Note: For a solo agent running a combined demo and closing call, skip team visibility and go straight to the close.</p></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">5</div><span class="step-title">End the demo with a question, not a pitch</span></div><span class="step-time">Last 5 min</span></div><div class="step-body"><div class="quote-block"><p>"That's the core of what AgentNav does. Based on what you told me earlier about [their specific pain], does this feel like it solves that? What did you see today that felt most relevant to your situation?"</p><p class="quote-tip">Get them talking. Their answer tells you exactly how to close.</p></div></div></div></div><div class="myscript-panel" id="msp-demo" style="margin:0 auto 6px;"><div class="myscript-header"><div><div class="myscript-title" style="color:#6366f1;">&#9997;&#65039; My Demo Meeting Script</div><div class="myscript-subtitle">What to show, what to skip, and how to close.</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;"><button onclick="addMSStep('demo','')" class="qa-btn" style="border-color:#6366f1;color:#6366f1;white-space:nowrap;">&#43; Step</button><button onclick="loadDefaultMS('demo')" class="qa-btn" style="white-space:nowrap;">&#8635; Default</button><button onclick="copyMyScript('demo')" class="qa-btn" style="white-space:nowrap;">&#128203; Copy All</button></div></div><div class="myscript-steps" id="mss-demo"><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">1</div><input class="myscript-step-title" type="text" value="Set agenda" placeholder="Step name..." onchange="schedSave('demo')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Tell them what you will show and get their buy-in." onchange="schedSave('demo')" oninput="schedSave('demo')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">2</div><input class="myscript-step-title" type="text" value="Start with their pain" placeholder="Step name..." onchange="schedSave('demo')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Begin with the feature that solves what they told you in discovery." onchange="schedSave('demo')" oninput="schedSave('demo')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">3</div><input class="myscript-step-title" type="text" value="Renewal Autopilot" placeholder="Step name..." onchange="schedSave('demo')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Show the OEP board. This is the aha moment." onchange="schedSave('demo')" oninput="schedSave('demo')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">4</div><input class="myscript-step-title" type="text" value="CRM + quoting" placeholder="Step name..." onchange="schedSave('demo')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Show how they work together. Less tool switching." onchange="schedSave('demo')" oninput="schedSave('demo')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">5</div><input class="myscript-step-title" type="text" value="SMS + communication" placeholder="Step name..." onchange="schedSave('demo')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Texting clients from the platform." onchange="schedSave('demo')" oninput="schedSave('demo')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">6</div><input class="myscript-step-title" type="text" value="Close the demo" placeholder="Step name..." onchange="schedSave('demo')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="What resonated? Transition to next steps." onchange="schedSave('demo')" oninput="schedSave('demo')"></textarea></div></div><div class="myscript-footer"><button onclick="saveMyScript('demo')" class="myscript-save-btn" style="background:#6366f1;">&#9729; Save</button><span id="mss-status-demo" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span><span style="flex:1;"></span><button onclick="goToMyScript('demo')" style="font-size:11px;color:#6366f1;background:none;border:none;cursor:pointer;font-weight:600;padding:0;font-family:inherit;">View in Script Library →</button></div></div><div id="demo-guide" style="display:none;"><div class="content"><div class="dark-banner"><h3>Before you start sharing your screen</h3><p>Spend the first three minutes confirming what you learned in discovery. "Last time we talked you mentioned X was the biggest frustration. Is that still the right thing to focus on today?" This shows you listened and keeps the demo focused on what actually matters to them.</p></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">1</div><span class="step-title">Start with the client record, not the home screen</span></div><span class="step-time">0:00 to 8:00</span></div><div class="step-body"><p>Open a client profile and walk through it like you're looking at a real person. The Rx and medical profile, household members, the FPL, the activity log, the task list. Show them this is not a contact database. It's a complete picture of a human being.</p><div class="quote-block"><p>"This is what your client looks like inside AgentNav. Every piece of information you need before a call is right here. Medical profile, income, family members, what was said last time, what needs to happen next. You never have to dig through emails or notes apps before picking up the phone."</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">2</div><span class="step-title">Show the quoting flow as a continuous story</span></div><span class="step-time">8:00 to 18:00</span></div><div class="step-body"><p>Don't just show the quoting tool. Show how the client data flows in automatically so they never re-enter anything. Build an A, B, C proposal. Show the side-by-side comparison. Show supplemental coverage — STM, Life, Ancillary, Indemnity — getting layered in.</p><div class="quote-block"><p>"Everything you entered in the client profile came with us. No re-entry. Now I'm building three options side by side. Bronze, Silver, and Gold. I can add dental on Option B and a life plan on Option C. When I share this proposal, the client sees exactly what you want them to see."</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">3</div><span class="step-title">Show Renewal Autopilot like it's the main event</span></div><span class="step-time">18:00 to 30:00</span></div><div class="step-body"><p>This is where most demos win or lose. Don't rush past it. Take your time and let them see the full board.</p><div class="quote-block"><p>"This is Renewal Autopilot. Every one of your renewal clients sits on this board with a status. Not Started. Outreach Sent. Responded. Meeting Scheduled. Re-Enrolled. The system sends the outreach automatically. It tracks who responds. It pulls updated quotes. You're not chasing 200 people in November. You're just reviewing what landed in your queue."</p></div><p>Let them react. Ask: "How does your team handle this today?" Get them talking about the gap before you move on.</p></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">4</div><span class="step-title">For small agencies — show team visibility</span></div><span class="step-time">30:00 to 38:00</span></div><div class="step-body"><p>If they have more than one agent, show the team view. This is often where the demo closes itself.</p><div class="quote-block"><p>"Right now you have no idea what your agents are doing without asking them. Here, you can see every agent's pipeline, what they've quoted, what's pending enrollment, and which clients haven't been touched. You don't have to manage by asking. You manage by looking."</p></div><p>Note: For a solo agent running a combined demo and closing call, skip team visibility and go straight to the close.</p></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">5</div><span class="step-title">End the demo with a question, not a pitch</span></div><span class="step-time">Last 5 min</span></div><div class="step-body"><div class="quote-block"><p>"That's the core of what AgentNav does. Based on what you told me earlier about [their specific pain], does this feel like it solves that? What did you see today that felt most relevant to your situation?"</p><p class="quote-tip">Get them talking. Their answer tells you exactly how to close.</p></div></div></div></div></div>
@@ -579,7 +579,7 @@
             🛡️ Objection Call<br><span style="font-size:10px;font-weight:400;color:#71717a;">They're pushing back</span></button></div><div style="height:1px;background:#e4e4e7;margin:14px 0;"></div></div><div class="hs-connect-bar" id="hsConnectBar"><span class="hs-logo">🔗</span><div class="hs-connect-text"><strong>Search HubSpot Contact</strong><span>Pull real deal data for personalized coaching</span></div></div><div class="hs-search-wrap" id="hsSearchWrap"><span class="hs-search-icon">🔍</span><input class="hs-search-input" id="hsSearchInput" type="text" placeholder="Search by name, email, or company…" oninput="hsSearch(this.value)" autocomplete="off"><div class="hs-search-results" id="hsSearchResults" style="display:none;"></div></div><div id="hsContactCard" style="display:none;"></div><div class="hs-divider" id="hsDivider" style="display:none;"></div><p style="font-size:12px;color:#8888a0;margin-bottom:14px;line-height:1.6;" id="setupSubtitle">Or fill in manually to generate a game plan.</p><div class="form-group"><label class="form-label">Segment</label><select class="form-select" id="f-segment"><option value="">Select a segment…</option><option value="solo">Solo Agent (1 agent, going independent)</option><option value="small">Small Agency (2–8 agents)</option><option value="large">Large Agency (9–20 agents)</option><option value="enterprise">Enterprise (21+ agents)</option></select></div><div class="form-group"><label class="form-label">Their Current Setup</label><div class="multi-select" id="f-setup"><div class="ms-option" onclick="toggleMS(this)">CRM already</div><div class="ms-option" onclick="toggleMS(this)">Manual texting</div><div class="ms-option" onclick="toggleMS(this)">Multiple quoting tools</div><div class="ms-option" onclick="toggleMS(this)">Spreadsheets only</div><div class="ms-option" onclick="toggleMS(this)">No real system</div><div class="ms-option" onclick="toggleMS(this)">Uses EZLynx</div><div class="ms-option" onclick="toggleMS(this)">Uses HawkSoft</div><div class="ms-option" onclick="toggleMS(this)">Uses AgencyBloc</div><div class="ms-option" onclick="toggleMS(this)">Uses Agent CRM</div></div></div><div class="form-group"><label class="form-label">Main Concern</label><select class="form-select" id="f-concern"><option value="">Select their main concern…</option><option value="already_crm">Already have a CRM</option><option value="too_expensive">Too expensive</option><option value="switching_risk">Worried about switching</option><option value="too_complicated">Looks too complicated</option><option value="timing">Bad timing / not now</option><option value="not_enough_leads">Not enough leads</option><option value="happy">Happy with current setup</option><option value="just_looking">Just looking</option><option value="no_concern">No major concern yet</option></select></div><div class="form-group"><label class="form-label">Deal Stage</label><select class="form-select" id="f-stage"><option value="">Select deal stage…</option><option value="cold_call">Cold call / first contact</option><option value="discovery">Discovery call</option><option value="demo">Demo call</option><option value="closing">Closing / follow-up</option><option value="objection">Handling an objection</option><option value="ghosted">They went quiet / ghosted</option></select></div><div class="form-group"><label class="form-label">Anything else? (optional)</label><input class="form-input" id="f-extra" type="text" placeholder="e.g. 5-agent team, OE is 3 months away…"></div><button class="generate-btn" onclick="generateGamePlan()" id="generateBtn">
         Generate Game Plan →
       </button></div><div id="coachOutput"></div></div><div class="followup-area" id="followupArea" style="display:none;"><div class="followup-label">Ask a follow-up</div><div class="followup-suggestions" id="followupSuggestions"></div><div class="followup-input-row"><input class="followup-input" id="followupInput" placeholder="Ask anything about this deal…" onkeydown="if(event.key==='Enter')sendFollowup()"><button class="followup-send" onclick="sendFollowup()" id="followupSendBtn">↑</button></div></div>
-</div><div class="quote-modal-overlay" id="quoteModal"><div class="quote-modal"><div class="quote-modal-header"><div><h3>Generate Quote PDF</h3><p>Downloads instantly as a branded PDF</p></div><button class="quote-modal-close" onclick="closeQuoteModal()">&#x2715;</button></div><div class="quote-modal-body"><div class="qf-row"><div class="qf-group"><label class="qf-label">Your Name (Rep)</label><input class="qf-input" id="qf-repname" type="text" placeholder="Alex Smith"></div><div class="qf-group"><label class="qf-label">Your Email</label><input class="qf-input" id="qf-repemail" type="email" placeholder="alex@agentnav.com"></div></div><div class="qf-row"><div class="qf-group"><label class="qf-label">Agency / Prospect Name</label><input class="qf-input" id="qf-prospect" type="text" placeholder="Sunrise Health Agency"></div><div class="qf-group"><label class="qf-label">Prospect Email</label><input class="qf-input" id="qf-prospectemail" type="email" placeholder="owner@agency.com"></div></div><div class="qf-row"><div class="qf-group"><label class="qf-label">Number of Agents</label><input class="qf-input" id="qf-agents" type="number" min="1" max="500" value="1" oninput="updateQuotePreview()"></div><div class="qf-group"><label class="qf-label">Number of Assistants</label><input class="qf-input" id="qf-assistants" type="number" min="0" max="100" value="0" oninput="updateQuotePreview()"></div></div><div class="qf-group"><label class="qf-label">Notes for prospect (optional)</label><input class="qf-input" id="qf-notes" type="text" placeholder="e.g. Includes dedicated onboarding session"></div><div class="quote-preview" id="quotePreview"><div class="quote-preview-line"><span>Plan</span><span id="qp-plan">Independent Agent</span></div><div class="quote-preview-line"><span>Team Size</span><span id="qp-team">1 agent, 0 assistants</span></div><div class="quote-preview-line"><span>Monthly Price</span><span id="qp-monthly">$79/month</span></div><div class="quote-preview-line"><span>Annual (20% discount)</span><span id="qp-annual">$853/year</span></div><div class="quote-preview-line"><span>Per Person/Month</span><span id="qp-per">$79</span></div></div><button class="generate-pdf-btn" onclick="generateQuotePDF()">
+</div><div class="quote-modal-overlay" id="quoteModal"><div class="quote-modal"><div class="quote-modal-header"><div><h3>Generate Quote PDF</h3><p>Downloads instantly as a branded PDF</p></div><button class="quote-modal-close" onclick="closeQuoteModal()">&#x2715;</button></div><div class="quote-modal-body"><div class="qf-row"><div class="qf-group"><label class="qf-label">Your Name (Rep)</label><input class="qf-input" id="qf-repname" type="text" placeholder="Alex Smith"></div><div class="qf-group"><label class="qf-label">Your Email</label><input class="qf-input" id="qf-repemail" type="email" placeholder="alex@agentnav.com"></div></div><div class="qf-row"><div class="qf-group"><label class="qf-label">Agency / Prospect Name</label><input class="qf-input" id="qf-prospect" type="text" placeholder="Sunrise Health Agency"></div><div class="qf-group"><label class="qf-label">Prospect Email</label><input class="qf-input" id="qf-prospectemail" type="email" placeholder="owner@agency.com"></div></div><div class="qf-row"><div class="qf-group"><label class="qf-label">Number of Agents</label><input class="qf-input" id="qf-agents" type="number" min="1" max="500" value="1" oninput="updateQuotePreview()"></div><div class="qf-group"><label class="qf-label">Number of Assistants</label><input class="qf-input" id="qf-assistants" type="number" min="0" max="100" value="0" oninput="updateQuotePreview()"></div></div><div class="qf-group"><label class="qf-label">Notes for prospect (optional)</label><input class="qf-input" id="qf-notes" type="text" placeholder="e.g. Includes dedicated onboarding session"></div><div class="quote-preview" id="quotePreview"><div class="quote-preview-line"><span>Plan</span><span id="qp-plan">Independent Agent</span></div><div class="quote-preview-line"><span>Team Size</span><span id="qp-team">1 agent, 0 assistants</span></div><div class="quote-preview-line"><span>Monthly Price</span><span id="qp-monthly">$79/month</span></div><div class="quote-preview-line"><span>Annual (20% discount)</span><span id="qp-annual">$853/year</span></div><div class="quote-preview-line"><span>Per Person/mo (20% off)</span><span id="qp-per">$63.17</span></div></div><button class="generate-pdf-btn" onclick="generateQuotePDF()">
         Download Quote as PDF
       </button></div></div>
 </div><div class="auth-modal-overlay" id="authModal"><div class="auth-modal"><div class="auth-modal-header"><h2 id="authModalTitle">Sign in to AgentNav Sales Coach</h2><p id="authModalSub">Access your sales playbook and save demo recaps</p></div><div class="auth-modal-body"><div class="auth-field"><label>Work Email</label><input type="email" id="authEmail" placeholder="you@company.com" autocomplete="email" onkeydown="if(event.key==='Enter')authSubmit()"></div><div class="auth-field"><label>Password</label><input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')authSubmit()"></div><div id="authError" class="auth-error" style="display:none;"></div><button class="auth-submit-btn" id="authSubmitBtn" onclick="authSubmit()">Sign In</button><div class="auth-toggle"><span id="authToggleText">Don't have an account?</span><a onclick="authToggleMode()"> Sign up</a></div><button class="auth-skip-btn" onclick="authSkip()">Continue without signing in</button></div></div>
@@ -907,86 +907,287 @@ console.log('[PATCH] All 4 fixes applied.');
 // Include after app.js and after patch1 (fixes_patch.js)
 // ============================================================
 
-// ── FIX: Correct pricing logic ───────────────────────────────
-// Solo: 1 agent = $79, 2 agents = $79×2 = $158, 3 = $237
-// Small Agency: 4–9 agents = $247 flat, +$60/additional agent above 4
-//   (small includes 1 assistant; extras +$15/mo)
-// Large Agency: 10+ agents = $597 flat, +$55/additional above 10
-//   (large includes 2 assistants; extras +$10/mo)
-window.calcUniversal = function() {
-  var agents  = Math.max(0, parseInt((document.getElementById('univ-agents')  || {value:'1'}).value) || 0);
-  var assts   = Math.max(0, parseInt((document.getElementById('univ-assistants') || {value:'0'}).value) || 0);
+// ── FIX: Pricing logic + quote builder/PDF sync ──────────────
+window._lastQuotePricing = null;
 
-  var monthly = 0, planName = '', planDesc = '', breakdown = '';
-  var includedAssts = 0;
+function anFormatMoney(n){
+  if(!n || n <= 0) return '—';
+  return '$' + Math.round(n).toLocaleString();
+}
 
-  if (agents === 0) {
-    planName = 'Enter agents above'; planDesc = ''; breakdown = '';
-  } else if (agents === 1) {
-    // Solo: flat $79, assistants $25/ea (none included)
-    monthly = 79 + assts * 25;
+function anFormatPerPersonMonthly(n){
+  if(!n || n <= 0) return '—';
+  var v = Math.round(n * 100) / 100;
+  return '$' + (Math.abs(v % 1) < 0.001 ? v.toLocaleString() : v.toFixed(2));
+}
+
+function calcUniversalPricing(agents, assistants){
+  agents = Math.max(0, parseInt(agents, 10) || 0);
+  assistants = Math.max(0, parseInt(assistants, 10) || 0);
+  var monthly = 0, planName = '', planDesc = '', breakdown = '', custom = false;
+
+  if(agents === 0){
+    planName = 'Enter agents above';
+  } else if(agents === 1){
+    monthly = 79 + assistants * 25;
     planName = 'Independent Agent';
-    planDesc = '1 agent';
-    breakdown = '$79 flat' + (assts ? ' + ' + assts + ' asst' + (assts>1?'s':'') + ' @ $25' : '');
-    includedAssts = 0;
-  } else if (agents <= 3) {
-    // Still solo pricing: $79 per agent
-    monthly = agents * 79 + assts * 25;
+    planDesc = '1 agent' + (assistants ? ', ' + assistants + ' assistant' + (assistants > 1 ? 's' : '') : '');
+    breakdown = '$79 flat' + (assistants ? ' + ' + assistants + ' asst @ $25' : '');
+  } else if(agents <= 3){
+    monthly = agents * 79 + assistants * 25;
     planName = 'Independent Agent';
-    planDesc = agents + ' agents @ $79/ea';
-    breakdown = agents + ' × $79' + (assts ? ' + ' + assts + ' asst' + (assts>1?'s':'') + ' @ $25' : '');
-    includedAssts = 0;
-  } else if (agents <= 9) {
-    // Small Agency: $247 base (covers 4 agents, 1 asst included)
-    // Extra agents 5-9: +$60/ea; extra assts above 1 included: +$15/ea
+    planDesc = agents + ' agents' + (assistants ? ', ' + assistants + ' assistant' + (assistants > 1 ? 's' : '') : '');
+    breakdown = agents + ' × $79' + (assistants ? ' + ' + assistants + ' asst @ $25' : '');
+  } else if(agents <= 9){
     var extraAgents = Math.max(0, agents - 4);
-    includedAssts = 1;
-    var extraAssts = Math.max(0, assts - includedAssts);
+    var extraAssts = Math.max(0, assistants - 1);
     monthly = 247 + extraAgents * 60 + extraAssts * 15;
     planName = 'Small Agency';
     planDesc = agents + ' agents (1 asst included)';
     breakdown = '$247 base' +
-      (extraAgents ? ' + ' + extraAgents + ' extra agent' + (extraAgents>1?'s':'') + ' @ $60' : '') +
-      (extraAssts  ? ' + ' + extraAssts + ' extra asst' + (extraAssts>1?'s':'') + ' @ $15'  : '');
-  } else {
-    // Large Agency: $597 base (covers 10 agents, 2 assts included)
-    // Extra agents: +$55/ea; extra assts above 2: +$10/ea
-    var extraAgentsL = Math.max(0, agents - 10);
-    includedAssts = 2;
-    var extraAsstsL = Math.max(0, assts - includedAssts);
-    monthly = 597 + extraAgentsL * 55 + extraAsstsL * 10;
+      (extraAgents ? ' + ' + extraAgents + ' extra agent' + (extraAgents > 1 ? 's' : '') + ' @ $60' : '') +
+      (extraAssts ? ' + ' + extraAssts + ' extra asst' + (extraAssts > 1 ? 's' : '') + ' @ $15' : '');
+  } else if(agents === 10){
+    var extraAssts10 = Math.max(0, assistants - 2);
+    monthly = 597 + extraAssts10 * 10;
     planName = 'Large Agency';
-    planDesc = agents + ' agents (2 assts included)';
-    breakdown = '$597 base' +
-      (extraAgentsL ? ' + ' + extraAgentsL + ' extra agent' + (extraAgentsL>1?'s':'') + ' @ $55' : '') +
-      (extraAsstsL  ? ' + ' + extraAsstsL + ' extra asst' + (extraAsstsL>1?'s':'') + ' @ $10'  : '');
+    planDesc = '10 agents (2 assts included)';
+    breakdown = '$597 base' + (extraAssts10 ? ' + ' + extraAssts10 + ' extra asst @ $10' : '');
+  } else if(agents <= 50){
+    monthly = agents * 30 + assistants * 10;
+    planName = 'Growth Agency';
+    planDesc = agents + ' agents @ $30/agent';
+    breakdown = agents + ' × $30/agent' + (assistants ? ' + ' + assistants + ' asst @ $10' : '');
+  } else if(agents <= 100){
+    monthly = agents * 27 + assistants * 10;
+    planName = 'Regional Agency';
+    planDesc = agents + ' agents @ $27/agent';
+    breakdown = agents + ' × $27/agent' + (assistants ? ' + ' + assistants + ' asst @ $10' : '');
+  } else if(agents <= 200){
+    monthly = agents * 24 + assistants * 10;
+    planName = 'Scale Agency';
+    planDesc = agents + ' agents @ $24/agent';
+    breakdown = agents + ' × $24/agent' + (assistants ? ' + ' + assistants + ' asst @ $10' : '');
+  } else if(agents <= 500){
+    monthly = agents * 22 + assistants * 10;
+    planName = 'Enterprise Agency';
+    planDesc = agents + ' agents @ $22/agent';
+    breakdown = agents + ' × $22/agent' + (assistants ? ' + ' + assistants + ' asst @ $10' : '');
+  } else if(agents <= 10000){
+    monthly = agents * 20 + assistants * 10;
+    planName = 'National Agency';
+    planDesc = agents + ' agents @ $20/agent';
+    breakdown = agents + ' × $20/agent' + (assistants ? ' + ' + assistants + ' asst @ $10' : '');
+  } else {
+    custom = true;
+    planName = 'Enterprise — Custom Pricing';
+    planDesc = agents.toLocaleString() + '+ agents — contact us';
+    breakdown = 'Custom quote required';
   }
 
-  var annual    = Math.round(monthly * 12 * 0.8);
-  var savings   = Math.round(monthly * 12 * 0.2);
-  var totalPpl  = agents + assts;
-  var perPerson = totalPpl > 0 ? Math.round(monthly / totalPpl) : 0;
+  var annual = monthly > 0 ? Math.round(monthly * 12 * 0.8) : 0;
+  var savings = monthly > 0 ? Math.round(monthly * 12 * 0.2) : 0;
+  var totalPpl = agents + assistants;
+  var perPersonList = totalPpl > 0 && monthly > 0 ? monthly / totalPpl : 0;
+  var perPersonAnnual = totalPpl > 0 && annual > 0 ? annual / 12 / totalPpl : 0;
 
-  var set = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
-  set('univ-plan-name',   planName);
-  set('univ-plan-desc',   planDesc);
-  set('univ-monthly',     monthly  > 0 ? '$' + monthly.toLocaleString()  : '—');
-  set('univ-annual',      annual   > 0 ? '$' + annual.toLocaleString() + '/yr' : '—');
-  set('univ-per-person',  perPerson > 0 ? '$' + perPerson : '—');
-  set('univ-savings',     savings  > 0 ? 'Save $' + savings.toLocaleString() : '—');
-  set('univ-breakdown',   breakdown);
+  return {
+    agents: agents, assistants: assistants, monthly: monthly, annual: annual, savings: savings,
+    planName: planName, planDesc: planDesc, breakdown: breakdown, custom: custom,
+    totalPpl: totalPpl, perPersonList: perPersonList, perPersonAnnual: perPersonAnnual
+  };
+}
 
-  // Also update pricing tier table to reflect real rules
-  var tiersEl = document.getElementById('univ-tiers-display');
-  if (tiersEl) tiersEl.innerHTML =
-    '<span style="font-size:11.5px;color:#52525b;">1 agent</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$79/mo flat</span>' +
-    '<span style="font-size:11.5px;color:#52525b;">2–3 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$79/agent/mo</span>' +
-    '<span style="font-size:11.5px;color:#52525b;">4–9 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$247 base + $60/extra agent</span>' +
-    '<span style="font-size:11.5px;color:#52525b;">10+ agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$597 base + $55/extra agent</span>';
+function anRenderUniversalPricing(p){
+  var set = function(id, val){ var el = document.getElementById(id); if(el) el.textContent = val; };
+  set('univ-plan-name', p.planName);
+  set('univ-plan-desc', p.planDesc + (p.planDesc ? ' · all features' : ''));
+  set('univ-monthly', p.monthly > 0 ? anFormatMoney(p.monthly) : '—');
+  set('univ-annual', p.annual > 0 ? anFormatMoney(p.annual) + '/yr' : (p.custom ? 'Custom' : '—'));
+  set('univ-per-person', p.custom ? '—' : anFormatPerPersonMonthly(p.perPersonAnnual));
+  set('univ-savings', p.savings > 0 ? 'Save ' + anFormatMoney(p.savings) : '—');
+  set('univ-breakdown', p.breakdown || 'Standard plan');
+}
+
+window.calcUniversal = function(){
+  var agents = Math.max(0, parseInt((document.getElementById('univ-agents') || {value:'1'}).value, 10) || 0);
+  var assts = Math.max(0, parseInt((document.getElementById('univ-assistants') || {value:'0'}).value, 10) || 0);
+  var p = calcUniversalPricing(agents, assts);
+  window._lastQuotePricing = p;
+  anRenderUniversalPricing(p);
 };
 
-// Trigger on load
-document.addEventListener('DOMContentLoaded', function() { calcUniversal(); });
+window.applyCalcToQuote = function(){
+  calcUniversal();
+  var el = document.getElementById('qb-fname') || document.getElementById('qb-agency');
+  if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+  if(typeof showToast === 'function') showToast('Price locked in — fill prospect info and download PDF');
+};
+
+function anGetQuoteDiscount(){
+  var type = (document.getElementById('qb-discount-type') || {}).value || '';
+  if(!type) return null;
+  var pct = parseFloat((document.getElementById('qb-disc-pct') || {}).value) || 0;
+  var months = parseInt((document.getElementById('qb-disc-months') || {}).value, 10) || 0;
+  var flat = parseFloat((document.getElementById('qb-disc-flat') || {}).value) || 0;
+  var custom = (document.getElementById('qb-disc-custom') || {}).value || '';
+  var label = '';
+  if(type === 'percent_months' && pct > 0 && months > 0){
+    label = pct + '% off first ' + months + ' month' + (months > 1 ? 's' : '');
+  } else if(type === 'free_months' && months > 0){
+    label = months + ' free month' + (months > 1 ? 's' : '');
+  } else if(type === 'flat_off' && flat > 0){
+    label = anFormatMoney(flat) + '/mo off';
+  } else if(type === 'custom' && custom.trim()){
+    label = custom.trim();
+  }
+  return label ? { type: type, label: label, pct: pct, months: months, flat: flat, custom: custom } : null;
+}
+
+window.updateDiscountLabel = function(){
+  var type = (document.getElementById('qb-discount-type') || {}).value || '';
+  var wrap = document.getElementById('qb-discount-inputs');
+  var preview = document.getElementById('qb-discount-preview');
+  if(!wrap) return;
+  if(!type){
+    wrap.style.display = 'none';
+    wrap.innerHTML = '';
+    if(preview) preview.textContent = '';
+    return;
+  }
+  wrap.style.display = 'block';
+  if(type === 'percent_months'){
+    wrap.innerHTML = '<input id="qb-disc-pct" type="number" min="1" max="100" placeholder="% off" style="width:100%;border:1.5px solid #fde68a;border-radius:6px;padding:6px 8px;font-size:12px;" oninput="updateDiscountLabel()">'
+      + '<input id="qb-disc-months" type="number" min="1" max="24" placeholder="Months" style="width:100%;border:1.5px solid #fde68a;border-radius:6px;padding:6px 8px;font-size:12px;" oninput="updateDiscountLabel()">';
+  } else if(type === 'free_months'){
+    wrap.innerHTML = '<input id="qb-disc-months" type="number" min="1" max="24" placeholder="# free months" style="width:100%;border:1.5px solid #fde68a;border-radius:6px;padding:6px 8px;font-size:12px;" oninput="updateDiscountLabel()">';
+  } else if(type === 'flat_off'){
+    wrap.innerHTML = '<input id="qb-disc-flat" type="number" min="1" placeholder="$ off / month" style="width:100%;border:1.5px solid #fde68a;border-radius:6px;padding:6px 8px;font-size:12px;" oninput="updateDiscountLabel()">';
+  } else if(type === 'custom'){
+    wrap.innerHTML = '<input id="qb-disc-custom" type="text" placeholder="Custom discount text" style="width:100%;border:1.5px solid #fde68a;border-radius:6px;padding:6px 8px;font-size:12px;" oninput="updateDiscountLabel()">';
+  }
+  var disc = anGetQuoteDiscount();
+  if(preview) preview.textContent = disc ? ('🏷️ ' + disc.label) : '';
+};
+
+function anBuildQuotePdfLines(p, prospect, discount){
+  var lines = [
+    ['Plan', p.planName],
+    ['Team Size', p.agents + ' agent' + (p.agents !== 1 ? 's' : '') + (p.assistants ? ', ' + p.assistants + ' assistant' + (p.assistants !== 1 ? 's' : '') : '')],
+    ['Monthly Price', anFormatMoney(p.monthly) + '/month'],
+    ['Annual (20% off)', anFormatMoney(p.annual) + '/year'],
+    ['Per Person/mo (20% off)', anFormatPerPersonMonthly(p.perPersonAnnual)],
+    ['Annual Savings', anFormatMoney(p.savings)]
+  ];
+  if(discount) lines.push(['Special Offer', discount.label]);
+  if(prospect.notes) lines.push(['Notes', prospect.notes]);
+  return lines;
+}
+
+window.generateQuotePDF2 = function(){
+  var p = window._lastQuotePricing || calcUniversalPricing(
+    (document.getElementById('univ-agents') || {}).value || 1,
+    (document.getElementById('univ-assistants') || {}).value || 0
+  );
+  if(p.custom){
+    if(typeof showToast === 'function') showToast('Enterprise pricing is custom — contact sales for a PDF quote');
+    return;
+  }
+  if(!window.jspdf || !window.jspdf.jsPDF){
+    if(typeof showToast === 'function') showToast('PDF library not loaded — refresh and try again');
+    return;
+  }
+  var prospect = {
+    fname: (document.getElementById('qb-fname') || {}).value || '',
+    lname: (document.getElementById('qb-lname') || {}).value || '',
+    agency: (document.getElementById('qb-agency') || {}).value || '',
+    email: (document.getElementById('qb-email') || {}).value || '',
+    phone: (document.getElementById('qb-phone') || {}).value || '',
+    repname: (document.getElementById('qb-repname') || {}).value || '',
+    notes: (document.getElementById('qb-notes') || {}).value || ''
+  };
+  var discount = anGetQuoteDiscount();
+  var doc = new window.jspdf.jsPDF();
+  var y = 18;
+  doc.setFillColor(99, 102, 241);
+  doc.rect(0, 0, 210, 34, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(20);
+  doc.text('AgentNav Quote', 14, 18);
+  doc.setFontSize(10);
+  doc.text('Prepared ' + new Date().toLocaleDateString(), 14, 27);
+  y = 44;
+  doc.setTextColor(30, 30, 30);
+  doc.setFontSize(12);
+  doc.text('Prepared for', 14, y); y += 7;
+  doc.setFontSize(11);
+  var prospectName = ((prospect.fname + ' ' + prospect.lname).trim() || prospect.agency || 'Prospect');
+  doc.text(prospectName, 14, y); y += 6;
+  if(prospect.agency) { doc.text(prospect.agency, 14, y); y += 6; }
+  if(prospect.email) { doc.text(prospect.email, 14, y); y += 6; }
+  if(prospect.phone) { doc.text(prospect.phone, 14, y); y += 8; }
+  if(prospect.repname){
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Your rep: ' + prospect.repname, 14, y); y += 10;
+  }
+  doc.setTextColor(30, 30, 30);
+  doc.setFontSize(13);
+  doc.text('Pricing Summary', 14, y); y += 8;
+  doc.setFontSize(10);
+  anBuildQuotePdfLines(p, prospect, discount).forEach(function(row){
+    doc.setFont(undefined, 'bold');
+    doc.text(row[0] + ':', 14, y);
+    doc.setFont(undefined, 'normal');
+    doc.text(String(row[1]), 72, y);
+    y += 7;
+  });
+  y += 4;
+  doc.setFontSize(9);
+  doc.setTextColor(90, 90, 90);
+  doc.text(p.breakdown, 14, y); y += 8;
+  doc.text('All plans include ACA/STM/Life quoting, CRM, SMS, Renewal Autopilot, and calendar sync.', 14, y, {maxWidth: 180});
+  y += 12;
+  doc.text('Questions? Reply to your rep or visit agentnav.com', 14, y);
+  var safeName = (prospect.agency || prospectName || 'Quote').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'Quote';
+  doc.save('AgentNav-Quote-' + safeName + '.pdf');
+  if(typeof showToast === 'function') showToast('PDF quote downloaded');
+};
+
+window.updateQuotePreview = function(){
+  var agents = Math.max(1, parseInt((document.getElementById('qf-agents') || {}).value, 10) || 1);
+  var assts = Math.max(0, parseInt((document.getElementById('qf-assistants') || {}).value, 10) || 0);
+  var p = calcUniversalPricing(agents, assts);
+  var set = function(id, val){ var el = document.getElementById(id); if(el) el.textContent = val; };
+  set('qp-plan', p.planName);
+  set('qp-team', p.agents + ' agent' + (p.agents !== 1 ? 's' : '') + ', ' + p.assistants + ' assistant' + (p.assistants !== 1 ? 's' : ''));
+  set('qp-monthly', p.monthly > 0 ? anFormatMoney(p.monthly) + '/month' : 'Custom');
+  set('qp-annual', p.annual > 0 ? anFormatMoney(p.annual) + '/year' : 'Custom');
+  set('qp-per', p.custom ? '—' : anFormatPerPersonMonthly(p.perPersonAnnual));
+};
+
+window.generateQuotePDF = function(){
+  var agents = Math.max(1, parseInt((document.getElementById('qf-agents') || {}).value, 10) || 1);
+  var assts = Math.max(0, parseInt((document.getElementById('qf-assistants') || {}).value, 10) || 0);
+  window._lastQuotePricing = calcUniversalPricing(agents, assts);
+  var sync = [['qb-agency','qf-prospect'],['qb-email','qf-prospectemail'],['qb-repname','qf-repname'],['qb-notes','qf-notes']];
+  sync.forEach(function(pair){
+    var dst = document.getElementById(pair[0]);
+    var src = document.getElementById(pair[1]);
+    if(dst && src) dst.value = src.value;
+  });
+  generateQuotePDF2();
+};
+
+window.closeQuoteModal = function(){
+  var m = document.getElementById('quoteModal');
+  if(m) m.classList.remove('open');
+};
+
+document.addEventListener('DOMContentLoaded', function(){
+  calcUniversal();
+  updateDiscountLabel();
+});
 
 // ── COMMISSION PLAN — hidden to everyone except asmithee ─────
 var COMMISSION_EMAIL = 'asmithee@insurewithcompass.com';
@@ -1290,86 +1491,7 @@ console.log('[PATCH] All 4 fixes applied.');
 // Include after app.js and after patch1 (fixes_patch.js)
 // ============================================================
 
-// ── FIX: Correct pricing logic ───────────────────────────────
-// Solo: 1 agent = $79, 2 agents = $79×2 = $158, 3 = $237
-// Small Agency: 4–9 agents = $247 flat, +$60/additional agent above 4
-//   (small includes 1 assistant; extras +$15/mo)
-// Large Agency: 10+ agents = $597 flat, +$55/additional above 10
-//   (large includes 2 assistants; extras +$10/mo)
-window.calcUniversal = function() {
-  var agents  = Math.max(0, parseInt((document.getElementById('univ-agents')  || {value:'1'}).value) || 0);
-  var assts   = Math.max(0, parseInt((document.getElementById('univ-assistants') || {value:'0'}).value) || 0);
-
-  var monthly = 0, planName = '', planDesc = '', breakdown = '';
-  var includedAssts = 0;
-
-  if (agents === 0) {
-    planName = 'Enter agents above'; planDesc = ''; breakdown = '';
-  } else if (agents === 1) {
-    // Solo: flat $79, assistants $25/ea (none included)
-    monthly = 79 + assts * 25;
-    planName = 'Independent Agent';
-    planDesc = '1 agent';
-    breakdown = '$79 flat' + (assts ? ' + ' + assts + ' asst' + (assts>1?'s':'') + ' @ $25' : '');
-    includedAssts = 0;
-  } else if (agents <= 3) {
-    // Still solo pricing: $79 per agent
-    monthly = agents * 79 + assts * 25;
-    planName = 'Independent Agent';
-    planDesc = agents + ' agents @ $79/ea';
-    breakdown = agents + ' × $79' + (assts ? ' + ' + assts + ' asst' + (assts>1?'s':'') + ' @ $25' : '');
-    includedAssts = 0;
-  } else if (agents <= 9) {
-    // Small Agency: $247 base (covers 4 agents, 1 asst included)
-    // Extra agents 5-9: +$60/ea; extra assts above 1 included: +$15/ea
-    var extraAgents = Math.max(0, agents - 4);
-    includedAssts = 1;
-    var extraAssts = Math.max(0, assts - includedAssts);
-    monthly = 247 + extraAgents * 60 + extraAssts * 15;
-    planName = 'Small Agency';
-    planDesc = agents + ' agents (1 asst included)';
-    breakdown = '$247 base' +
-      (extraAgents ? ' + ' + extraAgents + ' extra agent' + (extraAgents>1?'s':'') + ' @ $60' : '') +
-      (extraAssts  ? ' + ' + extraAssts + ' extra asst' + (extraAssts>1?'s':'') + ' @ $15'  : '');
-  } else {
-    // Large Agency: $597 base (covers 10 agents, 2 assts included)
-    // Extra agents: +$55/ea; extra assts above 2: +$10/ea
-    var extraAgentsL = Math.max(0, agents - 10);
-    includedAssts = 2;
-    var extraAsstsL = Math.max(0, assts - includedAssts);
-    monthly = 597 + extraAgentsL * 55 + extraAsstsL * 10;
-    planName = 'Large Agency';
-    planDesc = agents + ' agents (2 assts included)';
-    breakdown = '$597 base' +
-      (extraAgentsL ? ' + ' + extraAgentsL + ' extra agent' + (extraAgentsL>1?'s':'') + ' @ $55' : '') +
-      (extraAsstsL  ? ' + ' + extraAsstsL + ' extra asst' + (extraAsstsL>1?'s':'') + ' @ $10'  : '');
-  }
-
-  var annual    = Math.round(monthly * 12 * 0.8);
-  var savings   = Math.round(monthly * 12 * 0.2);
-  var totalPpl  = agents + assts;
-  var perPerson = totalPpl > 0 ? Math.round(monthly / totalPpl) : 0;
-
-  var set = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
-  set('univ-plan-name',   planName);
-  set('univ-plan-desc',   planDesc);
-  set('univ-monthly',     monthly  > 0 ? '$' + monthly.toLocaleString()  : '—');
-  set('univ-annual',      annual   > 0 ? '$' + annual.toLocaleString() + '/yr' : '—');
-  set('univ-per-person',  perPerson > 0 ? '$' + perPerson : '—');
-  set('univ-savings',     savings  > 0 ? 'Save $' + savings.toLocaleString() : '—');
-  set('univ-breakdown',   breakdown);
-
-  // Also update pricing tier table to reflect real rules
-  var tiersEl = document.getElementById('univ-tiers-display');
-  if (tiersEl) tiersEl.innerHTML =
-    '<span style="font-size:11.5px;color:#52525b;">1 agent</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$79/mo flat</span>' +
-    '<span style="font-size:11.5px;color:#52525b;">2–3 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$79/agent/mo</span>' +
-    '<span style="font-size:11.5px;color:#52525b;">4–9 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$247 base + $60/extra agent</span>' +
-    '<span style="font-size:11.5px;color:#52525b;">10+ agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$597 base + $55/extra agent</span>';
-};
-
-// Trigger on load
-document.addEventListener('DOMContentLoaded', function() { calcUniversal(); });
+// Pricing + quote PDF defined in earlier patch block — do not override calcUniversal here.
 
 // ── COMMISSION PLAN — hidden to everyone except asmithee ─────
 var COMMISSION_EMAIL = 'asmithee@insurewithcompass.com';
@@ -9101,7 +9223,7 @@ window.anOpenLead = function(id){
     +'<div id="alp-details" style="padding:22px 26px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
     +anField('First Name','alf-fn',lead.firstName||'','text')
     +anField('Last Name','alf-ln',lead.lastName||'','text')
-    +anField('Company','alf-co',lead.company||'','text')
+    +anField('Company','alf-co',lead.company||'','text').replace('type="text"','type="text" placeholder="Agency name — add anytime, even if blank on import"')
     +anField('Title / Role','alf-title',lead.title||'','text')
     +anField('Email','alf-em',lead.email||'','email')
     +anField('Phone','alf-ph',lead.phone||'','tel')
@@ -9156,6 +9278,46 @@ window.anLeadTab = function(tab){
   });
 };
 
+function anLinkLeadToCompanyRecord(lead, companyName){
+  if(!lead || typeof coNormName !== 'function') return;
+  var cn = (companyName || '').trim();
+  if(!cn){
+    delete lead.companyId;
+    return;
+  }
+  if(typeof coIsValidCompanyName === 'function' && !coIsValidCompanyName(cn)){
+    delete lead.companyId;
+    return;
+  }
+  if(typeof coSave !== 'function') return;
+  var companies = (typeof _coData !== 'undefined' && _coData && _coData.length) ? _coData.slice() : [];
+  try { if(!companies.length) companies = JSON.parse(localStorage.getItem('agentnav-companies')||'[]'); } catch(e){}
+  var key = coNormName(cn);
+  var found = companies.find(function(c){ return coNormName(c.name) === key; });
+  if(!found){
+    found = { id:'co-'+Date.now()+'-'+Math.random().toString(36).slice(2,6), name:cn, industry:'Insurance Agency', notes:'', website:'', lifecycleStage:'', created:new Date().toISOString() };
+    companies.push(found);
+    coSave(companies);
+  }
+  lead.companyId = found.id;
+}
+
+window.anUpdateLeadCompany = function(leadId, companyName, opts){
+  opts = opts || {};
+  var lead = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.find(function(l){ return l.id === leadId; }) : null;
+  if(!lead) return false;
+  var cn = (companyName || '').trim();
+  lead.company = cn;
+  lead.updated = new Date().toISOString();
+  anLinkLeadToCompanyRecord(lead, cn);
+  if(typeof AN.save === 'function') AN.save();
+  if(typeof renderLeadsTable === 'function') renderLeadsTable();
+  if(document.getElementById('an-cs-lead-panel') && typeof anRenderCallSessionLeadPanel === 'function') anRenderCallSessionLeadPanel(leadId);
+  if(document.getElementById('an-side-panel') && window._anPanelLeadId === leadId && typeof anOpenLeadPanel === 'function') anOpenLeadPanel(leadId);
+  if(!opts.silent && typeof showToast === 'function') showToast(cn ? 'Company saved on lead' : 'Company removed');
+  return true;
+};
+
 window.anSaveLead = function(id){
   var lead = AN.leads.find(function(l){ return l.id===id; });
   if(!lead) return;
@@ -9165,6 +9327,7 @@ window.anSaveLead = function(id){
   lead.size=g('alf-sz'); lead.status=g('alf-sta'); lead.source=g('alf-src');
   lead.nextFollowUp=g('alf-fu');
   var notesEl=document.getElementById('alf-notes'); if(notesEl) lead.notes=notesEl.value;
+  anLinkLeadToCompanyRecord(lead, lead.company);
   lead.updated=new Date().toISOString();
   AN.save(); renderLeadsTable();
   document.getElementById('an-lead-modal').remove();
@@ -9542,6 +9705,7 @@ var _anImportMapping = null;
 var _anImportResolved = {};
 var _anImportShowAllFields = false;
 var AN_IMPORT_IDENTITY_KEYS = ['firstName', 'lastName', 'email', 'company'];
+var AN_IMPORT_AUTO_SKIP_KEYS = ['title', 'nextFollowUp'];
 
 function anCsvHasFieldCandidate(fieldKey, headers){
   if(!headers || !headers.length) return false;
@@ -9573,7 +9737,21 @@ window.anSkipAllPendingImportFields = function(){
 function anApplyImportAutoResolutions(mapping, headers){
   _anImportResolved = {};
   AN_IMPORT_FIELDS.forEach(function(field){
-    if(mapping[field.key] >= 0) _anImportResolved[field.key] = true;
+    if(mapping[field.key] >= 0) {
+      _anImportResolved[field.key] = true;
+    } else if(AN_IMPORT_AUTO_SKIP_KEYS.indexOf(field.key) >= 0 && !anCsvHasFieldCandidate(field.key, headers)) {
+      _anImportResolved[field.key] = true;
+    }
+  });
+}
+
+function anApplyMissingCsvAutoSkips(){
+  if(!_anImportRaw || !_anImportMapping) return;
+  var headers = _anImportRaw.headers;
+  AN_IMPORT_AUTO_SKIP_KEYS.forEach(function(key){
+    if(_anImportMapping[key] < 0 && !_anImportResolved[key] && !anCsvHasFieldCandidate(key, headers)){
+      _anImportResolved[key] = true;
+    }
   });
 }
 
@@ -9690,6 +9868,15 @@ function anSanitizeImportCompanyMapping(mapping, headers){
   return mapping;
 }
 
+function anImportCompanyHeaderIsId(norm){
+  return /\bid\b/.test(norm) || norm.indexOf('company id') >= 0;
+}
+
+function anImportCompanyHeaderIsName(norm){
+  return (norm.indexOf('associated company') >= 0 && norm.indexOf(' id') < 0)
+    || norm === 'company name' || norm === 'company' || norm === 'organization name';
+}
+
 function anGetImportWarnings(mapping){
   var warnings = [];
   if(!_anImportRaw || !mapping) return warnings;
@@ -9697,7 +9884,9 @@ function anGetImportWarnings(mapping){
   if(mapping.company >= 0){
     var colName = headers[mapping.company] || '';
     var norm = anNormHeader(colName);
-    if(/\bid\b/.test(norm)){
+    var isIdHeader = anImportCompanyHeaderIsId(norm);
+    var isNameHeader = anImportCompanyHeaderIsName(norm);
+    if(isIdHeader){
       warnings.push({
         level: 'error',
         text: 'Company maps to <strong>'+anEsc(colName)+'</strong> — that\'s a numeric ID column, not an agency name.',
@@ -9712,11 +9901,21 @@ function anGetImportWarnings(mapping){
       if(typeof coIsJunkCompanyName === 'function' && coIsJunkCompanyName(v)) junk++;
     });
     if(checked && junk > checked * 0.3){
-      warnings.push({
-        level: 'error',
-        text: Math.round(junk / checked * 100)+'% of preview rows look like numeric IDs — switch Company to <strong>Associated Company</strong>.',
-        fixKey: 'company'
-      });
+      if(isIdHeader){
+        // ID-column warning already shown above; auto-fix can switch columns.
+      } else if(isNameHeader){
+        warnings.push({
+          level: 'info',
+          text: Math.round(junk / checked * 100)+'% of preview rows have numeric company values in <strong>'+anEsc(colName)+'</strong> — leads still import; those values won\'t create Companies records.',
+          fixKey: null
+        });
+      } else {
+        warnings.push({
+          level: 'error',
+          text: Math.round(junk / checked * 100)+'% of preview rows look like numeric IDs — switch Company to <strong>Associated Company</strong>.',
+          fixKey: 'company'
+        });
+      }
     }
   } else {
     warnings.push({
@@ -9728,22 +9927,51 @@ function anGetImportWarnings(mapping){
   return warnings;
 }
 
+function anImportCompanyMappingIsWrong(mapping){
+  if(!_anImportRaw || !mapping || mapping.company < 0) return false;
+  return anImportCompanyHeaderIsId(anNormHeader(_anImportRaw.headers[mapping.company] || ''));
+}
+
+function anImportBlocksCompanyCreation(mapping){
+  return anImportCompanyMappingIsWrong(mapping);
+}
+
 window.anAutoFixCompanyColumnMapping = function(){
-  if(!_anImportRaw || !_anImportMapping) return false;
+  if(!_anImportRaw || !_anImportMapping) return { changed: false, message: 'No import loaded.' };
   var headers = _anImportRaw.headers;
   var before = _anImportMapping.company;
+  var beforeName = before >= 0 ? (headers[before] || '') : '';
   anSanitizeImportCompanyMapping(_anImportMapping, headers);
   if(_anImportMapping.company !== before){
     anMarkImportFieldResolved('company');
-    return true;
+    return {
+      changed: true,
+      message: 'Company column → ' + (headers[_anImportMapping.company] || 'Associated Company')
+    };
   }
   headers.forEach(function(h, idx){
-    if(anNormHeader(h).indexOf('associated company') >= 0 && anNormHeader(h).indexOf(' id') < 0){
+    var norm = anNormHeader(h);
+    if(norm.indexOf('associated company') >= 0 && norm.indexOf(' id') < 0){
       _anImportMapping.company = idx;
       anMarkImportFieldResolved('company');
     }
   });
-  return _anImportMapping.company !== before;
+  if(_anImportMapping.company !== before){
+    return { changed: true, message: 'Switched company column to Associated Company.' };
+  }
+  if(before >= 0 && anImportCompanyHeaderIsName(anNormHeader(beforeName))){
+    return {
+      changed: false,
+      message: 'Already on Associated Company. Some rows still have numeric IDs in that column — that\'s normal for HubSpot; leads import fine.'
+    };
+  }
+  return { changed: false, message: 'No better company column found in this CSV.' };
+};
+
+window.anClickAutoFixCompanyColumn = function(){
+  var result = anAutoFixCompanyColumnMapping();
+  anRenderImportMapping();
+  if(typeof showToast === 'function' && result && result.message) showToast(result.message);
 };
 
 function anGetImportDestinationStats(contacts){
@@ -9822,6 +10050,7 @@ window.anUpdateImportStats = function(){
 
   var mapping = anGetImportMapping();
   var summary = anGetImportMappingSummary(mapping);
+  var headers = _anImportRaw ? _anImportRaw.headers : [];
   var mappedCount = summary.mapped.length;
   var skippedCount = summary.skipped.length;
   var pendingCount = summary.pending.length;
@@ -9835,7 +10064,7 @@ window.anUpdateImportStats = function(){
         var border = w.level === 'error' ? 'rgba(239,68,68,0.35)' : 'rgba(99,102,241,0.25)';
         var color = w.level === 'error' ? '#b91c1c' : '#4338ca';
         var fixBtn = w.fixKey === 'company'
-          ? ' <button type="button" onclick="anAutoFixCompanyColumnMapping();anRenderImportMapping();" style="margin-left:6px;padding:3px 8px;border-radius:5px;border:1px solid #fca5a5;background:#fff;color:#b91c1c;font-size:10px;font-weight:700;cursor:pointer;">Auto-fix column</button>'
+          ? ' <button type="button" onclick="anClickAutoFixCompanyColumn()" style="margin-left:6px;padding:3px 8px;border-radius:5px;border:1px solid #fca5a5;background:#fff;color:#b91c1c;font-size:10px;font-weight:700;cursor:pointer;">Auto-fix column</button>'
           : '';
         return '<div style="background:'+bg+';border:1px solid '+border+';border-radius:8px;padding:8px 10px;font-size:11px;color:'+color+';margin-bottom:6px;line-height:1.5;">'
           +(w.level === 'error' ? '⚠️ ' : 'ℹ️ ')+w.text+fixBtn+'</div>';
@@ -9850,14 +10079,17 @@ window.anUpdateImportStats = function(){
   }).join('');
 
   var skippedChips = summary.skipped.map(function(f){
+    var reason = (AN_IMPORT_AUTO_SKIP_KEYS.indexOf(f.key) >= 0 && !anCsvHasFieldCandidate(f.key, headers))
+      ? ' · not in CSV'
+      : ' · skipped';
     return '<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(161,161,170,0.12);border:1px solid rgba(161,161,170,0.28);color:#71717a;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;margin:2px 4px 2px 0;">'
-      +anEsc(f.label)+' <span style="opacity:0.8;">· skipped</span></span>';
+      +anEsc(f.label)+' <span style="opacity:0.8;">'+reason+'</span></span>';
   }).join('');
 
   stats.innerHTML = '<div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:var(--text-secondary);line-height:1.55;">'
     +'<div style="font-weight:800;color:#6366f1;margin-bottom:4px;">Where your data goes</div>'
-    +'<div>👤 <strong>Lead Pipeline</strong> — every contact row becomes a lead (always)</div>'
-    +'<div>🏢 <strong>Companies</strong> — optional; only real agency names, never numeric IDs</div>'
+    +'<div>👤 <strong>Lead Pipeline</strong> — every row becomes a lead, even with no company or a numeric ID</div>'
+    +'<div>🏢 <strong>Companies</strong> — optional; only rows with a real agency name (add company on the lead later anytime)</div>'
     +'</div>'
     +warningHtml
     +'<div style="margin-bottom:8px;"><strong style="color:'+(canImport ? '#10b981' : '#f59e0b')+';">'
@@ -9911,6 +10143,7 @@ function anUpdateImportStats(){
 
 function anRenderImportMapping(){
   if(!_anImportRaw) return;
+  anApplyMissingCsvAutoSkips();
   var wrap = document.getElementById('an-import-mapping');
   var preview = document.getElementById('an-import-preview');
   if(!wrap) return;
@@ -10049,12 +10282,7 @@ function anBuildContactsFromMapping(mapping, limit){
       }
       else if(field.key === 'source'){ c.source = v; mappedSource = true; }
       else if(field.key === 'company'){
-        if(typeof coIsValidCompanyName === 'function' && !coIsValidCompanyName(v)){
-          if(!c.notes) c.notes = 'Bad company ID skipped: '+v;
-          else c.notes += '\nBad company ID skipped: '+v;
-        } else {
-          c.company = v;
-        }
+        if(typeof coIsValidCompanyName !== 'function' || coIsValidCompanyName(v)) c.company = v;
       }
       else c[field.key] = v;
     });
@@ -10729,7 +10957,14 @@ window.anShowImportDestinationModal = function(classified, onProceed){
   var dupeCount = classified ? classified.duplicates.length : 0;
   var mapping = anGetImportMapping();
   var warnings = anGetImportWarnings(mapping);
-  var hasErrors = warnings.some(function(w){ return w.level === 'error'; });
+  var wrongCompanyCol = anImportCompanyMappingIsWrong(mapping);
+  var companyWarnings = warnings.filter(function(w){ return w.fixKey === 'company' || (w.text && w.text.indexOf('company') >= 0); });
+  var advisoryHtml = companyWarnings.length
+    ? '<div style="background:'+(wrongCompanyCol ? '#fffbeb' : 'rgba(99,102,241,0.06)')+';border:1px solid '+(wrongCompanyCol ? '#fcd34d' : 'rgba(99,102,241,0.25)')+';border-radius:8px;padding:10px 12px;font-size:12px;color:'+(wrongCompanyCol ? '#92400e' : '#4338ca')+';margin-bottom:12px;line-height:1.5;">'
+      +(wrongCompanyCol ? '⚠️ Company is on an ID column — leads will import, but turn off Companies below or go Back → Auto-fix column.' : 'ℹ️ '+companyWarnings.map(function(w){ return w.text.replace(/<[^>]+>/g, ''); }).join(' '))
+      +'</div>'
+    : '';
+  var defaultCreateCompanies = stats.companyCount > 0 && !anImportBlocksCompanyCreation(mapping);
 
   var m = document.createElement('div');
   m.id = 'an-import-dest-modal';
@@ -10737,21 +10972,21 @@ window.anShowImportDestinationModal = function(classified, onProceed){
   m.innerHTML = '<div style="background:var(--card-bg);border-radius:14px;padding:24px;width:520px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,0.35);">'
     +'<div style="font-size:17px;font-weight:800;color:var(--text-primary);margin-bottom:6px;">Confirm import destination</div>'
     +'<div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;">Choose what to create before we save anything.</div>'
-    +(hasErrors ? '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;font-size:12px;color:#b91c1c;margin-bottom:12px;">Fix company column warnings above before importing, or click Auto-fix in the mapping screen.</div>' : '')
+    +advisoryHtml
     +'<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">'
     +'<label style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:2px solid #6366f1;border-radius:10px;background:rgba(99,102,241,0.05);cursor:default;">'
     +'<input type="checkbox" checked disabled style="margin-top:3px;accent-color:#6366f1;">'
     +'<div><div style="font-size:13px;font-weight:800;color:var(--text-primary);">👤 Create '+newCount.toLocaleString()+' lead'+(newCount!==1?'s':'')+' in Lead Pipeline</div>'
-    +'<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Always — this is your contact list for calling & follow-up.'+(dupeCount ? ' ('+dupeCount+' duplicates handled next)' : '')+'</div></div></label>'
+    +'<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Always — every contact becomes a lead. Missing or numeric company? Still a lead; add the agency name later.'+(dupeCount ? ' ('+dupeCount+' duplicates handled next)' : '')+'</div></div></label>'
     +'<label style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:1.5px solid var(--divider);border-radius:10px;cursor:pointer;" id="an-import-co-label">'
-    +'<input type="checkbox" id="an-import-create-companies" '+(stats.companyCount > 0 ? 'checked' : '')+' style="margin-top:3px;accent-color:#10b981;">'
+    +'<input type="checkbox" id="an-import-create-companies" '+(defaultCreateCompanies ? 'checked' : '')+' style="margin-top:3px;accent-color:#10b981;">'
     +'<div><div style="font-size:13px;font-weight:800;color:var(--text-primary);">🏢 Create '+stats.companyCount.toLocaleString()+' company page'+(stats.companyCount!==1?'s':'')+' in Companies</div>'
     +'<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Only unique agency names (e.g. "Network Insurance"). Numeric IDs are never created.'+(stats.junkCompanyLeads ? ' · '+stats.junkCompanyLeads+' rows with bad IDs skipped' : '')+'</div></div></label>'
     +'</div>'
     +'<div style="font-size:11px;color:var(--text-muted);margin-bottom:16px;padding:10px;background:var(--body-bg);border-radius:8px;">💡 Tip: Import leads first. You can always sync companies later from Lead Pipeline → Fix from CSV.</div>'
     +'<div style="display:flex;gap:8px;justify-content:flex-end;">'
     +'<button onclick="document.getElementById(\'an-import-dest-modal\').remove()" style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--divider);background:transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--text-secondary);">Back</button>'
-    +'<button id="an-import-dest-confirm" '+(hasErrors ? 'disabled style="padding:9px 18px;border-radius:8px;border:none;background:#a1a1aa;color:#fff;font-size:13px;font-weight:700;cursor:not-allowed;font-family:var(--sans);opacity:0.7;"' : 'style="padding:9px 18px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);"')+'>Import now</button>'
+    +'<button id="an-import-dest-confirm" style="padding:9px 18px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);">Import now</button>'
     +'</div></div>';
   document.body.appendChild(m);
   m.onclick = function(e){ if(e.target === m) m.remove(); };
@@ -10759,10 +10994,9 @@ window.anShowImportDestinationModal = function(classified, onProceed){
 
   var confirmBtn = document.getElementById('an-import-dest-confirm');
   if(confirmBtn) confirmBtn.onclick = function(){
-    if(hasErrors) return;
     var createCos = document.getElementById('an-import-create-companies');
     window._anImportOpts = {
-      createCompanies: createCos ? createCos.checked : false,
+      createCompanies: (createCos ? createCos.checked : false) && !anImportBlocksCompanyCreation(mapping),
       skipDupes: true,
       updateDupes: false,
       importAnyway: false
@@ -11211,7 +11445,7 @@ window.anOpenLeadPanel = function(leadId) {
       +'<div>'
       +'<div style="font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.4px;">'+anEsc((lead.firstName||'')+' '+(lead.lastName||''))+'</div>'
       +(lead.title?'<div style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:2px;">'+anEsc(lead.title)+'</div>':'')
-      +(lead.company?'<div style="font-size:13px;color:rgba(255,255,255,0.5);margin-top:2px;">'+anEsc(lead.company)+'</div>':'')
+      +(lead.company?'<div style="font-size:13px;color:rgba(255,255,255,0.5);margin-top:2px;">'+anEsc(lead.company)+'</div>':'<div style="font-size:12px;color:#fcd34d;margin-top:2px;">No company — add below</div>')
       +'</div>'
       +'<div style="display:flex;gap:7px;align-items:center;">'
       +'<span style="background:'+st.color+'28;color:'+st.color+';border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;">'+st.label+'</span>'
@@ -11238,6 +11472,13 @@ window.anOpenLeadPanel = function(leadId) {
       // Contact details card
       +'<div style="background:var(--body-bg);border-radius:10px;padding:14px;margin-bottom:14px;">'
       +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:10px;">Contact Details</div>'
+      +'<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--divider);">'
+      +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">🏢 Company / Agency</div>'
+      +(lead.company ? '<div style="font-size:12.5px;font-weight:600;color:var(--text-primary);margin-bottom:6px;">'+anEsc(lead.company)+'</div>' : '<div style="font-size:11px;color:#b45309;margin-bottom:6px;">Not set</div>')
+      +'<div style="display:flex;gap:6px;">'
+      +'<input id="sp-company-input" type="text" value="'+anEsc(lead.company||'')+'" placeholder="Add agency name" style="flex:1;border:1.5px solid var(--divider);border-radius:8px;padding:7px 10px;font-size:12px;background:var(--card-bg);color:var(--text-primary);outline:none;font-family:var(--sans);">'
+      +'<button type="button" onclick="anUpdateLeadCompany(\''+lead.id+'\', document.getElementById(\'sp-company-input\').value)" style="background:#eef2ff;color:#6366f1;border:1px solid #c7d2fe;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">Save</button>'
+      +'</div></div>'
       +[
         ['💼 Title / Role', lead.title, null],
         ['📧 Email', lead.email, lead.email ? 'mailto:'+lead.email : null],
@@ -11348,7 +11589,7 @@ window.anRenderCallSessionLeadPanel = function(leadId) {
     +'<div style="font-size:10px;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">'+modeLabel+' Profile</div>'
     +'<div style="font-size:17px;font-weight:800;color:#fff;letter-spacing:-0.4px;">'+anEsc((lead.firstName || '') + ' ' + (lead.lastName || ''))+'</div>'
     +(lead.title ? '<div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:2px;">'+anEsc(lead.title)+'</div>' : '')
-    +(lead.company ? '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px;">'+anEsc(lead.company)+'</div>' : '')
+    +(lead.company ? '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px;">'+anEsc(lead.company)+'</div>' : '<div style="font-size:11px;color:#fcd34d;margin-top:2px;">No agency on file</div>')
     +'</div>'
     +'<div style="display:flex;gap:6px;align-items:center;">'
     +'<span style="background:'+st.color+'28;color:'+st.color+';border-radius:20px;padding:4px 11px;font-size:10px;font-weight:700;">'+st.label+'</span>'
@@ -11369,6 +11610,13 @@ window.anRenderCallSessionLeadPanel = function(leadId) {
 
     +'<div style="background:var(--body-bg);border-radius:10px;padding:12px;margin-bottom:12px;">'
     +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Contact</div>'
+    +'<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--divider);">'
+    +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">🏢 Company / Agency</div>'
+    +(lead.company ? '<div style="font-size:12.5px;font-weight:600;color:var(--text-primary);margin-bottom:6px;">'+anEsc(lead.company)+'</div>' : '<div style="font-size:11px;color:#b45309;margin-bottom:6px;">Not set — add if they tell you on the call</div>')
+    +'<div style="display:flex;gap:6px;">'
+    +'<input id="cs-company-input" type="text" value="'+anEsc(lead.company||'')+'" placeholder="Agency name" style="flex:1;border:1.5px solid var(--divider);border-radius:8px;padding:7px 10px;font-size:12px;background:var(--card-bg);color:var(--text-primary);outline:none;font-family:var(--sans);">'
+    +'<button type="button" onclick="anUpdateLeadCompany(\''+lead.id+'\', document.getElementById(\'cs-company-input\').value)" style="background:#eef2ff;color:#6366f1;border:1px solid #c7d2fe;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">Save</button>'
+    +'</div></div>'
     +[
       ['💼 Title / Role', lead.title, null],
       ['📧 Email', lead.email, lead.email ? 'mailto:'+lead.email : null],
@@ -13434,10 +13682,21 @@ window.openMobileCallMode = function(leadId) {
     +'<div>'
     +sessionBadge
     +'<div style="font-size:16px;font-weight:800;color:#fff;">'+mcmEsc(name)+'</div>'
-    +(lead.company ? '<div style="font-size:12px;color:rgba(255,255,255,0.4);">'+mcmEsc(lead.company)+'</div>' : '')
+    +(lead.company ? '<div style="font-size:12px;color:rgba(255,255,255,0.4);">'+mcmEsc(lead.company)+'</div>' : '<div style="font-size:11px;color:#fcd34d;margin-top:2px;">No agency on file</div>')
     +'</div></div>'
     +'<button onclick="mcmClose()" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>'
     +'</div>'
+
+    // Agency / Company — editable on the call
+    +'<div style="padding:12px 18px;border-bottom:1px solid rgba(255,255,255,0.06);">'
+    +'<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Agency / Company</div>'
+    +(lead.company ? '' : '<div style="font-size:11px;color:rgba(252,211,77,0.9);margin-bottom:8px;line-height:1.45;">Imported without a company? Add the agency name if they tell you on the call.</div>')
+    +'<div style="display:flex;gap:8px;align-items:center;">'
+    +'<input id="mcm-company-input" type="text" value="'+mcmEsc(lead.company||'')+'" placeholder="e.g. Network Insurance" '
+    +'style="flex:1;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px;font-size:13px;color:#fff;font-family:inherit;outline:none;box-sizing:border-box;" '
+    +'onfocus="this.style.borderColor=\'rgba(99,102,241,0.6)\'" onblur="this.style.borderColor=\'rgba(255,255,255,0.12)\'">'
+    +'<button type="button" onclick="mcmSaveCompany(\''+leadId+'\')" style="flex-shrink:0;background:rgba(99,102,241,0.25);border:1px solid rgba(99,102,241,0.5);color:#c7d2fe;border-radius:10px;padding:10px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Save</button>'
+    +'</div></div>'
 
     // Phone + Call button
     +'<div style="padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.06);">'
@@ -13837,7 +14096,13 @@ window.mcmEditPhone = function(leadId) {
   lead.phone = anNormalizePhone(phone);
   lead.updated = new Date().toISOString();
   if (typeof AN !== 'undefined' && AN.save) AN.save();
-  // Reopen with updated info
+  openMobileCallMode(leadId);
+};
+
+window.mcmSaveCompany = function(leadId) {
+  var input = document.getElementById('mcm-company-input');
+  var cn = input ? input.value : '';
+  if(!anUpdateLeadCompany(leadId, cn)) return;
   openMobileCallMode(leadId);
 };
 
