@@ -9273,26 +9273,34 @@ var AN_CSV_ALIASES = {
   firstname: 'firstName', 'first name': 'firstName', fname: 'firstName', givenname: 'firstName',
   first: 'firstName', 'person first name': 'firstName', personfirstname: 'firstName',
   lastname: 'lastName', 'last name': 'lastName', lname: 'lastName', surname: 'lastName',
-  last: 'lastName', 'person last name': 'lastName', personlastname: 'lastName',
-  name: 'firstName', 'full name': 'firstName', contactname: 'firstName', 'contact name': 'firstName',
+  'person last name': 'lastName', personlastname: 'lastName',
+  'full name': 'firstName', contactname: 'firstName', 'contact name': 'firstName',
   company: 'company', 'company name': 'company', organization: 'company', account: 'company', accountname: 'company',
-  'organization name': 'company', organizationname: 'company', accountname: 'company', employer: 'company',
+  'organization name': 'company', organizationname: 'company', employer: 'company',
+  'associated company': 'company', 'primary company': 'company',
   title: 'title', jobtitle: 'title', 'job title': 'title', role: 'title', 'person title': 'title',
-  'title role': 'title', job: 'title', position: 'title', 'contact title': 'title', designation: 'title',
+  'title role': 'title', position: 'title', 'contact title': 'title', designation: 'title',
   email: 'email', 'email address': 'email', emailaddress: 'email', workemail: 'email',
   'work email': 'email', 'primary email': 'email', primaryemail: 'email', 'contact email': 'email',
+  'primary email address': 'email',
   phone: 'phone', 'phone number': 'phone', mobilephone: 'phone', mobile: 'phone', cell: 'phone', workphone: 'phone',
   'work phone': 'phone', 'mobile phone': 'phone', 'direct phone': 'phone', 'contact phone': 'phone',
+  'mobile phone number': 'phone',
   state: 'state', 'state/region': 'state', region: 'state', province: 'state', 'state region': 'state',
-  status: 'status', 'lifecycle stage': 'status', lifecyclestage: 'status', leadstatus: 'status', stage: 'status',
+  status: 'status', 'lifecycle stage': 'status', lifecyclestage: 'status', leadstatus: 'status',
+  'lead status': 'status', stage: 'status', 'marketing contact status': 'status',
   source: 'source', leadsource: 'source', 'lead source': 'source', 'original source': 'source',
   'record source': 'source', 'contact source': 'source', 'latest source': 'source',
-  notes: 'notes', description: 'notes', comments: 'notes', 'contact notes': 'notes',
+  'contact owner': 'source', owner: 'source', 'connection date': 'source',
+  notes: 'notes', note: 'notes', description: 'notes', comments: 'notes', 'contact notes': 'notes',
   'associated note': 'notes', 'note body': 'notes', memo: 'notes', 'last activity': 'notes',
+  'last activity date': 'notes', 'create date': 'notes', 'record id': 'notes',
   nextfollowup: 'nextFollowUp', 'next follow-up': 'nextFollowUp', 'follow up date': 'nextFollowUp',
   'next follow up': 'nextFollowUp', 'follow-up date': 'nextFollowUp', 'followup date': 'nextFollowUp',
   'next activity date': 'nextFollowUp', 'task due date': 'nextFollowUp', 'reminder date': 'nextFollowUp'
 };
+
+var AN_IMPORT_MATCH_MIN_SCORE = 52;
 
 function anParseImportDate(val){
   if(!val) return '';
@@ -9311,24 +9319,90 @@ function anParseImportDate(val){
 var _anImportRaw = null;
 var _anPending = [];
 var _anImportMapping = null;
+var _anImportResolved = {};
 var _anImportShowAllFields = false;
 var AN_IMPORT_IDENTITY_KEYS = ['firstName', 'lastName', 'email', 'company'];
+
+function anCsvHasFieldCandidate(fieldKey, headers){
+  if(!headers || !headers.length) return false;
+  return headers.some(function(h){
+    var best = anScoreHeaderField(h);
+    return best && best.field === fieldKey && best.score >= AN_IMPORT_MATCH_MIN_SCORE;
+  });
+}
+
+function anMarkImportFieldResolved(fieldKey){
+  if(!fieldKey) return;
+  _anImportResolved[fieldKey] = true;
+}
+
+function anFinalizePendingImportSkips(){
+  if(!_anImportMapping) return;
+  AN_IMPORT_FIELDS.forEach(function(field){
+    if(_anImportMapping[field.key] < 0 && !_anImportResolved[field.key]) {
+      anMarkImportFieldResolved(field.key);
+    }
+  });
+}
+
+window.anSkipAllPendingImportFields = function(){
+  anFinalizePendingImportSkips();
+  anRenderImportMapping();
+};
+
+function anApplyImportAutoResolutions(mapping, headers){
+  _anImportResolved = {};
+  AN_IMPORT_FIELDS.forEach(function(field){
+    if(mapping[field.key] >= 0) _anImportResolved[field.key] = true;
+  });
+}
 
 function anNormHeader(h){
   return (h || '').replace(/^\uFEFF/, '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-function anGuessField(header){
-  var norm = anNormHeader(header);
-  if(AN_CSV_ALIASES[norm]) return AN_CSV_ALIASES[norm];
+function anImportAliasScore(norm, aliasKey){
+  if(norm === aliasKey) return 100;
   var compact = norm.replace(/ /g, '');
-  if(AN_CSV_ALIASES[compact]) return AN_CSV_ALIASES[compact];
-  // Partial match for headers like "Person Email Address"
+  var aliasCompact = aliasKey.replace(/ /g, '');
+  if(compact === aliasCompact) return 98;
+  if(aliasKey.indexOf(' ') >= 0 || aliasKey.length >= 8){
+    var escaped = aliasKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if(new RegExp('(^|\\s)' + escaped + '(\\s|$)').test(norm)) return 72 + Math.min(aliasKey.length, 20);
+    if(norm.indexOf(aliasKey) >= 0) return 58 + Math.min(aliasKey.length, 18);
+    if(aliasKey.indexOf(norm) >= 0 && norm.length >= 6) return 55 + norm.length;
+  }
+  return 0;
+}
+
+function anImportHeaderPenalty(norm, fieldKey){
+  var penalty = 0;
+  if(/\bid\b/.test(norm) && (fieldKey === 'company' || fieldKey === 'firstName' || fieldKey === 'lastName')) penalty += 35;
+  if(fieldKey === 'company' && norm.indexOf('associated company') >= 0 && norm.indexOf(' id') < 0) penalty -= 18;
+  if(fieldKey === 'notes' && (norm.indexOf('activity') >= 0 || norm.indexOf('create date') >= 0)) penalty -= 8;
+  if(fieldKey === 'lastName' && norm.indexOf('activity') >= 0) penalty += 50;
+  if(fieldKey === 'source' && norm.indexOf('owner') >= 0) penalty -= 10;
+  return penalty;
+}
+
+function anScoreHeaderField(header){
+  var norm = anNormHeader(header);
+  if(!norm) return null;
+  var best = null;
   var keys = Object.keys(AN_CSV_ALIASES);
   for(var i = 0; i < keys.length; i++){
-    if(norm.indexOf(keys[i]) >= 0 || keys[i].indexOf(norm) >= 0) return AN_CSV_ALIASES[keys[i]];
+    var aliasKey = keys[i];
+    var fieldKey = AN_CSV_ALIASES[aliasKey];
+    var score = anImportAliasScore(norm, aliasKey) - anImportHeaderPenalty(norm, fieldKey);
+    if(score <= 0) continue;
+    if(!best || score > best.score) best = { field: fieldKey, score: score, header: header };
   }
-  return '';
+  return best;
+}
+
+function anGuessField(header){
+  var best = anScoreHeaderField(header);
+  return best && best.score >= AN_IMPORT_MATCH_MIN_SCORE ? best.field : '';
 }
 
 function csvLine(line){
@@ -9359,16 +9433,24 @@ function anParseCSVText(text){
 
 function anBuildImportMapping(headers){
   var mapping = {};
-  var used = {};
   AN_IMPORT_FIELDS.forEach(function(field){
     mapping[field.key] = -1;
   });
+  var pairs = [];
   headers.forEach(function(h, idx){
-    var guess = anGuessField(h);
-    if(guess && mapping[guess] === -1 && !used[idx]){
-      mapping[guess] = idx;
-      used[idx] = true;
+    var best = anScoreHeaderField(h);
+    if(best && best.score >= AN_IMPORT_MATCH_MIN_SCORE){
+      pairs.push({ idx: idx, field: best.field, score: best.score, header: h });
     }
+  });
+  pairs.sort(function(a, b){ return b.score - a.score; });
+  var usedCols = {};
+  var usedFields = {};
+  pairs.forEach(function(p){
+    if(usedCols[p.idx] || usedFields[p.field]) return;
+    mapping[p.field] = p.idx;
+    usedCols[p.idx] = true;
+    usedFields[p.field] = true;
   });
   return mapping;
 }
@@ -9376,6 +9458,7 @@ function anBuildImportMapping(headers){
 function anInitImportMapping(){
   if(!_anImportRaw) return {};
   _anImportMapping = anBuildImportMapping(_anImportRaw.headers);
+  anApplyImportAutoResolutions(_anImportMapping, _anImportRaw.headers);
   return _anImportMapping;
 }
 
@@ -9395,7 +9478,8 @@ function anImportMappingHasIdentity(mapping){
 function anGetImportMappingSummary(mapping){
   var headers = _anImportRaw ? _anImportRaw.headers : [];
   var mapped = [];
-  var unmapped = [];
+  var skipped = [];
+  var pending = [];
   var usedCols = {};
 
   AN_IMPORT_FIELDS.forEach(function(field){
@@ -9403,8 +9487,10 @@ function anGetImportMappingSummary(mapping){
     if(idx >= 0){
       mapped.push({ field: field, colIdx: idx, colName: headers[idx] || ('Column ' + (idx + 1)) });
       usedCols[idx] = true;
+    } else if(_anImportResolved[field.key]) {
+      skipped.push(field);
     } else {
-      unmapped.push(field);
+      pending.push(field);
     }
   });
 
@@ -9412,7 +9498,7 @@ function anGetImportMappingSummary(mapping){
     return { idx: i, name: h };
   }).filter(function(col){ return !usedCols[col.idx]; });
 
-  return { mapped: mapped, unmapped: unmapped, orphanCols: orphanCols };
+  return { mapped: mapped, skipped: skipped, pending: pending, orphanCols: orphanCols };
 }
 
 function anToggleImportFieldView(showAll){
@@ -9429,7 +9515,8 @@ window.anUpdateImportStats = function(){
   var mapping = anGetImportMapping();
   var summary = anGetImportMappingSummary(mapping);
   var mappedCount = summary.mapped.length;
-  var unmappedCount = summary.unmapped.length;
+  var skippedCount = summary.skipped.length;
+  var pendingCount = summary.pending.length;
   var rowCount = _anImportRaw.rows.length;
   var sampleContacts = anBuildContactsFromMapping(mapping, 3);
   var canImport = anImportMappingHasIdentity(mapping);
@@ -9441,19 +9528,29 @@ window.anUpdateImportStats = function(){
       +'<span>'+anEsc(m.colName)+'</span></span>';
   }).join('');
 
+  var skippedChips = summary.skipped.map(function(f){
+    return '<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(161,161,170,0.12);border:1px solid rgba(161,161,170,0.28);color:#71717a;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;margin:2px 4px 2px 0;">'
+      +anEsc(f.label)+' <span style="opacity:0.8;">· skipped</span></span>';
+  }).join('');
+
   stats.innerHTML = '<div style="margin-bottom:8px;"><strong style="color:'+(canImport ? '#10b981' : '#f59e0b')+';">'
-    +(canImport ? '✅ ' : '⚠️ ')+rowCount+' rows · '+mappedCount+' mapped · '+unmappedCount+' not mapped'
-    +(canImport ? ' · ready to import' : ' · map at least one of: name, email, or company')+'</strong></div>'
+    +(canImport ? '✅ ' : '⚠️ ')+rowCount+' rows · '+mappedCount+' mapped'
+    +(skippedCount ? ' · '+skippedCount+' skipped' : '')
+    +(pendingCount ? ' · '+pendingCount+' need decision' : '')
+    +(canImport && !pendingCount ? ' · ready to import' : (canImport ? '' : ' · map at least one of: name, email, or company'))+'</strong></div>'
     +(mappedCount
       ? '<div style="margin-bottom:8px;"><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">Mapped</div><div style="line-height:1.6;">'+mappedChips+'</div></div>'
       : '<div style="font-size:12px;color:#f59e0b;margin-bottom:8px;">No fields mapped yet — match CSV columns below.</div>')
-    +(unmappedCount
-      ? '<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">Still need a decision: <strong style="color:var(--text-secondary);">'
-        +summary.unmapped.map(function(f){ return f.label; }).join(', ')
-        +'</strong> — map each to a CSV column or leave as Skip.</div>'
+    +(skippedCount
+      ? '<div style="margin-bottom:8px;"><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">Skipped</div><div style="line-height:1.6;">'+skippedChips+'</div></div>'
       : '')
+    +(pendingCount
+      ? '<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">Still need a decision: <strong style="color:var(--text-secondary);">'
+        +summary.pending.map(function(f){ return f.label; }).join(', ')
+        +'</strong> — map to a CSV column or choose Skip.</div>'
+      : (canImport ? '<div style="font-size:11px;color:#10b981;margin-bottom:6px;">All fields reviewed — you can import now.</div>' : ''))
     +(summary.orphanCols.length
-      ? '<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">CSV columns not used: <span style="color:#a1a1aa;">'
+      ? '<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">Extra CSV columns (auto-saved into Notes): <span style="color:#a1a1aa;">'
         +summary.orphanCols.slice(0, 8).map(function(c){ return anEsc(c.name); }).join(', ')
         +(summary.orphanCols.length > 8 ? ' +'+(summary.orphanCols.length - 8)+' more' : '')
         +'</span></div>'
@@ -9464,6 +9561,10 @@ window.anUpdateImportStats = function(){
       if(c.title) label += ' · '+c.title;
       if(c.company) label += ' ('+c.company+')';
       if(c.source) label += ' ['+c.source+']';
+      if(c.notes){
+        var notePreview = c.notes.length > 72 ? c.notes.slice(0, 72) + '…' : c.notes;
+        label += ' — Notes: ' + notePreview.replace(/\n/g, '; ');
+      }
       return label;
     }).join(', ') : 'Map at least one identity field to see preview')
     +'</div>';
@@ -9490,7 +9591,7 @@ function anRenderImportMapping(){
   var headers = _anImportRaw.headers;
   var mapping = anGetImportMapping();
   var summary = anGetImportMappingSummary(mapping);
-  var fieldsToShow = _anImportShowAllFields ? AN_IMPORT_FIELDS : summary.unmapped;
+  var fieldsToShow = _anImportShowAllFields ? AN_IMPORT_FIELDS : summary.pending;
 
   function fieldOpts(selectedIdx, fieldKey){
     return '<option value="-1"'+(selectedIdx===-1?' selected':'')+'>— Skip —</option>'
@@ -9506,8 +9607,8 @@ function anRenderImportMapping(){
 
   var viewToggle = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">'
     +'<div style="font-size:12px;font-weight:700;color:var(--text-primary);">'
-    +(_anImportShowAllFields ? 'All fields' : 'Unmapped fields only')
-    +' <span style="font-weight:600;color:var(--text-muted);">('+fieldsToShow.length+')</span></div>'
+    +(_anImportShowAllFields ? 'All fields' : (fieldsToShow.length ? 'Needs your decision' : 'All set'))
+    +' <span style="font-weight:600;color:var(--text-muted);">('+(_anImportShowAllFields ? AN_IMPORT_FIELDS.length : fieldsToShow.length)+')</span></div>'
     +'<div style="display:flex;gap:6px;">'
     +'<button type="button" onclick="anToggleImportFieldView(false)" style="padding:5px 11px;border-radius:20px;border:1.5px solid '
     +(!_anImportShowAllFields ? '#6366f1' : 'var(--divider)')+';background:'
@@ -9519,19 +9620,27 @@ function anRenderImportMapping(){
     +(_anImportShowAllFields ? '#6366f1' : 'var(--text-muted)')+';font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">Show all</button>'
     +'</div></div>';
 
+  var skipAllBtn = (!_anImportShowAllFields && summary.pending.length)
+    ? '<div style="margin-bottom:10px;display:flex;justify-content:flex-end;">'
+      +'<button type="button" onclick="anSkipAllPendingImportFields()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--divider);background:var(--body-bg);color:var(--text-secondary);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">Skip all remaining ('+summary.pending.length+')</button>'
+      +'</div>'
+    : '';
+
   var fieldGrid = fieldsToShow.length
-    ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;max-height:240px;overflow-y:auto;padding-right:4px;">'
+    ? skipAllBtn + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;max-height:240px;overflow-y:auto;padding-right:4px;">'
       + fieldsToShow.map(function(field){
         var val = mapping[field.key];
         var isIdentity = AN_IMPORT_IDENTITY_KEYS.indexOf(field.key) >= 0;
         var isMapped = val >= 0;
+        var isSkipped = val < 0 && !!_anImportResolved[field.key];
         return '<div style="padding:8px 10px;border-radius:8px;border:1.5px solid '
-          +(isMapped ? 'rgba(16,185,129,0.35)' : (isIdentity ? 'rgba(245,158,11,0.35)' : 'var(--divider)'))+';background:'
-          +(isMapped ? 'rgba(16,185,129,0.04)' : (isIdentity ? 'rgba(245,158,11,0.04)' : 'transparent'))+';">'
+          +(isMapped ? 'rgba(16,185,129,0.35)' : (isSkipped ? 'rgba(161,161,170,0.35)' : (isIdentity ? 'rgba(245,158,11,0.35)' : 'var(--divider)')))+';background:'
+          +(isMapped ? 'rgba(16,185,129,0.04)' : (isSkipped ? 'rgba(161,161,170,0.06)' : (isIdentity ? 'rgba(245,158,11,0.04)' : 'transparent')))+';">'
           +'<label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">'
           +field.label
-          +(isIdentity && !isMapped ? ' <span style="color:#f59e0b;font-size:10px;">(recommended)</span>' : '')
+          +(isIdentity && !isMapped && !isSkipped ? ' <span style="color:#f59e0b;font-size:10px;">(recommended)</span>' : '')
           +(isMapped ? ' <span style="color:#10b981;font-size:10px;">✓ mapped</span>' : '')
+          +(isSkipped ? ' <span style="color:#71717a;font-size:10px;">· skipped</span>' : '')
           +'</label>'
           +'<select data-import-field="'+field.key+'" onchange="anImportFieldChanged(\''+field.key+'\', this.value)" style="width:100%;border:1.5px solid var(--divider);border-radius:7px;padding:7px 9px;font-size:12px;background:var(--card-bg);color:var(--text-primary);font-family:var(--sans);cursor:pointer;">'
           + fieldOpts(val, field.key)
@@ -9539,8 +9648,8 @@ function anRenderImportMapping(){
       }).join('')
       +'</div>'
     : '<div style="text-align:center;padding:20px 12px;background:rgba(16,185,129,0.06);border:1.5px solid rgba(16,185,129,0.25);border-radius:10px;color:#059669;font-size:13px;font-weight:600;">'
-      +'✅ All fields are mapped or skipped. Review the summary above, then import.'
-      +' <button type="button" onclick="anToggleImportFieldView(true)" style="display:block;margin:10px auto 0;padding:6px 14px;border-radius:6px;border:1px solid rgba(16,185,129,0.4);background:#fff;color:#059669;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">Show all fields anyway</button>'
+      +'✅ All fields reviewed — mapped or intentionally skipped.'
+      +' <button type="button" onclick="anToggleImportFieldView(true)" style="display:block;margin:10px auto 0;padding:6px 14px;border-radius:6px;border:1px solid rgba(16,185,129,0.4);background:#fff;color:#059669;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">Review all fields</button>'
       +'</div>';
 
   wrap.innerHTML = viewToggle + fieldGrid;
@@ -9556,10 +9665,14 @@ window.anImportFieldChanged = function(fieldKey, value){
 
   if(newIdx >= 0){
     AN_IMPORT_FIELDS.forEach(function(f){
-      if(f.key !== fieldKey && _anImportMapping[f.key] === newIdx) _anImportMapping[f.key] = -1;
+      if(f.key !== fieldKey && _anImportMapping[f.key] === newIdx){
+        _anImportMapping[f.key] = -1;
+        delete _anImportResolved[f.key];
+      }
     });
   }
   _anImportMapping[fieldKey] = newIdx;
+  anMarkImportFieldResolved(fieldKey);
   anRenderImportMapping();
 };
 
@@ -9594,17 +9707,33 @@ function anBuildContactsFromMapping(mapping, limit){
       _repEmail: repEmail
     };
     var mappedSource = false;
+    var usedColIdx = {};
     AN_IMPORT_FIELDS.forEach(function(field){
       var idx = mapping[field.key];
       if(idx < 0) return;
+      usedColIdx[idx] = true;
       var v = (vals[idx] || '').trim();
       if(!v) return;
       if(field.key === 'status') c.status = anMapStatus(v);
       else if(field.key === 'phone') c.phone = anNormalizePhone(v);
       else if(field.key === 'nextFollowUp') c.nextFollowUp = anParseImportDate(v);
+      else if(field.key === 'notes'){
+        c.notes = c.notes ? (c.notes + '\n' + v) : v;
+      }
       else if(field.key === 'source'){ c.source = v; mappedSource = true; }
       else c[field.key] = v;
     });
+    var extraNoteLines = [];
+    _anImportRaw.headers.forEach(function(h, colIdx){
+      if(usedColIdx[colIdx]) return;
+      var extraVal = (vals[colIdx] || '').trim();
+      if(!extraVal) return;
+      extraNoteLines.push(h + ': ' + extraVal);
+    });
+    if(extraNoteLines.length){
+      var extraBlock = extraNoteLines.join('\n');
+      c.notes = c.notes ? (c.notes + '\n' + extraBlock) : extraBlock;
+    }
     if(!c.source) c.source = mappedSource ? '' : 'CSV Import';
     if(!c.lastName && c.firstName){
       var parts = c.firstName.split(' ');
@@ -9623,6 +9752,7 @@ window.anOpenImport = function(){
   _anImportRaw = null;
   _anPending = [];
   _anImportMapping = null;
+  _anImportResolved = {};
   _anImportShowAllFields = false;
 
   var m = document.createElement('div');
@@ -9680,6 +9810,7 @@ function anParseCSV(file){
     }
     _anImportRaw = parsed;
     _anImportMapping = null;
+    _anImportResolved = {};
     if(zone){
       zone.style.borderColor = '#10b981';
       zone.style.background = 'rgba(16,185,129,0.04)';
@@ -9832,6 +9963,7 @@ window.anShowDuplicateReview = function(classified){
 
 window.anConfirmImport = function(){
   var btn = document.getElementById('an-import-confirm');
+  anFinalizePendingImportSkips();
   var mapping = anGetImportMapping();
   if(!anImportMappingHasIdentity(mapping)){
     if(typeof showToast === 'function') showToast('Map at least one column (name, email, or company) before importing');
