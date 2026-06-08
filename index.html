@@ -8818,11 +8818,40 @@ function anFinishCloudLeadLoad(sb, cb){
   });
 }
 
+AN._leadById = null;
+AN._filteredCache = null;
+AN._knownRepEmailsCache = null;
+
+AN.invalidateLeadCaches = function(){
+  AN._leadById = null;
+  AN._filteredCache = null;
+};
+
+AN.leadById = function(id){
+  if(!id) return null;
+  if(!AN._leadById || AN._leadById._len !== AN.leads.length){
+    AN._leadById = { _len: AN.leads.length };
+    AN.leads.forEach(function(l){ if(l && l.id) AN._leadById[l.id] = l; });
+  }
+  return AN._leadById[id] || null;
+};
+
 function anPersistLeadsLocal(cb){
   if(!Array.isArray(AN.leads)) AN.leads = [];
+  AN.invalidateLeadCaches();
   AN.leads.forEach(function(l){
     if(l && l.phone) l.phone = anNormalizePhone(l.phone);
   });
+  if(AN.leads.length > 1500 || localStorage.getItem('an-crm-leads-idb') === '1'){
+    anSaveLeadsToIDB(AN.leads, function(idbErr){
+      if(idbErr){
+        if(cb) cb(idbErr, 'failed');
+        return;
+      }
+      if(cb) cb(null, 'idb');
+    });
+    return;
+  }
   var payload = JSON.stringify(AN.leads);
   try {
     localStorage.setItem('an-crm-leads', payload);
@@ -8875,6 +8904,8 @@ AN.save = function(cb){
 
 // ── Filter leads ──────────────────────────────────────────────
 AN.filtered = function(){
+  var cacheKey = (AN.searchQ||'')+'|'+(AN.currentFilter||'')+'|'+(AN.repFilter||'')+'|'+AN.leads.length+'|'+(AN.sortField||'')+'|'+(AN.sortDir||'');
+  if(AN._filteredCache && AN._filteredCache.key === cacheKey) return AN._filteredCache.list.slice();
   var q = AN.searchQ.toLowerCase();
   var list = AN.leads.filter(function(l){
     if(!anIsProspect(l)) return false;
@@ -8899,7 +8930,8 @@ AN.filtered = function(){
     var av=(a[AN.sortField]||'').toString(), bv=(b[AN.sortField]||'').toString();
     return AN.sortDir==='asc'?av.localeCompare(bv):bv.localeCompare(av);
   });
-  return list;
+  AN._filteredCache = { key: cacheKey, list: list };
+  return list.slice();
 };
 
 // ── RENDER MAIN CRM PAGE ──────────────────────────────────────
@@ -9001,7 +9033,8 @@ function buildCRMShell(){
     +'</div>'
     +'<button id="crm-bulk-call" onclick="anStartCallSessionFromSelected()" style="display:'+(AN.selectedIds.length?'inline-flex':'none')+';align-items:center;gap:5px;padding:5px 12px;border-radius:7px;border:1.5px solid #a7f3d0;background:#ecfdf5;color:#10b981;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);">📞 Call Selected ('+AN.selectedIds.length+')</button>'
     +'<button id="crm-bulk-owner" onclick="anBulkReassignOwner()" style="display:'+(AN.selectedIds.length?'inline-flex':'none')+';align-items:center;gap:5px;padding:5px 12px;border-radius:7px;border:1.5px solid #fde68a;background:#fffbeb;color:#b45309;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);">👤 Assign Owner ('+AN.selectedIds.length+')</button>'
-    +'<button id="crm-bulk-delete" onclick="anDeleteSelected()" style="display:'+(AN.selectedIds.length?'inline-flex':'none')+';align-items:center;gap:5px;padding:5px 12px;border-radius:7px;border:1.5px solid #fca5a5;background:#fef2f2;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);">🗑 Delete ('+AN.selectedIds.length+')</button>'
+    +'<button id="crm-bulk-delete" onclick="anDeleteSelected()" style="display:'+(AN.selectedIds.length?'inline-flex':'none')+';align-items:center;gap:5px;padding:5px 12px;border-radius:7px;border:1.5px solid #fca5a5;background:#fef2f2;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);">🗑 Delete ('+AN.selectedIds.length.toLocaleString()+')</button>'
+    +'<button id="crm-bulk-clear" onclick="anClearSelection()" style="display:'+(AN.selectedIds.length?'inline-flex':'none')+';align-items:center;gap:5px;padding:5px 12px;border-radius:7px;border:1.5px solid var(--divider);background:var(--card-bg);color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);">✕ Clear</button>'
     +'<span id="crm-count" style="font-size:12px;color:var(--text-muted);"></span>'
     +'</div></div>'
 
@@ -9127,7 +9160,7 @@ function renderLeadsTable(){
   el.innerHTML = '<div style="display:flex;flex-direction:column;min-height:100%;">'
     +'<div style="flex:1;overflow:auto;"><table style="width:100%;border-collapse:collapse;font-size:13.5px;min-width:800px;">'
     +'<thead><tr>'
-    +'<th style="width:36px;padding:9px 12px;border-bottom:2px solid var(--divider);"><input type="checkbox" id="crm-select-all" onclick="anToggleSelectAll(this.checked)" style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;"></th>'
+    +'<th style="width:36px;padding:9px 12px;border-bottom:2px solid var(--divider);vertical-align:bottom;"><input type="checkbox" id="crm-select-all" onclick="anToggleSelectAll(this.checked)" title="Select this page only" style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;"><div style="font-size:8px;color:var(--text-muted);margin-top:3px;white-space:nowrap;"><a href="#" onclick="event.preventDefault();anSelectAllFilteredLeads()" style="color:#6366f1;text-decoration:none;">all filtered</a></div></th>'
     +th('Name','lastName')+th('Company','company')+th('State','state')+th('Size','size')+th('Phone','phone')+th('Status','status')
     +(anShowOwnerColumn()?'<th style="padding:9px 12px;border-bottom:2px solid var(--divider);font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#f59e0b;">Owner</th>':'')
     +th('Follow Up','nextFollowUp')+th('Last Activity','lastContactDate')
@@ -9311,9 +9344,17 @@ window.anUpdateLeadCompany = function(leadId, companyName, opts){
   lead.updated = new Date().toISOString();
   anLinkLeadToCompanyRecord(lead, cn);
   if(typeof AN.save === 'function') AN.save();
-  if(typeof renderLeadsTable === 'function') renderLeadsTable();
+  anPatchCompanyCell(leadId, cn);
   if(document.getElementById('an-cs-lead-panel') && typeof anRenderCallSessionLeadPanel === 'function') anRenderCallSessionLeadPanel(leadId);
-  if(document.getElementById('an-side-panel') && window._anPanelLeadId === leadId && typeof anOpenLeadPanel === 'function') anOpenLeadPanel(leadId);
+  if(document.getElementById('an-side-panel') && window._anPanelLeadId === leadId){
+    var hdrCo = document.querySelector('#an-side-panel [data-panel-company]');
+    var inp = document.getElementById('sp-company-input');
+    if(inp) inp.value = cn;
+    if(hdrCo){
+      hdrCo.textContent = cn || 'No company — add below';
+      hdrCo.style.color = cn ? 'rgba(255,255,255,0.5)' : '#fcd34d';
+    }
+  }
   if(!opts.silent && typeof showToast === 'function') showToast(cn ? 'Company saved on lead' : 'Company removed');
   return true;
 };
@@ -9455,21 +9496,32 @@ window.anDeleteLead = function(id){
 // ── Selection + bulk delete ───────────────────────────────────
 window.anUpdateBulkBar = function(){
   var n = AN.selectedIds.length;
+  var nLabel = n.toLocaleString();
   var delBtn = document.getElementById('crm-bulk-delete');
   var callBtn = document.getElementById('crm-bulk-call');
   if(delBtn){
     delBtn.style.display = n ? 'inline-flex' : 'none';
-    delBtn.textContent = '🗑 Delete ('+n+')';
+    delBtn.textContent = '🗑 Delete ('+nLabel+')';
   }
   if(callBtn){
     callBtn.style.display = n ? 'inline-flex' : 'none';
-    callBtn.textContent = '📞 Call Selected ('+n+')';
+    callBtn.textContent = '📞 Call Selected ('+nLabel+')';
   }
   var ownerBtn = document.getElementById('crm-bulk-owner');
   if(ownerBtn){
     ownerBtn.style.display = n ? 'inline-flex' : 'none';
-    ownerBtn.textContent = '👤 Assign Owner ('+n+')';
+    ownerBtn.textContent = '👤 Assign Owner ('+nLabel+')';
   }
+  var clearBtn = document.getElementById('crm-bulk-clear');
+  if(clearBtn) clearBtn.style.display = n ? 'inline-flex' : 'none';
+};
+window.anClearSelection = function(){
+  AN.selectedIds = [];
+  document.querySelectorAll('#crm-content .lead-cb').forEach(function(cb){ cb.checked = false; });
+  var allCb = document.getElementById('crm-select-all');
+  if(allCb) allCb.checked = false;
+  anUpdateBulkBar();
+  if(typeof showToast === 'function') showToast('Selection cleared');
 };
 window.anToggleSelect = function(id,checked){
   if(checked){ if(AN.selectedIds.indexOf(id)<0) AN.selectedIds.push(id); }
@@ -9477,8 +9529,30 @@ window.anToggleSelect = function(id,checked){
   anUpdateBulkBar();
 };
 window.anToggleSelectAll = function(checked){
-  AN.selectedIds = checked ? AN.filtered().map(function(l){ return l.id; }) : [];
-  document.querySelectorAll('.lead-cb').forEach(function(cb){ cb.checked = checked; });
+  var pageIds = [];
+  document.querySelectorAll('#crm-content .lead-cb').forEach(function(cb){
+    var id = cb.getAttribute('data-id');
+    if(!id) return;
+    pageIds.push(id);
+    cb.checked = checked;
+  });
+  if(checked){
+    pageIds.forEach(function(id){
+      if(AN.selectedIds.indexOf(id) < 0) AN.selectedIds.push(id);
+    });
+  } else {
+    AN.selectedIds = AN.selectedIds.filter(function(x){ return pageIds.indexOf(x) < 0; });
+  }
+  anUpdateBulkBar();
+};
+
+window.anSelectAllFilteredLeads = function(){
+  var ids = AN.filtered().map(function(l){ return l.id; });
+  if(ids.length > 500 && !confirm('Select all '+ids.length.toLocaleString()+' filtered leads? Bulk actions on huge selections can be slow.')) return;
+  AN.selectedIds = ids.slice();
+  document.querySelectorAll('#crm-content .lead-cb').forEach(function(cb){
+    cb.checked = AN.selectedIds.indexOf(cb.getAttribute('data-id')) >= 0;
+  });
   anUpdateBulkBar();
 };
 window.anDeleteSelected = function(){
@@ -9509,18 +9583,66 @@ window.anCanReassignOwner = function(lead) {
 };
 
 window.anGetKnownRepEmails = function() {
+  if(AN._knownRepEmailsCache) return AN._knownRepEmailsCache.slice();
   if (typeof loadRepViews === 'function') loadRepViews();
   var emails = {};
   if (typeof _repViews !== 'undefined') {
     Object.keys(_repViews).forEach(function(e) { if (e && e.indexOf('@') > 0) emails[e] = 1; });
   }
-  if (AN && AN.leads) {
-    AN.leads.forEach(function(l) { if (l._repEmail) emails[l._repEmail] = 1; });
-  }
+  ['afausto@insurewithcompass.com','asmithee@insurewithcompass.com','jobarlow@insurewithcompass.com'].forEach(function(e){ emails[e] = 1; });
   if (AN && AN.currentRepEmail) emails[AN.currentRepEmail] = 1;
   if (typeof ADMIN_EMAIL !== 'undefined') emails[ADMIN_EMAIL] = 1;
-  return Object.keys(emails).sort();
+  AN._knownRepEmailsCache = Object.keys(emails).sort();
+  return AN._knownRepEmailsCache.slice();
 };
+
+function anPatchCompanyCell(leadId, company){
+  document.querySelectorAll('#crm-content tbody tr').forEach(function(tr){
+    var cb = tr.querySelector('.lead-cb');
+    if(!cb || cb.getAttribute('data-id') !== leadId) return;
+    var cells = tr.querySelectorAll('td');
+    if(cells[2]) cells[2].textContent = company || '—';
+  });
+}
+
+function anPatchOwnerCells(leadIds, email){
+  var repName = anGetRepName(email);
+  var repCol = anColor(email);
+  var idSet = {};
+  leadIds.forEach(function(id){ idSet[id] = true; });
+  document.querySelectorAll('#crm-content tbody tr').forEach(function(tr){
+    var cb = tr.querySelector('.lead-cb');
+    if(!cb || !idSet[cb.getAttribute('data-id')]) return;
+    tr.querySelectorAll('td').forEach(function(td){
+      var span = td.querySelector('span[title="Change owner"]');
+      if(span){
+        span.style.background = repCol + '18';
+        span.style.color = repCol;
+        span.textContent = repName + ' ▾';
+      }
+    });
+  });
+}
+
+function anRefreshLeadPanelOwner(leadId, email){
+  if(!leadId) return;
+  var panel = document.getElementById('an-side-panel');
+  if(!panel) return;
+  var ownerBtn = panel.querySelector('[data-panel-owner-btn]');
+  if(ownerBtn){
+    var repCol = anColor(email);
+    ownerBtn.style.background = repCol + '18';
+    ownerBtn.style.color = repCol;
+    ownerBtn.style.borderColor = repCol + '44';
+    ownerBtn.textContent = anGetRepName(email) + ' ▾';
+  }
+  var hdrCo = panel.querySelector('[data-panel-company]');
+  var lead = AN.leadById(leadId);
+  if(hdrCo && lead){
+    hdrCo.textContent = lead.company || 'No company — add below';
+    hdrCo.style.color = lead.company ? 'rgba(255,255,255,0.5)' : '#fcd34d';
+  }
+}
 
 window.anOpenOwnerPicker = function(opts) {
   opts = opts || {};
@@ -9534,7 +9656,7 @@ window.anOpenOwnerPicker = function(opts) {
   }
   if (!leadIds.length) return;
 
-  var leads = leadIds.map(function(id) { return AN.leads.find(function(l){ return l.id === id; }); }).filter(Boolean);
+  var leads = leadIds.map(function(id) { return AN.leadById(id); }).filter(Boolean);
   if (!leads.length) return;
   if (!leads.every(anCanReassignOwner)) {
     if (typeof showToast === 'function') showToast('You do not have permission to reassign these records');
@@ -9548,16 +9670,19 @@ window.anOpenOwnerPicker = function(opts) {
   var knownEmails = anGetKnownRepEmails();
   var title = opts.companyName
     ? 'Assign company owner — ' + opts.companyName
-    : (leadIds.length > 1 ? 'Assign owner — ' + leadIds.length + ' records' : 'Change owner');
+    : (leadIds.length > 1 ? 'Assign owner — ' + leadIds.length.toLocaleString() + ' records' : 'Change owner');
+  var subtitle = opts.companyName
+    ? 'Sets owner on all '+leadIds.length.toLocaleString()+' contacts at this company.'
+    : (leadIds.length > 1
+      ? 'Applies to all '+leadIds.length.toLocaleString()+' selected leads. Save may take a moment on large lists.'
+      : 'Select the rep who owns this record.');
 
   var pop = document.createElement('div');
   pop.id = 'an-reassign-popover';
   pop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:10002;display:flex;align-items:center;justify-content:center;padding:20px;';
-  pop.innerHTML = '<div style="background:var(--card-bg);border-radius:14px;padding:22px;width:360px;max-width:95vw;box-shadow:0 16px 48px rgba(0,0,0,0.28);">'
+  pop.innerHTML = '<div id="an-reassign-popover-card" style="background:var(--card-bg);border-radius:14px;padding:22px;width:360px;max-width:95vw;box-shadow:0 16px 48px rgba(0,0,0,0.28);" onclick="event.stopPropagation()">'
     +'<div style="font-size:15px;font-weight:800;color:var(--text-primary);margin-bottom:4px;">'+anEsc(title)+'</div>'
-    +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.5;">'
-    +(opts.companyName ? 'Sets owner on all '+leadIds.length+' contacts at this company.' : 'Select the rep who owns this record.')
-    +'</div>'
+    +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.5;">'+subtitle+'</div>'
     +'<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;max-height:240px;overflow-y:auto;" id="an-reassign-list">'
     +knownEmails.map(function(em) {
       var nm = anGetRepName(em);
@@ -9578,23 +9703,36 @@ window.anOpenOwnerPicker = function(opts) {
     +'<button type="button" onclick="document.getElementById(\'an-reassign-popover\').remove()" style="width:100%;background:none;border:1px solid var(--divider);border-radius:8px;padding:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--text-secondary);">Cancel</button>'
     +'</div>';
   document.body.appendChild(pop);
+  pop._leadIds = leadIds.slice();
+
+  function assignFromPicker(email){
+    anApplyOwnerAssignment(pop._leadIds || leadIds, email);
+  }
 
   pop.querySelectorAll('[data-owner-email]').forEach(function(btn) {
-    btn.onclick = function() {
-      anApplyOwnerAssignment(leadIds, btn.getAttribute('data-owner-email'));
+    btn.onclick = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      assignFromPicker(btn.getAttribute('data-owner-email'));
     };
   });
   var customBtn = document.getElementById('an-reassign-custom-btn');
   if (customBtn) {
-    customBtn.onclick = function() {
+    customBtn.onclick = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
       var inp = document.getElementById('an-reassign-email');
-      anApplyOwnerAssignment(leadIds, inp ? inp.value : '');
+      assignFromPicker(inp ? inp.value : '');
     };
   }
   pop.onclick = function(e) { if (e.target === pop) pop.remove(); };
 };
 
 window.anApplyOwnerAssignment = function(leadIds, email) {
+  if(AN._ownerAssignBusy){
+    if(typeof showToast === 'function') showToast('Still saving previous assignment — one moment');
+    return;
+  }
   if (!email || email.indexOf('@') < 1) {
     if (typeof showToast === 'function') showToast('Enter a valid email');
     else alert('Please enter a valid email.');
@@ -9603,29 +9741,26 @@ window.anApplyOwnerAssignment = function(leadIds, email) {
   email = email.trim().toLowerCase();
   var count = 0;
   leadIds.forEach(function(id) {
-    var lead = AN.leads.find(function(l) { return l.id === id; });
+    var lead = AN.leadById(id);
     if (!lead || !anCanReassignOwner(lead)) return;
     lead._repEmail = email;
     lead.updated = new Date().toISOString();
     count++;
   });
   if (!count) return;
-  AN.save(function() {
-    var pop = document.getElementById('an-reassign-popover');
-    if (pop) pop.remove();
-    if (typeof renderLeadsTable === 'function') renderLeadsTable();
-    if (typeof renderOpportunities === 'function') {
-      var oppSec = document.getElementById('section-opportunities');
-      if (oppSec && oppSec.classList.contains('active')) renderOpportunities();
-    }
-    if (typeof anOpenOppDetail === 'function' && document.getElementById('an-opp-detail-modal') && window._anOppDetailLeadId) {
-      anOpenOppDetail(window._anOppDetailLeadId);
-    }
-    if (typeof openCompanyDetail === 'function' && window._anCurrentCompanyName) openCompanyDetail(window._anCurrentCompanyName);
-    else if (typeof showCompanyView === 'function' && AN.currentView === 'company') showCompanyView();
-    var panel = document.getElementById('an-side-panel');
-    if (panel && window._anPanelLeadId) anOpenLeadPanel(window._anPanelLeadId);
-    if (typeof showToast === 'function') showToast('Assigned to ' + anGetRepName(email) + (count > 1 ? ' (' + count + ' records)' : ''));
+
+  AN._ownerAssignBusy = true;
+  var pop = document.getElementById('an-reassign-popover');
+  if (pop) pop.remove();
+
+  anPatchOwnerCells(leadIds, email);
+  if(window._anPanelLeadId) anRefreshLeadPanelOwner(window._anPanelLeadId, email);
+  if(typeof showToast === 'function') showToast('Assigned to ' + anGetRepName(email) + (count > 1 ? ' (' + count.toLocaleString() + ' leads)' : '') + ' — saving...');
+
+  AN.save(function(ok) {
+    AN._ownerAssignBusy = false;
+    AN.invalidateLeadCaches();
+    if (typeof showToast === 'function') showToast((ok !== false ? 'Owner saved' : 'Saved locally') + ' — ' + anGetRepName(email) + (count > 1 ? ' (' + count.toLocaleString() + ')' : ''));
   });
 };
 
@@ -11416,17 +11551,25 @@ window.anSaveCall = function(leadId) {
 
 // ── 3. LEAD SIDE PANEL (detail view) ─────────────────────────
 window.anOpenLeadPanel = function(leadId) {
-  var lead = AN.leads.find(function(l){ return l.id === leadId; });
+  var lead = AN.leadById(leadId);
   if (!lead) return;
 
-  var old = document.getElementById('an-side-panel');
-  if (old) old.remove();
-
-  var panel = document.createElement('div');
-  panel.id = 'an-side-panel';
-  panel.style.cssText = 'position:fixed;top:0;right:0;width:440px;height:100vh;background:var(--card-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.15);z-index:8888;display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);';
-  document.body.appendChild(panel);
-  setTimeout(function(){ panel.style.transform = 'translateX(0)'; }, 10);
+  var panel = document.getElementById('an-side-panel');
+  var sameLead = panel && window._anPanelLeadId === leadId;
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'an-side-panel';
+    panel.style.cssText = 'position:fixed;top:0;right:0;width:440px;height:100vh;background:var(--card-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.15);z-index:8888;display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);';
+    document.body.appendChild(panel);
+    setTimeout(function(){ panel.style.transform = 'translateX(0)'; }, 10);
+  } else if (!sameLead) {
+    panel.remove();
+    panel = document.createElement('div');
+    panel.id = 'an-side-panel';
+    panel.style.cssText = 'position:fixed;top:0;right:0;width:440px;height:100vh;background:var(--card-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.15);z-index:8888;display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);';
+    document.body.appendChild(panel);
+    setTimeout(function(){ panel.style.transform = 'translateX(0)'; }, 10);
+  }
 
   function refreshPanel() {
     var st = anStatus(lead.status||'new');
@@ -11445,7 +11588,7 @@ window.anOpenLeadPanel = function(leadId) {
       +'<div>'
       +'<div style="font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.4px;">'+anEsc((lead.firstName||'')+' '+(lead.lastName||''))+'</div>'
       +(lead.title?'<div style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:2px;">'+anEsc(lead.title)+'</div>':'')
-      +(lead.company?'<div style="font-size:13px;color:rgba(255,255,255,0.5);margin-top:2px;">'+anEsc(lead.company)+'</div>':'<div style="font-size:12px;color:#fcd34d;margin-top:2px;">No company — add below</div>')
+      +'<div data-panel-company style="font-size:13px;margin-top:2px;color:'+(lead.company?'rgba(255,255,255,0.5)':'#fcd34d')+';">'+anEsc(lead.company||'No company — add below')+'</div>'
       +'</div>'
       +'<div style="display:flex;gap:7px;align-items:center;">'
       +'<span style="background:'+st.color+'28;color:'+st.color+';border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;">'+st.label+'</span>'
@@ -11501,7 +11644,7 @@ window.anOpenLeadPanel = function(leadId) {
       +'<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--divider);">'
       +'<span style="font-size:12px;color:var(--text-muted);">👤 Owner</span>'
       +(anCanReassignOwner(lead)
-        ? '<button type="button" onclick="anOpenOwnerPicker({leadId:\''+lead.id+'\'})" style="background:'+(lead._repEmail?anColor(lead._repEmail)+'18':'var(--body-bg)')+';color:'+(lead._repEmail?anColor(lead._repEmail):'#b45309')+';border:1px solid '+(lead._repEmail?anColor(lead._repEmail)+'44':'#fde68a')+';border-radius:6px;padding:3px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);">'
+        ? '<button type="button" data-panel-owner-btn onclick="anOpenOwnerPicker({leadId:\''+lead.id+'\'})" style="background:'+(lead._repEmail?anColor(lead._repEmail)+'18':'var(--body-bg)')+';color:'+(lead._repEmail?anColor(lead._repEmail):'#b45309')+';border:1px solid '+(lead._repEmail?anColor(lead._repEmail)+'44':'#fde68a')+';border-radius:6px;padding:3px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);">'
           +(lead._repEmail?anEsc(anGetRepName(lead._repEmail)):'Assign owner')+' ▾</button>'
         : '<span style="font-size:12.5px;font-weight:600;color:var(--text-primary);text-align:right;">'+anEsc(lead._repEmail?anGetRepName(lead._repEmail):'—')+'</span>')
       +'</div>'
@@ -12614,54 +12757,7 @@ window.anSaveLead = function(id) {
   setTimeout(function(){ var el=document.getElementById('an-save-action-bar'); if(el) el.remove(); }, 8000);
 };
 
-// ── 6. PATCH side panel: show rep full name and last activity icon ─
-var _origAnOpenLeadPanel_v2 = window.anOpenLeadPanel;
-window.anOpenLeadPanel = function(leadId) {
-  _origAnOpenLeadPanel_v2 && _origAnOpenLeadPanel_v2(leadId);
-  // After panel renders, patch the rep row and last contact row
-  setTimeout(function() {
-    var panel = document.getElementById('an-side-panel');
-    if (!panel) return;
-    var lead = AN.leads.find(function(l){ return l.id === leadId; });
-    if (!lead) return;
-
-    // Find and update rep row
-    panel.querySelectorAll('div').forEach(function(el) {
-      if (el.textContent.trim().startsWith('👤 Rep')) {
-        var sib = el.nextSibling || el.parentElement.querySelector('div:last-child');
-        // The contact details rows are built with specific text — find via innerHTML
-      }
-    });
-    // Simpler: find elements showing raw email and replace with name
-    var repEmail = lead._repEmail || '';
-    if (repEmail) {
-      var repName = anGetRepName(repEmail);
-      panel.innerHTML = panel.innerHTML.replace(
-        new RegExp('(?<=>)' + repEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=<)', 'g'),
-        repName + ' <span style="font-size:10px;opacity:0.5;">(' + repEmail + ')</span>'
-      );
-    }
-
-    // Last activity: find the ⏱ Last Contact row and update it
-    var lastCall = (lead.callLog && lead.callLog.length)
-      ? lead.callLog.slice().sort(function(a,b){ return b.date.localeCompare(a.date); })[0]
-      : null;
-    if (lastCall) {
-      var actIcons2 = {pickup:'☎️',demo:'🎯',voicemail:'📬',noanswer:'📵',note:'📝'};
-      var actLabels2 = {pickup:'Call — Picked Up',demo:'Demo Set',voicemail:'Voicemail Left',noanswer:'No Answer',note:'Note Added'};
-      var actColors2 = {pickup:'#10b981',demo:'#f59e0b',voicemail:'#6366f1',noanswer:'#a1a1aa',note:'#06b6d4'};
-      var ic2 = actIcons2[lastCall.outcome] || '📞';
-      var lb2 = actLabels2[lastCall.outcome] || 'Call';
-      var cl2 = actColors2[lastCall.outcome] || '#a1a1aa';
-      var ago2 = anTimeAgo(lastCall.date + (lastCall.time ? 'T' + lastCall.time : ''));
-      // Replace the ⏱ Last Contact value in the side panel contact details
-      panel.innerHTML = panel.innerHTML.replace(
-        /(<div[^>]*>\s*⏱ Last Contact\s*<\/div>\s*<div[^>]*>)[^<]*(<\/div>)/,
-        '$1<span style="color:'+cl2+';font-weight:600;">'+ic2+' '+lb2+'</span> · '+ago2+'$2'
-      );
-    }
-  }, 80);
-};
+// v2 side-panel innerHTML patch removed — caused flicker; base panel already shows rep + activity
 
 // ── 7. Ensure nav label says "Lead Pipeline" on render ────────
 var _origShowSection_lpfix = window.showSection;
@@ -14157,6 +14253,9 @@ window.mcmSave = function(leadId, opts) {
 
   if (typeof AN !== 'undefined' && AN.save) AN.save();
   if (typeof renderLeadsTable === 'function') renderLeadsTable();
+  if (document.getElementById('an-side-panel') && window._anPanelLeadId === leadId && typeof anRefreshLeadPanel === 'function') {
+    anRefreshLeadPanel(leadId);
+  }
 
   if (!keepOpen) {
     mcmClose();
@@ -17538,6 +17637,47 @@ if (typeof _origHdRender === 'function') {
 }
 
 console.log('[CALL SYNC] Side panel + dashboard tracking + team shouts loaded.');
+</script>
+
+<script>
+// ============================================================
+// PERFORMANCE PATCH — debounced table render, lighter refreshes
+// ============================================================
+(function(){
+  var _renderImmediate = window.renderLeadsTable;
+  var _renderTimer = null;
+  window.renderLeadsTableNow = function(){
+    if(_renderTimer){ clearTimeout(_renderTimer); _renderTimer = null; }
+    if(typeof _renderImmediate === 'function') _renderImmediate();
+  };
+  window.renderLeadsTable = function(){
+    if(_renderTimer) clearTimeout(_renderTimer);
+    _renderTimer = setTimeout(function(){
+      _renderTimer = null;
+      if(typeof _renderImmediate === 'function') _renderImmediate();
+    }, 120);
+  };
+
+  var _panelChain = window.anOpenLeadPanel;
+  window.anOpenLeadPanel = function(leadId, opts){
+    opts = opts || {};
+    if(!opts.force && document.getElementById('an-side-panel') && window._anPanelLeadId === leadId){
+      return;
+    }
+    if(typeof _panelChain === 'function') _panelChain(leadId);
+  };
+  window.anRefreshLeadPanel = function(leadId){
+    window.anOpenLeadPanel(leadId, { force: true });
+  };
+})();
+
+if(typeof AN !== 'undefined' && AN.selectedIds && AN.selectedIds.length > 500){
+  setTimeout(function(){
+    if(typeof showToast === 'function') showToast(AN.selectedIds.length.toLocaleString()+' leads selected — click ✕ Clear if accidental');
+  }, 1500);
+}
+
+console.log('[CRM PERF] Debounced render + side panel stability patch loaded.');
 </script>
 </body>
 </html>
