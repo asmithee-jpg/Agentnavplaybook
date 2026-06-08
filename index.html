@@ -9675,9 +9675,97 @@ function anBuildImportMapping(headers){
   return mapping;
 }
 
+function anSanitizeImportCompanyMapping(mapping, headers){
+  if(!mapping || !headers || mapping.company < 0) return mapping;
+  var coHeader = anNormHeader(headers[mapping.company]);
+  var looksLikeId = /\bid\b/.test(coHeader) || coHeader.indexOf('company id') >= 0;
+  if(!looksLikeId) return mapping;
+  var betterIdx = -1;
+  headers.forEach(function(h, idx){
+    var norm = anNormHeader(h);
+    if(norm.indexOf('associated company') >= 0 && norm.indexOf(' id') < 0) betterIdx = idx;
+    else if((norm === 'company name' || norm === 'company' || norm === 'organization name') && betterIdx < 0) betterIdx = idx;
+  });
+  if(betterIdx >= 0 && betterIdx !== mapping.company) mapping.company = betterIdx;
+  return mapping;
+}
+
+function anGetImportWarnings(mapping){
+  var warnings = [];
+  if(!_anImportRaw || !mapping) return warnings;
+  var headers = _anImportRaw.headers;
+  if(mapping.company >= 0){
+    var colName = headers[mapping.company] || '';
+    var norm = anNormHeader(colName);
+    if(/\bid\b/.test(norm)){
+      warnings.push({
+        level: 'error',
+        text: 'Company maps to <strong>'+anEsc(colName)+'</strong> — that\'s a numeric ID column, not an agency name.',
+        fixKey: 'company'
+      });
+    }
+    var junk = 0, checked = 0;
+    _anImportRaw.rows.slice(0, 80).forEach(function(vals){
+      var v = (vals[mapping.company] || '').trim();
+      if(!v) return;
+      checked++;
+      if(typeof coIsJunkCompanyName === 'function' && coIsJunkCompanyName(v)) junk++;
+    });
+    if(checked && junk > checked * 0.3){
+      warnings.push({
+        level: 'error',
+        text: Math.round(junk / checked * 100)+'% of preview rows look like numeric IDs — switch Company to <strong>Associated Company</strong>.',
+        fixKey: 'company'
+      });
+    }
+  } else {
+    warnings.push({
+      level: 'info',
+      text: 'No company column mapped — leads import fine; Companies page won\'t get agency records.',
+      fixKey: null
+    });
+  }
+  return warnings;
+}
+
+window.anAutoFixCompanyColumnMapping = function(){
+  if(!_anImportRaw || !_anImportMapping) return false;
+  var headers = _anImportRaw.headers;
+  var before = _anImportMapping.company;
+  anSanitizeImportCompanyMapping(_anImportMapping, headers);
+  if(_anImportMapping.company !== before){
+    anMarkImportFieldResolved('company');
+    return true;
+  }
+  headers.forEach(function(h, idx){
+    if(anNormHeader(h).indexOf('associated company') >= 0 && anNormHeader(h).indexOf(' id') < 0){
+      _anImportMapping.company = idx;
+      anMarkImportFieldResolved('company');
+    }
+  });
+  return _anImportMapping.company !== before;
+};
+
+function anGetImportDestinationStats(contacts){
+  var validCompanies = {};
+  var junkCompanies = 0;
+  (contacts || []).forEach(function(c){
+    if(!c.company) return;
+    if(typeof coIsValidCompanyName === 'function' && coIsValidCompanyName(c.company)){
+      validCompanies[coNormName(c.company)] = c.company;
+    } else junkCompanies++;
+  });
+  return {
+    leadCount: (contacts || []).length,
+    companyCount: Object.keys(validCompanies).length,
+    junkCompanyLeads: junkCompanies
+  };
+}
+
 function anInitImportMapping(){
   if(!_anImportRaw) return {};
   _anImportMapping = anBuildImportMapping(_anImportRaw.headers);
+  anSanitizeImportCompanyMapping(_anImportMapping, _anImportRaw.headers);
   anApplyImportAutoResolutions(_anImportMapping, _anImportRaw.headers);
   return _anImportMapping;
 }
@@ -9740,6 +9828,19 @@ window.anUpdateImportStats = function(){
   var rowCount = _anImportRaw.rows.length;
   var sampleContacts = anBuildContactsFromMapping(mapping, 3);
   var canImport = anImportMappingHasIdentity(mapping);
+  var importWarnings = anGetImportWarnings(mapping);
+  var warningHtml = importWarnings.length
+    ? '<div style="margin-bottom:10px;">'+importWarnings.map(function(w){
+        var bg = w.level === 'error' ? 'rgba(239,68,68,0.08)' : 'rgba(99,102,241,0.06)';
+        var border = w.level === 'error' ? 'rgba(239,68,68,0.35)' : 'rgba(99,102,241,0.25)';
+        var color = w.level === 'error' ? '#b91c1c' : '#4338ca';
+        var fixBtn = w.fixKey === 'company'
+          ? ' <button type="button" onclick="anAutoFixCompanyColumnMapping();anRenderImportMapping();" style="margin-left:6px;padding:3px 8px;border-radius:5px;border:1px solid #fca5a5;background:#fff;color:#b91c1c;font-size:10px;font-weight:700;cursor:pointer;">Auto-fix column</button>'
+          : '';
+        return '<div style="background:'+bg+';border:1px solid '+border+';border-radius:8px;padding:8px 10px;font-size:11px;color:'+color+';margin-bottom:6px;line-height:1.5;">'
+          +(w.level === 'error' ? '⚠️ ' : 'ℹ️ ')+w.text+fixBtn+'</div>';
+      }).join('')+'</div>'
+    : '';
 
   var mappedChips = summary.mapped.map(function(m){
     return '<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#059669;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;margin:2px 4px 2px 0;">'
@@ -9753,7 +9854,13 @@ window.anUpdateImportStats = function(){
       +anEsc(f.label)+' <span style="opacity:0.8;">· skipped</span></span>';
   }).join('');
 
-  stats.innerHTML = '<div style="margin-bottom:8px;"><strong style="color:'+(canImport ? '#10b981' : '#f59e0b')+';">'
+  stats.innerHTML = '<div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:var(--text-secondary);line-height:1.55;">'
+    +'<div style="font-weight:800;color:#6366f1;margin-bottom:4px;">Where your data goes</div>'
+    +'<div>👤 <strong>Lead Pipeline</strong> — every contact row becomes a lead (always)</div>'
+    +'<div>🏢 <strong>Companies</strong> — optional; only real agency names, never numeric IDs</div>'
+    +'</div>'
+    +warningHtml
+    +'<div style="margin-bottom:8px;"><strong style="color:'+(canImport ? '#10b981' : '#f59e0b')+';">'
     +(canImport ? '✅ ' : '⚠️ ')+rowCount+' rows · '+mappedCount+' mapped'
     +(skippedCount ? ' · '+skippedCount+' skipped' : '')
     +(pendingCount ? ' · '+pendingCount+' need decision' : '')
@@ -9941,6 +10048,14 @@ function anBuildContactsFromMapping(mapping, limit){
         c.notes = c.notes ? (c.notes + '\n' + v) : v;
       }
       else if(field.key === 'source'){ c.source = v; mappedSource = true; }
+      else if(field.key === 'company'){
+        if(typeof coIsValidCompanyName === 'function' && !coIsValidCompanyName(v)){
+          if(!c.notes) c.notes = 'Bad company ID skipped: '+v;
+          else c.notes += '\nBad company ID skipped: '+v;
+        } else {
+          c.company = v;
+        }
+      }
       else c[field.key] = v;
     });
     var extraNoteLines = [];
@@ -10030,10 +10145,20 @@ function anMatchLeadToCsvRow(lead, index){
 }
 
 function anPreviewFixFromCsv(parsed, mapping){
-  if(!Array.isArray(AN.leads) || !parsed) return { needsFix:0, matchable:0, sample:[] };
+  if(!parsed) return { needsFix:0, matchable:0, sample:[], totalLeads:0, csvRows:0, shouldImport:false, importable:0 };
+  var leads = Array.isArray(AN.leads) ? AN.leads : [];
   var index = anBuildCsvRowIndex(parsed, mapping);
-  var needsFix = 0, matchable = 0, sample = [];
-  AN.leads.forEach(function(lead){
+  var needsFix = 0, matchable = 0, sample = [], importable = 0;
+  var existingEmails = {};
+  leads.forEach(function(l){ if(l.email) existingEmails[l.email.toLowerCase()] = true; });
+
+  parsed.rows.forEach(function(vals){
+    var fields = anExtractRowFields(vals, mapping);
+    var em = (fields.email || '').toLowerCase();
+    if(em && !existingEmails[em]) importable++;
+  });
+
+  leads.forEach(function(lead){
     if(!anLeadNeedsCompanyFix(lead)) return;
     needsFix++;
     var row = anMatchLeadToCsvRow(lead, index);
@@ -10050,7 +10175,11 @@ function anPreviewFixFromCsv(parsed, mapping){
       }
     }
   });
-  return { needsFix: needsFix, matchable: matchable, sample: sample };
+
+  var csvRows = parsed.rows.length;
+  var totalLeads = leads.length;
+  var shouldImport = totalLeads < Math.max(50, Math.round(csvRows * 0.2));
+  return { needsFix: needsFix, matchable: matchable, sample: sample, totalLeads: totalLeads, csvRows: csvRows, shouldImport: shouldImport, importable: importable };
 }
 
 function anFixLeadsFromCsvChunked(parsed, mapping, opts, onProgress, onDone){
@@ -10167,6 +10296,7 @@ function anProcessFixCsvFile(file){
     }
     _anFixCsvRaw = parsed;
     _anFixCsvMapping = anBuildImportMapping(parsed.headers);
+    anSanitizeImportCompanyMapping(_anFixCsvMapping, parsed.headers);
     var preview = anPreviewFixFromCsv(parsed, _anFixCsvMapping);
     var companyCol = _anFixCsvMapping.company >= 0 ? parsed.headers[_anFixCsvMapping.company] : null;
 
@@ -10185,18 +10315,31 @@ function anProcessFixCsvFile(file){
           + preview.sample.map(function(s){ return anEsc(s.name)+': '+anEsc(s.oldCo)+' → <span style="color:#10b981;font-weight:700;">'+anEsc(s.newCo)+'</span>'; }).join(' · ')
           +'</div>'
         : '';
-      wrap.innerHTML = '<div style="background:var(--body-bg);border-radius:8px;padding:12px;font-size:13px;color:var(--text-secondary);">'
+      var importAlert = preview.shouldImport
+        ? '<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:8px;padding:12px;margin-bottom:10px;">'
+          +'<div style="font-size:13px;font-weight:800;color:#b91c1c;margin-bottom:4px;">Your leads didn\'t fully save</div>'
+          +'<div style="font-size:12px;color:#7f1d1d;line-height:1.5;">Only <strong>'+preview.totalLeads+'</strong> lead'+(preview.totalLeads!==1?'s':'')+' in Lead Pipeline vs <strong>'+preview.csvRows.toLocaleString()+'</strong> CSV rows. Use <strong>Import Leads</strong> below — don\'t use Fix.</div>'
+          +'</div>'
+        : '';
+      wrap.innerHTML = importAlert
+        +'<div style="background:var(--body-bg);border-radius:8px;padding:12px;font-size:13px;color:var(--text-secondary);">'
+        +'<div style="margin-bottom:8px;">Lead Pipeline: <strong>'+preview.totalLeads.toLocaleString()+'</strong> saved · CSV: <strong>'+preview.csvRows.toLocaleString()+'</strong> rows</div>'
         +'<div><strong style="color:'+(preview.matchable ? '#10b981' : '#f59e0b')+';">'+preview.matchable+'</strong> of <strong>'+preview.needsFix+'</strong> bad leads can be fixed from this CSV.</div>'
+        +(preview.shouldImport ? '<div style="font-size:12px;color:#6366f1;margin-top:6px;font-weight:600;">~'+preview.importable.toLocaleString()+' new leads ready to import by email.</div>' : '')
         +(companyCol ? '<div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Company column: <strong>'+anEsc(companyCol)+'</strong></div>' : '<div style="font-size:11px;color:#ef4444;margin-top:6px;">⚠️ No company column detected — check CSV headers.</div>')
         +'<label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;cursor:pointer;"><input type="checkbox" id="an-fix-fill-empty" checked style="accent-color:#f59e0b;"> Also fill empty title, source, state, notes from CSV</label>'
-        +'<label style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12px;cursor:pointer;"><input type="checkbox" id="an-fix-clean-junk-cos" checked style="accent-color:#f59e0b;"> Remove junk company records after fix</label>'
+        +'<label style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12px;cursor:pointer;"><input type="checkbox" id="an-fix-clean-junk-cos" checked style="accent-color:#f59e0b;"> Remove junk company records after</label>'
         +sampleHtml
-        +'</div>';
+        +'</div>'
+        +(preview.shouldImport && _anFixCsvMapping.company >= 0
+          ? '<button type="button" id="an-fix-import-btn" onclick="anImportLeadsFromFixCsv()" style="width:100%;margin-top:12px;padding:12px 16px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--sans);">Import '+preview.csvRows.toLocaleString()+' Leads into Lead Pipeline</button>'
+          : '');
     }
     if(btn){
-      btn.disabled = !(preview.matchable > 0 && _anFixCsvMapping.company >= 0);
+      var canFix = preview.matchable > 0 && _anFixCsvMapping.company >= 0 && !preview.shouldImport;
+      btn.disabled = !canFix;
       btn.style.opacity = btn.disabled ? '0.5' : '1';
-      btn.textContent = preview.matchable ? ('Fix '+preview.matchable+' Company Names') : 'No matches found';
+      btn.textContent = preview.shouldImport ? 'Use Import button above' : (preview.matchable ? ('Fix '+preview.matchable+' Company Names') : 'No matches to fix');
     }
   };
   reader.onerror = function(){
@@ -10205,6 +10348,70 @@ function anProcessFixCsvFile(file){
   };
   reader.readAsText(file);
 }
+
+function anPurgeJunkCompaniesSilent(){
+  if(typeof coIsJunkCompanyName !== 'function' || typeof coSave !== 'function') return;
+  var junk = (_coData || []).filter(function(c){ return coIsJunkCompanyName(c.name); });
+  if(!junk.length) return;
+  var junkIds = {};
+  junk.forEach(function(c){ junkIds[c.id] = true; });
+  var companies = _coData.filter(function(c){ return !junkIds[c.id]; });
+  coSave(companies);
+}
+
+window.anImportLeadsFromFixCsv = function(){
+  if(!_anFixCsvRaw || !_anFixCsvMapping){
+    if(typeof showToast === 'function') showToast('Load a CSV first');
+    return;
+  }
+  if(!anImportMappingHasIdentity(_anFixCsvMapping)){
+    if(typeof showToast === 'function') showToast('CSV needs name, email, or company column');
+    return;
+  }
+  var rowCount = _anFixCsvRaw.rows.length;
+  if(!confirm('Import '+rowCount.toLocaleString()+' contacts into Lead Pipeline?\n\nThis may take 1–2 minutes. Junk company records will be cleared after.')) return;
+
+  window._anImportCleanJunkAfter = true;
+  window._anImportGoToCrmAfter = true;
+  var fixModal = document.getElementById('an-fix-csv-modal');
+  if(fixModal) fixModal.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'an-fix-import-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:10002;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = '<div style="background:var(--card-bg);border-radius:12px;padding:28px 32px;text-align:center;min-width:280px;"><div style="font-size:16px;font-weight:800;color:var(--text-primary);margin-bottom:8px;">Importing leads...</div><div id="an-fix-import-status" style="font-size:13px;color:var(--text-muted);">Building contacts (0%)...</div></div>';
+  document.body.appendChild(overlay);
+
+  var mapping = _anFixCsvMapping;
+  setTimeout(function(){
+    try {
+      _anPending = anBuildContactsFromMapping(mapping);
+      var statusEl = document.getElementById('an-fix-import-status');
+      if(statusEl) statusEl.textContent = 'Checking duplicates...';
+      anClassifyImportBatchChunked(_anPending, function(classified){
+        var runImport = function(){
+          if(statusEl) statusEl.textContent = 'Saving '+_anPending.length.toLocaleString()+' leads...';
+          anExecuteImport(_anPending, { skipDupes:true, updateDupes:false, importAnyway:false, cleanJunkCompanies:true, goToCrm:true });
+        };
+        if(classified.duplicates.length > 0){
+          var ov = document.getElementById('an-fix-import-overlay');
+          if(ov) ov.remove();
+          anShowDuplicateReview(classified);
+        } else {
+          runImport();
+        }
+      }, function(done, total){
+        var statusEl2 = document.getElementById('an-fix-import-status');
+        if(statusEl2 && total) statusEl2.textContent = 'Checking duplicates ('+Math.round(done/total*100)+'%)...';
+      });
+    } catch(err) {
+      console.error('[CRM] Import from fix CSV failed:', err);
+      var ov2 = document.getElementById('an-fix-import-overlay');
+      if(ov2) ov2.remove();
+      if(typeof showToast === 'function') showToast('Import failed — try Lead Pipeline → Import CSV');
+    }
+  }, 50);
+};
 
 window.anConfirmFixFromCSV = function(){
   if(!_anFixCsvRaw || !_anFixCsvMapping || _anFixCsvMapping.company < 0){
@@ -10272,7 +10479,7 @@ window.anOpenImport = function(){
   m.innerHTML = '<div style="background:var(--card-bg);border-radius:14px;padding:26px;width:720px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div style="font-size:17px;font-weight:800;color:var(--text-primary);">Import Contacts from CSV</div>'
     +'<button onclick="document.getElementById(\'an-import-modal\').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);">✕</button></div>'
-    +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Upload a HubSpot, Apollo, or any contact CSV. You\'ll match columns before importing. Data saves locally and syncs to Supabase when signed in.</div>'
+    +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.55;">Upload a HubSpot, Apollo, or any contact CSV. <strong>Leads always go to Lead Pipeline.</strong> Company pages are optional — you\'ll confirm before creating them. Data saves locally and syncs to Supabase when signed in.</div>'
     +'<div id="an-drop-zone" style="border:2px dashed var(--divider);border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all 0.15s;margin-bottom:14px;" '
     +'onclick="document.getElementById(\'an-file-input\').click()" '
     +'ondragover="event.preventDefault();this.style.borderColor=\'#6366f1\';this.style.background=\'rgba(99,102,241,0.04)\'" '
@@ -10471,16 +10678,22 @@ function anExecuteImport(contacts, opts){
 
   _anPending = [];
   _anImportRaw = null;
-  anSyncCompaniesFromLeads();
+  if((opts.cleanJunkCompanies || window._anImportCleanJunkAfter) && typeof anPurgeJunkCompaniesSilent === 'function') anPurgeJunkCompaniesSilent();
+  window._anImportCleanJunkAfter = false;
+  if(opts.createCompanies !== false) anSyncCompaniesFromLeads();
 
   AN.listPage = 0;
   AN.save(function(ok, err, where){
     var importModal = document.getElementById('an-import-modal');
     var dupeModal = document.getElementById('an-dupe-modal');
+    var fixOverlay = document.getElementById('an-fix-import-overlay');
     if(importModal) importModal.remove();
     if(dupeModal) dupeModal.remove();
+    if(fixOverlay) fixOverlay.remove();
     var msg = '';
     if(added) msg += 'Imported '+added+' lead'+(added!==1?'s':'')+' → Lead Pipeline';
+    if(added && opts.createCompanies !== false) msg += ' · companies updated';
+    else if(added && opts.createCompanies === false) msg += ' · companies skipped';
     if(updated) msg += (msg?' · ':'')+'Updated '+updated;
     if(skipped) msg += (msg?' · ':'')+'Skipped '+skipped+' duplicate'+(skipped!==1?'s':'');
     if(!msg) msg = 'No contacts imported';
@@ -10496,6 +10709,8 @@ function anExecuteImport(contacts, opts){
       var coSec = document.getElementById('section-companies');
       if(coSec && coSec.style.display !== 'none') coRender();
     }
+    if((opts.goToCrm || window._anImportGoToCrmAfter) && typeof showSection === 'function') showSection('crm');
+    window._anImportGoToCrmAfter = false;
   });
   } catch(execErr) {
     console.error('[CRM] Import failed:', execErr);
@@ -10504,6 +10719,58 @@ function anExecuteImport(contacts, opts){
     if(btn){ btn.disabled = false; btn.textContent = 'Import Contacts'; }
   }
 }
+
+window.anShowImportDestinationModal = function(classified, onProceed){
+  var old = document.getElementById('an-import-dest-modal');
+  if(old) old.remove();
+  var contacts = _anPending || [];
+  var stats = anGetImportDestinationStats(contacts);
+  var newCount = classified ? classified.newOnes.length : contacts.length;
+  var dupeCount = classified ? classified.duplicates.length : 0;
+  var mapping = anGetImportMapping();
+  var warnings = anGetImportWarnings(mapping);
+  var hasErrors = warnings.some(function(w){ return w.level === 'error'; });
+
+  var m = document.createElement('div');
+  m.id = 'an-import-dest-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
+  m.innerHTML = '<div style="background:var(--card-bg);border-radius:14px;padding:24px;width:520px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,0.35);">'
+    +'<div style="font-size:17px;font-weight:800;color:var(--text-primary);margin-bottom:6px;">Confirm import destination</div>'
+    +'<div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;">Choose what to create before we save anything.</div>'
+    +(hasErrors ? '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;font-size:12px;color:#b91c1c;margin-bottom:12px;">Fix company column warnings above before importing, or click Auto-fix in the mapping screen.</div>' : '')
+    +'<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">'
+    +'<label style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:2px solid #6366f1;border-radius:10px;background:rgba(99,102,241,0.05);cursor:default;">'
+    +'<input type="checkbox" checked disabled style="margin-top:3px;accent-color:#6366f1;">'
+    +'<div><div style="font-size:13px;font-weight:800;color:var(--text-primary);">👤 Create '+newCount.toLocaleString()+' lead'+(newCount!==1?'s':'')+' in Lead Pipeline</div>'
+    +'<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Always — this is your contact list for calling & follow-up.'+(dupeCount ? ' ('+dupeCount+' duplicates handled next)' : '')+'</div></div></label>'
+    +'<label style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:1.5px solid var(--divider);border-radius:10px;cursor:pointer;" id="an-import-co-label">'
+    +'<input type="checkbox" id="an-import-create-companies" '+(stats.companyCount > 0 ? 'checked' : '')+' style="margin-top:3px;accent-color:#10b981;">'
+    +'<div><div style="font-size:13px;font-weight:800;color:var(--text-primary);">🏢 Create '+stats.companyCount.toLocaleString()+' company page'+(stats.companyCount!==1?'s':'')+' in Companies</div>'
+    +'<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Only unique agency names (e.g. "Network Insurance"). Numeric IDs are never created.'+(stats.junkCompanyLeads ? ' · '+stats.junkCompanyLeads+' rows with bad IDs skipped' : '')+'</div></div></label>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--text-muted);margin-bottom:16px;padding:10px;background:var(--body-bg);border-radius:8px;">💡 Tip: Import leads first. You can always sync companies later from Lead Pipeline → Fix from CSV.</div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;">'
+    +'<button onclick="document.getElementById(\'an-import-dest-modal\').remove()" style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--divider);background:transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--text-secondary);">Back</button>'
+    +'<button id="an-import-dest-confirm" '+(hasErrors ? 'disabled style="padding:9px 18px;border-radius:8px;border:none;background:#a1a1aa;color:#fff;font-size:13px;font-weight:700;cursor:not-allowed;font-family:var(--sans);opacity:0.7;"' : 'style="padding:9px 18px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);"')+'>Import now</button>'
+    +'</div></div>';
+  document.body.appendChild(m);
+  m.onclick = function(e){ if(e.target === m) m.remove(); };
+  m.firstElementChild.onclick = function(e){ e.stopPropagation(); };
+
+  var confirmBtn = document.getElementById('an-import-dest-confirm');
+  if(confirmBtn) confirmBtn.onclick = function(){
+    if(hasErrors) return;
+    var createCos = document.getElementById('an-import-create-companies');
+    window._anImportOpts = {
+      createCompanies: createCos ? createCos.checked : false,
+      skipDupes: true,
+      updateDupes: false,
+      importAnyway: false
+    };
+    m.remove();
+    if(typeof onProceed === 'function') onProceed(window._anImportOpts);
+  };
+};
 
 window.anShowDuplicateReview = function(classified){
   var old = document.getElementById('an-dupe-modal');
@@ -10527,9 +10794,9 @@ window.anShowDuplicateReview = function(classified){
     +'<div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;">These contacts look like ones you already have. Choose what to do before importing <strong>'+(classified.newOnes.length + classified.duplicates.length)+'</strong> total contacts.</div>'
     +'<div style="max-height:240px;overflow-y:auto;margin-bottom:16px;">'+rows+(classified.duplicates.length>8?'<div style="font-size:12px;color:var(--text-muted);padding:8px;">+' +(classified.duplicates.length-8)+' more...</div>':'')+'</div>'
     +'<div style="display:flex;flex-direction:column;gap:8px;">'
-    +'<button onclick="anExecuteImport(_anPending,{skipDupes:true,updateDupes:false,importAnyway:false})" style="padding:11px 16px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);">Skip duplicates — import '+classified.newOnes.length+' new only</button>'
-    +'<button onclick="anExecuteImport(_anPending,{skipDupes:false,updateDupes:true,importAnyway:false})" style="padding:11px 16px;border-radius:8px;border:1.5px solid #10b981;background:rgba(16,185,129,0.08);color:#10b981;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);">Update existing records with CSV data</button>'
-    +'<button onclick="anExecuteImport(_anPending,{skipDupes:false,updateDupes:false,importAnyway:true})" style="padding:11px 16px;border-radius:8px;border:1.5px solid #f59e0b;background:rgba(245,158,11,0.08);color:#b45309;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);">Import all anyway (keep duplicates)</button>'
+    +'<button onclick="anExecuteImport(_anPending,Object.assign({skipDupes:true,updateDupes:false,importAnyway:false},window._anImportOpts||{}))" style="padding:11px 16px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);">Skip duplicates — import '+classified.newOnes.length+' new only</button>'
+    +'<button onclick="anExecuteImport(_anPending,Object.assign({skipDupes:false,updateDupes:true,importAnyway:false},window._anImportOpts||{}))" style="padding:11px 16px;border-radius:8px;border:1.5px solid #10b981;background:rgba(16,185,129,0.08);color:#10b981;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);">Update existing records with CSV data</button>'
+    +'<button onclick="anExecuteImport(_anPending,Object.assign({skipDupes:false,updateDupes:false,importAnyway:true},window._anImportOpts||{}))" style="padding:11px 16px;border-radius:8px;border:1.5px solid #f59e0b;background:rgba(245,158,11,0.08);color:#b45309;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);">Import all anyway (keep duplicates)</button>'
     +'<button onclick="document.getElementById(\'an-dupe-modal\').remove()" style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--divider);background:transparent;color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);">Cancel</button>'
     +'</div></div>';
   document.body.appendChild(m);
@@ -10556,13 +10823,15 @@ window.anConfirmImport = function(){
       }
       if(btn) btn.textContent = 'Checking duplicates (0%)...';
       anClassifyImportBatchChunked(_anPending, function(classified){
-        if(classified.duplicates.length > 0){
-          if(btn){ btn.disabled = false; btn.textContent = 'Import '+_anPending.length+' Contacts'; }
-          anShowDuplicateReview(classified);
-          return;
-        }
-        if(btn){ btn.disabled = true; btn.textContent = 'Importing '+_anPending.length+'...'; }
-        anExecuteImport(_anPending, { skipDupes:true, updateDupes:false, importAnyway:false });
+        if(btn){ btn.disabled = false; btn.textContent = 'Import '+_anPending.length+' Contacts'; }
+        anShowImportDestinationModal(classified, function(opts){
+          if(classified.duplicates.length > 0){
+            anShowDuplicateReview(classified);
+            return;
+          }
+          if(btn){ btn.disabled = true; btn.textContent = 'Importing '+_anPending.length+'...'; }
+          anExecuteImport(_anPending, opts);
+        });
       }, function(done, total){
         if(btn && total){
           var pct = Math.round((done / total) * 100);
@@ -14354,8 +14623,11 @@ console.log('[HOME DASHBOARD] Rendered successfully.');
 
 /* ── Companies view ─────────────────────────────────────── */
 #section-companies { overflow: hidden !important; }
-#co-root { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; height: 100%; min-height: 0; width: 100%; max-width: 100%; background: #f7f7f9; display: flex; overflow: hidden; box-sizing: border-box; }
-#co-list-pane { width: 280px; min-width: 240px; max-width: 300px; flex-shrink: 0; background: #fff; border-right: 1px solid #e9e9ef; display: flex; flex-direction: column; overflow: hidden; }
+#co-root { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; height: 100%; min-height: 0; width: 100%; max-width: 100%; background: #f7f7f9; display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; }
+#co-split-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+#co-list-pane { width: 300px; min-width: 260px; max-width: 340px; flex-shrink: 0; background: #fff; border-right: 1px solid #e9e9ef; display: flex; flex-direction: column; overflow: hidden; }
+#co-page-header .co-header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+#co-page-header .co-header-actions button { white-space: nowrap; }
 #co-detail-pane { flex: 1; min-width: 0; overflow: hidden; display: flex; flex-direction: column; }
 .co-detail-grid { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; width: 100%; }
 .co-detail-left { width: 260px; min-width: 220px; max-width: 280px; flex-shrink: 0; border-right: 1px solid #e9e9ef; background: #fff; padding: 20px; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; }
@@ -14732,21 +15004,6 @@ function coRender() {
 
   // Then load fresh from Supabase
   coLoad(function(companies) {
-    // Auto-populate from leads (merge, don't duplicate)
-    if (typeof AN !== 'undefined' && AN.leads) {
-      var compMap = {};
-      companies.forEach(function(c){ compMap[c.name.toLowerCase().trim()] = true; });
-      var changed = false;
-      AN.leads.forEach(function(l) {
-        var cn = (l.company || '').trim();
-        if (cn && coIsValidCompanyName(cn) && !compMap[cn.toLowerCase()]) {
-          compMap[cn.toLowerCase()] = true;
-          companies.push({ id:'co-'+Date.now()+'-'+Math.random().toString(36).slice(2), name:cn, industry:'Insurance Agency', website:'', lifecycleStage:'', notes:'', created:new Date().toISOString() });
-          changed = true;
-        }
-      });
-      if (changed) coSave(companies);
-    }
     _coRenderWith(sec, companies);
   });
 }
@@ -14756,46 +15013,66 @@ function _coRenderWith(sec, companies) {
   if (!selectedCo && companies.length > 0 && CO.currentView === 'split') { selectedCo = companies[0]; _coSelected = companies[0].id; }
 
   if (CO.currentView === 'table') {
-    sec.innerHTML = '<div id="co-root" style="flex-direction:column;">' + coToolbar(companies) + coBulkBar() + coTableView(companies) + '</div>';
+    sec.innerHTML = '<div id="co-root">' + coPageHeader(companies) + coTableView(companies) + '</div>';
     return;
   }
 
-  sec.innerHTML = '<div id="co-root">' + coListPane(companies, selectedCo) + coDetailPane(selectedCo, companies) + '</div>';
+  sec.innerHTML = '<div id="co-root">' + coPageHeader(companies) + '<div id="co-split-body">' + coListPane(companies, selectedCo) + coDetailPane(selectedCo, companies) + '</div></div>';
 }
 
-function coToolbar(companies) {
-  var junkCount = companies.filter(function(c){ return coIsJunkCompanyName(c.name); }).length;
-  var junkBanner = junkCount
-    ? '<div style="width:100%;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;font-size:12px;color:#92400e;line-height:1.5;margin-bottom:2px;">'
-      +'<strong>'+junkCount+' junk record'+(junkCount!==1?'s':'')+'</strong> from a bad import (numeric IDs, not real companies). '
-      +'Contacts live in <strong>Lead Pipeline</strong> — use <strong>Fix from CSV</strong> there (no re-import), or <strong>Clear junk IDs</strong> / <strong>Delete all</strong> here.'
-      +'</div>'
-    : '';
-  return junkBanner
-    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#fff;border-bottom:1px solid #e9e9ef;flex-shrink:0;gap:10px;flex-wrap:wrap;">'
-    +'<div style="display:flex;align-items:center;gap:10px;">'
-    +'<h2 style="font-size:16px;font-weight:800;color:#09090b;margin:0;">🏢 Companies</h2>'
-    +'<span style="font-size:12px;color:#a1a1aa;">'+companies.length+' total</span>'
-    +'</div>'
-    +'<div style="display:flex;align-items:center;gap:8px;">'
-    +'<div style="display:flex;background:#f4f4f5;border:1.5px solid #e4e4e7;border-radius:8px;padding:2px;">'
-    +'<button onclick="CO.currentView=\'table\';coRender()" style="padding:5px 12px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:'+(CO.currentView==='table'?'#6366f1':'transparent')+';color:'+(CO.currentView==='table'?'#fff':'#71717a')+';">☰ Table</button>'
-    +'<button onclick="CO.currentView=\'split\';coRender()" style="padding:5px 12px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:'+(CO.currentView==='split'?'#6366f1':'transparent')+';color:'+(CO.currentView==='split'?'#fff':'#71717a')+';">⊞ Split</button>'
-    +'</div>'
-    +'<button class="co-add-btn" onclick="coNewCompany()">+ Add</button>'
-    +(companies.length ? '<button onclick="coDeleteJunkCompanies()" style="padding:6px 12px;border-radius:7px;border:1.5px solid #fde68a;background:#fffbeb;color:#b45309;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Clear junk IDs</button>' : '')
-    +(companies.length ? '<button onclick="coDeleteAll()" style="padding:6px 12px;border-radius:7px;border:1.5px solid #fca5a5;background:#fef2f2;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Delete all</button>' : '')
+function coJunkBanner(junkCount){
+  return '<div style="padding:10px 20px;background:#fffbeb;border-bottom:1px solid #fde68a;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">'
+    +'<div style="font-size:12px;color:#92400e;line-height:1.5;flex:1;min-width:220px;"><strong>'+junkCount.toLocaleString()+' junk record'+(junkCount!==1?'s':'')+'</strong> — numeric IDs from a bad import, not real companies. Contacts belong in <strong>Lead Pipeline</strong>.</div>'
+    +'<div class="co-header-actions">'
+    +'<button onclick="if(typeof showSection===\'function\'){showSection(\'crm\');setTimeout(anOpenFixFromCSV,200);}" style="padding:7px 14px;border-radius:7px;border:none;background:#6366f1;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Import / Fix CSV</button>'
+    +'<button onclick="coDeleteJunkCompanies()" style="padding:7px 14px;border-radius:7px;border:1.5px solid #fde68a;background:#fff;color:#b45309;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Clear junk</button>'
+    +'<button onclick="coDeleteAll()" style="padding:7px 14px;border-radius:7px;border:1.5px solid #fca5a5;background:#fff;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Delete all</button>'
     +'</div></div>';
 }
 
-function coBulkBar() {
-  if (!CO.selectedIds.length) return '';
-  return '<div class="co-bulk-bar">'
-    +'<span><strong>'+CO.selectedIds.length+'</strong> selected</span>'
-    +'<button onclick="coDeleteSelected()" style="padding:5px 12px;border-radius:7px;border:1.5px solid #fca5a5;background:#fff;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🗑 Delete Selected</button>'
-    +'<button onclick="CO.selectedIds=[];coRender()" style="padding:5px 12px;border-radius:7px;border:1.5px solid #e4e4e7;background:#fff;color:#71717a;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Clear</button>'
+function coPageHeaderBulkBar(companies){
+  if(!CO.selectedIds.length) return '';
+  var allSelected = companies.length > 0 && CO.selectedIds.length >= companies.length;
+  return '<div style="padding:10px 20px;background:#fef2f2;border-bottom:1px solid #fecaca;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
+    +'<span style="font-size:13px;font-weight:700;color:#b91c1c;">'+CO.selectedIds.length.toLocaleString()+' selected</span>'
+    +'<div class="co-header-actions">'
+    +'<button onclick="coToggleSelectAll('+(!allSelected)+')" style="padding:7px 14px;border-radius:7px;border:1.5px solid #e4e4e7;background:#fff;color:#52525b;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">'+(allSelected?'Deselect all':'Select all')+'</button>'
+    +'<button onclick="coDeleteSelected()" style="padding:7px 14px;border-radius:7px;border:none;background:#ef4444;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🗑 Delete selected</button>'
+    +'<button onclick="CO.selectedIds=[];coRender()" style="padding:7px 14px;border-radius:7px;border:1.5px solid #e4e4e7;background:#fff;color:#71717a;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Clear</button>'
+    +'</div></div>';
+}
+
+function coPageHeader(companies) {
+  var junkCount = companies.filter(function(c){ return coIsJunkCompanyName(c.name); }).length;
+  return '<div id="co-page-header" style="flex-shrink:0;background:#fff;border-bottom:1px solid #e9e9ef;">'
+    +(junkCount ? coJunkBanner(junkCount) : '')
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;gap:12px;flex-wrap:wrap;">'
+    +'<div style="display:flex;align-items:baseline;gap:10px;min-width:0;">'
+    +'<h2 style="font-size:18px;font-weight:800;color:#09090b;margin:0;">🏢 Companies</h2>'
+    +'<span style="font-size:12px;color:#a1a1aa;white-space:nowrap;">'+companies.length.toLocaleString()+' total</span>'
+    +'</div>'
+    +'<div class="co-header-actions">'
+    +'<div style="display:flex;background:#f4f4f5;border:1.5px solid #e4e4e7;border-radius:8px;padding:2px;">'
+    +'<button onclick="CO.currentView=\'table\';coRender()" style="padding:6px 14px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:'+(CO.currentView==='table'?'#6366f1':'transparent')+';color:'+(CO.currentView==='table'?'#fff':'#71717a')+';">Table</button>'
+    +'<button onclick="CO.currentView=\'split\';coRender()" style="padding:6px 14px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:'+(CO.currentView==='split'?'#6366f1':'transparent')+';color:'+(CO.currentView==='split'?'#fff':'#71717a')+';">Split</button>'
+    +'</div>'
+    +'<button class="co-add-btn" onclick="coNewCompany()">+ Add Company</button>'
+    +'<button onclick="coSyncFromLeads()" style="padding:7px 14px;border-radius:7px;border:1.5px solid #c7d2fe;background:#eef2ff;color:#4338ca;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Sync from leads</button>'
+    +(companies.length ? '<button onclick="coDeleteAll()" style="padding:7px 14px;border-radius:7px;border:1.5px solid #fca5a5;background:#fff;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Delete all</button>' : '')
+    +'</div></div>'
+    +coPageHeaderBulkBar(companies)
     +'</div>';
 }
+
+window.coSyncFromLeads = function(){
+  if(typeof anSyncCompaniesFromLeads !== 'function'){
+    if(typeof showToast === 'function') showToast('Load Lead Pipeline first');
+    return;
+  }
+  anSyncCompaniesFromLeads();
+  coRender();
+  if(typeof showToast === 'function') showToast('Synced company pages from lead agency names');
+};
 
 function coTableView(companies) {
   if (!companies.length) {
@@ -14816,20 +15093,29 @@ function coTableView(companies) {
       +'<td>'+(stats.activeMRR ? '$'+stats.activeMRR+'/mo' : (stats.pipelineMRR ? '$'+stats.pipelineMRR+'/mo pipe' : '—'))+'</td>'
       +'<td><span style="background:#eef2ff;color:#6366f1;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;">'+coEsc(stats.lifecycle)+'</span></td>'
       +'<td style="color:#71717a;">'+coEsc(owner)+'</td>'
+      +'<td onclick="event.stopPropagation()" style="white-space:nowrap;">'
+      +'<button onclick="coDeleteCompany(\''+co.id+'\')" title="Delete company" style="padding:5px 10px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🗑</button>'
+      +'</td>'
       +'</tr>';
   }).join('');
 
+  var allChecked = companies.length > 0 && CO.selectedIds.length === companies.length;
   return '<div class="co-table-wrap"><table class="co-table">'
     +'<thead><tr>'
-    +'<th style="width:36px;"><input type="checkbox" onclick="coToggleSelectAll(this.checked)" style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;"></th>'
-    +'<th>Company</th><th>Contacts</th><th>Signed Up</th><th>Plan</th><th>MRR</th><th>Stage</th><th>Owner</th>'
+    +'<th style="width:36px;"><input type="checkbox"'+(allChecked?' checked':'')+' onclick="coToggleSelectAll(this.checked)" style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;"></th>'
+    +'<th>Company</th><th>Contacts</th><th>Signed Up</th><th>Plan</th><th>MRR</th><th>Stage</th><th>Owner</th><th style="width:52px;"> </th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
 function coListPane(companies, selected) {
+  var allChecked = companies.length > 0 && CO.selectedIds.length === companies.length;
   return '<div id="co-list-pane">'
-    + coToolbar(companies)
-    + coBulkBar()
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #f0f0f5;background:#fafafa;font-size:11px;color:#71717a;">'
+    +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;">'
+    +'<input type="checkbox"'+(allChecked?' checked':'')+' onchange="coToggleSelectAll(this.checked)" style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;"> Select all'
+    +'</label>'
+    +(CO.selectedIds.length ? '<span style="color:#ef4444;font-weight:700;">'+CO.selectedIds.length+' selected</span>' : '<span>'+companies.length+' shown</span>')
+    +'</div>'
     +'<div class="co-search"><input id="co-search-input" type="text" placeholder="Search companies..." oninput="coFilterList(this.value)" value=""></div>'
     +'<div id="co-company-list">'
     +(companies.length === 0 ? '<div style="padding:32px;text-align:center;color:#a1a1aa;font-size:13px;"><div style="font-size:32px;margin-bottom:8px;">🏢</div>No companies yet.<br><small>They\'ll appear here from your lead data, or add one manually.</small></div>' : '')
@@ -14846,6 +15132,7 @@ function coListPane(companies, selected) {
         +'<div class="co-co-meta">'+stats.totalContacts+' contact'+(stats.totalContacts!==1?'s':'')+(stats.activeUsers?' · '+stats.activeUsers+' signed up':'')+(stats.activeMRR?' · $'+stats.activeMRR+'/mo':'')+'</div>'
         +'</div>'
         +(stats.activeUsers ? '<span class="co-co-badge" style="background:#dcfce7;color:#16a34a;">✓ '+stats.activeUsers+'</span>' : (stats.totalContacts ? '<span class="co-co-badge" style="background:#eef2ff;color:#6366f1;">'+stats.lifecycle+'</span>' : ''))
+        +'<button onclick="event.stopPropagation();coDeleteCompany(\''+co.id+'\')" title="Delete" style="flex-shrink:0;padding:4px 8px;border-radius:6px;border:1px solid #fecaca;background:#fff;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;opacity:0.85;">🗑</button>'
         +'</div></div>';
     }).join('')
     +'</div></div>';
@@ -14898,11 +15185,13 @@ function coDetailPane(co, allCompanies) {
 
     // ── LEFT: Company profile + key info (HubSpot-style) ──
     +'<div class="co-detail-left">'
-    +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">'
-    +'<div style="width:48px;height:48px;border-radius:12px;background:'+coColor(co.name)+';display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;">'+co.name.charAt(0).toUpperCase()+'</div>'
+    +'<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:18px;">'
+    +'<div style="width:48px;height:48px;border-radius:12px;background:'+coColor(co.name)+';display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;flex-shrink:0;">'+co.name.charAt(0).toUpperCase()+'</div>'
     +'<div style="flex:1;min-width:0;"><div style="font-size:17px;font-weight:800;color:#09090b;">'+coEsc(co.name)+'</div>'
     +'<input id="co-website-edit" type="text" value="'+coEsc(co.website||'')+'" placeholder="website.com" onblur="coSaveField(\''+co.id+'\',\'website\',this.value)" style="border:none;font-size:12px;color:#6366f1;background:transparent;outline:none;width:100%;margin-top:2px;" onfocus="this.style.borderColor=\'#6366f1\'">'
-    +'</div></div>'
+    +'</div>'
+    +'<button onclick="coDeleteCompany(\''+co.id+'\')" title="Delete company" style="flex-shrink:0;padding:7px 12px;border-radius:8px;border:1px solid #fecaca;background:#fef2f2;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🗑 Delete</button>'
+    +'</div>'
     +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;">'
     +'<button onclick="coAddContact(\''+co.id+'\')" style="padding:6px 12px;border-radius:20px;border:1px solid #e4e4e7;background:#fff;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;">📝 Note</button>'
     +'<button onclick="coAddContact(\''+co.id+'\')" style="padding:6px 12px;border-radius:20px;border:1px solid #e4e4e7;background:#fff;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;">📞 Call</button>'
@@ -15079,30 +15368,53 @@ window.coToggleSelectAll = function(checked) {
   coRender();
 };
 
+function coRemoveCompaniesByIds(ids, skipConfirm){
+  if(!ids || !ids.length) return 0;
+  var idMap = {};
+  ids.forEach(function(id){ idMap[id] = true; });
+  var names = [];
+  var companies = (_coData || []).filter(function(c){
+    if(idMap[c.id]){ names.push(c.name); return false; }
+    return true;
+  });
+  if(companies.length === (_coData || []).length) return 0;
+
+  if(typeof AN !== 'undefined' && Array.isArray(AN.leads)){
+    var leadsTouched = false;
+    AN.leads.forEach(function(l){
+      if(l.companyId && idMap[l.companyId]){ delete l.companyId; leadsTouched = true; }
+    });
+    if(leadsTouched && typeof AN.save === 'function') AN.save();
+  }
+
+  CO.selectedIds = CO.selectedIds.filter(function(id){ return !idMap[id]; });
+  if(_coSelected && idMap[_coSelected]) _coSelected = companies.length ? companies[0].id : null;
+
+  coSave(companies, function(){
+    coRender();
+    if(typeof showToast === 'function'){
+      var n = ids.length;
+      showToast('Deleted '+n+' compan'+(n!==1?'ies':'y')+(names.length===1 ? ': '+names[0] : ''));
+    }
+  });
+  return ids.length;
+}
+
 window.coDeleteSelected = function() {
   if (!CO.selectedIds.length) return;
   var n = CO.selectedIds.length;
-  if (!confirm('Remove '+n+' selected compan'+(n!==1?'ies':'y')+'? Leads will be kept — only the company record is removed.')) return;
-  var ids = CO.selectedIds.slice();
-  var companies = _coData.filter(function(c){ return ids.indexOf(c.id) < 0; });
-  CO.selectedIds = [];
-  if (_coSelected && ids.indexOf(_coSelected) >= 0) {
-    _coSelected = companies.length ? companies[0].id : null;
-  }
-  coSave(companies, function(){ coRender(); if(typeof showToast==='function') showToast('Removed '+n+' compan'+(n!==1?'ies':'y')); });
+  if (!confirm('Delete '+n+' selected compan'+(n!==1?'ies':'y')+'?\n\nLeads in Lead Pipeline are kept — only these company pages are removed.')) return;
+  coRemoveCompaniesByIds(CO.selectedIds.slice(), true);
 };
 
 window.coDeleteAll = function() {
   var n = _coData.length;
   if (!n) return;
-  if (!confirm('Delete ALL '+n+' companies?\n\nYour leads in Lead Pipeline are NOT deleted — only company records here.')) return;
-  if (!confirm('Confirm: remove all '+n+' company records?')) return;
+  if (!confirm('Delete ALL '+n.toLocaleString()+' companies?\n\nLeads in Lead Pipeline are NOT deleted.')) return;
+  if (!confirm('Last chance — remove every company record?')) return;
   CO.selectedIds = [];
   _coSelected = null;
-  coSave([], function(){
-    coRender();
-    if(typeof showToast==='function') showToast('Removed all companies — import leads from Lead Pipeline → Import CSV');
-  });
+  coRemoveCompaniesByIds(_coData.map(function(c){ return c.id; }), true);
 };
 
 window.coDeleteJunkCompanies = function() {
@@ -15111,16 +15423,8 @@ window.coDeleteJunkCompanies = function() {
     if(typeof showToast==='function') showToast('No junk company records found');
     return;
   }
-  if (!confirm('Remove '+junk.length+' junk compan'+(junk.length!==1?'ies':'y')+' (numeric IDs / bad import names)?\n\nLeads are kept.')) return;
-  var junkIds = {};
-  junk.forEach(function(c){ junkIds[c.id] = true; });
-  var companies = _coData.filter(function(c){ return !junkIds[c.id]; });
-  CO.selectedIds = CO.selectedIds.filter(function(id){ return !junkIds[id]; });
-  if (_coSelected && junkIds[_coSelected]) _coSelected = companies.length ? companies[0].id : null;
-  coSave(companies, function(){
-    coRender();
-    if(typeof showToast==='function') showToast('Removed '+junk.length+' junk companies');
-  });
+  if (!confirm('Delete '+junk.length.toLocaleString()+' junk compan'+(junk.length!==1?'ies':'y')+' (numeric IDs)?\n\nLeads are kept.')) return;
+  coRemoveCompaniesByIds(junk.map(function(c){ return c.id; }), true);
 };
 
 window.coFilterList = function(q) {
@@ -15187,11 +15491,11 @@ window.coSaveField = function(coId, field, value) {
   coSave(companies); // fire and forget — no need to re-render
 };
 
-window.coDeleteCompany = function(coId) {
-  if (!confirm('Remove this company? This won\'t delete the leads.')) return;
-  var companies = _coData.filter(function(c){ return c.id!==coId; });
-  _coSelected = companies.length ? companies[0].id : null;
-  coSave(companies, function() { coRender(); });
+window.coDeleteCompany = function(coId, skipConfirm) {
+  var co = (_coData || []).find(function(c){ return c.id === coId; });
+  if(!co) return;
+  if(!skipConfirm && !confirm('Delete "'+co.name+'"?\n\nLeads in Lead Pipeline are kept — only this company page is removed.')) return;
+  coRemoveCompaniesByIds([coId], true);
 };
 
 // Wire Companies into showSection — load leads from Supabase first
