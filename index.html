@@ -5334,10 +5334,86 @@ window.editDemo=function(id){ openAddDemo(id); };
 window.updateDemoStatus=window.updDemoStatus;
 
 // ── Show Rate HTML ────────────────────────────────────────────
+var DASH_DOW_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+var DASH_DOW_ORDER = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+function dashDayOfWeek(dateStr){
+  if(!dateStr) return null;
+  var d = new Date(dateStr + 'T12:00:00');
+  if(isNaN(d.getTime())) return null;
+  return DASH_DOW_NAMES[d.getDay()];
+}
+
+function dashBuildDemoDayBuckets(demos, dateField){
+  var buckets = {};
+  DASH_DOW_ORDER.forEach(function(day){ buckets[day] = { booked:0, showed:0, noshow:0, pending:0, rescheduled:0 }; });
+  (demos || []).forEach(function(demo){
+    var day = dashDayOfWeek(demo[dateField] || (dateField === 'scheduledDate' ? demo.scheduledDate : demo.bookedDate));
+    if(!day || !buckets[day]) return;
+    buckets[day].booked++;
+    if(demo.status === 'showed') buckets[day].showed++;
+    else if(demo.status === 'noshow') buckets[day].noshow++;
+    else if(demo.status === 'rescheduled') buckets[day].rescheduled++;
+    else buckets[day].pending++;
+  });
+  return buckets;
+}
+
+function dashRenderDemoDayTable(buckets, title, subtitle){
+  var rows = DASH_DOW_ORDER.map(function(day){
+    var b = buckets[day] || { booked:0, showed:0, noshow:0, pending:0, rescheduled:0 };
+    var decided = b.showed + b.noshow;
+    var showRate = decided > 0 ? Math.round(b.showed / decided * 100) : null;
+    var dropOff = decided > 0 ? Math.round(b.noshow / decided * 100) : null;
+    var isFriday = day === 'Friday';
+    var rowBg = isFriday && dropOff !== null && dropOff >= 40 ? 'rgba(239,68,68,0.06)' : 'transparent';
+    return '<tr style="background:'+rowBg+';">'
+      +'<td style="padding:8px 10px;font-size:12px;font-weight:'+(isFriday?'700':'600')+';color:#09090b;">'+day+(isFriday?' ⚠️':'')+'</td>'
+      +'<td style="padding:8px 10px;font-size:12px;color:#71717a;text-align:center;">'+b.booked+'</td>'
+      +'<td style="padding:8px 10px;font-size:12px;color:#10b981;text-align:center;font-weight:600;">'+b.showed+'</td>'
+      +'<td style="padding:8px 10px;font-size:12px;color:#ef4444;text-align:center;font-weight:600;">'+b.noshow+'</td>'
+      +'<td style="padding:8px 10px;font-size:12px;color:#6366f1;text-align:center;">'+b.pending+'</td>'
+      +'<td style="padding:8px 10px;font-size:12px;text-align:center;font-weight:700;color:'+(showRate===null?'#a1a1aa':showRate>=70?'#10b981':showRate>=50?'#f59e0b':'#ef4444')+';">'+(showRate!==null?showRate+'%':'—')+'</td>'
+      +'<td style="padding:8px 10px;font-size:12px;text-align:center;font-weight:700;color:'+(dropOff===null?'#a1a1aa':dropOff>=40?'#ef4444':dropOff>=25?'#f59e0b':'#71717a')+';">'+(dropOff!==null?dropOff+'%':'—')+'</td>'
+      +'</tr>';
+  }).join('');
+  return '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:18px;margin-bottom:16px;">'
+    +'<div style="font-size:11px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">'+title+'</div>'
+    +'<div style="font-size:12px;color:#71717a;margin-bottom:12px;line-height:1.5;">'+subtitle+'</div>'
+    +'<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;min-width:520px;">'
+    +'<thead><tr style="border-bottom:2px solid #e4e4e7;">'
+    +'<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;">Day</th>'
+    +'<th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;">Booked</th>'
+    +'<th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;">Showed</th>'
+    +'<th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;">No-Show</th>'
+    +'<th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;">Pending</th>'
+    +'<th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;">Show Rate</th>'
+    +'<th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;">Drop-off</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+}
+
 function buildShowRateHTML() {
   var demos=_dash.demos||[], showed=demos.filter(function(d){return d.status==='showed';}).length;
   var noshow=demos.filter(function(d){return d.status==='noshow';}).length;
   var decided=showed+noshow, rate=decided>0?Math.round(showed/decided*100):0;
+  var schedBuckets = dashBuildDemoDayBuckets(demos, 'scheduledDate');
+  var bookedBuckets = dashBuildDemoDayBuckets(demos, 'bookedDate');
+  var friSched = schedBuckets.Friday || { showed:0, noshow:0 };
+  var friBooked = bookedBuckets.Friday || { showed:0, noshow:0 };
+  var friSchedDecided = friSched.showed + friSched.noshow;
+  var friBookedDecided = friBooked.showed + friBooked.noshow;
+  var friSchedDrop = friSchedDecided > 0 ? Math.round(friSched.noshow / friSchedDecided * 100) : null;
+  var friBookedDrop = friBookedDecided > 0 ? Math.round(friBooked.noshow / friBookedDecided * 100) : null;
+  var fridayAlert = '';
+  if((friSchedDrop !== null && friSchedDrop >= 35) || (friBookedDrop !== null && friBookedDrop >= 35)){
+    fridayAlert = '<div style="background:linear-gradient(135deg,#fef2f2,#fff7ed);border:1.5px solid #fca5a5;border-radius:12px;padding:16px 18px;margin-bottom:16px;">'
+      +'<div style="font-size:13px;font-weight:800;color:#b91c1c;margin-bottom:6px;">⚠️ Friday drop-off pattern detected</div>'
+      +'<div style="font-size:12px;color:#7f1d1d;line-height:1.6;">'
+      +(friSchedDrop !== null ? 'Demos <strong>scheduled on Friday</strong>: '+friSchedDrop+'% no-show ('+friSched.noshow+' of '+friSchedDecided+' decided). ' : '')
+      +(friBookedDrop !== null ? 'Demos <strong>booked on Friday</strong>: '+friBookedDrop+'% no-show ('+friBooked.noshow+' of '+friBookedDecided+' decided). ' : '')
+      +'Consider confirming Friday bookings with a reminder call or moving to Tue–Thu slots.'
+      +'</div></div>';
+  }
   var SIZES_D=typeof SIZES!=='undefined'?SIZES:[{id:'solo',label:'Solo Agent'},{id:'small',label:'Small Agency'},{id:'large',label:'Large Agency'}];
   var bySizeRows=SIZES_D.map(function(sz){
     var sd=demos.filter(function(d){return d.size===sz.id;}), dc=sd.filter(function(d){return d.status==='showed'||d.status==='noshow';});
@@ -5353,6 +5429,9 @@ function buildShowRateHTML() {
     +'<div style="background:linear-gradient(135deg,#0f0f17,#1e1b4b);border-radius:12px;padding:14px;text-align:center;"><div style="font-size:9px;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Show Rate</div><div style="font-size:40px;font-weight:800;color:#fff;line-height:1;">'+(decided>0?rate+'%':'—')+'</div>'+(decided>0?'<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:4px;">'+showed+' of '+decided+' decided</div>':'')+'</div>'
     +'</div>'
     +(decided>0?'<div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:18px;margin-bottom:16px;"><div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:12px;font-weight:700;">Show Rate</span><span style="font-size:12px;font-weight:700;color:'+(rate>=70?'#10b981':rate>=50?'#f59e0b':'#ef4444')+';">'+rate+'%</span></div><div style="background:#f4f4f5;border-radius:20px;height:12px;overflow:hidden;margin-bottom:6px;"><div style="background:'+(rate>=70?'linear-gradient(90deg,#10b981,#06b6d4)':rate>=50?'linear-gradient(90deg,#f59e0b,#ef4444)':'#ef4444')+';height:12px;border-radius:20px;width:'+rate+'%;transition:width 0.5s;"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:#a1a1aa;"><span>0%</span><span style="color:#f59e0b;">50%</span><span style="color:#10b981;">70%+ great</span><span>100%</span></div></div>':'')
+    +fridayAlert
+    +dashRenderDemoDayTable(schedBuckets, 'Drop-off by Scheduled Day', 'When the demo was set to happen — e.g. Friday demos that never showed.')
+    +dashRenderDemoDayTable(bookedBuckets, 'Drop-off by Booking Day', 'When the demo was originally booked — e.g. booked on Friday but didn\'t make it.')
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;"><div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:18px;"><div style="font-size:11px;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Demo Outcomes</div><div style="position:relative;height:180px;"><canvas id="chart-showrate"></canvas></div></div>'
     +'<div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:18px;"><div style="font-size:11px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Show Rate by Size</div>'+bySizeRows+'</div></div>'
     +'</div>';
@@ -8373,6 +8452,9 @@ AN.sortField     = 'created';
 AN.sortDir       = 'desc';
 AN.searchQ       = '';
 AN.repFilter     = '';
+AN.listPage      = 0;
+AN.pageSize      = 100;
+AN.leadsStorage  = 'local';  // local | idb
 AN.activeLead    = null;
 AN.selectedIds   = [];
 AN.isAdmin       = false;
@@ -8511,10 +8593,78 @@ function anNormalizeLeads(arr){
   });
 }
 
+function anLoadLeadsFromLocal(){
+  try {
+    if(localStorage.getItem('an-crm-leads-idb') === '1') return null;
+    return anNormalizeLeads(JSON.parse(localStorage.getItem('an-crm-leads')||'[]'));
+  } catch(e){ return []; }
+}
+
+function anOpenLeadsIDB(cb){
+  if(typeof indexedDB === 'undefined'){ if(cb) cb(new Error('IndexedDB unavailable')); return; }
+  var req = indexedDB.open('agentnav-crm', 1);
+  req.onupgradeneeded = function(e){
+    if(!e.target.result.objectStoreNames.contains('kv')) e.target.result.createObjectStore('kv');
+  };
+  req.onsuccess = function(){ cb(null, req.result); };
+  req.onerror = function(){ cb(req.error || new Error('IndexedDB open failed')); };
+}
+
+function anLoadLeadsFromIDB(cb){
+  anOpenLeadsIDB(function(err, db){
+    if(err){ cb(err, []); return; }
+    var tx = db.transaction('kv', 'readonly');
+    var getReq = tx.objectStore('kv').get('leads');
+    getReq.onsuccess = function(){
+      var leads = anNormalizeLeads(getReq.result || []);
+      cb(null, leads);
+    };
+    getReq.onerror = function(){ cb(getReq.error || new Error('IndexedDB read failed'), []); };
+  });
+}
+
+function anSaveLeadsToIDB(leads, cb){
+  anOpenLeadsIDB(function(err, db){
+    if(err){ if(cb) cb(err); return; }
+    var tx = db.transaction('kv', 'readwrite');
+    tx.objectStore('kv').put(leads, 'leads');
+    tx.oncomplete = function(){
+      try {
+        localStorage.removeItem('an-crm-leads');
+        localStorage.setItem('an-crm-leads-idb', '1');
+      } catch(e){}
+      AN.leadsStorage = 'idb';
+      if(cb) cb(null);
+    };
+    tx.onerror = function(){ if(cb) cb(tx.error || new Error('IndexedDB write failed')); };
+  });
+}
+
 AN.load = function(cb){
   var sb = typeof getSupabase==='function'?getSupabase():null;
-  try { AN.leads = anNormalizeLeads(JSON.parse(localStorage.getItem('an-crm-leads')||'[]')); } catch(e){ AN.leads=[]; }
-  if(!sb||!_currentUser){ if(cb) cb(); return; }
+  var localLeads = anLoadLeadsFromLocal();
+  if(localLeads && localLeads.length){
+    AN.leads = localLeads;
+    AN.leadsStorage = 'local';
+    if(!sb||!_currentUser){ if(cb) cb(); return; }
+  } else if(localStorage.getItem('an-crm-leads-idb') === '1'){
+    anLoadLeadsFromIDB(function(err, leads){
+      AN.leads = leads || [];
+      AN.leadsStorage = err ? 'local' : 'idb';
+      if(!sb||!_currentUser){ if(cb) cb(); return; }
+      anFinishCloudLeadLoad(sb, cb);
+    });
+    return;
+  } else {
+    AN.leads = localLeads || [];
+    AN.leadsStorage = 'local';
+    if(!sb||!_currentUser){ if(cb) cb(); return; }
+  }
+  anFinishCloudLeadLoad(sb, cb);
+};
+
+function anFinishCloudLeadLoad(sb, cb){
+  if(typeof _currentUser === 'undefined' || !_currentUser){ if(cb) cb(); return; }
   AN.isAdmin = _currentUser.email === 'asmithee@insurewithcompass.com';
   AN.currentRepEmail = _currentUser.email;
   AN.currentRep = (_currentUser.user_metadata&&_currentUser.user_metadata.full_name)||_currentUser.email.split('@')[0];
@@ -8536,7 +8686,7 @@ AN.load = function(cb){
       });
       if(merged.length){
         AN.leads = merged;
-        localStorage.setItem('an-crm-leads', JSON.stringify(AN.leads));
+        anPersistLeadsLocal(function(){});
       }
     }
     if(cb) cb();
@@ -8544,32 +8694,60 @@ AN.load = function(cb){
     console.warn('[CRM] Supabase load failed, using local cache:', err);
     if(cb) cb();
   });
-};
+}
 
-AN.save = function(cb){
+function anPersistLeadsLocal(cb){
   if(!Array.isArray(AN.leads)) AN.leads = [];
   AN.leads.forEach(function(l){
     if(l && l.phone) l.phone = anNormalizePhone(l.phone);
   });
-  localStorage.setItem('an-crm-leads', JSON.stringify(AN.leads));
-  var sb = typeof getSupabase==='function'?getSupabase():null;
-  if(!sb||!_currentUser){ if(cb) cb(true, null, 'local'); return; }
+  var payload = JSON.stringify(AN.leads);
+  try {
+    localStorage.setItem('an-crm-leads', payload);
+    localStorage.removeItem('an-crm-leads-idb');
+    AN.leadsStorage = 'local';
+    if(cb) cb(null, 'local');
+    return;
+  } catch(e){}
+  anSaveLeadsToIDB(AN.leads, function(idbErr){
+    if(idbErr){
+      if(cb) cb(idbErr, 'failed');
+      return;
+    }
+    if(cb) cb(null, 'idb');
+  });
+}
+
+AN.save = function(cb){
+  if(!Array.isArray(AN.leads)) AN.leads = [];
+  anPersistLeadsLocal(function(err, where){
+    if(err){
+      console.error('[CRM] Local save failed:', err);
+      if(cb) cb(false, err, 'failed');
+      return;
+    }
+    var sb = typeof getSupabase==='function'?getSupabase():null;
+    if(!sb||!_currentUser){
+      if(cb) cb(true, null, where || 'local');
+      return;
+    }
   var repEmail = AN.currentRepEmail || _currentUser.email;
   var mine = AN.leads.filter(function(l){ return !l._repEmail || l._repEmail === repEmail; })
     .map(function(l){ var c = Object.assign({}, l); delete c._repEmail; return c; });
-  sb.from('an_leads').upsert({
-    user_id: _currentUser.id,
-    rep_email: repEmail,
-    data: mine,
-    updated_at: new Date().toISOString()
-  }, { onConflict: 'user_id' }).then(function(r){
-    if(r.error){
-      console.error('[CRM] Supabase save error:', r.error);
-      if(cb) cb(false, r.error, 'cloud');
-    } else if(cb) cb(true, null, 'cloud');
-  }).catch(function(err){
-    console.error('[CRM] Supabase save failed:', err);
-    if(cb) cb(false, err, 'cloud');
+    sb.from('an_leads').upsert({
+      user_id: _currentUser.id,
+      rep_email: repEmail,
+      data: mine,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' }).then(function(r){
+      if(r.error){
+        console.error('[CRM] Supabase save error:', r.error);
+        if(cb) cb(false, r.error, where || 'local');
+      } else if(cb) cb(true, null, 'cloud');
+    }).catch(function(err){
+      console.error('[CRM] Supabase save failed:', err);
+      if(cb) cb(false, err, where || 'local');
+    });
   });
 };
 
@@ -8625,7 +8803,7 @@ function buildCRMShell(){
 
   // Stats bar
   var statsHTML = AN_LEAD_STATUSES.map(function(s){
-    return '<div onclick="AN.currentFilter=\''+s.id+'\';renderLeadsTable();" style="padding:12px 16px;cursor:pointer;border-right:1px solid var(--divider);flex:1;min-width:0;transition:background 0.15s;" onmouseover="this.style.background=\'var(--body-bg)\'" onmouseout="this.style.background=\'transparent\'">'
+    return '<div onclick="AN.currentFilter=\''+s.id+'\';anResetLeadsPage();renderLeadsTable();" style="padding:12px 16px;cursor:pointer;border-right:1px solid var(--divider);flex:1;min-width:0;transition:background 0.15s;" onmouseover="this.style.background=\'var(--body-bg)\'" onmouseout="this.style.background=\'transparent\'">'
       +'<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">'
       +'<span style="width:7px;height:7px;border-radius:50%;background:'+s.dot+';flex-shrink:0;"></span>'
       +'<span style="font-size:10px;font-weight:700;color:'+s.color+';text-transform:uppercase;letter-spacing:0.1em;white-space:nowrap;">'+s.label+'</span>'
@@ -8643,7 +8821,7 @@ function buildCRMShell(){
     {id:'followup',label:'📅 Follow Up'}
   ].map(function(f){
     var active = AN.currentFilter===f.id;
-    return '<button onclick="AN.currentFilter=\''+f.id+'\';renderLeadsTable();" '
+    return '<button onclick="AN.currentFilter=\''+f.id+'\';anResetLeadsPage();renderLeadsTable();" '
       +'style="padding:5px 13px;border-radius:20px;border:1.5px solid '+(active?'#6366f1':'var(--divider)')+';background:'+(active?'rgba(99,102,241,0.1)':'transparent')+';color:'+(active?'#6366f1':'var(--text-secondary)')+';font-size:12.5px;font-weight:'+(active?'700':'500')+';cursor:pointer;font-family:var(--sans);white-space:nowrap;">'+f.label+'</button>';
   }).join('');
 
@@ -8655,11 +8833,11 @@ function buildCRMShell(){
     if(reps.length){
       repFilterHTML = '<div style="display:flex;align-items:center;gap:6px;padding:8px 16px;border-top:1px solid var(--divider);overflow-x:auto;">'
         +'<span style="font-size:10px;font-weight:700;font-family:var(--mono);letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);white-space:nowrap;margin-right:4px;">Rep:</span>'
-        +'<button onclick="AN.repFilter=\'\';renderLeadsTable()" style="padding:3px 10px;border-radius:20px;border:1.5px solid '+(AN.repFilter===''?'#6366f1':'var(--divider)')+';background:'+(AN.repFilter===''?'rgba(99,102,241,0.1)':'transparent')+';color:'+(AN.repFilter===''?'#6366f1':'var(--text-secondary)')+';font-size:11.5px;font-weight:600;cursor:pointer;font-family:var(--sans);white-space:nowrap;">All</button>'
+        +'<button onclick="AN.repFilter=\'\';anResetLeadsPage();renderLeadsTable()" style="padding:3px 10px;border-radius:20px;border:1.5px solid '+(AN.repFilter===''?'#6366f1':'var(--divider)')+';background:'+(AN.repFilter===''?'rgba(99,102,241,0.1)':'transparent')+';color:'+(AN.repFilter===''?'#6366f1':'var(--text-secondary)')+';font-size:11.5px;font-weight:600;cursor:pointer;font-family:var(--sans);white-space:nowrap;">All</button>'
         +reps.map(function(email){
           var name=typeof anGetRepName==='function'?anGetRepName(email):email.split('@')[0], col=anColor(email), cnt=AN.leads.filter(function(l){return l._repEmail===email;}).length;
           var active=AN.repFilter===email;
-          return '<button onclick="AN.repFilter=\''+email+'\';renderLeadsTable()" style="padding:3px 10px;border-radius:20px;border:1.5px solid '+(active?col:'var(--divider)')+';background:'+(active?col+'1a':'transparent')+';color:'+(active?col:'var(--text-secondary)')+';font-size:11.5px;font-weight:600;cursor:pointer;font-family:var(--sans);white-space:nowrap;display:flex;align-items:center;gap:5px;">'
+          return '<button onclick="AN.repFilter=\''+email+'\';anResetLeadsPage();renderLeadsTable()" style="padding:3px 10px;border-radius:20px;border:1.5px solid '+(active?col:'var(--divider)')+';background:'+(active?col+'1a':'transparent')+';color:'+(active?col:'var(--text-secondary)')+';font-size:11.5px;font-weight:600;cursor:pointer;font-family:var(--sans);white-space:nowrap;display:flex;align-items:center;gap:5px;">'
             +'<span style="width:6px;height:6px;border-radius:50%;background:'+col+';"></span>'+name+' ('+cnt+')</button>';
         }).join('')
         +'</div>';
@@ -8674,13 +8852,14 @@ function buildCRMShell(){
     +'<h1 style="font-size:22px;font-weight:900;letter-spacing:-0.5px;color:var(--text-primary);margin:0;">Lead Pipeline</h1></div>'
     +'<div style="display:flex;gap:8px;align-items:center;">'
     +'<div style="position:relative;">'
-    +'<input id="crm-search" type="text" placeholder="Search leads..." value="'+anEsc(AN.searchQ)+'" oninput="AN.searchQ=this.value;renderLeadsTable()" '
+    +'<input id="crm-search" type="text" placeholder="Search leads..." value="'+anEsc(AN.searchQ)+'" oninput="AN.searchQ=this.value;anResetLeadsPage();renderLeadsTable()" '
     +'style="padding:8px 12px 8px 32px;border:1.5px solid var(--divider);border-radius:8px;font-size:13px;color:var(--text-primary);background:var(--card-bg);outline:none;width:200px;font-family:var(--sans);" '
     +'onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'">'
     +'<span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;color:var(--text-muted);">🔍</span>'
     +'</div>'
     +'<button onclick="anOpenCallSessionSetup()" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px solid #a7f3d0;border-radius:8px;font-size:13px;font-weight:700;color:#10b981;background:#ecfdf5;cursor:pointer;font-family:var(--sans);">📞 Lead Session</button>'
     +'<button onclick="anOpenImport()" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px solid var(--divider);border-radius:8px;font-size:13px;font-weight:600;color:var(--text-secondary);background:var(--card-bg);cursor:pointer;font-family:var(--sans);">📂 Import CSV</button>'
+    +'<button onclick="anOpenFixFromCSV()" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px solid #fde68a;border-radius:8px;font-size:13px;font-weight:600;color:#b45309;background:#fffbeb;cursor:pointer;font-family:var(--sans);">🔧 Fix from CSV</button>'
     +'<button onclick="anNewLead()" style="display:flex;align-items:center;gap:6px;padding:8px 16px;border:none;border-radius:8px;font-size:13px;font-weight:700;color:#fff;background:#6366f1;cursor:pointer;font-family:var(--sans);box-shadow:0 2px 8px rgba(99,102,241,0.3);">+ Add Lead</button>'
     +'</div></div>'
 
@@ -8709,7 +8888,35 @@ function buildCRMShell(){
     +'</div>';
 }
 
+function anResetLeadsPage(){
+  AN.listPage = 0;
+}
+
+function anLeadsPageSlice(list){
+  var pageSize = AN.pageSize || 100;
+  var totalPages = Math.max(1, Math.ceil(list.length / pageSize));
+  if(AN.listPage >= totalPages) AN.listPage = totalPages - 1;
+  if(AN.listPage < 0) AN.listPage = 0;
+  var start = AN.listPage * pageSize;
+  return { pageList: list.slice(start, start + pageSize), totalPages: totalPages, start: start };
+}
+
+function anRenderLeadsPagination(list, totalPages, start){
+  if(list.length <= (AN.pageSize || 100)) return '';
+  var end = Math.min(start + (AN.pageSize || 100), list.length);
+  return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--divider);background:var(--card-bg);flex-shrink:0;gap:10px;flex-wrap:wrap;">'
+    +'<div style="font-size:12px;color:var(--text-muted);">Showing '+(start+1)+'–'+end+' of '+list.length+'</div>'
+    +'<div style="display:flex;gap:6px;align-items:center;">'
+    +'<button onclick="AN.listPage=0;renderLeadsTable()" '+(AN.listPage<=0?'disabled':'')+' style="padding:5px 10px;border-radius:6px;border:1px solid var(--divider);background:var(--body-bg);font-size:11px;font-weight:600;cursor:pointer;">First</button>'
+    +'<button onclick="AN.listPage=Math.max(0,AN.listPage-1);renderLeadsTable()" '+(AN.listPage<=0?'disabled':'')+' style="padding:5px 10px;border-radius:6px;border:1px solid var(--divider);background:var(--body-bg);font-size:11px;font-weight:600;cursor:pointer;">Prev</button>'
+    +'<span style="font-size:12px;font-weight:700;color:var(--text-secondary);min-width:90px;text-align:center;">Page '+(AN.listPage+1)+' / '+totalPages+'</span>'
+    +'<button onclick="AN.listPage=Math.min('+(totalPages-1)+',AN.listPage+1);renderLeadsTable()" '+(AN.listPage>=totalPages-1?'disabled':'')+' style="padding:5px 10px;border-radius:6px;border:1px solid var(--divider);background:var(--body-bg);font-size:11px;font-weight:600;cursor:pointer;">Next</button>'
+    +'<button onclick="AN.listPage='+(totalPages-1)+';renderLeadsTable()" '+(AN.listPage>=totalPages-1?'disabled':'')+' style="padding:5px 10px;border-radius:6px;border:1px solid var(--divider);background:var(--body-bg);font-size:11px;font-weight:600;cursor:pointer;">Last</button>'
+    +'</div></div>';
+}
+
 function renderLeadsTable(){
+  try {
   var list = AN.filtered();
   var el = document.getElementById('crm-content');
   var countEl = document.getElementById('crm-count');
@@ -8740,7 +8947,10 @@ function renderLeadsTable(){
       +label+(active?(AN.sortDir==='asc'?' ↑':' ↓'):'')+'</th>';
   };
 
-  var rows = list.map(function(lead, i){
+  var pageInfo = anLeadsPageSlice(list);
+  var pageList = pageInfo.pageList;
+  var rows = pageList.map(function(lead, i){
+    var rowIndex = pageInfo.start + i;
     var st = anStatus(lead.status||'new');
     var sz = anSize(lead.size||'');
     var calls = (lead.callLog||[]).length;
@@ -8749,7 +8959,7 @@ function renderLeadsTable(){
     var repCol   = anColor(repEmail);
     var today    = new Date().toISOString().split('T')[0];
     var fuDue    = lead.nextFollowUp && lead.nextFollowUp <= today;
-    var rowBg    = i%2===0?'transparent':'rgba(0,0,0,0.012)';
+    var rowBg    = rowIndex%2===0?'transparent':'rgba(0,0,0,0.012)';
 
     return '<tr style="border-bottom:1px solid var(--divider);background:'+rowBg+';cursor:pointer;" '
       +'onclick="anOpenLead(\''+lead.id+'\')" '
@@ -8792,7 +9002,8 @@ function renderLeadsTable(){
       +'</tr>';
   }).join('');
 
-  el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13.5px;min-width:800px;">'
+  el.innerHTML = '<div style="display:flex;flex-direction:column;min-height:100%;">'
+    +'<div style="flex:1;overflow:auto;"><table style="width:100%;border-collapse:collapse;font-size:13.5px;min-width:800px;">'
     +'<thead><tr>'
     +'<th style="width:36px;padding:9px 12px;border-bottom:2px solid var(--divider);"><input type="checkbox" id="crm-select-all" onclick="anToggleSelectAll(this.checked)" style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;"></th>'
     +th('Name','lastName')+th('Company','company')+th('State','state')+th('Size','size')+th('Phone','phone')+th('Status','status')
@@ -8800,14 +9011,23 @@ function renderLeadsTable(){
     +th('Follow Up','nextFollowUp')+th('Last Activity','lastContactDate')
     +'<th style="padding:9px 12px;border-bottom:2px solid var(--divider);font-family:var(--mono);font-size:9px;font-weight:700;color:var(--text-muted);">ACTIONS</th>'
     +'</tr></thead>'
-    +'<tbody>'+rows+'</tbody></table>';
+    +'<tbody>'+rows+'</tbody></table></div>'
+    +anRenderLeadsPagination(list, pageInfo.totalPages, pageInfo.start)
+    +'</div>';
   setTimeout(function(){ if(typeof anUpdateBulkBar==='function') anUpdateBulkBar(); }, 0);
+  } catch(err) {
+    console.error('[CRM] renderLeadsTable failed:', err);
+    var el2 = document.getElementById('crm-content');
+    if(el2) el2.innerHTML = '<div style="padding:40px 20px;text-align:center;color:#ef4444;font-size:14px;">Could not render leads table. Try refreshing — your data may still be saved.</div>';
+  }
 }
 
 function buildKanban(list){
+  var KANBAN_COL_LIMIT = 60;
   var cols = AN_STATUSES.map(function(s){
     var leads = list.filter(function(l){ return l.status===s.id; });
-    var cards = leads.map(function(l){
+    var shown = leads.slice(0, KANBAN_COL_LIMIT);
+    var cards = shown.map(function(l){
       return '<div onclick="anOpenLead(\''+l.id+'\')" style="background:var(--card-bg);border:1px solid var(--divider);border-radius:9px;padding:12px;margin-bottom:8px;cursor:pointer;transition:box-shadow 0.15s;border-left:3px solid '+s.color+';" onmouseover="this.style.boxShadow=\'0 4px 12px rgba(0,0,0,0.08)\'" onmouseout="this.style.boxShadow=\'none\'">'
         +'<div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:3px;">'+anEsc((l.firstName||'')+' '+(l.lastName||''))+'</div>'
         +(l.company?'<div style="font-size:12px;color:var(--text-muted);">'+anEsc(l.company)+'</div>':'')
@@ -8821,7 +9041,7 @@ function buildKanban(list){
       +'<span style="width:8px;height:8px;border-radius:50%;background:'+s.dot+';"></span>'
       +'<span style="font-size:12px;font-weight:700;color:var(--text-primary);">'+s.label+'</span>'
       +'<span style="background:var(--card-bg);border:1px solid var(--divider);border-radius:10px;padding:1px 7px;font-size:11px;color:var(--text-muted);margin-left:auto;">'+leads.length+'</span>'
-      +'</div>'+cards+'</div>';
+      +'</div>'+cards+(leads.length > KANBAN_COL_LIMIT ? '<div style="font-size:11px;color:var(--text-muted);padding:6px 2px;">+'+(leads.length - KANBAN_COL_LIMIT)+' more — switch to List view</div>' : '')+'</div>';
   }).join('');
   return '<div style="display:flex;gap:10px;padding:16px;overflow-x:auto;min-height:100%;">'+cols+'</div>';
 }
@@ -9746,6 +9966,274 @@ function anBuildContactsFromMapping(mapping, limit){
   return contacts;
 }
 
+function anLeadNeedsCompanyFix(lead){
+  var c = (lead && lead.company || '').trim();
+  if(!c) return true;
+  return typeof coIsJunkCompanyName === 'function' ? coIsJunkCompanyName(c) : /^\d+$/.test(c);
+}
+
+function anExtractRowFields(vals, mapping){
+  var out = {};
+  AN_IMPORT_FIELDS.forEach(function(field){
+    var idx = mapping[field.key];
+    if(idx < 0) return;
+    var v = (vals[idx] || '').trim();
+    if(!v) return;
+    if(field.key === 'phone') out.phone = anNormalizePhone(v);
+    else if(field.key === 'nextFollowUp') out.nextFollowUp = anParseImportDate(v);
+    else if(field.key === 'status') out.status = anMapStatus(v);
+    else out[field.key] = v;
+  });
+  return out;
+}
+
+function anBuildCsvRowIndex(parsed, mapping){
+  var byEmail = {}, byPhone = {}, byName = {};
+  var emailIdx = mapping.email, phoneIdx = mapping.phone;
+  var fnIdx = mapping.firstName, lnIdx = mapping.lastName;
+  parsed.rows.forEach(function(vals){
+    var entry = { vals: vals };
+    if(emailIdx >= 0){
+      var em = (vals[emailIdx] || '').trim().toLowerCase();
+      if(em) byEmail[em] = entry;
+    }
+    if(phoneIdx >= 0){
+      var ph = (vals[phoneIdx] || '').replace(/\D/g, '');
+      if(ph){
+        if(ph.length === 11 && ph.charAt(0) === '1') ph = ph.slice(1);
+        if(ph) byPhone[ph] = entry;
+      }
+    }
+    if(fnIdx >= 0){
+      var name = ((vals[fnIdx] || '') + ' ' + (lnIdx >= 0 ? (vals[lnIdx] || '') : '')).trim().toLowerCase();
+      if(name.length > 2) byName[name] = entry;
+    }
+  });
+  return { byEmail: byEmail, byPhone: byPhone, byName: byName };
+}
+
+function anMatchLeadToCsvRow(lead, index){
+  if(!lead || !index) return null;
+  if(lead.email){
+    var byE = index.byEmail[lead.email.toLowerCase()];
+    if(byE) return byE;
+  }
+  if(lead.phone){
+    var ph = String(lead.phone).replace(/\D/g, '');
+    if(ph.length === 11 && ph.charAt(0) === '1') ph = ph.slice(1);
+    var byP = index.byPhone[ph];
+    if(byP) return byP;
+  }
+  var name = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim().toLowerCase();
+  if(name) return index.byName[name] || null;
+  return null;
+}
+
+function anPreviewFixFromCsv(parsed, mapping){
+  if(!Array.isArray(AN.leads) || !parsed) return { needsFix:0, matchable:0, sample:[] };
+  var index = anBuildCsvRowIndex(parsed, mapping);
+  var needsFix = 0, matchable = 0, sample = [];
+  AN.leads.forEach(function(lead){
+    if(!anLeadNeedsCompanyFix(lead)) return;
+    needsFix++;
+    var row = anMatchLeadToCsvRow(lead, index);
+    if(!row) return;
+    var fields = anExtractRowFields(row.vals, mapping);
+    if(fields.company && (typeof coIsValidCompanyName !== 'function' || coIsValidCompanyName(fields.company))){
+      matchable++;
+      if(sample.length < 3){
+        sample.push({
+          name: ((lead.firstName||'')+' '+(lead.lastName||'')).trim(),
+          oldCo: lead.company || '—',
+          newCo: fields.company
+        });
+      }
+    }
+  });
+  return { needsFix: needsFix, matchable: matchable, sample: sample };
+}
+
+function anFixLeadsFromCsvChunked(parsed, mapping, opts, onProgress, onDone){
+  opts = opts || {};
+  if(!Array.isArray(AN.leads) || !parsed) { if(onDone) onDone({ fixed:0, matched:0, skipped:0, notFound:0 }); return; }
+  var index = anBuildCsvRowIndex(parsed, mapping);
+  var leads = AN.leads;
+  var fixed = 0, matched = 0, notFound = 0, skipped = 0, filled = 0;
+  var i = 0, chunk = 350;
+
+  function applyFields(lead, fields){
+    var changed = false;
+    if(fields.company && (!coIsValidCompanyName || coIsValidCompanyName(fields.company))){
+      if(lead.company !== fields.company){
+        lead.company = fields.company;
+        delete lead.companyId;
+        changed = true;
+        fixed++;
+      }
+    }
+    if(opts.fillEmpty){
+      ['title','source','state','notes','email','phone'].forEach(function(k){
+        if(fields[k] && (!lead[k] || (k === 'source' && lead[k] === 'CSV Import'))){
+          lead[k] = fields[k];
+          changed = true;
+          filled++;
+        }
+      });
+    }
+    if(changed) lead.updated = new Date().toISOString();
+    return changed;
+  }
+
+  function step(){
+    var end = Math.min(i + chunk, leads.length);
+    for(; i < end; i++){
+      var lead = leads[i];
+      if(!anLeadNeedsCompanyFix(lead) && !opts.fillEmpty){ skipped++; continue; }
+      var row = anMatchLeadToCsvRow(lead, index);
+      if(!row){ if(anLeadNeedsCompanyFix(lead)) notFound++; continue; }
+      matched++;
+      var fields = anExtractRowFields(row.vals, mapping);
+      applyFields(lead, fields);
+    }
+    if(onProgress) onProgress(i, leads.length, fixed, matched, notFound);
+    if(i < leads.length) setTimeout(step, 0);
+    else if(onDone) onDone({ fixed: fixed, matched: matched, skipped: skipped, notFound: notFound, filled: filled, total: leads.length });
+  }
+  step();
+}
+
+window.anOpenFixFromCSV = function(){
+  var old = document.getElementById('an-fix-csv-modal');
+  if(old) old.remove();
+
+  var junkCount = (AN.leads || []).filter(anLeadNeedsCompanyFix).length;
+  var m = document.createElement('div');
+  m.id = 'an-fix-csv-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
+  m.innerHTML = '<div style="background:var(--card-bg);border-radius:14px;padding:26px;width:680px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div style="font-size:17px;font-weight:800;color:var(--text-primary);">Fix Lead Company Names from CSV</div>'
+    +'<button onclick="document.getElementById(\'an-fix-csv-modal\').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);">✕</button></div>'
+    +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.6;">Upload the <strong>same HubSpot CSV</strong> you imported. We\'ll match existing leads by email / phone / name and replace bad numeric company IDs with real company names — <strong>no re-import needed</strong>.</div>'
+    +(junkCount ? '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;font-size:12px;color:#92400e;margin-bottom:14px;"><strong>'+junkCount+'</strong> lead'+(junkCount!==1?'s':'')+' currently have junk company IDs.</div>' : '')
+    +'<div id="an-fix-drop-zone" style="border:2px dashed var(--divider);border-radius:12px;padding:28px;text-align:center;cursor:pointer;margin-bottom:14px;" '
+    +'onclick="document.getElementById(\'an-fix-file-input\').click()">'
+    +'<div style="font-size:28px;margin-bottom:6px;">🔧</div>'
+    +'<div style="font-size:14px;font-weight:700;color:var(--text-primary);">Drop your CSV here</div>'
+    +'<div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Same file you used before (e.g. adrian-fl.csv)</div></div>'
+    +'<input type="file" id="an-fix-file-input" accept=".csv,text/csv" style="display:none;" onchange="anHandleFixCsvFile(this)">'
+    +'<div id="an-fix-preview" style="display:none;"></div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">'
+    +'<button onclick="document.getElementById(\'an-fix-csv-modal\').remove()" style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--divider);background:transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--text-secondary);">Cancel</button>'
+    +'<button id="an-fix-confirm" onclick="anConfirmFixFromCSV()" disabled style="padding:9px 18px;border-radius:8px;border:none;background:#f59e0b;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);opacity:0.5;">Fix Company Names</button>'
+    +'</div></div>';
+  document.body.appendChild(m);
+  m.onclick = function(e){ if(e.target === m) m.remove(); };
+};
+
+var _anFixCsvRaw = null;
+var _anFixCsvMapping = null;
+
+window.anHandleFixCsvFile = function(inp){
+  var file = inp && inp.files && inp.files[0];
+  if(!file) return;
+  var zone = document.getElementById('an-fix-drop-zone');
+  if(zone) zone.innerHTML = '<div style="font-size:13px;color:var(--text-muted);">Reading '+anEsc(file.name)+'...</div>';
+
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var parsed = anParseCSVText(e.target.result);
+    if(!parsed || !parsed.rows.length){
+      if(zone) zone.innerHTML = '<div style="color:#ef4444;font-weight:700;">Could not parse CSV</div>';
+      return;
+    }
+    _anFixCsvRaw = parsed;
+    _anFixCsvMapping = anBuildImportMapping(parsed.headers);
+    var preview = anPreviewFixFromCsv(parsed, _anFixCsvMapping);
+    var companyCol = _anFixCsvMapping.company >= 0 ? parsed.headers[_anFixCsvMapping.company] : null;
+
+    if(zone){
+      zone.style.borderColor = '#10b981';
+      zone.style.background = 'rgba(16,185,129,0.04)';
+      zone.innerHTML = '<div style="font-size:22px;margin-bottom:4px;">✅</div><div style="font-size:14px;font-weight:700;color:#10b981;">'+parsed.rows.length+' CSV rows loaded</div>';
+    }
+
+    var wrap = document.getElementById('an-fix-preview');
+    var btn = document.getElementById('an-fix-confirm');
+    if(wrap){
+      wrap.style.display = 'block';
+      var sampleHtml = preview.sample.length
+        ? '<div style="margin-top:10px;font-size:12px;color:var(--text-secondary);"><strong>Preview:</strong> '
+          + preview.sample.map(function(s){ return anEsc(s.name)+': '+anEsc(s.oldCo)+' → <span style="color:#10b981;font-weight:700;">'+anEsc(s.newCo)+'</span>'; }).join(' · ')
+          +'</div>'
+        : '';
+      wrap.innerHTML = '<div style="background:var(--body-bg);border-radius:8px;padding:12px;font-size:13px;color:var(--text-secondary);">'
+        +'<div><strong style="color:'+(preview.matchable ? '#10b981' : '#f59e0b')+';">'+preview.matchable+'</strong> of <strong>'+preview.needsFix+'</strong> bad leads can be fixed from this CSV.</div>'
+        +(companyCol ? '<div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Company column: <strong>'+anEsc(companyCol)+'</strong></div>' : '<div style="font-size:11px;color:#ef4444;margin-top:6px;">⚠️ No company column detected — check CSV headers.</div>')
+        +'<label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;cursor:pointer;"><input type="checkbox" id="an-fix-fill-empty" checked style="accent-color:#f59e0b;"> Also fill empty title, source, state, notes from CSV</label>'
+        +'<label style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12px;cursor:pointer;"><input type="checkbox" id="an-fix-clean-junk-cos" checked style="accent-color:#f59e0b;"> Remove junk company records after fix</label>'
+        +sampleHtml
+        +'</div>';
+    }
+    if(btn){
+      btn.disabled = !(preview.matchable > 0 && _anFixCsvMapping.company >= 0);
+      btn.style.opacity = btn.disabled ? '0.5' : '1';
+      btn.textContent = preview.matchable ? ('Fix '+preview.matchable+' Company Names') : 'No matches found';
+    }
+  };
+  reader.readAsText(file);
+};
+
+window.anConfirmFixFromCSV = function(){
+  if(!_anFixCsvRaw || !_anFixCsvMapping || _anFixCsvMapping.company < 0){
+    if(typeof showToast === 'function') showToast('Load a CSV with a company column first');
+    return;
+  }
+  var btn = document.getElementById('an-fix-confirm');
+  var fillEmpty = document.getElementById('an-fix-fill-empty');
+  var cleanJunk = document.getElementById('an-fix-clean-junk-cos');
+  if(btn){ btn.disabled = true; btn.textContent = 'Fixing (0%)...'; }
+
+  anFixLeadsFromCsvChunked(_anFixCsvRaw, _anFixCsvMapping, {
+    fillEmpty: fillEmpty ? fillEmpty.checked : true
+  }, function(done, total, fixed){
+    if(btn && total) btn.textContent = 'Fixing ('+Math.round(done/total*100)+'%)...';
+  }, function(result){
+    AN.listPage = 0;
+    AN.save(function(ok){
+      var msg = 'Fixed '+result.fixed+' company name'+(result.fixed!==1?'s':'');
+      if(result.notFound) msg += ' · '+result.notFound+' not matched in CSV';
+      if(!ok) msg += ' · save issue — refresh and try again';
+      if(typeof showToast === 'function') showToast(msg);
+
+      if(cleanJunk && cleanJunk.checked && typeof coDeleteJunkCompanies === 'function'){
+        var junk = (_coData || []).filter(function(c){ return coIsJunkCompanyName(c.name); });
+        if(junk.length){
+          var junkIds = {};
+          junk.forEach(function(c){ junkIds[c.id] = true; });
+          var companies = _coData.filter(function(c){ return !junkIds[c.id]; });
+          coSave(companies, function(){
+            if(typeof anSyncCompaniesFromLeads === 'function') anSyncCompaniesFromLeads();
+          });
+        } else if(typeof anSyncCompaniesFromLeads === 'function') {
+          anSyncCompaniesFromLeads();
+        }
+      } else if(typeof anSyncCompaniesFromLeads === 'function') {
+        anSyncCompaniesFromLeads();
+      }
+
+      var modal = document.getElementById('an-fix-csv-modal');
+      if(modal) modal.remove();
+      _anFixCsvRaw = null;
+      _anFixCsvMapping = null;
+      try { renderLeadsTable(); } catch(e){}
+      if(typeof coRender === 'function'){
+        var coSec = document.getElementById('section-companies');
+        if(coSec && coSec.style.display !== 'none') coRender();
+      }
+    });
+  });
+};
+
 window.anOpenImport = function(){
   var old = document.getElementById('an-import-modal');
   if(old) old.remove();
@@ -9814,7 +10302,11 @@ function anParseCSV(file){
     if(zone){
       zone.style.borderColor = '#10b981';
       zone.style.background = 'rgba(16,185,129,0.04)';
-      zone.innerHTML = '<div style="font-size:24px;margin-bottom:6px;">✅</div><div style="font-size:14px;font-weight:700;color:#10b981;">'+parsed.rows.length+' rows loaded</div><div style="font-size:12px;color:var(--text-muted);margin-top:4px;">'+anEsc(file.name)+'</div>';
+      zone.innerHTML = '<div style="font-size:24px;margin-bottom:6px;">✅</div><div style="font-size:14px;font-weight:700;color:#10b981;">'+parsed.rows.length+' rows loaded</div><div style="font-size:12px;color:var(--text-muted);margin-top:4px;">'+anEsc(file.name)+'</div>'
+        +(parsed.rows.length > 2000 ? '<div style="font-size:11px;color:#b45309;margin-top:8px;font-weight:600;">Large import — duplicate check and save run in batches. List view shows 100 per page.</div>' : '');
+    }
+    if(parsed.rows.length > 2000 && typeof showToast === 'function'){
+      showToast('Large CSV ('+parsed.rows.length+' rows) — import may take a minute');
     }
     anRenderImportMapping();
   };
@@ -9828,29 +10320,78 @@ function anContactLabel(c){
   return ((c.firstName||'')+' '+(c.lastName||'')).trim() || c.email || c.company || 'Unknown';
 }
 
-function anFindDuplicateMatches(c){
-  if(!Array.isArray(AN.leads)) return [];
-  var cName = ((c.firstName||'')+' '+(c.lastName||'')).trim().toLowerCase();
-  var cEmail = (c.email||'').toLowerCase();
-  var cPhone = (c.phone||'').replace(/\D/g,'');
-  var cCo = (c.company||'').trim().toLowerCase();
-  return AN.leads.filter(function(x){
-    if(cEmail && x.email && cEmail === x.email.toLowerCase()) return true;
-    if(cPhone && x.phone && cPhone === x.phone.replace(/\D/g,'')) return true;
+function anBuildDuplicateIndex(leads){
+  var byEmail = {}, byPhone = {}, byNameCo = {};
+  (leads || []).forEach(function(x){
+    if(x.email){
+      var ek = x.email.toLowerCase();
+      if(!byEmail[ek]) byEmail[ek] = [];
+      byEmail[ek].push(x);
+    }
+    if(x.phone){
+      var pk = String(x.phone).replace(/\D/g,'');
+      if(pk){
+        if(!byPhone[pk]) byPhone[pk] = [];
+        byPhone[pk].push(x);
+      }
+    }
     var xName = ((x.firstName||'')+' '+(x.lastName||'')).trim().toLowerCase();
-    if(cName && xName && cName === xName && cCo && x.company && cCo === x.company.toLowerCase()) return true;
-    return false;
+    var xCo = (x.company||'').trim().toLowerCase();
+    if(xName && xCo){
+      var nk = xName + '|' + xCo;
+      if(!byNameCo[nk]) byNameCo[nk] = [];
+      byNameCo[nk].push(x);
+    }
   });
+  return { byEmail: byEmail, byPhone: byPhone, byNameCo: byNameCo };
 }
 
-function anClassifyImportBatch(contacts){
+function anFindDuplicateMatches(c, index){
+  if(!index) index = anBuildDuplicateIndex(AN.leads);
+  var seen = {}, out = [];
+  function addMatches(arr){
+    (arr || []).forEach(function(x){
+      if(x && x.id && !seen[x.id]){ seen[x.id] = true; out.push(x); }
+    });
+  }
+  var cEmail = (c.email||'').toLowerCase();
+  var cPhone = (c.phone||'').replace(/\D/g,'');
+  var cName = ((c.firstName||'')+' '+(c.lastName||'')).trim().toLowerCase();
+  var cCo = (c.company||'').trim().toLowerCase();
+  if(cEmail) addMatches(index.byEmail[cEmail]);
+  if(cPhone) addMatches(index.byPhone[cPhone]);
+  if(cName && cCo) addMatches(index.byNameCo[cName + '|' + cCo]);
+  return out;
+}
+
+function anClassifyImportBatch(contacts, index){
+  if(!index) index = anBuildDuplicateIndex(AN.leads);
   var duplicates = [], newOnes = [];
   contacts.forEach(function(c){
-    var matches = anFindDuplicateMatches(c);
+    var matches = anFindDuplicateMatches(c, index);
     if(matches.length) duplicates.push({ contact: c, matches: matches });
     else newOnes.push(c);
   });
   return { duplicates: duplicates, newOnes: newOnes };
+}
+
+function anClassifyImportBatchChunked(contacts, onDone, onProgress){
+  var index = anBuildDuplicateIndex(AN.leads);
+  var duplicates = [], newOnes = [];
+  var i = 0, chunk = 400;
+  function step(){
+    var end = Math.min(i + chunk, contacts.length);
+    for(; i < end; i++){
+      var c = contacts[i];
+      var matches = anFindDuplicateMatches(c, index);
+      if(matches.length) duplicates.push({ contact: c, matches: matches });
+      else newOnes.push(c);
+    }
+    if(onProgress) onProgress(i, contacts.length);
+    if(i < contacts.length) setTimeout(step, 0);
+    else if(onDone) onDone({ duplicates: duplicates, newOnes: newOnes });
+  }
+  step();
 }
 
 function anSyncCompaniesFromLeads(){
@@ -9862,7 +10403,7 @@ function anSyncCompaniesFromLeads(){
   var changed = false;
   AN.leads.forEach(function(l){
     var cn = (l.company||'').trim();
-    if(!cn) return;
+    if(!cn || !coIsValidCompanyName(cn)) return;
     var key = coNormName(cn);
     if(!compMap[key]){
       companies.push({ id:'co-'+Date.now()+'-'+Math.random().toString(36).slice(2,6), name:cn, industry:'Insurance Agency', notes:'', website:'', lifecycleStage:'', created:new Date().toISOString() });
@@ -9876,11 +10417,13 @@ function anSyncCompaniesFromLeads(){
 
 function anExecuteImport(contacts, opts){
   opts = opts || { skipDupes:true, updateDupes:false, importAnyway:false };
+  try {
   if(!Array.isArray(AN.leads)) AN.leads = anNormalizeLeads(AN.leads);
   var added = 0, skipped = 0, updated = 0;
+  var dupeIndex = anBuildDuplicateIndex(AN.leads);
 
   contacts.forEach(function(c){
-    var matches = anFindDuplicateMatches(c);
+    var matches = anFindDuplicateMatches(c, dupeIndex);
     if(matches.length){
       if(opts.updateDupes){
         var existing = matches[0];
@@ -9907,27 +10450,36 @@ function anExecuteImport(contacts, opts){
   _anImportRaw = null;
   anSyncCompaniesFromLeads();
 
+  AN.listPage = 0;
   AN.save(function(ok, err, where){
     var importModal = document.getElementById('an-import-modal');
     var dupeModal = document.getElementById('an-dupe-modal');
     if(importModal) importModal.remove();
     if(dupeModal) dupeModal.remove();
     var msg = '';
-    if(added) msg += 'Imported '+added+' contact'+(added!==1?'s':'');
+    if(added) msg += 'Imported '+added+' lead'+(added!==1?'s':'')+' → Lead Pipeline';
     if(updated) msg += (msg?' · ':'')+'Updated '+updated;
     if(skipped) msg += (msg?' · ':'')+'Skipped '+skipped+' duplicate'+(skipped!==1?'s':'');
     if(!msg) msg = 'No contacts imported';
-    if(where === 'cloud' && ok) msg += ' · saved to cloud';
+    if(where === 'idb') msg += ' · saved in browser storage (large list)';
+    else if(where === 'cloud' && ok) msg += ' · saved to cloud';
     else if(where === 'cloud' && !ok) msg += ' · saved locally (cloud sync failed)';
     else if(where === 'local') msg += ' · saved locally (sign in to sync)';
+    else if(where === 'failed') msg += ' · save failed — try a smaller import';
     if(typeof showToast === 'function') showToast(msg);
     if(!ok && err) console.error('[CRM] Import save error:', err);
-    renderLeadsTable();
+    try { renderLeadsTable(); } catch(renderErr){ console.error('[CRM] Post-import render failed:', renderErr); }
     if(typeof coRender === 'function'){
       var coSec = document.getElementById('section-companies');
       if(coSec && coSec.style.display !== 'none') coRender();
     }
   });
+  } catch(execErr) {
+    console.error('[CRM] Import failed:', execErr);
+    if(typeof showToast === 'function') showToast('Import failed — try refreshing and importing again');
+    var btn = document.getElementById('an-import-confirm');
+    if(btn){ btn.disabled = false; btn.textContent = 'Import Contacts'; }
+  }
 }
 
 window.anShowDuplicateReview = function(classified){
@@ -9972,23 +10524,33 @@ window.anConfirmImport = function(){
   if(btn){ btn.disabled = true; btn.textContent = 'Building contacts...'; }
 
   setTimeout(function(){
-    _anPending = anBuildContactsFromMapping(mapping);
-    if(!_anPending.length){
-      if(btn){ btn.disabled = false; btn.textContent = 'Map columns to import'; }
-      if(typeof showToast === 'function') showToast('No importable rows — check your column mapping');
-      return;
-    }
-    if(btn) btn.textContent = 'Checking duplicates...';
-    setTimeout(function(){
-      var classified = anClassifyImportBatch(_anPending);
-      if(classified.duplicates.length > 0){
-        if(btn){ btn.disabled = false; btn.textContent = 'Import '+_anPending.length+' Contacts'; }
-        anShowDuplicateReview(classified);
+    try {
+      _anPending = anBuildContactsFromMapping(mapping);
+      if(!_anPending.length){
+        if(btn){ btn.disabled = false; btn.textContent = 'Map columns to import'; }
+        if(typeof showToast === 'function') showToast('No importable rows — check your column mapping');
         return;
       }
-      if(btn){ btn.disabled = true; btn.textContent = 'Importing...'; }
-      anExecuteImport(_anPending, { skipDupes:true, updateDupes:false, importAnyway:false });
-    }, 30);
+      if(btn) btn.textContent = 'Checking duplicates (0%)...';
+      anClassifyImportBatchChunked(_anPending, function(classified){
+        if(classified.duplicates.length > 0){
+          if(btn){ btn.disabled = false; btn.textContent = 'Import '+_anPending.length+' Contacts'; }
+          anShowDuplicateReview(classified);
+          return;
+        }
+        if(btn){ btn.disabled = true; btn.textContent = 'Importing '+_anPending.length+'...'; }
+        anExecuteImport(_anPending, { skipDupes:true, updateDupes:false, importAnyway:false });
+      }, function(done, total){
+        if(btn && total){
+          var pct = Math.round((done / total) * 100);
+          btn.textContent = 'Checking duplicates ('+pct+'%)...';
+        }
+      });
+    } catch(err) {
+      console.error('[CRM] Import build failed:', err);
+      if(btn){ btn.disabled = false; btn.textContent = 'Import Contacts'; }
+      if(typeof showToast === 'function') showToast('Import failed while building contacts');
+    }
   }, 30);
 };
 
@@ -14081,6 +14643,18 @@ var _coSelected = null; // currently open company id
 
 function coNormName(n){ return (n||'').trim().toLowerCase(); }
 
+function coIsValidCompanyName(name){
+  var n = (name || '').trim();
+  if(n.length < 2) return false;
+  if(/^\d+$/.test(n)) return false;
+  if(/^[0-9\-]+$/.test(n) && n.replace(/\D/g,'').length >= 8) return false;
+  return /[a-zA-Z]/.test(n);
+}
+
+function coIsJunkCompanyName(name){
+  return !coIsValidCompanyName(name);
+}
+
 function coGetLeadsForCompany(coName){
   if(typeof AN === 'undefined' || !AN.leads) return [];
   return AN.leads.filter(function(l){ return l.company && coNormName(l.company) === coNormName(coName); });
@@ -14142,7 +14716,7 @@ function coRender() {
       var changed = false;
       AN.leads.forEach(function(l) {
         var cn = (l.company || '').trim();
-        if (cn && !compMap[cn.toLowerCase()]) {
+        if (cn && coIsValidCompanyName(cn) && !compMap[cn.toLowerCase()]) {
           compMap[cn.toLowerCase()] = true;
           companies.push({ id:'co-'+Date.now()+'-'+Math.random().toString(36).slice(2), name:cn, industry:'Insurance Agency', website:'', lifecycleStage:'', notes:'', created:new Date().toISOString() });
           changed = true;
@@ -14167,7 +14741,15 @@ function _coRenderWith(sec, companies) {
 }
 
 function coToolbar(companies) {
-  return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#fff;border-bottom:1px solid #e9e9ef;flex-shrink:0;gap:10px;flex-wrap:wrap;">'
+  var junkCount = companies.filter(function(c){ return coIsJunkCompanyName(c.name); }).length;
+  var junkBanner = junkCount
+    ? '<div style="width:100%;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;font-size:12px;color:#92400e;line-height:1.5;margin-bottom:2px;">'
+      +'<strong>'+junkCount+' junk record'+(junkCount!==1?'s':'')+'</strong> from a bad import (numeric IDs, not real companies). '
+      +'Contacts live in <strong>Lead Pipeline</strong> — use <strong>Fix from CSV</strong> there (no re-import), or <strong>Clear junk IDs</strong> / <strong>Delete all</strong> here.'
+      +'</div>'
+    : '';
+  return junkBanner
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#fff;border-bottom:1px solid #e9e9ef;flex-shrink:0;gap:10px;flex-wrap:wrap;">'
     +'<div style="display:flex;align-items:center;gap:10px;">'
     +'<h2 style="font-size:16px;font-weight:800;color:#09090b;margin:0;">🏢 Companies</h2>'
     +'<span style="font-size:12px;color:#a1a1aa;">'+companies.length+' total</span>'
@@ -14178,6 +14760,8 @@ function coToolbar(companies) {
     +'<button onclick="CO.currentView=\'split\';coRender()" style="padding:5px 12px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:'+(CO.currentView==='split'?'#6366f1':'transparent')+';color:'+(CO.currentView==='split'?'#fff':'#71717a')+';">⊞ Split</button>'
     +'</div>'
     +'<button class="co-add-btn" onclick="coNewCompany()">+ Add</button>'
+    +(companies.length ? '<button onclick="coDeleteJunkCompanies()" style="padding:6px 12px;border-radius:7px;border:1.5px solid #fde68a;background:#fffbeb;color:#b45309;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Clear junk IDs</button>' : '')
+    +(companies.length ? '<button onclick="coDeleteAll()" style="padding:6px 12px;border-radius:7px;border:1.5px solid #fca5a5;background:#fef2f2;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Delete all</button>' : '')
     +'</div></div>';
 }
 
@@ -14483,6 +15067,37 @@ window.coDeleteSelected = function() {
     _coSelected = companies.length ? companies[0].id : null;
   }
   coSave(companies, function(){ coRender(); if(typeof showToast==='function') showToast('Removed '+n+' compan'+(n!==1?'ies':'y')); });
+};
+
+window.coDeleteAll = function() {
+  var n = _coData.length;
+  if (!n) return;
+  if (!confirm('Delete ALL '+n+' companies?\n\nYour leads in Lead Pipeline are NOT deleted — only company records here.')) return;
+  if (!confirm('Confirm: remove all '+n+' company records?')) return;
+  CO.selectedIds = [];
+  _coSelected = null;
+  coSave([], function(){
+    coRender();
+    if(typeof showToast==='function') showToast('Removed all companies — import leads from Lead Pipeline → Import CSV');
+  });
+};
+
+window.coDeleteJunkCompanies = function() {
+  var junk = _coData.filter(function(c){ return coIsJunkCompanyName(c.name); });
+  if (!junk.length) {
+    if(typeof showToast==='function') showToast('No junk company records found');
+    return;
+  }
+  if (!confirm('Remove '+junk.length+' junk compan'+(junk.length!==1?'ies':'y')+' (numeric IDs / bad import names)?\n\nLeads are kept.')) return;
+  var junkIds = {};
+  junk.forEach(function(c){ junkIds[c.id] = true; });
+  var companies = _coData.filter(function(c){ return !junkIds[c.id]; });
+  CO.selectedIds = CO.selectedIds.filter(function(id){ return !junkIds[id]; });
+  if (_coSelected && junkIds[_coSelected]) _coSelected = companies.length ? companies[0].id : null;
+  coSave(companies, function(){
+    coRender();
+    if(typeof showToast==='function') showToast('Removed '+junk.length+' junk companies');
+  });
 };
 
 window.coFilterList = function(q) {
