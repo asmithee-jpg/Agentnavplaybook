@@ -6052,7 +6052,7 @@ window.doHSSearch = function() {
             + '<div style="flex:1;min-width:0;">'
             + '<div style="font-size:13px;font-weight:700;color:#09090b;">' + c.name + '</div>'
             + '<div style="font-size:11px;color:#71717a;">' + (c.company ? c.company + ' · ' : '') + (c.email || '') + '</div>'
-            + '<div style="font-size:11px;color:#71717a;">' + (c.state ? c.state + ' · ' : '') + (c.phone || '') + '</div>'
+            + '<div style="font-size:11px;color:#71717a;">' + (c.state ? c.state + ' · ' : '') + (c.phone ? anFormatPhone(c.phone) : '') + '</div>'
             + '</div>'
             + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
             + '<span style="font-size:10px;font-weight:700;color:' + statusColor + ';background:' + statusColor + '18;padding:2px 8px;border-radius:10px;">' + (c.status || 'contact') + '</span>'
@@ -8444,6 +8444,52 @@ function anStatus(id){
 }
 function anSize(id){ return AN_SIZES.find(function(s){ return s.id===id; })||{label:id,price:0}; }
 function anEsc(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function anDigitsPhone(phone){
+  return (phone || '').toString().replace(/\D/g, '');
+}
+
+function anFormatPhone(phone){
+  if(phone === null || phone === undefined) return '';
+  var raw = phone.toString().trim();
+  if(!raw) return '';
+  var d = anDigitsPhone(raw);
+  if(d.length === 11 && d.charAt(0) === '1') d = d.slice(1);
+  if(d.length === 10){
+    return d.slice(0, 3) + '-' + d.slice(3, 6) + '-' + d.slice(6);
+  }
+  if(d.length === 7){
+    return d.slice(0, 3) + '-' + d.slice(3);
+  }
+  if(d.length > 10){
+    var tail = d.slice(-10);
+    return tail.slice(0, 3) + '-' + tail.slice(3, 6) + '-' + tail.slice(6);
+  }
+  return raw;
+}
+
+function anNormalizePhone(phone){
+  var formatted = anFormatPhone(phone);
+  return formatted || (phone || '').toString().trim();
+}
+
+function anTelPhone(phone){
+  var d = anDigitsPhone(phone);
+  if(!d) return '';
+  if(d.length === 10) return '+1' + d;
+  if(d.length === 11 && d.charAt(0) === '1') return '+' + d;
+  return d;
+}
+
+function anPhoneDisplay(phone){
+  return anFormatPhone(phone) || '—';
+}
+
+window.anFormatPhone = anFormatPhone;
+window.anNormalizePhone = anNormalizePhone;
+window.anTelPhone = anTelPhone;
+window.anPhoneDisplay = anPhoneDisplay;
+
 function anFmt$(n){ return '$'+(n||0).toLocaleString(); }
 function anDate(d){ if(!d) return '—'; try{ return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }catch(e){return d;} }
 function anTimeAgo(d){ if(!d) return ''; var diff=Date.now()-new Date(d).getTime(); if(diff<60000) return 'just now'; if(diff<3600000) return Math.floor(diff/60000)+'m ago'; if(diff<86400000) return Math.floor(diff/3600000)+'h ago'; return Math.floor(diff/86400000)+'d ago'; }
@@ -8453,7 +8499,10 @@ function anColor(str){ if(!str) return '#6366f1'; var h=0; for(var i=0;i<str.len
 function anNormalizeLeads(arr){
   if(!Array.isArray(arr)) return [];
   if(arr.length && Array.isArray(arr[0]) && !arr[0].id) return arr.reduce(function(flat, item){ return flat.concat(item); }, []);
-  return arr;
+  return arr.map(function(l){
+    if(l && l.phone) l.phone = anNormalizePhone(l.phone);
+    return l;
+  });
 }
 
 AN.load = function(cb){
@@ -8493,6 +8542,9 @@ AN.load = function(cb){
 
 AN.save = function(cb){
   if(!Array.isArray(AN.leads)) AN.leads = [];
+  AN.leads.forEach(function(l){
+    if(l && l.phone) l.phone = anNormalizePhone(l.phone);
+  });
   localStorage.setItem('an-crm-leads', JSON.stringify(AN.leads));
   var sb = typeof getSupabase==='function'?getSupabase():null;
   if(!sb||!_currentUser){ if(cb) cb(true, null, 'local'); return; }
@@ -8529,7 +8581,12 @@ AN.filtered = function(){
     } else if(AN.currentFilter==='followup') {
       if(!l.nextFollowUp) return false;
     } else if(AN.currentFilter!=='all' && l.status!==AN.currentFilter) return false;
-    if(q && !(l.firstName+l.lastName+l.company+l.email+l.phone+l.state).toLowerCase().includes(q)) return false;
+    if(q){
+      var hay = (l.firstName+l.lastName+l.company+l.email+l.phone+l.state).toLowerCase();
+      var qDigits = q.replace(/\D/g,'');
+      var phoneDigits = anDigitsPhone(l.phone);
+      if(!hay.includes(q) && !(qDigits && phoneDigits && phoneDigits.includes(qDigits))) return false;
+    }
     return true;
   });
   list.sort(function(a,b){
@@ -8699,7 +8756,7 @@ function renderLeadsTable(){
       +'<td style="padding:10px 12px;font-size:13px;color:var(--text-secondary);">'+anEsc(lead.company||'—')+'</td>'
       +'<td style="padding:10px 12px;font-size:13px;color:var(--text-secondary);">'+anEsc(lead.state||'—')+'</td>'
       +'<td style="padding:10px 12px;">'+(lead.size?'<span style="background:var(--body-bg);border:1px solid var(--divider);border-radius:5px;padding:2px 8px;font-size:11.5px;font-weight:600;color:var(--text-secondary);">'+anEsc(sz.label)+'</span>':'<span style="color:var(--text-muted);font-size:12px;">—</span>')+'</td>'
-      +'<td style="padding:10px 12px;"><a href="tel:'+anEsc(lead.phone||'')+'" onclick="event.stopPropagation()" style="color:var(--text-secondary);text-decoration:none;font-size:13px;">'+anEsc(lead.phone||'—')+'</a></td>'
+      +'<td style="padding:10px 12px;"><a href="tel:'+anEsc(anTelPhone(lead.phone)||'')+'" onclick="event.stopPropagation()" style="color:var(--text-secondary);text-decoration:none;font-size:13px;">'+anEsc(anPhoneDisplay(lead.phone))+'</a></td>'
       +'<td style="padding:10px 12px;"><span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap;">'+st.label+'</span></td>'
       +(anShowOwnerColumn()?'<td style="padding:10px 12px;" onclick="event.stopPropagation()">'+(repEmail?'<span style="background:'+repCol+'18;color:'+repCol+';border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;" title="Change owner" onclick="anOpenOwnerPicker({leadId:\''+lead.id+'\'})">'+anEsc(repName)+' ▾</span>':'<span style="color:var(--text-muted);font-size:12px;cursor:pointer;" onclick="anOpenOwnerPicker({leadId:\''+lead.id+'\'})">+ Assign ▾</span>')+'</td>':'')
       +'<td style="padding:10px 12px;font-size:12.5px;color:'+(fuDue?'#ef4444':'var(--text-muted)')+';font-weight:'+(fuDue?'700':'400')+';">'+(lead.nextFollowUp?anDate(lead.nextFollowUp):'—')+'</td>'
@@ -8850,8 +8907,14 @@ window.anOpenLead = function(id){
 };
 
 function anField(label,id,value,type){
+  var blurExtra = '';
+  if(type === 'tel'){
+    value = anFormatPhone(value);
+    blurExtra = 'this.value=anFormatPhone(this.value)||this.value;';
+  }
   return '<div><label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">'+label+'</label>'
-    +'<input id="'+id+'" type="'+type+'" value="'+anEsc(value)+'" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13.5px;color:var(--text-primary);background:var(--card-bg);outline:none;font-family:var(--sans);box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'"></div>';
+    +'<input id="'+id+'" type="'+type+'" value="'+anEsc(value)+'"'+(type==='tel'?' placeholder="801-888-8888"':'')
+    +' style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13.5px;color:var(--text-primary);background:var(--card-bg);outline:none;font-family:var(--sans);box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="'+blurExtra+'this.style.borderColor=\'var(--divider)\'"></div>';
 }
 
 window.anLeadTab = function(tab){
@@ -8867,7 +8930,7 @@ window.anSaveLead = function(id){
   if(!lead) return;
   var g = function(eid){ var el=document.getElementById(eid); return el?el.value:''; };
   lead.firstName=g('alf-fn'); lead.lastName=g('alf-ln'); lead.company=g('alf-co');
-  lead.email=g('alf-em'); lead.phone=g('alf-ph'); lead.state=g('alf-st');
+  lead.email=g('alf-em'); lead.phone=anNormalizePhone(g('alf-ph')); lead.state=g('alf-st');
   lead.size=g('alf-sz'); lead.status=g('alf-sta'); lead.source=g('alf-src');
   lead.nextFollowUp=g('alf-fu'); lead.updated=new Date().toISOString();
   AN.save(); renderLeadsTable();
@@ -9216,6 +9279,8 @@ var AN_CSV_ALIASES = {
 var _anImportRaw = null;
 var _anPending = [];
 var _anImportMapping = null;
+var _anImportShowAllFields = false;
+var AN_IMPORT_IDENTITY_KEYS = ['firstName', 'lastName', 'email', 'company'];
 
 function anNormHeader(h){
   return (h || '').replace(/^\uFEFF/, '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -9291,38 +9356,93 @@ function anGetImportMapping(){
 function anImportMappingHasIdentity(mapping){
   return AN_IMPORT_FIELDS.some(function(f){
     var idx = mapping[f.key];
-    return idx >= 0 && (f.key === 'firstName' || f.key === 'lastName' || f.key === 'email' || f.key === 'company');
+    return idx >= 0 && AN_IMPORT_IDENTITY_KEYS.indexOf(f.key) >= 0;
   });
 }
 
-function anUpdateImportStats(){
+function anGetImportMappingSummary(mapping){
+  var headers = _anImportRaw ? _anImportRaw.headers : [];
+  var mapped = [];
+  var unmapped = [];
+  var usedCols = {};
+
+  AN_IMPORT_FIELDS.forEach(function(field){
+    var idx = mapping[field.key];
+    if(idx >= 0){
+      mapped.push({ field: field, colIdx: idx, colName: headers[idx] || ('Column ' + (idx + 1)) });
+      usedCols[idx] = true;
+    } else {
+      unmapped.push(field);
+    }
+  });
+
+  var orphanCols = headers.map(function(h, i){
+    return { idx: i, name: h };
+  }).filter(function(col){ return !usedCols[col.idx]; });
+
+  return { mapped: mapped, unmapped: unmapped, orphanCols: orphanCols };
+}
+
+function anToggleImportFieldView(showAll){
+  _anImportShowAllFields = !!showAll;
+  anRenderImportMapping();
+}
+
+window.anUpdateImportStats = function(){
   if(!_anImportRaw) return;
   var stats = document.getElementById('an-import-stats');
   var confirmBtn = document.getElementById('an-import-confirm');
   if(!stats) return;
 
   var mapping = anGetImportMapping();
-  var mappedCount = AN_IMPORT_FIELDS.filter(function(f){ return mapping[f.key] >= 0; }).length;
+  var summary = anGetImportMappingSummary(mapping);
+  var mappedCount = summary.mapped.length;
+  var unmappedCount = summary.unmapped.length;
   var rowCount = _anImportRaw.rows.length;
   var sampleContacts = anBuildContactsFromMapping(mapping, 3);
   var canImport = anImportMappingHasIdentity(mapping);
 
-  stats.innerHTML = '<strong style="color:'+(mappedCount ? '#10b981' : '#f59e0b')+';">'
-    +(mappedCount ? '✅ ' : '⚠️ ')+rowCount+' rows found · '+mappedCount+' fields mapped'
-    +(canImport ? ' · ready to import' : ' · map name, email, or company to continue')+'</strong>'
-    +'<br><span style="font-size:12px;color:var(--text-muted);">Preview: '
+  var mappedChips = summary.mapped.map(function(m){
+    return '<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#059669;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;margin:2px 4px 2px 0;">'
+      +'<span style="opacity:0.75;">'+anEsc(m.field.label)+'</span>'
+      +'<span style="color:#10b981;">→</span>'
+      +'<span>'+anEsc(m.colName)+'</span></span>';
+  }).join('');
+
+  stats.innerHTML = '<div style="margin-bottom:8px;"><strong style="color:'+(canImport ? '#10b981' : '#f59e0b')+';">'
+    +(canImport ? '✅ ' : '⚠️ ')+rowCount+' rows · '+mappedCount+' mapped · '+unmappedCount+' not mapped'
+    +(canImport ? ' · ready to import' : ' · map at least one of: name, email, or company')+'</strong></div>'
+    +(mappedCount
+      ? '<div style="margin-bottom:8px;"><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">Mapped</div><div style="line-height:1.6;">'+mappedChips+'</div></div>'
+      : '<div style="font-size:12px;color:#f59e0b;margin-bottom:8px;">No fields mapped yet — match CSV columns below.</div>')
+    +(unmappedCount
+      ? '<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">Still need a decision: <strong style="color:var(--text-secondary);">'
+        +summary.unmapped.map(function(f){ return f.label; }).join(', ')
+        +'</strong> — map each to a CSV column or leave as Skip.</div>'
+      : '')
+    +(summary.orphanCols.length
+      ? '<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">CSV columns not used: <span style="color:#a1a1aa;">'
+        +summary.orphanCols.slice(0, 8).map(function(c){ return anEsc(c.name); }).join(', ')
+        +(summary.orphanCols.length > 8 ? ' +'+(summary.orphanCols.length - 8)+' more' : '')
+        +'</span></div>'
+      : '')
+    +'<div style="font-size:12px;color:var(--text-muted);padding-top:6px;border-top:1px solid var(--divider);">Preview: '
     +(sampleContacts.length ? sampleContacts.map(function(c){
       return (c.firstName||'')+(c.lastName?' '+c.lastName:'')+(c.company?' ('+c.company+')':'');
-    }).join(', ') : 'Map at least one column to see preview')
-    +'</span>';
+    }).join(', ') : 'Map at least one identity field to see preview')
+    +'</div>';
 
   if(confirmBtn){
     confirmBtn.disabled = !canImport;
     confirmBtn.style.opacity = canImport ? '1' : '0.5';
     confirmBtn.textContent = canImport
       ? ('Import '+rowCount+' Contact'+(rowCount!==1?'s':''))
-      : 'Map columns to import';
+      : 'Map name, email, or company';
   }
+};
+
+function anUpdateImportStats(){
+  window.anUpdateImportStats();
 }
 
 function anRenderImportMapping(){
@@ -9332,25 +9452,62 @@ function anRenderImportMapping(){
   if(!wrap) return;
 
   var headers = _anImportRaw.headers;
-  var mapping = anInitImportMapping();
+  var mapping = anGetImportMapping();
+  var summary = anGetImportMappingSummary(mapping);
+  var fieldsToShow = _anImportShowAllFields ? AN_IMPORT_FIELDS : summary.unmapped;
 
-  function fieldOpts(selectedIdx){
+  function fieldOpts(selectedIdx, fieldKey){
     return '<option value="-1"'+(selectedIdx===-1?' selected':'')+'>— Skip —</option>'
       + headers.map(function(h, i){
-        return '<option value="'+i+'"'+(selectedIdx===i?' selected':'')+'">'+anEsc(h)+'</option>';
+        var takenBy = '';
+        AN_IMPORT_FIELDS.forEach(function(f){
+          if(f.key !== fieldKey && mapping[f.key] === i) takenBy = f.label;
+        });
+        var suffix = takenBy ? ' (used by '+takenBy+')' : '';
+        return '<option value="'+i+'"'+(selectedIdx===i?' selected':'')+'">'+anEsc(h)+suffix+'</option>';
       }).join('');
   }
 
-  wrap.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:10px;">Match your CSV columns</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;max-height:220px;overflow-y:auto;padding-right:4px;">'
-    + AN_IMPORT_FIELDS.map(function(field){
-      var val = mapping[field.key];
-      return '<div><label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">'+field.label+'</label>'
-        +'<select data-import-field="'+field.key+'" onchange="anImportFieldChanged(\''+field.key+'\', this.value)" style="width:100%;border:1.5px solid var(--divider);border-radius:7px;padding:7px 9px;font-size:12px;background:var(--card-bg);color:var(--text-primary);font-family:var(--sans);cursor:pointer;">'
-        + fieldOpts(val)
-        +'</select></div>';
-    }).join('')
-    +'</div>';
+  var viewToggle = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--text-primary);">'
+    +(_anImportShowAllFields ? 'All fields' : 'Unmapped fields only')
+    +' <span style="font-weight:600;color:var(--text-muted);">('+fieldsToShow.length+')</span></div>'
+    +'<div style="display:flex;gap:6px;">'
+    +'<button type="button" onclick="anToggleImportFieldView(false)" style="padding:5px 11px;border-radius:20px;border:1.5px solid '
+    +(!_anImportShowAllFields ? '#6366f1' : 'var(--divider)')+';background:'
+    +(!_anImportShowAllFields ? 'rgba(99,102,241,0.1)' : 'transparent')+';color:'
+    +(!_anImportShowAllFields ? '#6366f1' : 'var(--text-muted)')+';font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">Needs attention</button>'
+    +'<button type="button" onclick="anToggleImportFieldView(true)" style="padding:5px 11px;border-radius:20px;border:1.5px solid '
+    +(_anImportShowAllFields ? '#6366f1' : 'var(--divider)')+';background:'
+    +(_anImportShowAllFields ? 'rgba(99,102,241,0.1)' : 'transparent')+';color:'
+    +(_anImportShowAllFields ? '#6366f1' : 'var(--text-muted)')+';font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">Show all</button>'
+    +'</div></div>';
+
+  var fieldGrid = fieldsToShow.length
+    ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;max-height:240px;overflow-y:auto;padding-right:4px;">'
+      + fieldsToShow.map(function(field){
+        var val = mapping[field.key];
+        var isIdentity = AN_IMPORT_IDENTITY_KEYS.indexOf(field.key) >= 0;
+        var isMapped = val >= 0;
+        return '<div style="padding:8px 10px;border-radius:8px;border:1.5px solid '
+          +(isMapped ? 'rgba(16,185,129,0.35)' : (isIdentity ? 'rgba(245,158,11,0.35)' : 'var(--divider)'))+';background:'
+          +(isMapped ? 'rgba(16,185,129,0.04)' : (isIdentity ? 'rgba(245,158,11,0.04)' : 'transparent'))+';">'
+          +'<label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">'
+          +field.label
+          +(isIdentity && !isMapped ? ' <span style="color:#f59e0b;font-size:10px;">(recommended)</span>' : '')
+          +(isMapped ? ' <span style="color:#10b981;font-size:10px;">✓ mapped</span>' : '')
+          +'</label>'
+          +'<select data-import-field="'+field.key+'" onchange="anImportFieldChanged(\''+field.key+'\', this.value)" style="width:100%;border:1.5px solid var(--divider);border-radius:7px;padding:7px 9px;font-size:12px;background:var(--card-bg);color:var(--text-primary);font-family:var(--sans);cursor:pointer;">'
+          + fieldOpts(val, field.key)
+          +'</select></div>';
+      }).join('')
+      +'</div>'
+    : '<div style="text-align:center;padding:20px 12px;background:rgba(16,185,129,0.06);border:1.5px solid rgba(16,185,129,0.25);border-radius:10px;color:#059669;font-size:13px;font-weight:600;">'
+      +'✅ All fields are mapped or skipped. Review the summary above, then import.'
+      +' <button type="button" onclick="anToggleImportFieldView(true)" style="display:block;margin:10px auto 0;padding:6px 14px;border-radius:6px;border:1px solid rgba(16,185,129,0.4);background:#fff;color:#059669;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">Show all fields anyway</button>'
+      +'</div>';
+
+  wrap.innerHTML = viewToggle + fieldGrid;
 
   if(preview) preview.style.display = 'block';
   anUpdateImportStats();
@@ -9358,9 +9515,16 @@ function anRenderImportMapping(){
 
 window.anImportFieldChanged = function(fieldKey, value){
   if(!_anImportMapping) anInitImportMapping();
-  _anImportMapping[fieldKey] = parseInt(value, 10);
-  if(isNaN(_anImportMapping[fieldKey])) _anImportMapping[fieldKey] = -1;
-  anUpdateImportStats();
+  var newIdx = parseInt(value, 10);
+  if(isNaN(newIdx)) newIdx = -1;
+
+  if(newIdx >= 0){
+    AN_IMPORT_FIELDS.forEach(function(f){
+      if(f.key !== fieldKey && _anImportMapping[f.key] === newIdx) _anImportMapping[f.key] = -1;
+    });
+  }
+  _anImportMapping[fieldKey] = newIdx;
+  anRenderImportMapping();
 };
 
 window.anImportMappingChanged = window.anImportFieldChanged;
@@ -9400,6 +9564,7 @@ function anBuildContactsFromMapping(mapping, limit){
       var v = (vals[idx] || '').trim();
       if(!v) return;
       if(field.key === 'status') c.status = anMapStatus(v);
+      else if(field.key === 'phone') c.phone = anNormalizePhone(v);
       else c[field.key] = v;
     });
     if(!c.lastName && c.firstName){
@@ -9419,6 +9584,7 @@ window.anOpenImport = function(){
   _anImportRaw = null;
   _anPending = [];
   _anImportMapping = null;
+  _anImportShowAllFields = false;
 
   var m = document.createElement('div');
   m.id = 'an-import-modal';
@@ -9847,6 +10013,7 @@ function startInlineEdit(td) {
   if (!lead) return;
 
   var val = lead[field] || '';
+  if (field === 'phone') val = anFormatPhone(val);
   var original = td.innerHTML;
   td.style.padding = '2px 6px';
 
@@ -9883,8 +10050,9 @@ function startInlineEdit(td) {
 
   // Text input
   var inp = document.createElement('input');
-  inp.type = field === 'nextFollowUp' ? 'date' : 'text';
+  inp.type = field === 'nextFollowUp' ? 'date' : (field === 'phone' ? 'tel' : 'text');
   inp.value = val;
+  if (field === 'phone') inp.placeholder = '801-888-8888';
   inp.style.cssText = 'width:100%;border:1.5px solid #6366f1;border-radius:6px;padding:5px 8px;font-size:13px;font-family:var(--sans);background:var(--card-bg);color:var(--text-primary);outline:none;min-width:80px;';
   inp.onblur  = function() { saveInlineEdit(lead, field, inp.value, td, original); };
   inp.onkeydown = function(e) {
@@ -9895,6 +10063,7 @@ function startInlineEdit(td) {
 }
 
 function saveInlineEdit(lead, field, value, td, original) {
+  if (field === 'phone') value = anNormalizePhone(value);
   if (lead[field] === value) { td.innerHTML = original; td.style.padding = ''; return; }
   lead[field] = value;
   lead.updated = new Date().toISOString();
@@ -9923,6 +10092,10 @@ function renderCellContent(td, field, lead) {
     td.innerHTML = lead.size ? '<span style="background:var(--body-bg);border:1px solid var(--divider);border-radius:5px;padding:2px 8px;font-size:11.5px;font-weight:600;color:var(--text-secondary);">'+anSizeLabel(lead.size)+'</span>' : '<span style="color:var(--text-muted);">—</span>';
   } else if (field === 'nextFollowUp') {
     td.innerHTML = lead.nextFollowUp ? anDate(lead.nextFollowUp) : '—';
+  } else if (field === 'phone') {
+    td.innerHTML = lead.phone
+      ? '<a href="tel:'+anEsc(anTelPhone(lead.phone))+'" onclick="event.stopPropagation()" style="color:var(--text-secondary);text-decoration:none;font-size:13px;">'+anEsc(anPhoneDisplay(lead.phone))+'</a>'
+      : '<span style="color:var(--text-muted);">—</span>';
   } else {
     td.innerHTML = anEsc(lead[field]||'—');
   }
@@ -10041,18 +10214,20 @@ window.anOpenLeadPanel = function(leadId) {
       +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:10px;">Contact Details</div>'
       +[
         ['📧 Email', lead.email],
-        ['📞 Phone', lead.phone],
-        ['📍 State', lead.state],
-        ['🏢 Size', sz?sz.label:'—'],
-        ['🔗 Source', lead.source],
-        ['📅 Follow Up', lead.nextFollowUp?anDate(lead.nextFollowUp):'—'],
-        ['🔄 Status', st.label],
-        ['⏱ Last Contact', anTimeAgo(lead.lastContactDate||lead.created)],
-        ['📆 Created', anDate(lead.created)]
+        ['📞 Phone', lead.phone ? anPhoneDisplay(lead.phone) : '', lead.phone ? 'tel:'+anTelPhone(lead.phone) : null],
+        ['📍 State', lead.state, null],
+        ['🏢 Size', sz?sz.label:'—', null],
+        ['🔗 Source', lead.source, null],
+        ['📅 Follow Up', lead.nextFollowUp?anDate(lead.nextFollowUp):'—', null],
+        ['🔄 Status', st.label, null],
+        ['⏱ Last Contact', anTimeAgo(lead.lastContactDate||lead.created), null],
+        ['📆 Created', anDate(lead.created), null]
       ].filter(function(r){return r[1];}).map(function(row){
+        var val = row[2]
+          ? '<a href="'+row[2]+'" style="font-size:12.5px;font-weight:600;color:#6366f1;text-decoration:none;">'+anEsc(row[1])+'</a>'
+          : '<span style="font-size:12.5px;font-weight:600;color:var(--text-primary);text-align:right;max-width:60%;word-break:break-word;">'+anEsc(row[1])+'</span>';
         return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--divider);">'
-          +'<span style="font-size:12px;color:var(--text-muted);">'+row[0]+'</span>'
-          +'<span style="font-size:12.5px;font-weight:600;color:var(--text-primary);text-align:right;max-width:60%;word-break:break-word;">'+anEsc(row[1])+'</span>'
+          +'<span style="font-size:12px;color:var(--text-muted);">'+row[0]+'</span>'+val
           +'</div>';
       }).join('')
       +'<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--divider);">'
@@ -10168,7 +10343,7 @@ window.anRenderCallSessionLeadPanel = function(leadId) {
     +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Contact</div>'
     +[
       ['📧 Email', lead.email, lead.email ? 'mailto:'+lead.email : null],
-      ['📞 Phone', lead.phone, lead.phone ? 'tel:'+lead.phone : null],
+      ['📞 Phone', anPhoneDisplay(lead.phone), lead.phone ? 'tel:'+anTelPhone(lead.phone) : null],
       ['📍 State', lead.state, null],
       ['🏢 Size', sz ? sz.label : null, null],
       ['🔗 Source', lead.source, null],
@@ -12186,7 +12361,8 @@ window.openMobileCallMode = function(leadId) {
 
   var mode = anGetCallPanelMode(lead);
   var name = ((lead.firstName||'') + ' ' + (lead.lastName||'')).trim() || lead.company || (mode === 'opportunity' ? 'Deal' : 'Lead');
-  var phone = lead.phone || '';
+  var phone = anFormatPhone(lead.phone || '');
+  var telPhone = anTelPhone(lead.phone || '');
 
   var statuses = mode === 'opportunity'
     ? AN_OPP_STATUSES.map(function(s){ return { v:s.id, l:s.label, c:s.color }; })
@@ -12237,7 +12413,7 @@ window.openMobileCallMode = function(leadId) {
     // Phone + Call button
     +'<div style="padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.06);">'
     +(phone
-      ? '<a href="tel:'+phone+'" style="display:flex;align-items:center;justify-content:space-between;background:rgba(16,185,129,0.12);border:1.5px solid rgba(16,185,129,0.3);border-radius:14px;padding:16px 20px;text-decoration:none;">'
+      ? '<a href="tel:'+mcmEsc(telPhone)+'" style="display:flex;align-items:center;justify-content:space-between;background:rgba(16,185,129,0.12);border:1.5px solid rgba(16,185,129,0.3);border-radius:14px;padding:16px 20px;text-decoration:none;">'
         +'<div>'
         +'<div style="font-size:11px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:3px;">Tap to Call</div>'
         +'<div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:0.05em;">'+mcmEsc(phone)+'</div>'
@@ -12629,7 +12805,7 @@ window.mcmEditPhone = function(leadId) {
   if (!phone) return;
   var lead = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.find(function(l){ return l.id===leadId; }) : null;
   if (!lead) return;
-  lead.phone = phone.trim();
+  lead.phone = anNormalizePhone(phone);
   lead.updated = new Date().toISOString();
   if (typeof AN !== 'undefined' && AN.save) AN.save();
   // Reopen with updated info
@@ -12753,7 +12929,7 @@ window.renderLeadsTable = function() {
 
       if (lead.phone) {
         phoneCell.innerHTML = '<div style="display:flex;align-items:center;gap:6px;">'
-          +'<span style="font-size:12.5px;color:var(--text-primary);">'+mcmEsc(lead.phone)+'</span>'
+          +'<span style="font-size:12.5px;color:var(--text-primary);">'+mcmEsc(anFormatPhone(lead.phone))+'</span>'
           +'<button onclick="event.stopPropagation();openMobileCallMode(\''+leadId+'\')" '
           +'style="background:#ecfdf5;color:#10b981;border:1px solid #a7f3d0;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">📞</button>'
           +'</div>';
@@ -13186,7 +13362,7 @@ function hdRender() {
         +'<div class="hd-avatar" style="background:'+col+';">'+hdEsc(name.charAt(0).toUpperCase())+'</div>'
         +'<div class="hd-item-main">'
         +'<div class="hd-item-name">'+hdEsc(name)+'</div>'
-        +'<div class="hd-item-sub">'+(l.company ? hdEsc(l.company)+' · ' : '')+(l.phone || 'No phone')+'</div>'
+        +'<div class="hd-item-sub">'+(l.company ? hdEsc(l.company)+' · ' : '')+(l.phone ? anFormatPhone(l.phone) : 'No phone')+'</div>'
         +'</div>'
         +'<div class="hd-item-badge" style="background:'+col+'15;color:'+col+';">'+hdEsc(label)+'</div>'
         +'<button onclick="event.stopPropagation();openMobileCallMode&&openMobileCallMode(\''+l.id+'\')" style="background:#ecfdf5;color:#10b981;border:1px solid #a7f3d0;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">📞</button>'
@@ -14002,7 +14178,7 @@ function coDetailPane(co, allCompanies) {
           +(l.status==='won'?'<span style="font-size:10px;font-weight:700;background:#dcfce7;color:#16a34a;border-radius:4px;padding:1px 6px;">Signed Up</span>':'')
           +'</div>'
           +'<div style="font-size:12px;color:#71717a;margin-top:2px;">'
-          +(l.title?coEsc(l.title)+' · ':'')+(l.email?coEsc(l.email):'')+(l.email&&l.phone?' · ':'')+(l.phone?coEsc(l.phone):'')
+          +(l.title?coEsc(l.title)+' · ':'')+(l.email?coEsc(l.email):'')+(l.email&&l.phone?' · ':'')+(l.phone?coEsc(anFormatPhone(l.phone)):'')
           +'</div>'
           +(lastCall?'<div style="font-size:11px;color:#a1a1aa;margin-top:3px;">Last: '+coEsc(lastCall.date)+' — '+coEsc(lastCall.outcome||'call')+'</div>':'')
           +'</div>'
@@ -14032,7 +14208,7 @@ function coDetailPane(co, allCompanies) {
       return '<div onclick="typeof anOpenLeadPanel===\'function\'?anOpenLeadPanel(\''+l.id+'\'):anOpenLead&&anOpenLead(\''+l.id+'\')" style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;cursor:pointer;margin-bottom:4px;" onmouseover="this.style.background=\'#f4f4ff\'" onmouseout="this.style.background=\'transparent\'">'
         +'<div style="width:28px;height:28px;border-radius:50%;background:'+stCol+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;">'+name.charAt(0).toUpperCase()+'</div>'
         +'<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:600;color:#09090b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+coEsc(name)+'</div>'
-        +'<div style="font-size:10.5px;color:#a1a1aa;">'+(isSignedUp?'✓ Signed up · ':'')+(l.email||l.phone||'')+'</div></div></div>';
+        +'<div style="font-size:10.5px;color:#a1a1aa;">'+(isSignedUp?'✓ Signed up · ':'')+(l.email||(l.phone?anFormatPhone(l.phone):'')||'')+'</div></div></div>';
     }).join('') + (leads.length>6?'<div onclick="coSwitchCompanyTab(\'contacts\')" style="font-size:11px;color:#6366f1;padding:6px 8px;cursor:pointer;font-weight:600;">View all '+leads.length+' contacts →</div>':'')
       : '<div style="font-size:12px;color:#a1a1aa;padding:8px 0;">No contacts — import CSV or add manually.</div>')
     +'</div>'
@@ -14457,7 +14633,7 @@ window.openCompanyDetail = function(companyName) {
           +'<div style="width:38px;height:38px;border-radius:50%;background:'+anColor((l.firstName||'')+(l.lastName||''))+'22;border:2px solid '+anColor((l.firstName||'')+(l.lastName||''))+'44;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:'+anColor((l.firstName||'')+(l.lastName||''))+';flex-shrink:0;">'+((l.firstName||'?')[0].toUpperCase())+'</div>'
           +'<div style="flex:1;min-width:0;">'
           +'<div style="font-size:13.5px;font-weight:700;color:var(--text-primary);">'+anEsc((l.firstName||'')+' '+(l.lastName||''))+'</div>'
-          +'<div style="font-size:12px;color:var(--text-muted);">'+(l.email||'')+(l.phone?' · '+l.phone:'')+'</div>'
+          +'<div style="font-size:12px;color:var(--text-muted);">'+(l.email||'')+(l.phone?' · '+anFormatPhone(l.phone):'')+'</div>'
           +'</div>'
           +'<div style="text-align:right;">'
           +'<span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">'+st.label+'</span>'
@@ -14513,7 +14689,7 @@ window.logCallForCompany = function(companyName) {
         +'onmouseover="this.style.borderColor=\'#6366f1\'" onmouseout="this.style.borderColor=\'var(--divider)\'">'
         +'<div style="width:30px;height:30px;border-radius:50%;background:#6366f118;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#6366f1;flex-shrink:0;">'+((l.firstName||'?')[0].toUpperCase())+'</div>'
         +'<div style="flex:1;text-align:left;"><div style="font-size:13px;font-weight:600;color:var(--text-primary);">'+anEsc((l.firstName||'')+' '+(l.lastName||''))+'</div>'
-        +(l.phone?'<div style="font-size:11px;color:var(--text-muted);">'+anEsc(l.phone)+'</div>':'')
+        +(l.phone?'<div style="font-size:11px;color:var(--text-muted);">'+anEsc(anFormatPhone(l.phone))+'</div>':'')
         +'</div></button>';
     }).join('')
     +'</div>';
@@ -15045,7 +15221,7 @@ window.anGetScriptMergeValues = function(lead) {
     fullName: fullName,
     company: company,
     state: (lead && lead.state) ? lead.state : '',
-    phone: (lead && lead.phone) ? lead.phone : '',
+    phone: (lead && lead.phone) ? anFormatPhone(lead.phone) : '',
     email: (lead && lead.email) ? lead.email : '',
     rep_name: repName,
     repName: repName,
