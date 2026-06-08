@@ -69,7 +69,7 @@
                 style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:10px 12px;font-size:17px;font-weight:700;color:#09090b;outline:none;box-sizing:border-box;"
                 oninput="calcUniversal()" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div><div><label style="font-size:9px;font-weight:700;color:#71717a;display:block;margin-bottom:6px;letter-spacing:0.12em;text-transform:uppercase;">Assistants</label><input id="univ-assistants" type="text" inputmode="numeric" value="0" placeholder="e.g. 100"
                 style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:10px 12px;font-size:17px;font-weight:700;color:#09090b;outline:none;box-sizing:border-box;"
-                oninput="calcUniversal()" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div></div><div style="background:#eef2ff;border:1.5px solid rgba(99,102,241,0.25);border-radius:10px;padding:14px 16px;margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><div><div style="font-size:14px;font-weight:800;color:#6366f1;" id="univ-plan-name">Independent Agent</div><div style="font-size:11.5px;color:#71717a;margin-top:2px;" id="univ-plan-desc">1 agent &middot; all features</div></div><div style="text-align:right;"><div style="font-size:30px;font-weight:800;color:#6366f1;letter-spacing:-1.5px;line-height:1;" id="univ-monthly">$79</div><div style="font-size:10.5px;color:#71717a;">/month</div></div></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-top:10px;border-top:1px solid rgba(99,102,241,0.15);"><div style="text-align:center;"><div style="font-size:10.5px;color:#71717a;margin-bottom:2px;">Annual (20% off)</div><div style="font-size:13px;font-weight:700;color:#09090b;" id="univ-annual">$854/yr</div></div><div style="text-align:center;"><div style="font-size:10.5px;color:#71717a;margin-bottom:2px;">Per Person/mo (20% off)</div><div style="font-size:13px;font-weight:700;color:#09090b;" id="univ-per-person">$63.17</div></div><div style="text-align:center;"><div style="font-size:10.5px;color:#71717a;margin-bottom:2px;">Annual Savings</div><div style="font-size:13px;font-weight:700;color:#10b981;" id="univ-savings">Save $95</div></div></div></div><div style="font-size:10.5px;color:#a1a1aa;margin-bottom:14px;" id="univ-breakdown">Standard plan</div><div style="background:#f8f8fa;border-radius:8px;padding:10px 12px;margin-bottom:14px;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;">Pricing Tiers</div><div style="display:grid;grid-template-columns:auto auto;gap:3px 16px;"><span style="font-size:11.5px;color:#52525b;">1 agent</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$79/mo flat</span><span style="font-size:11.5px;color:#52525b;">2–4 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$247/mo flat</span><span style="font-size:11.5px;color:#52525b;">5–10 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$597/mo flat</span><span style="font-size:11.5px;color:#52525b;">11–50 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$30/agent/mo</span><span style="font-size:11.5px;color:#52525b;">51–100 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$27/agent/mo</span><span style="font-size:11.5px;color:#52525b;">101–200 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$24/agent/mo</span><span style="font-size:11.5px;color:#52525b;">201–500 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$22/agent/mo</span><span style="font-size:11.5px;color:#52525b;">501–10,000 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$20/agent/mo</span><span style="font-size:11.5px;color:#52525b;">10,001–100,000+</span><span style="font-size:11.5px;font-weight:700;color:#6366f1;">Custom &mdash; contact us</span></div></div><button onclick="applyCalcToQuote()" style="width:100%;background:#6366f1;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;margin-bottom:0;">Use This Price in Quote &#8595;</button></div></div><div style="display:flex;flex-direction:column;gap:12px;"><div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.05);"><div style="padding:12px 16px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;">Every Plan Includes</div></div><div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:6px;"><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>ACA, STM, Life, Ancillary &amp; Indemnity</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Full CRM &amp; household tracking</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Renewal Autopilot OEP workflow</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>SMS with dedicated number</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>HealthSherpa &amp; EDE integration</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Google Calendar sync</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Policy tracker &amp; reconciliation</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>No annual contract required</div></div></div><div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.05);"><div style="padding:12px 16px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;">PDF Quote &mdash; Prospect Info</div></div><div style="padding:13px 15px;display:flex;flex-direction:column;gap:8px;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><input id="qb-fname" type="text" placeholder="First Name" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><input id="qb-lname" type="text" placeholder="Last Name" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div><input id="qb-agency" type="text" placeholder="Agency Name" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><input id="qb-email" type="email" placeholder="Email" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><input id="qb-phone" type="tel" placeholder="Phone" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div><input id="qb-repname" type="text" placeholder="Your Name (Rep)" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><input id="qb-notes" type="text" placeholder="Notes (optional)" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><div style="border:1.5px solid #fde68a;border-radius:8px;background:#fffbeb;padding:10px 12px;"><div style="font-size:9px;font-weight:700;color:#92400e;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;">🏷️ Discount (Optional)</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;"><select id="qb-discount-type" onchange="updateDiscountLabel()" style="border:1.5px solid #fde68a;border-radius:6px;padding:6px 8px;font-size:12px;font-weight:600;color:#09090b;background:#fff;outline:none;cursor:pointer;"><option value="">No Discount</option><option value="percent_months">% Off First N Months</option><option value="free_months">Free Month(s)</option><option value="flat_off">Flat $ Off/Month</option><option value="custom">Custom Text</option></select><div id="qb-discount-inputs" style="display:none;"></div></div><div id="qb-discount-preview" style="font-size:11.5px;font-weight:700;color:#f59e0b;min-height:16px;"></div></div><button onclick="generateQuotePDF2()" style="width:100%;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:9px;padding:11px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(99,102,241,0.3);font-family:inherit;">&#128196; Download PDF Quote</button></div></div></div></div></div>
+                oninput="calcUniversal()" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div></div><div style="background:#eef2ff;border:1.5px solid rgba(99,102,241,0.25);border-radius:10px;padding:14px 16px;margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><div><div style="font-size:14px;font-weight:800;color:#6366f1;" id="univ-plan-name">Independent Agent</div><div style="font-size:11.5px;color:#71717a;margin-top:2px;" id="univ-plan-desc">1 agent &middot; all features</div></div><div style="text-align:right;"><div style="font-size:30px;font-weight:800;color:#6366f1;letter-spacing:-1.5px;line-height:1;" id="univ-monthly">$79</div><div style="font-size:10.5px;color:#71717a;">/month</div></div></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-top:10px;border-top:1px solid rgba(99,102,241,0.15);"><div style="text-align:center;"><div style="font-size:10.5px;color:#71717a;margin-bottom:2px;">Annual (20% off)</div><div style="font-size:13px;font-weight:700;color:#09090b;" id="univ-annual">$854/yr</div></div><div style="text-align:center;"><div style="font-size:10.5px;color:#71717a;margin-bottom:2px;">Per Person/mo (20% off)</div><div style="font-size:13px;font-weight:700;color:#09090b;" id="univ-per-person">$63.17</div></div><div style="text-align:center;"><div style="font-size:10.5px;color:#71717a;margin-bottom:2px;">Annual Savings</div><div style="font-size:13px;font-weight:700;color:#10b981;" id="univ-savings">Save $95</div></div></div></div><div style="font-size:10.5px;color:#a1a1aa;margin-bottom:14px;" id="univ-breakdown">Standard plan</div><div style="background:#f8f8fa;border-radius:8px;padding:10px 12px;margin-bottom:14px;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;">Pricing Tiers</div><div style="display:grid;grid-template-columns:auto auto;gap:3px 16px;"><span style="font-size:11.5px;color:#52525b;">1 agent</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$79/mo flat</span><span style="font-size:11.5px;color:#52525b;">2–4 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$247/mo flat</span><span style="font-size:11.5px;color:#52525b;">5–10 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$597/mo flat</span><span style="font-size:11.5px;color:#52525b;">11–50 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$30/agent/mo</span><span style="font-size:11.5px;color:#52525b;">51–100 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$27/agent/mo</span><span style="font-size:11.5px;color:#52525b;">101–200 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$24/agent/mo</span><span style="font-size:11.5px;color:#52525b;">201–500 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$22/agent/mo</span><span style="font-size:11.5px;color:#52525b;">501–10,000 agents</span><span style="font-size:11.5px;font-weight:700;color:#09090b;">$20/agent/mo</span><span style="font-size:11.5px;color:#52525b;">10,001–100,000+</span><span style="font-size:11.5px;font-weight:700;color:#6366f1;">Custom &mdash; contact us</span></div></div><button onclick="applyCalcToQuote()" style="width:100%;background:#6366f1;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;margin-bottom:0;">Use This Price in Quote &#8595;</button></div></div><div style="display:flex;flex-direction:column;gap:12px;"><div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.05);"><div style="padding:12px 16px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;">Every Plan Includes</div></div><div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:6px;"><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>ACA, STM, Life, Ancillary &amp; Indemnity</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Full CRM &amp; household tracking</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Renewal Autopilot OEP workflow</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>SMS with dedicated number</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>HealthSherpa &amp; EDE integration</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Google Calendar sync</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>Policy tracker &amp; reconciliation</div><div style="font-size:11.5px;color:#52525b;display:flex;gap:5px;"><span style="color:#10b981;font-weight:700;flex-shrink:0;">&#10003;</span>No annual contract required</div></div></div><div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.05);"><div style="padding:12px 16px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;"><div style="font-size:9px;font-weight:700;color:#71717a;letter-spacing:0.14em;text-transform:uppercase;">PDF Quote &mdash; Prospect Info</div></div><div style="padding:13px 15px;display:flex;flex-direction:column;gap:8px;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><input id="qb-fname" type="text" placeholder="First Name" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><input id="qb-lname" type="text" placeholder="Last Name" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div><input id="qb-agency" type="text" placeholder="Agency Name" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><input id="qb-email" type="email" placeholder="Email" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><input id="qb-phone" type="tel" placeholder="Phone" style="border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"></div><input id="qb-repname" type="text" placeholder="Your Name (Rep)" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><input id="qb-notes" type="text" placeholder="Notes (optional)" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><input id="qb-setup-fee" type="number" min="0" step="1" placeholder="One-time setup fee ($) — optional" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:8px 10px;font-size:13px;color:#09090b;outline:none;box-sizing:border-box;" oninput="updateQuoteBuilderPreview()" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e4e4e7'"><div style="border:1.5px solid #c7d2fe;border-radius:8px;background:#eef2ff;padding:10px 12px;"><div style="font-size:9px;font-weight:700;color:#4338ca;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;">✏️ Custom Quote (Optional)</div><label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:#3730a3;cursor:pointer;margin-bottom:8px;"><input type="checkbox" id="qb-custom-enabled" onchange="updateCustomQuoteUI()" style="width:15px;height:15px;accent-color:#6366f1;"> Override calculator — bigger discounts, custom pricing</label><div id="qb-custom-fields" style="display:none;flex-direction:column;gap:6px;"><input id="qb-custom-plan" type="text" placeholder="Custom plan name (optional)" style="width:100%;border:1.5px solid #c7d2fe;border-radius:6px;padding:6px 8px;font-size:12px;" oninput="updateQuoteBuilderPreview()"><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;"><input id="qb-custom-monthly" type="number" min="0" step="1" placeholder="Custom $/month" style="border:1.5px solid #c7d2fe;border-radius:6px;padding:6px 8px;font-size:12px;" oninput="updateQuoteBuilderPreview()"><input id="qb-custom-annual" type="number" min="0" step="1" placeholder="Custom $/year (optional)" style="border:1.5px solid #c7d2fe;border-radius:6px;padding:6px 8px;font-size:12px;" oninput="updateQuoteBuilderPreview()"></div><input id="qb-custom-annual-pct" type="number" min="0" max="100" step="1" placeholder="Annual discount % (default 20, try 25–30+)" style="width:100%;border:1.5px solid #c7d2fe;border-radius:6px;padding:6px 8px;font-size:12px;" oninput="updateQuoteBuilderPreview()"></div><div id="qb-price-preview" style="font-size:11.5px;font-weight:700;color:#4338ca;min-height:16px;margin-top:6px;line-height:1.5;"></div></div><div style="border:1.5px solid #fde68a;border-radius:8px;background:#fffbeb;padding:10px 12px;"><div style="font-size:9px;font-weight:700;color:#92400e;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;">🏷️ Discount (Optional)</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;"><select id="qb-discount-type" onchange="updateDiscountLabel()" style="border:1.5px solid #fde68a;border-radius:6px;padding:6px 8px;font-size:12px;font-weight:600;color:#09090b;background:#fff;outline:none;cursor:pointer;"><option value="">No Discount</option><option value="percent_months">% Off First N Months</option><option value="free_months">Free Month(s)</option><option value="flat_off">Flat $ Off/Month</option><option value="custom">Custom Text</option></select><div id="qb-discount-inputs" style="display:none;"></div></div><div id="qb-discount-preview" style="font-size:11.5px;font-weight:700;color:#f59e0b;min-height:16px;"></div></div><button onclick="generateQuotePDF2()" style="width:100%;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:9px;padding:11px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(99,102,241,0.3);font-family:inherit;">&#128196; Download PDF Quote</button></div></div></div></div></div>
 </div><div class="section" id="section-coldcall"><div class="page-header"><div class="page-label">On The Call</div><h1>Cold Call Guide</h1><p>You have about 8 seconds before someone decides to keep listening or hang up. The goal of a cold call is one thing: earn a conversation, not make a sale.</p></div><div class="nba-bar"><span class="nba-label">⚡ Next Best Action</span><div class="nba-actions"><button class="nba-btn primary" onclick="qaCopy('Hey [Name], this is [Your name] from AgentNav. I'll be quick. We built a platform for health insurance brokers — quoting for ACA, STM, Life, Ancillary, and Indemnity, a full CRM, SMS, and a tool that runs your entire Open Enrollment season without you doing it manually. Does that sound like something worth two minutes?')">📋 Copy Opening Script</button><button class="nba-btn" onclick="openCoach()">🧠 Customize for This Prospect</button><button class="nba-btn" id="btn-guide-coldcall" onclick="openSplitGuide('coldcall',this)" style="background:#0f0f17;color:#fff;border-color:#0f0f17;">📖 Prebuilt Call Guide</button></div></div><div class="myscript-panel" id="msp-coldcall" style="margin:0 auto 6px;"><div class="myscript-header"><div><div class="myscript-title" style="color:#6366f1;">&#9997;&#65039; My Cold Call Script</div><div class="myscript-subtitle">Your cold call. Your words. Your style.</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;"><button onclick="addMSStep('coldcall','')" class="qa-btn" style="border-color:#6366f1;color:#6366f1;white-space:nowrap;">&#43; Step</button><button onclick="loadDefaultMS('coldcall')" class="qa-btn" style="white-space:nowrap;">&#8635; Default</button><button onclick="copyMyScript('coldcall')" class="qa-btn" style="white-space:nowrap;">&#128203; Copy All</button></div></div><div class="myscript-steps" id="mss-coldcall"><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">1</div><input class="myscript-step-title" type="text" value="Opening (0:00–0:15)" placeholder="Step name..." onchange="schedSave('coldcall')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Name, who you are, one-line value. End with a permission question." onchange="schedSave('coldcall')" oninput="schedSave('coldcall')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">2</div><input class="myscript-step-title" type="text" value="Earn the minute (0:15–0:45)" placeholder="Step name..." onchange="schedSave('coldcall')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Ask before you pitch. Discover their pain first." onchange="schedSave('coldcall')" oninput="schedSave('coldcall')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">3</div><input class="myscript-step-title" type="text" value="Connect pain to feature (0:45–1:30)" placeholder="Step name..." onchange="schedSave('coldcall')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Link what they said to ONE AgentNav feature." onchange="schedSave('coldcall')" oninput="schedSave('coldcall')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">4</div><input class="myscript-step-title" type="text" value="Soft pitch (1:30–2:00)" placeholder="Step name..." onchange="schedSave('coldcall')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Brief platform mention. No feature lists." onchange="schedSave('coldcall')" oninput="schedSave('coldcall')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">5</div><input class="myscript-step-title" type="text" value="Close for meeting (2:00–2:30)" placeholder="Step name..." onchange="schedSave('coldcall')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Ask for 15 min. Give a specific time option." onchange="schedSave('coldcall')" oninput="schedSave('coldcall')"></textarea></div></div><div class="myscript-footer"><button onclick="saveMyScript('coldcall')" class="myscript-save-btn" style="background:#6366f1;">&#9729; Save</button><span id="mss-status-coldcall" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span><span style="flex:1;"></span><button onclick="goToMyScript('coldcall')" style="font-size:11px;color:#6366f1;background:none;border:none;cursor:pointer;font-weight:600;padding:0;font-family:inherit;">View in Script Library →</button></div></div><div id="coldcall-guide" style="display:none;"><div class="content"><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">1</div><span class="step-title">The opening — earn 30 more seconds</span></div><span class="step-time">0:00 to 0:15</span></div><div class="step-body"><p>Use their name, say who you are, and get to the point. No one wants small talk from a cold caller.</p><div class="quote-block"><p>"Hey [Name], this is [Your name] from AgentNav. I'll be quick. We built a platform for health insurance brokers — quoting for ACA, STM, Life, Ancillary, and Indemnity, a full CRM, SMS, and a tool that runs your entire Open Enrollment season without you doing it manually. Does that sound like something worth two minutes?"</p><p class="quote-tip">The question at the end matters. It gives them control and respects their time.</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">2</div><span class="step-title">If they say sure, tell me more</span></div><span class="step-time">0:15 to 1:30</span></div><div class="step-body"><p>Ask before you talk. The best thing you can do after they give you a minute is use it to learn about them.</p><div class="quote-block"><p>"Really quick before I pitch you anything. How are you currently managing renewals when OE hits? Like specifically, what does that process look like for your book?"</p><p class="quote-tip">This is your most important question on a cold call. Their answer tells you exactly which pain point to hit.</p></div><p>Listen for the words: manually, spreadsheet, calling everyone myself, some clients fall through, overwhelmed. Any of these is your entry point.</p></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">3</div><span class="step-title">Connect their pain to one specific thing AgentNav does</span></div><span class="step-time">1:30 to 2:30</span></div><div class="step-body"><p>Don't list features. Respond to what they just told you.</p><div class="quote-block"><p>"That's exactly what Renewal Autopilot is built for. It sends the outreach to your clients automatically, tracks who responds, generates updated quotes for ACA, STM, Life, and Ancillary products, and gives you a board where every client has a status. You're not chasing 200 people in November. You're just reviewing what the system surfaced for you."</p><p class="quote-tip">One feature. One pain. One connection. Don't add more.</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">4</div><span class="step-title">Ask for the meeting</span></div><span class="step-time">2:30 to 3:00</span></div><div class="step-body"><p>Don't ask if they want to learn more. Ask for a specific time.</p><div class="quote-block"><p>"I'd love to show you how this looks for a book your size. Do you have 20 minutes this week or next — Thursday afternoon or Friday morning?"</p><p class="quote-tip">Two specific options. Not "are you free sometime?" Give them a choice, not an open invitation to say no.</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">5</div><span class="step-title">If they say no or not now</span></div><span class="step-time">Any point</span></div><div class="step-body"><div class="quote-block"><p>"Totally fair. When does OE stress usually start hitting for your team? I'll follow up right before that so the timing actually makes sense."</p><p class="quote-tip">Never argue. Plant a seed and get permission to come back at the right moment.</p></div></div></div></div></div>
 </div><div class="section" id="section-discovery"><div class="page-header"><div class="page-label">On The Call</div><h1>Discovery Call Guide</h1><p>Discovery is the most important call in the sales process. If you do this right, the demo writes itself and the close is easy. The goal is to understand their world before you say anything about ours.</p></div><div class="content"><div class="dark-banner"><h3>The golden rule of discovery</h3><p>You should be talking about 30 percent of the time. They should be talking 70 percent. If you're the one doing most of the talking, you've already lost the call.</p></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">1</div><span class="step-title">Set the agenda and earn trust early</span></div><span class="step-time">0:00 to 3:00</span></div><div class="step-body"><div class="quote-block"><p>"Thanks for making time. Here's what I was hoping to do today. I want to spend most of this call learning about how you're set up right now, what's working and what isn't. Then if I think AgentNav could actually help, I'll be honest about that. And if it's not a fit I'll tell you that too. Does that work for you?"</p><p class="quote-tip">This sets expectations, positions you as a consultant not a salesperson, and makes them comfortable being honest with you.</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">2</div><span class="step-title">Understand their current setup</span></div><span class="step-time">3:00 to 12:00</span></div><div class="step-body"><p>Work through these questions naturally. Don't read them like a checklist.</p><ul class="numbered-list"><li><div class="li-num">1</div>How big is your agency right now, and is it just you or do you have a team?</li><li><div class="li-num">2</div>What lines of business are you mostly working in? Is it mostly ACA or do you also do STM, Life, Ancillary, Indemnity, or Medicare?</li><li><div class="li-num">3</div>Walk me through what your tech stack looks like today. What tools are you using?</li><li><div class="li-num">4</div>When a new lead comes in, what happens? Where does it go?</li><li><div class="li-num">5</div>How do you handle quoting right now? Are you using a comparative rater or going carrier by carrier?</li><li><div class="li-num">6</div>What does a typical client conversation look like from your side? How do you track what was said?</li><li><div class="li-num">7</div>How do you manage renewals? Walk me through what OE looks like for your team.</li><li><div class="li-num">8</div>What tools are you using for SMS or client communication?</li></ul></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">3</div><span class="step-title">Find the real pain</span></div><span class="step-time">12:00 to 20:00</span></div><div class="step-body"><p>Once you've heard their setup, go deeper on what's breaking. These are the follow-up questions that uncover real buying motivation.</p><ul class="numbered-list"><li><div class="li-num">1</div>What's the most frustrating part of your current setup right now?</li><li><div class="li-num">2</div>Last OE — how many clients did you lose track of or lose entirely?</li><li><div class="li-num">3</div>If you could change one thing about how your team works today, what would it be?</li><li><div class="li-num">4</div>What would make next OE feel different from last year?</li></ul><div class="quote-block"><p>"It sounds like the thing that's really costing you time right now is [their exact words]. Is that fair to say? Because that's actually one of the specific things AgentNav was built to fix."</p><p class="quote-tip">Use their exact words back to them. Don't paraphrase. It shows you listened.</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">4</div><span class="step-title">Set up the demo</span></div><span class="step-time">20:00 to 25:00</span></div><div class="step-body"><div class="quote-block"><p>"Based on what you told me, I want to show you three specific things in the demo — the client record because it sounds like tracking conversations is a problem, Renewal Autopilot because OE is clearly where the pain is, and the quoting flow because going carrier by carrier is eating your time. Does that sound like the right focus?"</p><p class="quote-tip">Name exactly what you'll show and why. This makes the demo feel tailored, not canned.</p></div></div></div></div><div class="myscript-panel" id="msp-discovery" style="margin:0 auto 6px;"><div class="myscript-header"><div><div class="myscript-title" style="color:#6366f1;">&#9997;&#65039; My Discovery Call Script</div><div class="myscript-subtitle">Questions that write the demo for you.</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;"><button onclick="addMSStep('discovery','')" class="qa-btn" style="border-color:#6366f1;color:#6366f1;white-space:nowrap;">&#43; Step</button><button onclick="loadDefaultMS('discovery')" class="qa-btn" style="white-space:nowrap;">&#8635; Default</button><button onclick="copyMyScript('discovery')" class="qa-btn" style="white-space:nowrap;">&#128203; Copy All</button></div></div><div class="myscript-steps" id="mss-discovery"><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">1</div><input class="myscript-step-title" type="text" value="Current setup" placeholder="Step name..." onchange="schedSave('discovery')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="How are they managing quoting, CRM, and renewals today?" onchange="schedSave('discovery')" oninput="schedSave('discovery')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">2</div><input class="myscript-step-title" type="text" value="Where it breaks" placeholder="Step name..." onchange="schedSave('discovery')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="What takes the most time? Where does the process fail?" onchange="schedSave('discovery')" oninput="schedSave('discovery')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">3</div><input class="myscript-step-title" type="text" value="Renewal season" placeholder="Step name..." onchange="schedSave('discovery')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="What does OEP look like for their book? How many clients?" onchange="schedSave('discovery')" oninput="schedSave('discovery')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">4</div><input class="myscript-step-title" type="text" value="Team size & growth" placeholder="Step name..." onchange="schedSave('discovery')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="How many agents, assistants? Growing?" onchange="schedSave('discovery')" oninput="schedSave('discovery')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">5</div><input class="myscript-step-title" type="text" value="Decision process" placeholder="Step name..." onchange="schedSave('discovery')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Who else is involved in choosing a platform?" onchange="schedSave('discovery')" oninput="schedSave('discovery')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">6</div><input class="myscript-step-title" type="text" value="Timeline" placeholder="Step name..." onchange="schedSave('discovery')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="When do they want to be set up by?" onchange="schedSave('discovery')" oninput="schedSave('discovery')"></textarea></div></div><div class="myscript-footer"><button onclick="saveMyScript('discovery')" class="myscript-save-btn" style="background:#6366f1;">&#9729; Save</button><span id="mss-status-discovery" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span><span style="flex:1;"></span><button onclick="goToMyScript('discovery')" style="font-size:11px;color:#6366f1;background:none;border:none;cursor:pointer;font-weight:600;padding:0;font-family:inherit;">View in Script Library →</button></div></div><div id="discovery-guide" style="display:none;"><div class="content"><div class="dark-banner"><h3>The golden rule of discovery</h3><p>You should be talking about 30 percent of the time. They should be talking 70 percent. If you're the one doing most of the talking, you've already lost the call.</p></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">1</div><span class="step-title">Set the agenda and earn trust early</span></div><span class="step-time">0:00 to 3:00</span></div><div class="step-body"><div class="quote-block"><p>"Thanks for making time. Here's what I was hoping to do today. I want to spend most of this call learning about how you're set up right now, what's working and what isn't. Then if I think AgentNav could actually help, I'll be honest about that. And if it's not a fit I'll tell you that too. Does that work for you?"</p><p class="quote-tip">This sets expectations, positions you as a consultant not a salesperson, and makes them comfortable being honest with you.</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">2</div><span class="step-title">Understand their current setup</span></div><span class="step-time">3:00 to 12:00</span></div><div class="step-body"><p>Work through these questions naturally. Don't read them like a checklist.</p><ul class="numbered-list"><li><div class="li-num">1</div>How big is your agency right now, and is it just you or do you have a team?</li><li><div class="li-num">2</div>What lines of business are you mostly working in? Is it mostly ACA or do you also do STM, Life, Ancillary, Indemnity, or Medicare?</li><li><div class="li-num">3</div>Walk me through what your tech stack looks like today. What tools are you using?</li><li><div class="li-num">4</div>When a new lead comes in, what happens? Where does it go?</li><li><div class="li-num">5</div>How do you handle quoting right now? Are you using a comparative rater or going carrier by carrier?</li><li><div class="li-num">6</div>What does a typical client conversation look like from your side? How do you track what was said?</li><li><div class="li-num">7</div>How do you manage renewals? Walk me through what OE looks like for your team.</li><li><div class="li-num">8</div>What tools are you using for SMS or client communication?</li></ul></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">3</div><span class="step-title">Find the real pain</span></div><span class="step-time">12:00 to 20:00</span></div><div class="step-body"><p>Once you've heard their setup, go deeper on what's breaking. These are the follow-up questions that uncover real buying motivation.</p><ul class="numbered-list"><li><div class="li-num">1</div>What's the most frustrating part of your current setup right now?</li><li><div class="li-num">2</div>Last OE — how many clients did you lose track of or lose entirely?</li><li><div class="li-num">3</div>If you could change one thing about how your team works today, what would it be?</li><li><div class="li-num">4</div>What would make next OE feel different from last year?</li></ul><div class="quote-block"><p>"It sounds like the thing that's really costing you time right now is [their exact words]. Is that fair to say? Because that's actually one of the specific things AgentNav was built to fix."</p><p class="quote-tip">Use their exact words back to them. Don't paraphrase. It shows you listened.</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">4</div><span class="step-title">Set up the demo</span></div><span class="step-time">20:00 to 25:00</span></div><div class="step-body"><div class="quote-block"><p>"Based on what you told me, I want to show you three specific things in the demo — the client record because it sounds like tracking conversations is a problem, Renewal Autopilot because OE is clearly where the pain is, and the quoting flow because going carrier by carrier is eating your time. Does that sound like the right focus?"</p><p class="quote-tip">Name exactly what you'll show and why. This makes the demo feel tailored, not canned.</p></div></div></div></div></div>
 </div><div class="section" id="section-demo"><div class="page-header"><div class="page-label">On The Call</div><h1>Demo Meeting Guide</h1><p>A good demo is not a feature tour. It's a story. The client is the main character. AgentNav is what makes their story go better.</p></div><div class="nba-bar"><span class="nba-label">⚡ Next Best Action</span><div class="nba-actions"><button class="nba-btn primary" onclick="openCoach()">🧠 Demo Meeting Coach</button><button class="nba-btn" onclick="qaCopy('A good demo is not a feature tour. It\'s a story. Your client is the main character. AgentNav is what makes their story go better. Focus on Renewal Autopilot first.')">📋 Copy Demo Opener</button><button class="nba-btn" id="btn-guide-demo" onclick="openSplitGuide('demo',this)" style="background:#0f0f17;color:#fff;border-color:#0f0f17;">📖 Prebuilt Guide</button></div></div><div class="content"><div class="dark-banner"><h3>Before you start sharing your screen</h3><p>Spend the first three minutes confirming what you learned in discovery. "Last time we talked you mentioned X was the biggest frustration. Is that still the right thing to focus on today?" This shows you listened and keeps the demo focused on what actually matters to them.</p></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">1</div><span class="step-title">Start with the client record, not the home screen</span></div><span class="step-time">0:00 to 8:00</span></div><div class="step-body"><p>Open a client profile and walk through it like you're looking at a real person. The Rx and medical profile, household members, the FPL, the activity log, the task list. Show them this is not a contact database. It's a complete picture of a human being.</p><div class="quote-block"><p>"This is what your client looks like inside AgentNav. Every piece of information you need before a call is right here. Medical profile, income, family members, what was said last time, what needs to happen next. You never have to dig through emails or notes apps before picking up the phone."</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">2</div><span class="step-title">Show the quoting flow as a continuous story</span></div><span class="step-time">8:00 to 18:00</span></div><div class="step-body"><p>Don't just show the quoting tool. Show how the client data flows in automatically so they never re-enter anything. Build an A, B, C proposal. Show the side-by-side comparison. Show supplemental coverage — STM, Life, Ancillary, Indemnity — getting layered in.</p><div class="quote-block"><p>"Everything you entered in the client profile came with us. No re-entry. Now I'm building three options side by side. Bronze, Silver, and Gold. I can add dental on Option B and a life plan on Option C. When I share this proposal, the client sees exactly what you want them to see."</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">3</div><span class="step-title">Show Renewal Autopilot like it's the main event</span></div><span class="step-time">18:00 to 30:00</span></div><div class="step-body"><p>This is where most demos win or lose. Don't rush past it. Take your time and let them see the full board.</p><div class="quote-block"><p>"This is Renewal Autopilot. Every one of your renewal clients sits on this board with a status. Not Started. Outreach Sent. Responded. Meeting Scheduled. Re-Enrolled. The system sends the outreach automatically. It tracks who responds. It pulls updated quotes. You're not chasing 200 people in November. You're just reviewing what landed in your queue."</p></div><p>Let them react. Ask: "How does your team handle this today?" Get them talking about the gap before you move on.</p></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">4</div><span class="step-title">For small agencies — show team visibility</span></div><span class="step-time">30:00 to 38:00</span></div><div class="step-body"><p>If they have more than one agent, show the team view. This is often where the demo closes itself.</p><div class="quote-block"><p>"Right now you have no idea what your agents are doing without asking them. Here, you can see every agent's pipeline, what they've quoted, what's pending enrollment, and which clients haven't been touched. You don't have to manage by asking. You manage by looking."</p></div><p>Note: For a solo agent running a combined demo and closing call, skip team visibility and go straight to the close.</p></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">5</div><span class="step-title">End the demo with a question, not a pitch</span></div><span class="step-time">Last 5 min</span></div><div class="step-body"><div class="quote-block"><p>"That's the core of what AgentNav does. Based on what you told me earlier about [their specific pain], does this feel like it solves that? What did you see today that felt most relevant to your situation?"</p><p class="quote-tip">Get them talking. Their answer tells you exactly how to close.</p></div></div></div></div><div class="myscript-panel" id="msp-demo" style="margin:0 auto 6px;"><div class="myscript-header"><div><div class="myscript-title" style="color:#6366f1;">&#9997;&#65039; My Demo Meeting Script</div><div class="myscript-subtitle">What to show, what to skip, and how to close.</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;"><button onclick="addMSStep('demo','')" class="qa-btn" style="border-color:#6366f1;color:#6366f1;white-space:nowrap;">&#43; Step</button><button onclick="loadDefaultMS('demo')" class="qa-btn" style="white-space:nowrap;">&#8635; Default</button><button onclick="copyMyScript('demo')" class="qa-btn" style="white-space:nowrap;">&#128203; Copy All</button></div></div><div class="myscript-steps" id="mss-demo"><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">1</div><input class="myscript-step-title" type="text" value="Set agenda" placeholder="Step name..." onchange="schedSave('demo')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Tell them what you will show and get their buy-in." onchange="schedSave('demo')" oninput="schedSave('demo')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">2</div><input class="myscript-step-title" type="text" value="Start with their pain" placeholder="Step name..." onchange="schedSave('demo')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Begin with the feature that solves what they told you in discovery." onchange="schedSave('demo')" oninput="schedSave('demo')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">3</div><input class="myscript-step-title" type="text" value="Renewal Autopilot" placeholder="Step name..." onchange="schedSave('demo')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Show the OEP board. This is the aha moment." onchange="schedSave('demo')" oninput="schedSave('demo')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">4</div><input class="myscript-step-title" type="text" value="CRM + quoting" placeholder="Step name..." onchange="schedSave('demo')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Show how they work together. Less tool switching." onchange="schedSave('demo')" oninput="schedSave('demo')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">5</div><input class="myscript-step-title" type="text" value="SMS + communication" placeholder="Step name..." onchange="schedSave('demo')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="Texting clients from the platform." onchange="schedSave('demo')" oninput="schedSave('demo')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">6</div><input class="myscript-step-title" type="text" value="Close the demo" placeholder="Step name..." onchange="schedSave('demo')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;" title="Remove step">&#10005;</button></div><textarea class="myscript-step-body" placeholder="What resonated? Transition to next steps." onchange="schedSave('demo')" oninput="schedSave('demo')"></textarea></div></div><div class="myscript-footer"><button onclick="saveMyScript('demo')" class="myscript-save-btn" style="background:#6366f1;">&#9729; Save</button><span id="mss-status-demo" style="font-size:11px;color:#10b981;display:none;">&#10003; Saved</span><span style="flex:1;"></span><button onclick="goToMyScript('demo')" style="font-size:11px;color:#6366f1;background:none;border:none;cursor:pointer;font-weight:600;padding:0;font-family:inherit;">View in Script Library →</button></div></div><div id="demo-guide" style="display:none;"><div class="content"><div class="dark-banner"><h3>Before you start sharing your screen</h3><p>Spend the first three minutes confirming what you learned in discovery. "Last time we talked you mentioned X was the biggest frustration. Is that still the right thing to focus on today?" This shows you listened and keeps the demo focused on what actually matters to them.</p></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">1</div><span class="step-title">Start with the client record, not the home screen</span></div><span class="step-time">0:00 to 8:00</span></div><div class="step-body"><p>Open a client profile and walk through it like you're looking at a real person. The Rx and medical profile, household members, the FPL, the activity log, the task list. Show them this is not a contact database. It's a complete picture of a human being.</p><div class="quote-block"><p>"This is what your client looks like inside AgentNav. Every piece of information you need before a call is right here. Medical profile, income, family members, what was said last time, what needs to happen next. You never have to dig through emails or notes apps before picking up the phone."</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">2</div><span class="step-title">Show the quoting flow as a continuous story</span></div><span class="step-time">8:00 to 18:00</span></div><div class="step-body"><p>Don't just show the quoting tool. Show how the client data flows in automatically so they never re-enter anything. Build an A, B, C proposal. Show the side-by-side comparison. Show supplemental coverage — STM, Life, Ancillary, Indemnity — getting layered in.</p><div class="quote-block"><p>"Everything you entered in the client profile came with us. No re-entry. Now I'm building three options side by side. Bronze, Silver, and Gold. I can add dental on Option B and a life plan on Option C. When I share this proposal, the client sees exactly what you want them to see."</p></div></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">3</div><span class="step-title">Show Renewal Autopilot like it's the main event</span></div><span class="step-time">18:00 to 30:00</span></div><div class="step-body"><p>This is where most demos win or lose. Don't rush past it. Take your time and let them see the full board.</p><div class="quote-block"><p>"This is Renewal Autopilot. Every one of your renewal clients sits on this board with a status. Not Started. Outreach Sent. Responded. Meeting Scheduled. Re-Enrolled. The system sends the outreach automatically. It tracks who responds. It pulls updated quotes. You're not chasing 200 people in November. You're just reviewing what landed in your queue."</p></div><p>Let them react. Ask: "How does your team handle this today?" Get them talking about the gap before you move on.</p></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">4</div><span class="step-title">For small agencies — show team visibility</span></div><span class="step-time">30:00 to 38:00</span></div><div class="step-body"><p>If they have more than one agent, show the team view. This is often where the demo closes itself.</p><div class="quote-block"><p>"Right now you have no idea what your agents are doing without asking them. Here, you can see every agent's pipeline, what they've quoted, what's pending enrollment, and which clients haven't been touched. You don't have to manage by asking. You manage by looking."</p></div><p>Note: For a solo agent running a combined demo and closing call, skip team visibility and go straight to the close.</p></div></div><div class="step-card"><div class="step-header"><div style="display:flex;align-items:center;flex:1;"><div class="step-num">5</div><span class="step-title">End the demo with a question, not a pitch</span></div><span class="step-time">Last 5 min</span></div><div class="step-body"><div class="quote-block"><p>"That's the core of what AgentNav does. Based on what you told me earlier about [their specific pain], does this feel like it solves that? What did you see today that felt most relevant to your situation?"</p><p class="quote-tip">Get them talking. Their answer tells you exactly how to close.</p></div></div></div></div></div>
@@ -633,38 +633,41 @@ document.addEventListener('DOMContentLoaded', function() {
 var _origSeMakeStep = window.seMakeStep;
 window.seMakeStep = function(st, idx) {
   var div = document.createElement('div');
-  div.style.cssText = 'background:#f8f8fa;border:1.5px solid #e4e4e7;border-radius:10px;overflow:hidden;';
+  div.className = 'se-step-card';
+  div.style.cssText = 'background:#fff;border:1px solid #e4e4e7;border-radius:8px;border-left:3px solid #6366f1;overflow:hidden;';
   div.draggable = true;
 
   var head = document.createElement('div');
-  head.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #e4e4e7;background:#fff;';
+  head.style.cssText = 'display:flex;align-items:center;gap:6px;padding:6px 10px;background:#fafafa;border-bottom:1px solid #f0f0f2;';
 
   var num = document.createElement('div');
-  num.style.cssText = 'width:22px;height:22px;border-radius:50%;background:#6366f1;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+  num.className = 'se-step-num';
+  num.style.cssText = 'width:18px;height:18px;border-radius:4px;background:#eef2ff;color:#6366f1;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
   num.textContent = idx + 1;
 
   var ti = document.createElement('input');
   ti.type = 'text';
   ti.value = st.title || '';
-  ti.placeholder = 'Step name...';
-  ti.style.cssText = 'flex:1;border:none;background:none;font-size:13px;font-weight:600;color:#09090b;font-family:inherit;outline:none;';
+  ti.placeholder = 'Step title...';
+  ti.style.cssText = 'flex:1;border:none;background:none;font-size:12px;font-weight:600;color:#09090b;font-family:inherit;outline:none;';
   ti.oninput = seMarkDirty;
 
   var drag = document.createElement('span');
-  drag.textContent = ':::';
-  drag.style.cssText = 'cursor:grab;color:#d4d4d8;font-size:14px;padding:0 2px;user-select:none;';
+  drag.textContent = '⋮⋮';
+  drag.title = 'Drag to reorder';
+  drag.style.cssText = 'cursor:grab;color:#d4d4d8;font-size:11px;padding:0 2px;user-select:none;letter-spacing:-2px;';
 
   var del = document.createElement('button');
-  del.textContent = 'x';
-  del.style.cssText = 'background:none;border:none;color:#d4d4d8;font-size:12px;cursor:pointer;padding:2px 4px;border-radius:3px;';
+  del.textContent = '×';
+  del.style.cssText = 'background:none;border:none;color:#d4d4d8;font-size:14px;cursor:pointer;padding:0 4px;line-height:1;';
   del.onclick = function() { div.remove(); seRenumber(); seMarkDirty(); };
 
   head.append(num, ti, drag, del);
 
   var ta = document.createElement('textarea');
   ta.value = st.body || '';
-  ta.placeholder = 'Write this step...';
-  ta.style.cssText = 'width:100%;min-height:80px;border:none;background:none;padding:10px 12px;font-size:13px;color:#52525b;font-family:inherit;resize:vertical;outline:none;line-height:1.65;box-sizing:border-box;';
+  ta.placeholder = 'Script text for this step...';
+  ta.style.cssText = 'width:100%;min-height:56px;border:none;background:#fff;padding:8px 10px;font-size:13px;color:#3f3f46;font-family:inherit;resize:vertical;outline:none;line-height:1.6;box-sizing:border-box;';
   ta.oninput = seMarkDirty;
 
   div.append(head, ta);
@@ -1015,13 +1018,85 @@ window.calcUniversal = function(){
   var p = calcUniversalPricing(agents, assts);
   window._lastQuotePricing = p;
   anRenderUniversalPricing(p);
+  if(typeof updateQuoteBuilderPreview === 'function') updateQuoteBuilderPreview();
 };
 
 window.applyCalcToQuote = function(){
   calcUniversal();
+  var p = window._lastQuotePricing;
+  if(p && p.monthly > 0){
+    var cm = document.getElementById('qb-custom-monthly');
+    var ca = document.getElementById('qb-custom-annual');
+    if(cm && !cm.value) cm.value = Math.round(p.monthly);
+    if(ca && !ca.value && p.annual > 0) ca.value = p.annual;
+  }
+  updateQuoteBuilderPreview();
   var el = document.getElementById('qb-fname') || document.getElementById('qb-agency');
   if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
-  if(typeof showToast === 'function') showToast('Price locked in — fill prospect info and download PDF');
+  if(typeof showToast === 'function') showToast('Price locked in — add setup fee or custom quote, then download PDF');
+};
+
+function anMergeQuotePricing(baseP){
+  var p = Object.assign({}, baseP || {});
+  p.setupFee = Math.max(0, parseFloat((document.getElementById('qb-setup-fee') || {}).value) || 0);
+  p.annualDiscountPct = 20;
+  var customOn = !!(document.getElementById('qb-custom-enabled') || {}).checked;
+  if(!customOn) return p;
+
+  var customMonthly = parseFloat((document.getElementById('qb-custom-monthly') || {}).value);
+  var customAnnual = parseFloat((document.getElementById('qb-custom-annual') || {}).value);
+  var annualPct = parseFloat((document.getElementById('qb-custom-annual-pct') || {}).value);
+  var customPlan = ((document.getElementById('qb-custom-plan') || {}).value || '').trim();
+
+  if(!isNaN(annualPct) && annualPct >= 0) p.annualDiscountPct = annualPct;
+  if(customPlan) p.planName = customPlan;
+  if(customMonthly > 0) p.monthly = customMonthly;
+  if(customAnnual > 0){
+    p.annual = Math.round(customAnnual);
+    p.savings = p.monthly > 0 ? Math.max(0, Math.round(p.monthly * 12 - p.annual)) : 0;
+  } else if(p.monthly > 0){
+    p.annual = Math.round(p.monthly * 12 * (1 - p.annualDiscountPct / 100));
+    p.savings = Math.round(p.monthly * 12 * (p.annualDiscountPct / 100));
+  }
+  p.isCustomQuote = true;
+  p.custom = false;
+  p.breakdown = 'Custom quote' + (customPlan ? ' — ' + customPlan : '');
+  if(p.totalPpl > 0 && p.monthly > 0) p.perPersonList = p.monthly / p.totalPpl;
+  if(p.totalPpl > 0 && p.annual > 0) p.perPersonAnnual = p.annual / 12 / p.totalPpl;
+  return p;
+}
+
+window.updateCustomQuoteUI = function(){
+  var on = !!(document.getElementById('qb-custom-enabled') || {}).checked;
+  var wrap = document.getElementById('qb-custom-fields');
+  if(wrap) wrap.style.display = on ? 'flex' : 'none';
+  if(on){
+    var p = window._lastQuotePricing;
+    var cm = document.getElementById('qb-custom-monthly');
+    var ca = document.getElementById('qb-custom-annual');
+    var cp = document.getElementById('qb-custom-annual-pct');
+    if(p){
+      if(cm && !cm.value && p.monthly > 0) cm.value = Math.round(p.monthly);
+      if(ca && !ca.value && p.annual > 0) ca.value = p.annual;
+    }
+    if(cp && !cp.value) cp.value = '20';
+  }
+  updateQuoteBuilderPreview();
+};
+
+window.updateQuoteBuilderPreview = function(){
+  var preview = document.getElementById('qb-price-preview');
+  if(!preview) return;
+  var base = window._lastQuotePricing || calcUniversalPricing(
+    (document.getElementById('univ-agents') || {}).value || 1,
+    (document.getElementById('univ-assistants') || {}).value || 0
+  );
+  var p = anMergeQuotePricing(base);
+  var parts = [];
+  if(p.monthly > 0) parts.push(anFormatMoney(p.monthly) + '/mo');
+  if(p.annual > 0) parts.push(anFormatMoney(p.annual) + '/yr (' + (p.annualDiscountPct || 20) + '% off)');
+  if(p.setupFee > 0) parts.push(anFormatMoney(p.setupFee) + ' setup');
+  preview.textContent = parts.length ? ('PDF will show: ' + parts.join(' · ')) : '';
 };
 
 function anGetQuoteDiscount(){
@@ -1071,26 +1146,38 @@ window.updateDiscountLabel = function(){
 };
 
 function anBuildQuotePdfLines(p, prospect, discount){
+  var annualLabel = 'Annual (' + (p.annualDiscountPct || 20) + '% off)';
+  var perLabel = 'Per Person/mo (' + (p.annualDiscountPct || 20) + '% off)';
   var lines = [
-    ['Plan', p.planName],
+    ['Plan', p.planName + (p.isCustomQuote ? ' (Custom)' : '')],
     ['Team Size', p.agents + ' agent' + (p.agents !== 1 ? 's' : '') + (p.assistants ? ', ' + p.assistants + ' assistant' + (p.assistants !== 1 ? 's' : '') : '')],
     ['Monthly Price', anFormatMoney(p.monthly) + '/month'],
-    ['Annual (20% off)', anFormatMoney(p.annual) + '/year'],
-    ['Per Person/mo (20% off)', anFormatPerPersonMonthly(p.perPersonAnnual)],
+    [annualLabel, anFormatMoney(p.annual) + '/year'],
+    [perLabel, anFormatPerPersonMonthly(p.perPersonAnnual)],
     ['Annual Savings', anFormatMoney(p.savings)]
   ];
+  if(p.setupFee > 0) lines.push(['One-Time Setup Fee', anFormatMoney(p.setupFee)]);
   if(discount) lines.push(['Special Offer', discount.label]);
   if(prospect.notes) lines.push(['Notes', prospect.notes]);
   return lines;
 }
 
 window.generateQuotePDF2 = function(){
-  var p = window._lastQuotePricing || calcUniversalPricing(
+  var baseP = window._lastQuotePricing || calcUniversalPricing(
     (document.getElementById('univ-agents') || {}).value || 1,
     (document.getElementById('univ-assistants') || {}).value || 0
   );
-  if(p.custom){
-    if(typeof showToast === 'function') showToast('Enterprise pricing is custom — contact sales for a PDF quote');
+  var p = anMergeQuotePricing(baseP);
+  if(baseP.custom && !p.isCustomQuote){
+    if(typeof showToast === 'function') showToast('Enterprise tier — enable Custom Quote and enter pricing, then download PDF');
+    return;
+  }
+  if(p.isCustomQuote && !(p.monthly > 0)){
+    if(typeof showToast === 'function') showToast('Enter a custom monthly price (or use calculator first)');
+    return;
+  }
+  if(!p.monthly && !p.annual){
+    if(typeof showToast === 'function') showToast('No pricing to quote — run the calculator first');
     return;
   }
   if(!window.jspdf || !window.jspdf.jsPDF){
@@ -1187,6 +1274,8 @@ window.closeQuoteModal = function(){
 document.addEventListener('DOMContentLoaded', function(){
   calcUniversal();
   updateDiscountLabel();
+  updateCustomQuoteUI();
+  updateQuoteBuilderPreview();
 });
 
 // ── COMMISSION PLAN — hidden to everyone except asmithee ─────
@@ -3335,111 +3424,74 @@ console.log('[PATCH 9] Context-aware AI + Competition rebuild loaded.');
 // PATCH 10 — Script Editor left panel cleanup + Language AI prompt
 // ============================================================
 
-// ── FIX 1: Replace seRenderLib with clean version ────────────
-// Shows: Prebuilt Templates + Recent (last 5) only
-// "Browse all" link goes to Script Library
+// Minimal script library — picker + recent only (templates live in toolbar picker)
 window.seRenderLib = function() {
   var el = document.getElementById('se-lib-list');
   if (!el) return;
   el.innerHTML = '';
 
-  // ── PREBUILT TEMPLATES ──
-  var prebuiltDiv = document.createElement('div');
-  prebuiltDiv.style.cssText = 'padding-bottom:4px;border-bottom:1px solid #2a2a38;margin-bottom:4px;';
-
-  var prebuiltLbl = document.createElement('div');
-  prebuiltLbl.style.cssText = 'font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#6366f1;padding:10px 14px 6px;';
-  prebuiltLbl.textContent = 'Prebuilt Templates';
-  prebuiltDiv.appendChild(prebuiltLbl);
-
-  var SE_TEMPLATES_REF = (typeof SE_TEMPLATES !== 'undefined') ? SE_TEMPLATES : {};
-  Object.keys(SE_TEMPLATES_REF).forEach(function(k) {
-    var t = SE_TEMPLATES_REF[k];
-    var alreadyLoaded = seScripts.some(function(s) { return s._tpl === k; });
-    var btn = document.createElement('div');
-    btn.style.cssText = 'display:flex;align-items:center;cursor:pointer;padding:7px 14px;font-size:12px;'
-      + 'color:' + (alreadyLoaded ? '#4a4a5a' : '#c7d2fe') + ';border-left:3px solid transparent;';
-    btn.innerHTML = (alreadyLoaded ? '&#10003; ' : '+ ') + t.name;
-    if (!alreadyLoaded) {
-      btn.onmouseover = function() { this.style.background = '#1e1e2e'; this.style.borderLeftColor = '#6366f1'; };
-      btn.onmouseout  = function() { this.style.background = ''; this.style.borderLeftColor = 'transparent'; };
-      btn.onclick = function() { seLoadTemplate(k); };
-    }
-    prebuiltDiv.appendChild(btn);
+  var sorted = seScripts.slice().sort(function(a, b) {
+    var ta = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+    var tb = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+    return tb - ta;
   });
-  el.appendChild(prebuiltDiv);
 
-  // ── RECENT SCRIPTS (last 5 edited) ──
-  var recent = seScripts
-    .slice()
-    .sort(function(a, b) {
-      var ta = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-      var tb = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-      return tb - ta;
-    })
-    .slice(0, 5);
-
-  if (recent.length > 0) {
-    var recentDiv = document.createElement('div');
-    recentDiv.style.cssText = 'padding-bottom:4px;border-bottom:1px solid #2a2a38;margin-bottom:4px;';
-
-    var recentLbl = document.createElement('div');
-    recentLbl.style.cssText = 'font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#52525b;padding:10px 14px 4px;';
-    recentLbl.textContent = 'Recent';
-    recentDiv.appendChild(recentLbl);
-
-    recent.forEach(function(s) {
-      var isActive = seCurrentId === s.id;
-      var TYPE_LABELS = (typeof SE_TYPE_LABELS !== 'undefined') ? SE_TYPE_LABELS : {};
-      var lang = s.lang && s.lang !== 'en' ? ' \u00b7 ' + s.lang.toUpperCase() : '';
-
-      var item = document.createElement('div');
-      item.style.cssText = 'display:flex;align-items:center;cursor:pointer;' + (isActive ? 'background:#2a2a38;' : '');
-
-      var inner = document.createElement('div');
-      inner.style.cssText = 'flex:1;padding:7px 14px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'
-        + 'border-left:3px solid ' + (isActive ? '#6366f1' : 'transparent') + ';'
-        + 'color:' + (isActive ? '#6366f1' : '#a1a1aa') + ';'
-        + 'font-weight:' + (isActive ? '600' : '400') + ';';
-      inner.title = s.name || 'Untitled';
-      inner.innerHTML = (s.name || 'Untitled')
-        + (lang ? '<span style="font-size:10px;opacity:0.5;">' + lang + '</span>' : '');
-
-      var del = document.createElement('button');
-      del.style.cssText = 'padding:7px 8px;background:none;border:none;cursor:pointer;color:#52525b;font-size:11px;flex-shrink:0;';
-      del.textContent = 'x';
-      del.title = 'Delete';
-      del.onclick = function(e) { e.stopPropagation(); seDelById(s.id); };
-
-      item.appendChild(inner);
-      item.appendChild(del);
-      item.onclick = function() { seOpenScript(s.id); };
-      recentDiv.appendChild(item);
+  var pickerWrap = document.createElement('div');
+  pickerWrap.style.cssText = 'padding:10px 10px 8px;';
+  var picker = document.createElement('select');
+  picker.id = 'se-lib-picker';
+  picker.style.cssText = 'width:100%;border:1.5px solid #2a2a38;border-radius:7px;padding:7px 8px;font-size:11.5px;font-weight:600;color:#e4e4e7;background:#12121a;font-family:inherit;outline:none;cursor:pointer;';
+  if (!sorted.length) {
+    var emptyOpt = document.createElement('option');
+    emptyOpt.textContent = 'No scripts yet';
+    picker.appendChild(emptyOpt);
+    picker.disabled = true;
+  } else {
+    sorted.forEach(function(s) {
+      var opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.name || 'Untitled';
+      if (s.id === seCurrentId) opt.selected = true;
+      picker.appendChild(opt);
     });
+    picker.onchange = function() {
+      if (picker.value && picker.value !== seCurrentId) seOpenScript(picker.value);
+    };
+  }
+  pickerWrap.appendChild(picker);
+  el.appendChild(pickerWrap);
 
-    el.appendChild(recentDiv);
+  var actions = document.createElement('div');
+  actions.style.cssText = 'display:flex;gap:5px;padding:0 10px 10px;';
+  actions.innerHTML = '<button type="button" id="se-lib-new-btn" style="flex:1;background:#6366f1;color:#fff;border:none;border-radius:6px;padding:6px 0;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">+ New</button>'
+    + '<button type="button" id="se-lib-tpl-btn" style="flex:1;background:rgba(99,102,241,0.15);color:#c7d2fe;border:1px solid rgba(99,102,241,0.3);border-radius:6px;padding:6px 0;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;">Templates</button>';
+  el.appendChild(actions);
+  var newBtn = document.getElementById('se-lib-new-btn');
+  if (newBtn) newBtn.onclick = function() { if (typeof seNewScript === 'function') seNewScript(); };
+  var tplBtn = document.getElementById('se-lib-tpl-btn');
+  if (tplBtn) tplBtn.onclick = function() { if (typeof seShowTemplatePicker === 'function') seShowTemplatePicker(); };
+
+  var expanded = document.getElementById('se-root') && !document.getElementById('se-root').classList.contains('se-lib-collapsed');
+  if (expanded && sorted.length) {
+    var recentLbl = document.createElement('div');
+    recentLbl.style.cssText = 'font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#52525b;padding:4px 10px 6px;';
+    recentLbl.textContent = 'Recent';
+    el.appendChild(recentLbl);
+    sorted.slice(0, 3).forEach(function(s) {
+      var isActive = seCurrentId === s.id;
+      var row = document.createElement('div');
+      row.style.cssText = 'padding:6px 10px;font-size:11.5px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:' + (isActive ? '#c7d2fe' : '#71717a') + ';font-weight:' + (isActive ? '700' : '400') + ';border-left:2px solid ' + (isActive ? '#6366f1' : 'transparent') + ';';
+      row.textContent = s.name || 'Untitled';
+      row.title = s.name || 'Untitled';
+      row.onclick = function() { seOpenScript(s.id); };
+      el.appendChild(row);
+    });
   }
 
-  // ── BROWSE ALL LINK ──
-  var browseWrap = document.createElement('div');
-  browseWrap.style.cssText = 'padding:10px 14px;';
-
-  var total = seScripts.length;
-  var browseBtn = document.createElement('button');
-  browseBtn.style.cssText = 'width:100%;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);'
-    + 'border-radius:7px;padding:8px 10px;font-size:12px;font-weight:600;color:#818cf8;cursor:pointer;font-family:inherit;text-align:center;';
-  browseBtn.textContent = total > 0 ? 'Browse All Scripts (' + total + ') \u2192' : 'Script Library \u2192';
-  browseBtn.onclick = function() { showSection('scriptlibrary', null); };
-  browseWrap.appendChild(browseBtn);
-
-  if (seScripts.length === 0) {
-    var note = document.createElement('div');
-    note.style.cssText = 'padding:4px 14px 8px;font-size:11px;color:#4a4a5a;font-style:italic;';
-    note.textContent = 'Load a template or create a new script.';
-    browseWrap.insertBefore(note, browseBtn);
-  }
-
-  el.appendChild(browseWrap);
+  var foot = document.createElement('div');
+  foot.style.cssText = 'padding:8px 10px 12px;margin-top:auto;';
+  foot.innerHTML = '<button type="button" style="width:100%;background:transparent;border:1px solid #2a2a38;border-radius:6px;padding:7px;font-size:11px;color:#71717a;cursor:pointer;font-family:inherit;" onclick="showSection(\'scriptlibrary\',null)">All scripts (' + seScripts.length + ') →</button>';
+  el.appendChild(foot);
 };
 
 // ── FIX 2: Language change triggers AI translation offer ─────
@@ -8577,6 +8629,8 @@ AN.repFilter     = '';
 AN.listPage      = 0;
 AN.pageSize      = 100;
 AN.leadsStorage  = 'local';  // local | idb
+AN.leadsLoading  = false;
+AN.leadsReady    = false;
 AN.activeLead    = null;
 AN.selectedIds   = [];
 AN.isAdmin       = false;
@@ -8765,24 +8819,32 @@ function anSaveLeadsToIDB(leads, cb){
 AN.load = function(cb){
   var sb = typeof getSupabase==='function'?getSupabase():null;
   var localLeads = anLoadLeadsFromLocal();
+  function anLeadsLoadDone(){
+    AN.leadsLoading = false;
+    AN.leadsReady = true;
+    if(typeof hdRefreshCallableSlot === 'function') hdRefreshCallableSlot();
+    if(cb) cb();
+  }
   if(localLeads && localLeads.length){
     AN.leads = localLeads;
     AN.leadsStorage = 'local';
-    if(!sb||!_currentUser){ if(cb) cb(); return; }
+    if(!sb||!_currentUser){ anLeadsLoadDone(); return; }
   } else if(localStorage.getItem('an-crm-leads-idb') === '1'){
+    AN.leadsLoading = true;
+    if(typeof hdRefreshCallableSlot === 'function') hdRefreshCallableSlot();
     anLoadLeadsFromIDB(function(err, leads){
       AN.leads = leads || [];
       AN.leadsStorage = err ? 'local' : 'idb';
-      if(!sb||!_currentUser){ if(cb) cb(); return; }
-      anFinishCloudLeadLoad(sb, cb);
+      if(!sb||!_currentUser){ anLeadsLoadDone(); return; }
+      anFinishCloudLeadLoad(sb, anLeadsLoadDone);
     });
     return;
   } else {
     AN.leads = localLeads || [];
     AN.leadsStorage = 'local';
-    if(!sb||!_currentUser){ if(cb) cb(); return; }
+    if(!sb||!_currentUser){ anLeadsLoadDone(); return; }
   }
-  anFinishCloudLeadLoad(sb, cb);
+  anFinishCloudLeadLoad(sb, anLeadsLoadDone);
 };
 
 function anFinishCloudLeadLoad(sb, cb){
@@ -9072,6 +9134,7 @@ function anRenderLeadsPagination(list, totalPages, start){
 
 function renderLeadsTable(){
   try {
+  if(typeof anSanitizeSelection === 'function') anSanitizeSelection();
   var list = AN.filtered();
   var el = document.getElementById('crm-content');
   var countEl = document.getElementById('crm-count');
@@ -9494,7 +9557,18 @@ window.anDeleteLead = function(id){
 };
 
 // ── Selection + bulk delete ───────────────────────────────────
+window.anSanitizeSelection = function(){
+  if(!AN || !Array.isArray(AN.selectedIds)) { if(AN) AN.selectedIds = []; return 0; }
+  var before = AN.selectedIds.length;
+  if(!Array.isArray(AN.leads) || !AN.leads.length) return 0;
+  var valid = {};
+  AN.leads.forEach(function(l){ if(l && l.id) valid[l.id] = true; });
+  AN.selectedIds = AN.selectedIds.filter(function(id){ return valid[id]; });
+  return before - AN.selectedIds.length;
+};
+
 window.anUpdateBulkBar = function(){
+  if(typeof anSanitizeSelection === 'function') anSanitizeSelection();
   var n = AN.selectedIds.length;
   var nLabel = n.toLocaleString();
   var delBtn = document.getElementById('crm-bulk-delete');
@@ -9520,6 +9594,8 @@ window.anClearSelection = function(){
   document.querySelectorAll('#crm-content .lead-cb').forEach(function(cb){ cb.checked = false; });
   var allCb = document.getElementById('crm-select-all');
   if(allCb) allCb.checked = false;
+  var pop = document.getElementById('an-reassign-popover');
+  if(pop) pop.remove();
   anUpdateBulkBar();
   if(typeof showToast === 'function') showToast('Selection cleared');
 };
@@ -9654,7 +9730,12 @@ window.anOpenOwnerPicker = function(opts) {
       if ((l.company || '(No Company)').trim() === opts.companyName) leadIds.push(l.id);
     });
   }
-  if (!leadIds.length) return;
+  leadIds = leadIds.filter(function(id){ return !!(typeof AN.leadById === 'function' ? AN.leadById(id) : AN.leads.find(function(l){ return l.id === id; })); });
+  if (!leadIds.length) {
+    if (typeof showToast === 'function') showToast('No valid leads to assign');
+    if (typeof anUpdateBulkBar === 'function') anUpdateBulkBar();
+    return;
+  }
 
   var leads = leadIds.map(function(id) { return AN.leadById(id); }).filter(Boolean);
   if (!leads.length) return;
@@ -9760,13 +9841,29 @@ window.anApplyOwnerAssignment = function(leadIds, email) {
   AN.save(function(ok) {
     AN._ownerAssignBusy = false;
     AN.invalidateLeadCaches();
+    if (leadIds.length > 1 && AN.selectedIds && AN.selectedIds.length) {
+      var assigned = {};
+      leadIds.forEach(function(id){ assigned[id] = true; });
+      AN.selectedIds = AN.selectedIds.filter(function(id){ return !assigned[id]; });
+      document.querySelectorAll('#crm-content .lead-cb').forEach(function(cb){
+        if (assigned[cb.getAttribute('data-id')]) cb.checked = false;
+      });
+      if (typeof anUpdateBulkBar === 'function') anUpdateBulkBar();
+    }
     if (typeof showToast === 'function') showToast((ok !== false ? 'Owner saved' : 'Saved locally') + ' — ' + anGetRepName(email) + (count > 1 ? ' (' + count.toLocaleString() + ')' : ''));
   });
 };
 
 window.anBulkReassignOwner = function() {
-  if (!AN.selectedIds || !AN.selectedIds.length) return;
-  anOpenOwnerPicker({ leadIds: AN.selectedIds.slice() });
+  if (typeof anSanitizeSelection === 'function') anSanitizeSelection();
+  if (!AN.selectedIds || !AN.selectedIds.length) {
+    if (typeof anUpdateBulkBar === 'function') anUpdateBulkBar();
+    if (typeof showToast === 'function') showToast('No leads selected');
+    return;
+  }
+  var ids = AN.selectedIds.slice();
+  if (ids.length > 500 && !confirm('Assign owner to ' + ids.length.toLocaleString() + ' selected leads?')) return;
+  anOpenOwnerPicker({ leadIds: ids });
 };
 
 window.anInlineReassign = function(leadId) { anOpenOwnerPicker({ leadId: leadId }); };
@@ -14480,6 +14577,9 @@ console.log('[DEMO SCHEDULER REWIRE] anOpenLeadModal patched for demo date/time/
 .hd-cs-icon { width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg,#10b981,#059669); display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; box-shadow: 0 4px 14px rgba(16,185,129,0.3); }
 .hd-cs-title { font-size: 16px; font-weight: 800; color: #065f46; }
 .hd-cs-sub { font-size: 12.5px; color: #047857; margin-top: 3px; }
+.hd-cs-loading { display: inline-flex; align-items: center; gap: 8px; color: #059669; font-weight: 600; }
+.hd-cs-loading-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; animation: hdCsPulse 1s ease-in-out infinite; }
+@keyframes hdCsPulse { 0%, 100% { opacity: 0.35; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1); } }
 .hd-cs-bar { height: 6px; background: #d1fae5; border-radius: 4px; margin-top: 8px; overflow: hidden; max-width: 280px; }
 .hd-cs-bar-fill { height: 100%; background: #10b981; border-radius: 4px; transition: width 0.3s; }
 .hd-cs-btn { padding: 10px 18px; border-radius: 10px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
@@ -14599,6 +14699,80 @@ body.sb-collapsed #nav-collapse-btn { right: -10px !important; transform: scaleX
 // HOME DASHBOARD ENGINE
 // ============================================================
 
+function hdGetTodayDashStats() {
+  var todayStr = new Date().toISOString().split('T')[0];
+  var dashCalls = 0, dashDemos = 0, dashCloses = 0;
+  if (typeof _dash !== 'undefined' && _dash.activityLog) {
+    var entry = _dash.activityLog.filter(function(e){ return e.date === todayStr; })[0];
+    if (entry) { dashCalls = entry.calls || 0; dashDemos = entry.demos || 0; dashCloses = entry.closes || 0; }
+  }
+  return { dashCalls: dashCalls, dashDemos: dashDemos, dashCloses: dashCloses };
+}
+
+function anIsLeadsLoadPending() {
+  if (typeof AN === 'undefined') return false;
+  if (AN.leadsLoading) return true;
+  if (AN.leadsReady) return false;
+  try {
+    if (localStorage.getItem('an-crm-leads-idb') === '1' && (!AN.leads || !AN.leads.length)) return true;
+  } catch(e) {}
+  return false;
+}
+
+function hdCallableSubtitleHTML(activeSession, csDone, csTotal, csRemaining, callableLeads, callableWithPhone) {
+  if (!activeSession && anIsLeadsLoadPending()) {
+    return '<span class="hd-cs-loading"><span class="hd-cs-loading-dot"></span> Loading your leads...</span>';
+  }
+  if (activeSession) {
+    return csDone + ' of ' + csTotal + ' leads logged · ' + csRemaining + ' remaining · cold call script ready on each call';
+  }
+  return callableLeads + ' callable lead' + (callableLeads === 1 ? '' : 's') + ' ready'
+    + (callableWithPhone < callableLeads ? ' (' + callableWithPhone + ' with phone)' : '')
+    + ' · queue up and blast through with scripts';
+}
+
+function hdCallableActionsHTML(activeSession, callableLeads) {
+  if (activeSession) {
+    return '<button class="hd-cs-btn hd-cs-btn-resume" onclick="anResumeCallSession()">▶ Resume Calling</button>'
+      + '<button class="hd-cs-btn hd-cs-btn-end" onclick="if(confirm(\'End call session?\'))anEndCallSession()">End Session</button>';
+  }
+  var loading = anIsLeadsLoadPending();
+  return '<button class="hd-cs-btn hd-cs-btn-start" onclick="anOpenCallSessionSetup()"'
+    + (loading ? ' disabled style="opacity:0.65;cursor:wait;"' : '') + '>📞 Start Call Session</button>'
+    + ((!loading && callableLeads) ? '<button class="hd-cs-btn hd-cs-btn-resume" onclick="showSection(\'crm\',null)">View Leads →</button>' : '');
+}
+
+window.hdRefreshCallableSlot = function() {
+  var sub = document.getElementById('hd-cs-sub');
+  var actions = document.getElementById('hd-cs-actions');
+  if (!sub && !actions) return;
+  if (typeof anLoadCallQueue === 'function') anLoadCallQueue();
+  var activeSession = (typeof AN !== 'undefined' && AN.callQueue && AN.callQueue.ids && AN.callQueue.ids.length);
+  var csDone = activeSession ? (AN.callQueue.completed || []).length : 0;
+  var csTotal = activeSession ? AN.callQueue.ids.length : 0;
+  var csRemaining = csTotal - csDone;
+  var callableLeads = (typeof anCountCallableLeads === 'function') ? anCountCallableLeads() : 0;
+  var callableWithPhone = (typeof anCountCallableLeads === 'function') ? anCountCallableLeads({ phoneOnly: true }) : 0;
+  if (sub) sub.innerHTML = hdCallableSubtitleHTML(activeSession, csDone, csTotal, csRemaining, callableLeads, callableWithPhone);
+  if (actions) actions.innerHTML = hdCallableActionsHTML(activeSession, callableLeads);
+  var title = document.getElementById('hd-cs-title');
+  if (title) title.textContent = activeSession ? 'Call Session in progress' : 'Start a Call Session';
+};
+
+function hdBuildShoutCardSection() {
+  var shouts = (typeof anGetTeamShouts === 'function') ? anGetTeamShouts() : [];
+  var stats = hdGetTodayDashStats();
+  var feed = (typeof anBuildShoutFeedHTML === 'function')
+    ? anBuildShoutFeedHTML(shouts, 6)
+    : '<div class="hd-empty"><div class="hd-empty-icon">📣</div>Demo sets &amp; closes show up here for the whole team</div>';
+  return '<div class="hd-card" id="hd-shout-card" style="grid-column:1/-1;">'
+    +'<div class="hd-card-header"><span class="hd-card-title">📣 Team Shout-Outs</span>'
+    +'<span class="hd-shout-stats" style="font-size:11px;color:#9999aa;">Today: '+stats.dashCalls+' calls · '+stats.dashDemos+' demos · '+stats.dashCloses+' closes</span></div>'
+    +'<div class="hd-shout-feed hd-card-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;">'
+    + feed
+    +'</div></div>';
+}
+
 function hdRender() {
   var root = document.getElementById('home-dashboard-root');
   if (!root) return;
@@ -14703,27 +14877,24 @@ function hdRender() {
     // Body grid
     +'<div class="hd-body">'
 
+    // ── Team Shout-Outs (fixed first — no async insert layout jump) ──
+    + hdBuildShoutCardSection()
+
     // ── Call Session hero card ──
     +'<div class="hd-card hd-cs-card" style="grid-column:1/-1;">'
     +'<div class="hd-cs-inner">'
     +'<div class="hd-cs-icon">📞</div>'
     +'<div style="flex:1;min-width:200px;">'
-    +'<div class="hd-cs-title">'+(activeSession ? 'Call Session in progress' : 'Start a Call Session')+'</div>'
-    +'<div class="hd-cs-sub">'
-    +(activeSession
-      ? csDone+' of '+csTotal+' leads logged · '+csRemaining+' remaining · cold call script ready on each call'
-      : callableLeads+' callable lead'+(callableLeads===1?'':'s')+' ready'+(callableWithPhone < callableLeads ? ' ('+callableWithPhone+' with phone)' : '')+' · queue up and blast through with scripts')
+    +'<div class="hd-cs-title" id="hd-cs-title">'+(activeSession ? 'Call Session in progress' : 'Start a Call Session')+'</div>'
+    +'<div class="hd-cs-sub" id="hd-cs-sub">'
+    + hdCallableSubtitleHTML(activeSession, csDone, csTotal, csRemaining, callableLeads, callableWithPhone)
     +'</div>'
     +(activeSession
       ? '<div class="hd-cs-bar"><div class="hd-cs-bar-fill" style="width:'+csPct+'%;"></div></div>'
       : '')
     +'</div>'
-    +'<div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;">'
-    +(activeSession
-      ? '<button class="hd-cs-btn hd-cs-btn-resume" onclick="anResumeCallSession()">▶ Resume Calling</button>'
-        +'<button class="hd-cs-btn hd-cs-btn-end" onclick="if(confirm(\'End call session?\'))anEndCallSession()">End Session</button>'
-      : '<button class="hd-cs-btn hd-cs-btn-start" onclick="anOpenCallSessionSetup()">📞 Start Call Session</button>'
-        +(callableLeads ? '<button class="hd-cs-btn hd-cs-btn-resume" onclick="showSection(\'crm\',null)">View Leads →</button>' : ''))
+    +'<div id="hd-cs-actions" style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;">'
+    + hdCallableActionsHTML(activeSession, callableLeads)
     +'</div>'
     +'</div></div>'
 
@@ -16278,15 +16449,34 @@ window.anCountCallableLeads = function(opts) {
 
 window.anEnsureLeadsLoaded = function(cb) {
   if (typeof AN === 'undefined') { if (cb) cb(); return; }
+  if (AN.leadsReady) { if (cb) cb(); return; }
+  AN._leadsLoadQueue = AN._leadsLoadQueue || [];
+  if (cb) AN._leadsLoadQueue.push(cb);
+  if (AN._leadsLoadPending) return;
+  AN._leadsLoadPending = true;
   try {
     if (!AN.leads || !AN.leads.length) {
-      AN.leads = anNormalizeLeads(JSON.parse(localStorage.getItem('an-crm-leads') || '[]'));
+      if (localStorage.getItem('an-crm-leads-idb') !== '1') {
+        AN.leads = anNormalizeLeads(JSON.parse(localStorage.getItem('an-crm-leads') || '[]'));
+        if (AN.leads.length) AN.leadsReady = true;
+      } else {
+        AN.leadsLoading = true;
+        if (typeof hdRefreshCallableSlot === 'function') hdRefreshCallableSlot();
+      }
     }
   } catch(e) {}
+  function flushLeadsQueue() {
+    AN._leadsLoadPending = false;
+    var q = AN._leadsLoadQueue || [];
+    AN._leadsLoadQueue = [];
+    q.forEach(function(fn) { try { fn(); } catch(e) {} });
+  }
   if (typeof AN.load === 'function') {
-    AN.load(function() { if (cb) cb(); });
-  } else if (cb) {
-    cb();
+    AN.load(function() { flushLeadsQueue(); });
+  } else {
+    AN.leadsReady = true;
+    AN.leadsLoading = false;
+    flushLeadsQueue();
   }
 };
 
@@ -17602,36 +17792,27 @@ function anBuildShoutFeedHTML(shouts, limit) {
   }).join('');
 }
 
-// Patch home dashboard to show shouts + dashboard-synced call counts
+window.hdRefreshShoutCard = function(shouts) {
+  var card = document.getElementById('hd-shout-card');
+  if (!card) return;
+  var feed = card.querySelector('.hd-shout-feed');
+  if (feed && typeof anBuildShoutFeedHTML === 'function') {
+    feed.innerHTML = anBuildShoutFeedHTML(shouts, 6);
+  }
+  var statsEl = card.querySelector('.hd-shout-stats');
+  if (statsEl && typeof hdGetTodayDashStats === 'function') {
+    var stats = hdGetTodayDashStats();
+    statsEl.textContent = 'Today: '+stats.dashCalls+' calls · '+stats.dashDemos+' demos · '+stats.dashCloses+' closes';
+  }
+};
+
+// Refresh shout content in place — never re-insert (prevents card order swap on load)
 var _origHdRender = window.hdRender;
 if (typeof _origHdRender === 'function') {
   window.hdRender = function() {
     _origHdRender();
     anLoadTeamShoutsFromCloud(function(shouts){
-      var root = document.getElementById('home-dashboard-root');
-      if (!root) return;
-      var body = root.querySelector('.hd-body');
-      if (!body) return;
-      var existing = document.getElementById('hd-shout-card');
-      if (existing) existing.remove();
-
-      var todayStr = new Date().toISOString().split('T')[0];
-      var dashCalls = 0, dashDemos = 0, dashCloses = 0;
-      if (typeof _dash !== 'undefined' && _dash.activityLog) {
-        var entry = _dash.activityLog.filter(function(e){ return e.date === todayStr; })[0];
-        if (entry) { dashCalls = entry.calls||0; dashDemos = entry.demos||0; dashCloses = entry.closes||0; }
-      }
-
-      var card = document.createElement('div');
-      card.id = 'hd-shout-card';
-      card.className = 'hd-card';
-      card.style.gridColumn = '1 / -1';
-      card.innerHTML = '<div class="hd-card-header"><span class="hd-card-title">📣 Team Shout-Outs</span>'
-        +'<span style="font-size:11px;color:#9999aa;">Today: '+dashCalls+' calls · '+dashDemos+' demos · '+dashCloses+' closes</span></div>'
-        +'<div class="hd-card-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;">'
-        + anBuildShoutFeedHTML(shouts, 6)
-        +'</div>';
-      body.insertBefore(card, body.firstChild);
+      hdRefreshShoutCard(shouts);
     });
   };
 }
@@ -17677,7 +17858,386 @@ if(typeof AN !== 'undefined' && AN.selectedIds && AN.selectedIds.length > 500){
   }, 1500);
 }
 
+(function(){
+  var _hdImmediate = window.hdRender;
+  var _hdTimer = null;
+  window.hdRender = function(){
+    if(_hdTimer) clearTimeout(_hdTimer);
+    _hdTimer = setTimeout(function(){
+      _hdTimer = null;
+      if(typeof _hdImmediate === 'function') _hdImmediate();
+    }, 60);
+  };
+})();
+
 console.log('[CRM PERF] Debounced render + side panel stability patch loaded.');
+</script>
+
+<style>
+#se-root.se-focus-mode { grid-template-columns: 0 1fr 0 !important; }
+#se-root.se-ai-hidden { grid-template-columns: 44px 1fr 0 !important; }
+#se-root.se-lib-hidden { grid-template-columns: 0 1fr 260px !important; }
+#se-root.se-focus-mode > div:first-child,
+#se-root.se-focus-mode > div:last-child { opacity: 0; pointer-events: none; overflow: hidden; }
+#se-root.se-ai-hidden > div:last-child { opacity: 0; pointer-events: none; }
+#se-root.se-lib-hidden > div:first-child { opacity: 0; pointer-events: none; }
+#se-root.se-lib-collapsed > #se-lib-panel .se-lib-expanded-only { display: none !important; }
+#se-root.se-lib-collapsed > #se-lib-panel .se-lib-rail { display: flex !important; }
+#se-root:not(.se-lib-collapsed) > #se-lib-panel .se-lib-rail { display: none !important; }
+#se-lib-panel { transition: width 0.15s ease; position: relative; }
+#se-steps-list { gap: 6px !important; }
+#se-steps-body { padding: 12px 16px !important; max-width: 820px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+#se-steps-body.se-doc-active #se-steps-list,
+#se-steps-body.se-doc-active > button[onclick*="seAddStep"] { display: none !important; }
+#se-doc-wrap { display: none; flex: 1; flex-direction: column; min-height: 0; }
+#se-steps-body.se-doc-active #se-doc-wrap { display: flex !important; }
+#se-doc-editor {
+  flex: 1; width: 100%; min-height: 420px; border: 1.5px solid #e4e4e7; border-radius: 10px;
+  padding: 16px 18px; font-size: 14px; line-height: 1.75; color: #27272a; font-family: inherit;
+  resize: none; outline: none; box-sizing: border-box; background: #fafafa;
+}
+#se-doc-editor:focus { border-color: #a5b4fc; background: #fff; }
+#se-doc-hint { font-size: 11px; color: #a1a1aa; margin-bottom: 8px; line-height: 1.5; }
+.se-focus-exit { position: fixed; bottom: 18px; right: 18px; z-index: 9000; background: #6366f1; color: #fff; border: none; border-radius: 20px; padding: 10px 18px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; box-shadow: 0 4px 20px rgba(99,102,241,0.4); display: none; }
+.se-focus-exit.visible { display: block; }
+#se-howto-box { display: block; }
+#se-howto-box.se-howto-hidden { display: none !important; }
+#se-sugg-list button { padding: 5px 8px !important; font-size: 10.5px !important; }
+.se-lib-rail { flex-direction: column; align-items: center; padding: 10px 4px; gap: 8px; height: 100%; }
+.se-lib-rail button { background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.25); color: #c7d2fe; border-radius: 6px; padding: 8px 4px; font-size: 10px; font-weight: 700; cursor: pointer; writing-mode: vertical-rl; text-orientation: mixed; font-family: inherit; letter-spacing: 0.04em; }
+#se-mode-toggle.se-mode-doc { background: #eef2ff !important; border-color: #c7d2fe !important; color: #6366f1 !important; }
+</style>
+
+<script>
+// Script Editor v2 — document mode, collapsed library, template picker
+(function(){
+  var _origRenderSteps = window.seRenderSteps;
+  var _origCollectSteps = window.seCollectSteps;
+  var _origShowEditor = window.seShowEditor;
+  var _origAddStep = window.seAddStep;
+
+  window.seStepsToDoc = function(steps) {
+    if (!steps || !steps.length) return '## Step 1\n\n';
+    return steps.map(function(s, i) {
+      var title = (s.title || '').trim() || ('Step ' + (i + 1));
+      var body = (s.body || '').trim();
+      return '## ' + title + (body ? '\n\n' + body : '');
+    }).join('\n\n');
+  };
+
+  window.seDocToSteps = function(text) {
+    var raw = (text || '').trim();
+    if (!raw) return [{ title: 'Step 1', body: '' }];
+    var chunks = raw.split(/\n(?=##\s+)/);
+    var steps = chunks.map(function(chunk, i) {
+      chunk = chunk.replace(/^##\s+/, '');
+      var nl = chunk.indexOf('\n');
+      var title, body;
+      if (nl === -1) { title = chunk.trim() || ('Step ' + (i + 1)); body = ''; }
+      else { title = chunk.slice(0, nl).trim() || ('Step ' + (i + 1)); body = chunk.slice(nl + 1).replace(/^\n+/, '').trim(); }
+      return { title: title, body: body };
+    }).filter(function(s) { return s.title || s.body; });
+    return steps.length ? steps : [{ title: 'Step 1', body: raw }];
+  };
+
+  window.seGetEditorMode = function() {
+    return localStorage.getItem('se-editor-mode') === 'cards' ? 'cards' : 'doc';
+  };
+
+  window.seSetEditorMode = function(mode) {
+    localStorage.setItem('se-editor-mode', mode);
+    var body = document.getElementById('se-steps-body');
+    var btn = document.getElementById('se-mode-toggle');
+    if (!body) return;
+    if (mode === 'doc') {
+      if (_origCollectSteps && document.getElementById('se-steps-list') && document.getElementById('se-steps-list').children.length) {
+        var steps = _origCollectSteps();
+        var doc = document.getElementById('se-doc-editor');
+        if (doc) doc.value = seStepsToDoc(steps);
+      }
+      body.classList.add('se-doc-active');
+      if (btn) { btn.textContent = 'Document'; btn.classList.add('se-mode-doc'); btn.title = 'Switch to step cards'; }
+    } else {
+      var doc = document.getElementById('se-doc-editor');
+      if (doc && doc.value.trim() && typeof _origRenderSteps === 'function') {
+        _origRenderSteps(seDocToSteps(doc.value));
+      }
+      body.classList.remove('se-doc-active');
+      if (btn) { btn.textContent = 'Cards'; btn.classList.remove('se-mode-doc'); btn.title = 'Switch to document mode'; }
+    }
+    if (typeof seUpdateCount === 'function') seUpdateCount(seCollectSteps());
+  };
+
+  window.seRenderSteps = function(steps) {
+    if (seGetEditorMode() === 'doc') {
+      var doc = document.getElementById('se-doc-editor');
+      var body = document.getElementById('se-steps-body');
+      if (body) body.classList.add('se-doc-active');
+      if (doc) doc.value = seStepsToDoc(steps || []);
+      if (typeof seUpdateCount === 'function') seUpdateCount(steps || []);
+      return;
+    }
+    if (typeof _origRenderSteps === 'function') _origRenderSteps(steps);
+  };
+
+  window.seCollectSteps = function() {
+    if (seGetEditorMode() === 'doc') {
+      var doc = document.getElementById('se-doc-editor');
+      return seDocToSteps(doc ? doc.value : '');
+    }
+    return typeof _origCollectSteps === 'function' ? _origCollectSteps() : [];
+  };
+
+  window.seShowEditor = function(s) {
+    if (typeof _origShowEditor === 'function') _origShowEditor(s);
+    seSetEditorMode(seGetEditorMode());
+    if (typeof seUpdateAI === 'function') seUpdateAI(s);
+  };
+
+  window.seAddStep = function() {
+    if (seGetEditorMode() === 'doc') {
+      var doc = document.getElementById('se-doc-editor');
+      if (!doc) return;
+      var steps = seDocToSteps(doc.value);
+      var n = steps.length + 1;
+      doc.value = (doc.value.trim() ? doc.value.trim() + '\n\n' : '') + '## Step ' + n + '\n\n';
+      doc.focus();
+      doc.setSelectionRange(doc.value.length, doc.value.length);
+      if (typeof seMarkDirty === 'function') seMarkDirty();
+      if (typeof seUpdateCount === 'function') seUpdateCount(seCollectSteps());
+      return;
+    }
+    if (typeof _origAddStep === 'function') _origAddStep();
+  };
+
+  window.seShowTemplatePicker = function() {
+    var existing = document.getElementById('se-tpl-picker-modal');
+    if (existing) existing.remove();
+    var SE_TEMPLATES_REF = (typeof SE_TEMPLATES !== 'undefined') ? SE_TEMPLATES : {};
+    var keys = Object.keys(SE_TEMPLATES_REF);
+    var modal = document.createElement('div');
+    modal.id = 'se-tpl-picker-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    var box = document.createElement('div');
+    box.style.cssText = 'background:#fff;border-radius:14px;padding:24px;width:440px;max-width:95vw;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25);';
+    box.innerHTML = '<div style="font-size:17px;font-weight:800;color:#09090b;margin-bottom:4px;">Load a template</div>'
+      + '<div style="font-size:12px;color:#71717a;margin-bottom:16px;">Creates a new script from a prebuilt template. Your existing scripts are untouched.</div>';
+    if (!keys.length) {
+      box.innerHTML += '<div style="color:#a1a1aa;font-size:13px;">No templates available.</div>';
+    } else {
+      keys.forEach(function(k) {
+        var t = SE_TEMPLATES_REF[k];
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.style.cssText = 'width:100%;text-align:left;padding:12px 14px;border:1.5px solid #e4e4e7;border-radius:8px;margin-bottom:8px;background:#fff;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:#09090b;display:flex;justify-content:space-between;align-items:center;';
+        btn.innerHTML = '<span>' + (t.name || k) + '</span><span style="font-size:11px;color:#6366f1;">+ Load</span>';
+        btn.onmouseover = function() { btn.style.background = '#f5f5ff'; btn.style.borderColor = '#6366f1'; };
+        btn.onmouseout = function() { btn.style.background = '#fff'; btn.style.borderColor = '#e4e4e7'; };
+        btn.onclick = function() {
+          modal.remove();
+          if (typeof seLoadTemplate === 'function') seLoadTemplate(k);
+        };
+        box.appendChild(btn);
+      });
+    }
+    var close = document.createElement('button');
+    close.type = 'button';
+    close.textContent = 'Cancel';
+    close.style.cssText = 'width:100%;margin-top:8px;padding:10px;border:1.5px solid #e4e4e7;border-radius:8px;background:#fff;color:#71717a;font-size:13px;cursor:pointer;font-family:inherit;';
+    close.onclick = function() { modal.remove(); };
+    box.appendChild(close);
+    modal.appendChild(box);
+    modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+    document.body.appendChild(modal);
+  };
+
+  function seUpdateGrid() {
+    var root = document.getElementById('se-root');
+    if (!root) return;
+    if (root.classList.contains('se-focus-mode')) {
+      root.style.gridTemplateColumns = '0 1fr 0';
+      return;
+    }
+    var lib;
+    if (root.classList.contains('se-lib-hidden')) lib = '0px';
+    else if (root.classList.contains('se-lib-collapsed')) lib = '44px';
+    else lib = '188px';
+    var ai = root.classList.contains('se-ai-hidden') ? '0px' : '260px';
+    root.style.gridTemplateColumns = lib + ' 1fr ' + ai;
+  }
+
+  window.seToggleLibPanel = function(on) {
+    var root = document.getElementById('se-root');
+    if (!root || root.classList.contains('se-focus-mode')) return;
+    var expand = (on === undefined) ? root.classList.contains('se-lib-collapsed') : !!on;
+    root.classList.toggle('se-lib-collapsed', !expand);
+    localStorage.setItem('se-lib-open', expand ? '1' : '0');
+    seUpdateGrid();
+    if (typeof seRenderLib === 'function') seRenderLib();
+    var btn = document.getElementById('se-lib-toggle-btn');
+    if (btn) btn.textContent = expand ? '◀' : '▶';
+  };
+
+  window.seToggleFocusMode = function(on) {
+    var root = document.getElementById('se-root');
+    var btn = document.getElementById('se-focus-exit');
+    if (!root) return;
+    var enable = (on === undefined) ? !root.classList.contains('se-focus-mode') : !!on;
+    root.classList.toggle('se-focus-mode', enable);
+    if (btn) btn.classList.toggle('visible', enable);
+    seUpdateGrid();
+    if (typeof showToast === 'function' && enable) showToast('Focus mode — writing space only');
+  };
+
+  window.seToggleAIPanel = function(on) {
+    var root = document.getElementById('se-root');
+    if (!root || root.classList.contains('se-focus-mode')) return;
+    var show = (on === undefined) ? root.classList.contains('se-ai-hidden') : !!on;
+    root.classList.toggle('se-ai-hidden', !show);
+    localStorage.setItem('se-ai-open', show ? '1' : '0');
+    seUpdateGrid();
+    var tgl = document.getElementById('se-ai-toggle-btn');
+    if (tgl) tgl.textContent = show ? '🧠 Hide AI' : '🧠 Ask AI';
+  };
+
+  function seEnsureDocEditor() {
+    var body = document.getElementById('se-steps-body');
+    if (!body || document.getElementById('se-doc-wrap')) return;
+    var wrap = document.createElement('div');
+    wrap.id = 'se-doc-wrap';
+    wrap.innerHTML = '<div id="se-doc-hint">Write your script as one document. Use <strong>## Step title</strong> on its own line to mark each step.</div>'
+      + '<textarea id="se-doc-editor" placeholder="## Opening\n\nHey [Name], this is...\n\n## Discovery\n\nWhat does your OEP process look like?"></textarea>';
+    var list = document.getElementById('se-steps-list');
+    if (list && list.parentNode) body.insertBefore(wrap, list);
+    else body.appendChild(wrap);
+    var doc = document.getElementById('se-doc-editor');
+    if (doc) doc.oninput = function() {
+      if (typeof seMarkDirty === 'function') seMarkDirty();
+      if (typeof seUpdateCount === 'function') seUpdateCount(seCollectSteps());
+    };
+  }
+
+  function seInitEditorUI() {
+    var root = document.getElementById('se-root');
+    if (!root || root._uiPatchedV2) return;
+    root._uiPatchedV2 = true;
+
+    var kids = root.children;
+    if (kids[0]) kids[0].id = 'se-lib-panel';
+    if (kids[2]) kids[2].id = 'se-ai-panel';
+
+    var libPanel = document.getElementById('se-lib-panel');
+    if (libPanel && !document.getElementById('se-lib-rail')) {
+      var rail = document.createElement('div');
+      rail.id = 'se-lib-rail';
+      rail.className = 'se-lib-rail';
+      rail.innerHTML = '<button type="button" id="se-lib-rail-expand" title="Expand scripts">Scripts</button>'
+        + '<button type="button" id="se-lib-rail-new" title="New script" style="writing-mode:horizontal-tb;padding:6px;">+</button>'
+        + '<button type="button" id="se-lib-rail-tpl" title="Templates" style="writing-mode:horizontal-tb;padding:6px;">📋</button>';
+      libPanel.appendChild(rail);
+      document.getElementById('se-lib-rail-expand').onclick = function() { seToggleLibPanel(true); };
+      document.getElementById('se-lib-rail-new').onclick = function() { if (typeof seNewScript === 'function') seNewScript(); };
+      document.getElementById('se-lib-rail-tpl').onclick = function() { seShowTemplatePicker(); };
+      var libHeader = libPanel.querySelector('div');
+      if (libHeader) {
+        libHeader.classList.add('se-lib-expanded-only');
+        if (!document.getElementById('se-lib-toggle-btn')) {
+          var tgl = document.createElement('button');
+          tgl.id = 'se-lib-toggle-btn';
+          tgl.type = 'button';
+          tgl.textContent = '◀';
+          tgl.title = 'Collapse library';
+          tgl.style.cssText = 'background:transparent;border:1px solid #3f3f46;color:#a1a1aa;border-radius:5px;padding:2px 7px;font-size:11px;cursor:pointer;font-family:inherit;';
+          tgl.onclick = function() { seToggleLibPanel(false); };
+          var newBtn = libHeader.querySelector('button[onclick*="seNewScript"]');
+          if (newBtn) libHeader.insertBefore(tgl, newBtn);
+          else libHeader.appendChild(tgl);
+        }
+      }
+      var libList = document.getElementById('se-lib-list');
+      if (libList) libList.classList.add('se-lib-expanded-only');
+    }
+
+    var howto = document.querySelector('#se-ai-panel [style*="How to use"]');
+    if (howto && howto.parentElement) {
+      howto.parentElement.id = 'se-howto-box';
+      if (localStorage.getItem('se-howto-seen') === '1') howto.parentElement.classList.add('se-howto-hidden');
+    }
+
+    if (!document.getElementById('se-focus-exit')) {
+      var exitBtn = document.createElement('button');
+      exitBtn.id = 'se-focus-exit';
+      exitBtn.className = 'se-focus-exit';
+      exitBtn.textContent = 'Exit focus';
+      exitBtn.onclick = function() { seToggleFocusMode(false); };
+      document.body.appendChild(exitBtn);
+    }
+
+    seEnsureDocEditor();
+
+    var toolbar = document.querySelector('#se-editor-wrap > div');
+    if (toolbar && !document.getElementById('se-focus-btn')) {
+      var wrap = document.createElement('div');
+      wrap.style.cssText = 'display:flex;gap:6px;flex-shrink:0;';
+      wrap.innerHTML = '<button type="button" id="se-mode-toggle" title="Switch editing mode" style="padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid #e4e4e7;background:#fafafa;color:#52525b;">Document</button>'
+        + '<button type="button" id="se-focus-btn" style="padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid #e4e4e7;background:#fafafa;color:#52525b;">Focus</button>'
+        + '<button type="button" id="se-ai-toggle-btn" style="padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid #c7d2fe;background:#eef2ff;color:#6366f1;">🧠 Hide AI</button>';
+      var saveBtn = toolbar.querySelector('button[onclick*="seSave"]');
+      if (saveBtn) toolbar.insertBefore(wrap, saveBtn);
+      else toolbar.appendChild(wrap);
+      document.getElementById('se-mode-toggle').onclick = function() {
+        seSetEditorMode(seGetEditorMode() === 'doc' ? 'cards' : 'doc');
+      };
+      document.getElementById('se-focus-btn').onclick = function() { seToggleFocusMode(); };
+      document.getElementById('se-ai-toggle-btn').onclick = function() { seToggleAIPanel(); };
+    }
+
+    if (localStorage.getItem('se-lib-open') !== '1') {
+      root.classList.add('se-lib-collapsed');
+    }
+    if (localStorage.getItem('se-ai-open') === '0') seToggleAIPanel(false);
+    seSetEditorMode(seGetEditorMode());
+    seUpdateGrid();
+
+    var origAsk = window.seAskAI;
+    if (typeof origAsk === 'function' && !origAsk._v2patched) {
+      window.seAskAI = function() {
+        seToggleAIPanel(true);
+        localStorage.setItem('se-howto-seen', '1');
+        var box = document.getElementById('se-howto-box');
+        if (box) box.classList.add('se-howto-hidden');
+        return origAsk.apply(this, arguments);
+      };
+      window.seAskAI._v2patched = true;
+    }
+
+    var origInit = window.initScriptEditor;
+    if (typeof origInit === 'function' && !origInit._v2patched) {
+      window.initScriptEditor = function() {
+        origInit();
+        setTimeout(seInitEditorUI, 50);
+      };
+      window.initScriptEditor._v2patched = true;
+    }
+
+    if (typeof seRenderLib === 'function') seRenderLib();
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(seInitEditorUI, 400);
+  });
+
+  var _origShow = window.showSection;
+  if (!_origShow || !window.showSection._seV2) {
+    window.showSection = function(id, btn) {
+      if (typeof _origShow === 'function') _origShow(id, btn);
+      if (id === 'scripteditor') setTimeout(seInitEditorUI, 100);
+    };
+    window.showSection._seV2 = true;
+  }
+
+  console.log('[SCRIPT EDITOR v2] Document mode + collapsed library loaded.');
+})();
 </script>
 </body>
 </html>
