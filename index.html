@@ -8626,6 +8626,8 @@ AN.sortField     = 'created';
 AN.sortDir       = 'desc';
 AN.searchQ       = '';
 AN.repFilter     = '';
+AN.activeListId  = 'sys-all';
+AN.advancedFilters = {};
 AN.listPage      = 0;
 AN.pageSize      = 100;
 AN.leadsStorage  = 'local';  // local | idb
@@ -8769,6 +8771,108 @@ function anNormalizeLeads(arr){
   });
 }
 
+var AN_OWNER_PATCH_KEY = 'an-crm-owner-patches';
+var AN_LARGE_LEAD_SKIP_CLOUD = 5000;
+
+function anGetOwnerPatches(){
+  try { return JSON.parse(localStorage.getItem(AN_OWNER_PATCH_KEY) || '{}'); } catch(e){ return {}; }
+}
+
+function anRecordOwnerPatches(leadIds, email){
+  if(!leadIds || !leadIds.length || !email) return;
+  if(leadIds.length > 3000) return;
+  try {
+    var patches = anGetOwnerPatches();
+    var n = 0;
+    leadIds.forEach(function(id){
+      if(id && n < 3000){ patches[id] = email; n++; }
+    });
+    localStorage.setItem(AN_OWNER_PATCH_KEY, JSON.stringify(patches));
+  } catch(e){ console.warn('[CRM] Owner patch write failed:', e); }
+}
+
+function anShowOwnerSaveOverlay(show, text){
+  var el = document.getElementById('an-owner-save-overlay');
+  if(show){
+    if(!el){
+      el = document.createElement('div');
+      el.id = 'an-owner-save-overlay';
+      el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:10003;display:flex;align-items:center;justify-content:center;padding:20px;';
+      document.body.appendChild(el);
+    }
+    el.innerHTML = '<div style="background:var(--card-bg);border-radius:14px;padding:22px 30px;font-size:14px;font-weight:700;color:var(--text-primary);text-align:center;max-width:360px;box-shadow:0 16px 48px rgba(0,0,0,0.25);">'
+      +'<div class="loading-spinner" style="margin:0 auto 12px;"></div>'
+      +(text || 'Saving owner changes...')+'<div style="font-size:12px;font-weight:500;color:var(--text-muted);margin-top:8px;">Please wait — do not refresh until this finishes.</div></div>';
+  } else if(el){
+    el.remove();
+  }
+}
+
+function anClearOwnerPatches(leadIds){
+  if(!leadIds || !leadIds.length) return;
+  try {
+    var patches = anGetOwnerPatches();
+    leadIds.forEach(function(id){ delete patches[id]; });
+    localStorage.setItem(AN_OWNER_PATCH_KEY, JSON.stringify(patches));
+  } catch(e){}
+}
+
+function anApplyOwnerPatches(leads){
+  if(!Array.isArray(leads) || !leads.length) return leads;
+  var patches = anGetOwnerPatches();
+  var keys = Object.keys(patches);
+  if(!keys.length) return leads;
+  leads.forEach(function(l){
+    if(l && l.id && patches[l.id]) l._repEmail = patches[l.id];
+  });
+  return leads;
+}
+
+function anLeadUpdatedMs(lead){
+  return new Date(lead && (lead.updated || lead.created) || 0).getTime() || 0;
+}
+
+function anMergeLeadsPreferNewer(localLeads, cloudLeads){
+  var byId = {};
+  (localLeads || []).forEach(function(l){
+    if(l && l.id) byId[l.id] = l;
+  });
+  (cloudLeads || []).forEach(function(cl){
+    if(!cl || !cl.id) return;
+    var existing = byId[cl.id];
+    if(!existing){ byId[cl.id] = cl; return; }
+    if(anLeadUpdatedMs(cl) > anLeadUpdatedMs(existing)) byId[cl.id] = cl;
+  });
+  return Object.keys(byId).map(function(id){ return byId[id]; });
+}
+
+function anAssignLeadsChunked(leads, cb){
+  leads = leads || [];
+  if(leads.length < 2500){
+    AN.leads = leads;
+    AN.invalidateLeadCaches();
+    if(cb) cb();
+    return;
+  }
+  AN.leads = [];
+  AN.leadsLoading = true;
+  if(typeof hdRefreshCallableSlot === 'function') hdRefreshCallableSlot();
+  var i = 0, CHUNK = 600;
+  function step(){
+    var end = Math.min(i + CHUNK, leads.length);
+    for(; i < end; i++) AN.leads.push(leads[i]);
+    if(i < leads.length){
+      setTimeout(step, 0);
+    } else {
+      AN.leadsLoading = false;
+      AN.invalidateLeadCaches();
+      if(typeof hdRefreshCallableSlot === 'function') hdRefreshCallableSlot();
+      if(cb) cb();
+    }
+  }
+  setTimeout(step, 0);
+}
+
 function anLoadLeadsFromLocal(){
   try {
     if(localStorage.getItem('an-crm-leads-idb') === '1') return null;
@@ -8800,20 +8904,22 @@ function anLoadLeadsFromIDB(cb){
 }
 
 function anSaveLeadsToIDB(leads, cb){
-  anOpenLeadsIDB(function(err, db){
-    if(err){ if(cb) cb(err); return; }
-    var tx = db.transaction('kv', 'readwrite');
-    tx.objectStore('kv').put(leads, 'leads');
-    tx.oncomplete = function(){
-      try {
-        localStorage.removeItem('an-crm-leads');
-        localStorage.setItem('an-crm-leads-idb', '1');
-      } catch(e){}
-      AN.leadsStorage = 'idb';
-      if(cb) cb(null);
-    };
-    tx.onerror = function(){ if(cb) cb(tx.error || new Error('IndexedDB write failed')); };
-  });
+  setTimeout(function(){
+    anOpenLeadsIDB(function(err, db){
+      if(err){ if(cb) cb(err); return; }
+      var tx = db.transaction('kv', 'readwrite');
+      tx.objectStore('kv').put(leads, 'leads');
+      tx.oncomplete = function(){
+        try {
+          localStorage.removeItem('an-crm-leads');
+          localStorage.setItem('an-crm-leads-idb', '1');
+        } catch(e){}
+        AN.leadsStorage = 'idb';
+        if(cb) cb(null);
+      };
+      tx.onerror = function(){ if(cb) cb(tx.error || new Error('IndexedDB write failed')); };
+    });
+  }, 15);
 }
 
 AN.load = function(cb){
@@ -8826,21 +8932,23 @@ AN.load = function(cb){
     if(cb) cb();
   }
   if(localLeads && localLeads.length){
-    AN.leads = localLeads;
+    AN.leads = anApplyOwnerPatches(localLeads);
     AN.leadsStorage = 'local';
     if(!sb||!_currentUser){ anLeadsLoadDone(); return; }
   } else if(localStorage.getItem('an-crm-leads-idb') === '1'){
     AN.leadsLoading = true;
     if(typeof hdRefreshCallableSlot === 'function') hdRefreshCallableSlot();
     anLoadLeadsFromIDB(function(err, leads){
-      AN.leads = leads || [];
-      AN.leadsStorage = err ? 'local' : 'idb';
-      if(!sb||!_currentUser){ anLeadsLoadDone(); return; }
-      anFinishCloudLeadLoad(sb, anLeadsLoadDone);
+      leads = anApplyOwnerPatches(anNormalizeLeads(leads || []));
+      anAssignLeadsChunked(leads, function(){
+        AN.leadsStorage = err ? 'local' : 'idb';
+        if(!sb||!_currentUser){ anLeadsLoadDone(); return; }
+        anFinishCloudLeadLoad(sb, anLeadsLoadDone);
+      });
     });
     return;
   } else {
-    AN.leads = localLeads || [];
+    AN.leads = anApplyOwnerPatches(localLeads || []);
     AN.leadsStorage = 'local';
     if(!sb||!_currentUser){ anLeadsLoadDone(); return; }
   }
@@ -8869,13 +8977,22 @@ function anFinishCloudLeadLoad(sb, cb){
         });
       });
       if(merged.length){
-        AN.leads = merged;
-        anPersistLeadsLocal(function(){});
+        var local = AN.leads || [];
+        AN.leads = anApplyOwnerPatches(anMergeLeadsPreferNewer(local, merged));
+        AN.invalidateLeadCaches();
+        if(AN.leads.length > 1500 || localStorage.getItem('an-crm-leads-idb') === '1'){
+          setTimeout(function(){ anSaveLeadsToIDB(AN.leads, function(){}); }, 100);
+        }
+      } else {
+        anApplyOwnerPatches(AN.leads);
       }
+    } else {
+      anApplyOwnerPatches(AN.leads);
     }
     if(cb) cb();
   }).catch(function(err){
     console.warn('[CRM] Supabase load failed, using local cache:', err);
+    anApplyOwnerPatches(AN.leads);
     if(cb) cb();
   });
 }
@@ -8944,42 +9061,446 @@ AN.save = function(cb){
       if(cb) cb(true, null, where || 'local');
       return;
     }
-  var repEmail = AN.currentRepEmail || _currentUser.email;
-  var mine = AN.leads.filter(function(l){ return !l._repEmail || l._repEmail === repEmail; })
-    .map(function(l){ var c = Object.assign({}, l); delete c._repEmail; return c; });
+    if(AN.leads.length > AN_LARGE_LEAD_SKIP_CLOUD){
+      if(cb) cb(true, null, where || 'idb');
+      return;
+    }
+    var repEmail = AN.currentRepEmail || _currentUser.email;
+    var payload;
+    if(AN.isAdmin){
+      payload = AN.leads.map(function(l){ return Object.assign({}, l); });
+    } else {
+      payload = AN.leads.filter(function(l){ return !l._repEmail || l._repEmail === repEmail; })
+        .map(function(l){ var c = Object.assign({}, l); delete c._repEmail; return c; });
+    }
     sb.from('an_leads').upsert({
       user_id: _currentUser.id,
       rep_email: repEmail,
-      data: mine,
+      data: payload,
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' }).then(function(r){
       if(r.error){
         console.error('[CRM] Supabase save error:', r.error);
-        if(cb) cb(false, r.error, where || 'local');
+        if(cb) cb(true, r.error, where || 'local');
       } else if(cb) cb(true, null, 'cloud');
     }).catch(function(err){
       console.error('[CRM] Supabase save failed:', err);
-      if(cb) cb(false, err, where || 'local');
+      if(cb) cb(true, err, where || 'local');
     });
   });
 };
 
+// ── Contact lists + advanced filters ───────────────────────────
+var AN_LISTS_KEY = 'an-crm-contact-lists';
+
+function anDefaultAdvancedFilters(){
+  return { owner:'', status:'', state:'', company:'', source:'', hasPhone:'', hasEmail:'', followUpDue:false, neverCalled:false, createdAfter:'', createdBefore:'', lastActivityAfter:'', lastActivityBefore:'', title:'' };
+}
+
+function anGetSystemContactLists(){
+  return [
+    { id:'sys-all', name:'All contacts', isSystem:true, filters:{ currentFilter:'all', repFilter:'', searchQ:'', sortField:'created', sortDir:'desc', advanced:anDefaultAdvancedFilters() } },
+    { id:'sys-mine', name:'My contacts', isSystem:true, filters:{ currentFilter:'all', repFilter:'__mine__', searchQ:'', sortField:'lastName', sortDir:'asc', advanced:anDefaultAdvancedFilters() } },
+    { id:'sys-no-owner', name:'No owner', isSystem:true, filters:{ currentFilter:'all', repFilter:'', searchQ:'', sortField:'created', sortDir:'desc', advanced:Object.assign(anDefaultAdvancedFilters(), { owner:'__none__' }) } },
+    { id:'sys-callable', name:'Callable', isSystem:true, filters:{ currentFilter:'hot', repFilter:'', searchQ:'', sortField:'lastName', sortDir:'asc', advanced:Object.assign(anDefaultAdvancedFilters(), { hasPhone:'yes' }) } }
+  ];
+}
+
+window.anLoadContactLists = function(){
+  var custom = [];
+  try { custom = JSON.parse(localStorage.getItem(AN_LISTS_KEY) || '[]'); } catch(e){}
+  if(!Array.isArray(custom)) custom = [];
+  return anGetSystemContactLists().concat(custom);
+};
+
+window.anSaveCustomContactLists = function(custom){
+  try { localStorage.setItem(AN_LISTS_KEY, JSON.stringify(custom || [])); } catch(e){}
+};
+
+window.anGetContactListById = function(id){
+  var lists = anLoadContactLists();
+  for(var i=0;i<lists.length;i++) if(lists[i].id===id) return lists[i];
+  return null;
+};
+
+window.anCaptureListFilters = function(){
+  return {
+    currentFilter: AN.currentFilter || 'all',
+    repFilter: AN.repFilter || '',
+    searchQ: AN.searchQ || '',
+    sortField: AN.sortField || 'created',
+    sortDir: AN.sortDir || 'desc',
+    advanced: Object.assign(anDefaultAdvancedFilters(), AN.advancedFilters || {})
+  };
+};
+
+window.anApplyContactList = function(listId){
+  var list = anGetContactListById(listId);
+  if(!list) return;
+  AN.activeListId = listId;
+  try { localStorage.setItem('an-crm-active-list', listId); } catch(e){}
+  var f = list.filters || {};
+  AN.currentFilter = f.currentFilter || 'all';
+  AN.repFilter = f.repFilter || '';
+  AN.searchQ = f.searchQ || '';
+  AN.sortField = f.sortField || 'created';
+  AN.sortDir = f.sortDir || 'desc';
+  AN.advancedFilters = Object.assign(anDefaultAdvancedFilters(), f.advanced || {});
+  AN.invalidateLeadCaches();
+  anResetLeadsPage();
+  var search = document.getElementById('crm-search');
+  if(search) search.value = AN.searchQ;
+  if(document.getElementById('crm-list-tabs')) anRefreshContactListUI();
+  else if(typeof renderCRM === 'function') renderCRM();
+  else renderLeadsTable();
+};
+
+window.anApplyListFiltersToState = function(f){
+  f = f || {};
+  AN.currentFilter = f.currentFilter || 'all';
+  AN.repFilter = f.repFilter || '';
+  AN.searchQ = f.searchQ || '';
+  AN.sortField = f.sortField || 'created';
+  AN.sortDir = f.sortDir || 'desc';
+  AN.advancedFilters = Object.assign(anDefaultAdvancedFilters(), f.advanced || {});
+};
+
+function anLeadLastActivityDate(lead){
+  var last = lead.lastContactDate || '';
+  if(lead.callLog && lead.callLog.length){
+    var sorted = lead.callLog.slice().sort(function(a,b){ return (b.date+b.time).localeCompare(a.date+a.time); });
+    if(sorted[0]) last = sorted[0].date;
+  }
+  return last || lead.created || '';
+}
+
+function anMatchesAdvancedFilters(lead, adv){
+  if(!adv) return true;
+  if(adv.owner === '__none__' && lead._repEmail) return false;
+  if(adv.owner && adv.owner !== '__none__' && lead._repEmail !== adv.owner) return false;
+  if(adv.status && (lead.status || 'new') !== adv.status) return false;
+  if(adv.state && (lead.state || '').toUpperCase() !== adv.state.toUpperCase()) return false;
+  if(adv.company){
+    var co = (lead.company || '').toLowerCase();
+    if(co.indexOf(adv.company.toLowerCase()) < 0) return false;
+  }
+  if(adv.source && (lead.source || '').toLowerCase().indexOf(adv.source.toLowerCase()) < 0) return false;
+  if(adv.title && (lead.title || '').toLowerCase().indexOf(adv.title.toLowerCase()) < 0) return false;
+  if(adv.hasPhone === 'yes' && !lead.phone) return false;
+  if(adv.hasPhone === 'no' && lead.phone) return false;
+  if(adv.hasEmail === 'yes' && !lead.email) return false;
+  if(adv.hasEmail === 'no' && lead.email) return false;
+  if(adv.followUpDue){
+    var today = new Date().toISOString().split('T')[0];
+    if(!lead.nextFollowUp || lead.nextFollowUp > today) return false;
+  }
+  if(adv.neverCalled && lead.callLog && lead.callLog.length) return false;
+  if(adv.createdAfter && (lead.created || '') < adv.createdAfter) return false;
+  if(adv.createdBefore && (lead.created || '').slice(0,10) > adv.createdBefore) return false;
+  var act = anLeadLastActivityDate(lead).slice(0,10);
+  if(adv.lastActivityAfter && act < adv.lastActivityAfter) return false;
+  if(adv.lastActivityBefore && act > adv.lastActivityBefore) return false;
+  return true;
+}
+
+window.anCountListMatches = function(list){
+  if(!list) return 0;
+  var saved = { cf:AN.currentFilter, rf:AN.repFilter, sq:AN.searchQ, sf:AN.sortField, sd:AN.sortDir, af:AN.advancedFilters, lid:AN.activeListId };
+  anApplyListFiltersToState(list.filters);
+  var n = AN.filtered().length;
+  AN.currentFilter = saved.cf; AN.repFilter = saved.rf; AN.searchQ = saved.sq;
+  AN.sortField = saved.sf; AN.sortDir = saved.sd; AN.advancedFilters = saved.af; AN.activeListId = saved.lid;
+  AN.invalidateLeadCaches();
+  return n;
+};
+
+window.anBuildContactListTabs = function(){
+  var lists = anLoadContactLists();
+  var tabs = lists.map(function(list){
+    var active = AN.activeListId === list.id;
+    var cnt = '';
+    if(active){
+      try { cnt = AN.filtered().length; } catch(e){ cnt = 0; }
+    }
+    var label = list.name + (active && cnt !== '' ? ' (' + cnt.toLocaleString() + ')' : '');
+    var del = (!list.isSystem) ? '<span onclick="event.stopPropagation();anDeleteContactList(\''+list.id+'\')" title="Delete list" style="margin-left:6px;opacity:0.45;font-size:11px;cursor:pointer;">×</span>' : '';
+    return '<button type="button" onclick="anApplyContactList(\''+list.id+'\')" '
+      +'style="padding:10px 14px;border:none;border-bottom:2px solid '+(active?'#6366f1':'transparent')+';background:transparent;color:'+(active?'#6366f1':'var(--text-secondary)')+';font-size:13px;font-weight:'+(active?'700':'500')+';cursor:pointer;font-family:var(--sans);white-space:nowrap;display:flex;align-items:center;gap:4px;">'
+      +anEsc(label)+del+'</button>';
+  }).join('');
+  return '<div id="crm-list-tabs" style="display:flex;align-items:center;gap:0;padding:0 16px;background:var(--card-bg);border-bottom:1px solid var(--divider);overflow-x:auto;flex-shrink:0;">'
+    +tabs
+    +'<button type="button" onclick="anOpenSaveContactListModal()" title="Save current filters as a list" style="padding:8px 12px;border:1.5px dashed var(--divider);border-radius:8px;background:transparent;color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);margin:6px 0 6px 8px;white-space:nowrap;">+ New list</button>'
+    +'</div>';
+};
+
+window.anRefreshContactListUI = function(){
+  var tabs = document.getElementById('crm-list-tabs');
+  if(tabs && tabs.parentElement){
+    var tmp = document.createElement('div');
+    tmp.innerHTML = anBuildContactListTabs();
+    tabs.parentElement.replaceChild(tmp.firstChild, tabs);
+  }
+  anRefreshFilterChips();
+};
+
+function anSortLabel(){
+  var m = { 'lastName|asc':'Name A→Z', 'lastName|desc':'Name Z→A', 'company|asc':'Company A→Z', 'created|desc':'Newest', 'created|asc':'Oldest', 'lastContactDate|desc':'Last activity', 'nextFollowUp|asc':'Follow-up date' };
+  return m[(AN.sortField||'created')+'|'+(AN.sortDir||'desc')] || 'Custom sort';
+}
+
+function anActiveFilterCount(){
+  var adv = AN.advancedFilters || {};
+  var n = 0;
+  Object.keys(adv).forEach(function(k){
+    var v = adv[k];
+    if(v && v !== false) n++;
+  });
+  if(AN.repFilter && AN.repFilter !== '__mine__') n++;
+  if(AN.currentFilter && AN.currentFilter !== 'all') n++;
+  return n;
+}
+
+window.anRefreshFilterChips = function(){
+  var el = document.getElementById('crm-filter-chips');
+  if(!el) return;
+  var adv = AN.advancedFilters || {};
+  var ownerLabel = 'Contact owner';
+  if(adv.owner === '__none__') ownerLabel = 'No owner';
+  else if(adv.owner) ownerLabel = typeof anGetRepName === 'function' ? anGetRepName(adv.owner) : adv.owner.split('@')[0];
+  else if(AN.repFilter === '__mine__') ownerLabel = 'My contacts';
+  else if(AN.repFilter) ownerLabel = typeof anGetRepName === 'function' ? anGetRepName(AN.repFilter) : AN.repFilter.split('@')[0];
+  var statusLabel = AN.currentFilter === 'all' ? 'Lead status' : (AN.currentFilter === 'hot' ? 'Hot leads' : AN.currentFilter);
+  var stateLabel = adv.state || 'State';
+  var chip = function(label, active, onclick){
+    return '<button type="button" onclick="'+onclick+'" style="padding:5px 11px;border-radius:20px;border:1.5px solid '+(active?'#6366f1':'var(--divider)')+';background:'+(active?'rgba(99,102,241,0.08)':'var(--card-bg)')+';color:'+(active?'#6366f1':'var(--text-secondary)')+';font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);white-space:nowrap;">'+label+' ▾</button>';
+  };
+  el.innerHTML = chip(anSortLabel(), true, 'anOpenSortFilter()')
+    + chip(ownerLabel, !!(adv.owner || AN.repFilter), 'anOpenOwnerFilter()')
+    + chip(statusLabel, AN.currentFilter !== 'all', 'anOpenStatusFilter()')
+    + chip(stateLabel, !!adv.state, 'anOpenStateFilter()')
+    + '<button type="button" onclick="anOpenAdvancedFiltersModal()" style="padding:5px 11px;border-radius:20px;border:1.5px solid '+(anActiveFilterCount()>0?'#6366f1':'var(--divider)')+';background:'+(anActiveFilterCount()>0?'rgba(99,102,241,0.08)':'var(--card-bg)')+';color:'+(anActiveFilterCount()>0?'#6366f1':'var(--text-secondary)')+';font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);">Advanced filters'+(anActiveFilterCount()>0?' ('+anActiveFilterCount()+')':'')+'</button>'
+    + '<button type="button" onclick="anClearAllFilters()" style="padding:5px 11px;border-radius:20px;border:none;background:transparent;color:var(--text-muted);font-size:12px;cursor:pointer;font-family:var(--sans);">Clear all</button>';
+  var sortLbl = document.getElementById('crm-sort-label');
+  if(sortLbl) sortLbl.textContent = anSortLabel();
+};
+
+window.anBuildContactFilterBar = function(){
+  var filteredN = 0;
+  try { filteredN = AN.filtered().length; } catch(e){}
+  return '<div id="crm-filter-toolbar" style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--body-bg);border-bottom:1px solid var(--divider);flex-shrink:0;gap:10px;flex-wrap:wrap;">'
+    +'<div id="crm-filter-chips" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;"></div>'
+    +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">'
+    +'<button type="button" id="crm-transfer-filtered-btn" onclick="anBulkReassignFilteredOwner()" style="padding:5px 11px;border-radius:8px;border:1.5px solid #fde68a;background:#fffbeb;color:#b45309;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);white-space:nowrap;">👤 Transfer list ('+filteredN.toLocaleString()+')</button>'
+    +'<button type="button" onclick="anOpenSaveContactListModal()" style="padding:5px 11px;border-radius:8px;border:1.5px solid var(--divider);background:var(--card-bg);color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);">💾 Save list</button>'
+    +'</div></div>';
+};
+
+window.anRefreshTransferFilteredBtn = function(){
+  var btn = document.getElementById('crm-transfer-filtered-btn');
+  if(!btn) return;
+  var n = 0;
+  try { n = AN.filtered().length; } catch(e){}
+  btn.textContent = '👤 Transfer list (' + n.toLocaleString() + ')';
+};
+
+window.anClearAllFilters = function(){
+  AN.activeListId = 'sys-all';
+  anApplyContactList('sys-all');
+};
+
+window.anOnFilterChanged = function(){
+  AN.activeListId = 'custom-active';
+  AN.invalidateLeadCaches();
+  anResetLeadsPage();
+  anRefreshContactListUI();
+  renderLeadsTable();
+};
+
+window.anSetSort = function(field, dir){
+  AN.sortField = field; AN.sortDir = dir;
+  anOnFilterChanged();
+};
+
+function anCloseFilterPopover(){ var p=document.getElementById('an-filter-popover'); if(p)p.remove(); }
+
+window.anOpenSortFilter = function(){
+  anCloseFilterPopover();
+  var opts = [
+    { f:'lastName', d:'asc', l:'Name A → Z' }, { f:'lastName', d:'desc', l:'Name Z → A' },
+    { f:'company', d:'asc', l:'Company A → Z' }, { f:'created', d:'desc', l:'Newest first' },
+    { f:'created', d:'asc', l:'Oldest first' }, { f:'lastContactDate', d:'desc', l:'Last activity' },
+    { f:'nextFollowUp', d:'asc', l:'Follow-up date' }
+  ];
+  anOpenFilterPopover('Sort by', opts.map(function(o){
+    return '<button type="button" onclick="anSetSort(\''+o.f+'\',\''+o.d+'\');anCloseFilterPopover()" style="width:100%;text-align:left;padding:9px 12px;border:none;background:'+((AN.sortField===o.f&&AN.sortDir===o.d)?'rgba(99,102,241,0.1)':'transparent')+';border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--text-primary);">'+o.l+'</button>';
+  }).join(''));
+};
+
+window.anOpenOwnerFilter = function(){
+  anCloseFilterPopover();
+  var emails = typeof anGetKnownRepEmails === 'function' ? anGetKnownRepEmails() : [];
+  var html = '<button type="button" onclick="AN.repFilter=\'\';AN.advancedFilters.owner=\'\';anOnFilterChanged();anCloseFilterPopover()" style="width:100%;text-align:left;padding:9px 12px;border:none;background:transparent;border-radius:6px;font-size:13px;cursor:pointer;font-family:var(--sans);">All owners</button>'
+    +'<button type="button" onclick="AN.repFilter=\'__mine__\';AN.advancedFilters.owner=\'\';anOnFilterChanged();anCloseFilterPopover()" style="width:100%;text-align:left;padding:9px 12px;border:none;background:transparent;border-radius:6px;font-size:13px;cursor:pointer;font-family:var(--sans);">My contacts</button>'
+    +'<button type="button" onclick="AN.repFilter=\'\';AN.advancedFilters.owner=\'__none__\';anOnFilterChanged();anCloseFilterPopover()" style="width:100%;text-align:left;padding:9px 12px;border:none;background:transparent;border-radius:6px;font-size:13px;cursor:pointer;font-family:var(--sans);">No owner</button>';
+  emails.forEach(function(em){
+    html += '<button type="button" onclick="AN.repFilter=\''+em+'\';AN.advancedFilters.owner=\''+em+'\';anOnFilterChanged();anCloseFilterPopover()" style="width:100%;text-align:left;padding:9px 12px;border:none;background:transparent;border-radius:6px;font-size:13px;cursor:pointer;font-family:var(--sans);">'+anEsc(typeof anGetRepName==='function'?anGetRepName(em):em)+'</button>';
+  });
+  anOpenFilterPopover('Contact owner', html);
+};
+
+window.anOpenStatusFilter = function(){
+  anCloseFilterPopover();
+  var opts = [{id:'all',l:'All statuses'},{id:'hot',l:'🔥 Hot'},{id:'new',l:'New'},{id:'contacted',l:'Contacted'},{id:'booked_demo',l:'Booked Demo'},{id:'followup',l:'📅 Follow Up Due'},{id:'nurture',l:'Nurture'}];
+  anOpenFilterPopover('Lead status', opts.map(function(o){
+    return '<button type="button" onclick="AN.currentFilter=\''+o.id+'\';anOnFilterChanged();anCloseFilterPopover()" style="width:100%;text-align:left;padding:9px 12px;border:none;background:'+(AN.currentFilter===o.id?'rgba(99,102,241,0.1)':'transparent')+';border-radius:6px;font-size:13px;cursor:pointer;font-family:var(--sans);">'+o.l+'</button>';
+  }).join(''));
+};
+
+window.anOpenStateFilter = function(){
+  anCloseFilterPopover();
+  var states = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
+  var html = '<button type="button" onclick="AN.advancedFilters.state=\'\';anOnFilterChanged();anCloseFilterPopover()" style="width:100%;text-align:left;padding:9px 12px;border:none;background:transparent;border-radius:6px;font-size:13px;cursor:pointer;font-family:var(--sans);">All states</button>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:4px;padding:4px 0;max-height:200px;overflow-y:auto;">'
+    +states.map(function(s){
+      return '<button type="button" onclick="AN.advancedFilters.state=\''+s+'\';anOnFilterChanged();anCloseFilterPopover()" style="padding:4px 8px;border-radius:6px;border:1.5px solid '+(AN.advancedFilters.state===s?'#6366f1':'var(--divider)')+';background:'+(AN.advancedFilters.state===s?'rgba(99,102,241,0.1)':'var(--card-bg)')+';font-size:11px;font-weight:700;cursor:pointer;font-family:var(--mono);">'+s+'</button>';
+    }).join('')+'</div>';
+  anOpenFilterPopover('State', html);
+};
+
+function anOpenFilterPopover(title, bodyHtml){
+  var pop = document.createElement('div');
+  pop.id = 'an-filter-popover';
+  pop.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.2);';
+  pop.innerHTML = '<div style="position:absolute;top:120px;left:50%;transform:translateX(-50%);background:var(--card-bg);border-radius:12px;padding:14px;width:280px;max-width:92vw;box-shadow:0 12px 40px rgba(0,0,0,0.18);border:1px solid var(--divider);" onclick="event.stopPropagation()">'
+    +'<div style="font-size:12px;font-weight:800;color:var(--text-primary);margin-bottom:8px;">'+title+'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:2px;max-height:320px;overflow-y:auto;">'+bodyHtml+'</div></div>';
+  pop.onclick = function(e){ if(e.target===pop) anCloseFilterPopover(); };
+  document.body.appendChild(pop);
+}
+
+window.anOpenAdvancedFiltersModal = function(){
+  var old = document.getElementById('an-adv-filter-modal');
+  if(old) old.remove();
+  var adv = Object.assign(anDefaultAdvancedFilters(), AN.advancedFilters || {});
+  var emails = typeof anGetKnownRepEmails === 'function' ? anGetKnownRepEmails() : [];
+  var statusOpts = AN_LEAD_STATUSES.map(function(s){ return '<option value="'+s.id+'"'+(adv.status===s.id?' selected':'')+'>'+s.label+'</option>'; }).join('');
+  var ownerOpts = '<option value="">Any owner</option><option value="__none__"'+(adv.owner==='__none__'?' selected':'')+'>No owner</option>'
+    +'<option value="__mine__"'+(AN.repFilter==='__mine__'?' selected':'')+'>My contacts</option>'
+    +emails.map(function(em){ return '<option value="'+em+'"'+(adv.owner===em?' selected':'')+'>'+anEsc(typeof anGetRepName==='function'?anGetRepName(em):em)+'</option>'; }).join('');
+  var modal = document.createElement('div');
+  modal.id = 'an-adv-filter-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:10002;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML = '<div style="background:var(--card-bg);border-radius:14px;padding:22px;width:480px;max-width:95vw;max-height:88vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,0.25);" onclick="event.stopPropagation()">'
+    +'<div style="font-size:16px;font-weight:800;color:var(--text-primary);margin-bottom:4px;">Advanced filters</div>'
+    +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Combine criteria to build a precise contact list. Save as a named list when done.</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+    +anAdvField('Owner', '<select id="af-owner" style="'+anAdvInputStyle()+'">'+ownerOpts+'</select>')
+    +anAdvField('Lead status', '<select id="af-status" style="'+anAdvInputStyle()+'"><option value="">Any</option>'+statusOpts+'</select>')
+    +anAdvField('State', '<input id="af-state" type="text" maxlength="2" placeholder="e.g. UT" value="'+anEsc(adv.state)+'" style="'+anAdvInputStyle()+'">')
+    +anAdvField('Company contains', '<input id="af-company" type="text" placeholder="e.g. FHM" value="'+anEsc(adv.company)+'" style="'+anAdvInputStyle()+'">')
+    +anAdvField('Title contains', '<input id="af-title" type="text" value="'+anEsc(adv.title)+'" style="'+anAdvInputStyle()+'">')
+    +anAdvField('Source contains', '<input id="af-source" type="text" value="'+anEsc(adv.source)+'" style="'+anAdvInputStyle()+'">')
+    +anAdvField('Has phone', '<select id="af-phone" style="'+anAdvInputStyle()+'"><option value="">Any</option><option value="yes"'+(adv.hasPhone==='yes'?' selected':'')+'>Yes</option><option value="no"'+(adv.hasPhone==='no'?' selected':'')+'>No</option></select>')
+    +anAdvField('Has email', '<select id="af-email" style="'+anAdvInputStyle()+'"><option value="">Any</option><option value="yes"'+(adv.hasEmail==='yes'?' selected':'')+'>Yes</option><option value="no"'+(adv.hasEmail==='no'?' selected':'')+'>No</option></select>')
+    +anAdvField('Created after', '<input id="af-created-after" type="date" value="'+anEsc(adv.createdAfter)+'" style="'+anAdvInputStyle()+'">')
+    +anAdvField('Created before', '<input id="af-created-before" type="date" value="'+anEsc(adv.createdBefore)+'" style="'+anAdvInputStyle()+'">')
+    +anAdvField('Last activity after', '<input id="af-act-after" type="date" value="'+anEsc(adv.lastActivityAfter)+'" style="'+anAdvInputStyle()+'">')
+    +anAdvField('Last activity before', '<input id="af-act-before" type="date" value="'+anEsc(adv.lastActivityBefore)+'" style="'+anAdvInputStyle()+'">')
+    +'</div>'
+    +'<div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;">'
+    +'<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);cursor:pointer;"><input type="checkbox" id="af-followup"'+(adv.followUpDue?' checked':'')+'> Follow-up due today or earlier</label>'
+    +'<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);cursor:pointer;"><input type="checkbox" id="af-never-called"'+(adv.neverCalled?' checked':'')+'> Never called</label>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;margin-top:18px;">'
+    +'<button type="button" onclick="anApplyAdvancedFiltersFromModal()" style="flex:1;background:#6366f1;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);">Apply filters</button>'
+    +'<button type="button" onclick="anOpenSaveContactListModal()" style="flex:1;background:var(--body-bg);color:var(--text-secondary);border:1.5px solid var(--divider);border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);">Save as list</button>'
+    +'<button type="button" onclick="document.getElementById(\'an-adv-filter-modal\').remove()" style="padding:10px 14px;background:transparent;border:1px solid var(--divider);border-radius:8px;font-size:13px;cursor:pointer;font-family:var(--sans);color:var(--text-muted);">Cancel</button>'
+    +'</div></div>';
+  modal.onclick = function(e){ if(e.target===modal) modal.remove(); };
+  document.body.appendChild(modal);
+};
+
+function anAdvInputStyle(){ return 'width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:8px 10px;font-size:12px;font-family:var(--sans);background:var(--card-bg);color:var(--text-primary);outline:none;box-sizing:border-box;'; }
+function anAdvField(label, input){ return '<div><label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);display:block;margin-bottom:4px;">'+label+'</label>'+input+'</div>'; }
+
+window.anApplyAdvancedFiltersFromModal = function(){
+  var owner = (document.getElementById('af-owner')||{}).value || '';
+  AN.advancedFilters = {
+    owner: owner === '__mine__' ? '' : owner,
+    status: (document.getElementById('af-status')||{}).value || '',
+    state: ((document.getElementById('af-state')||{}).value || '').toUpperCase(),
+    company: (document.getElementById('af-company')||{}).value || '',
+    source: (document.getElementById('af-source')||{}).value || '',
+    title: (document.getElementById('af-title')||{}).value || '',
+    hasPhone: (document.getElementById('af-phone')||{}).value || '',
+    hasEmail: (document.getElementById('af-email')||{}).value || '',
+    followUpDue: !!(document.getElementById('af-followup')||{}).checked,
+    neverCalled: !!(document.getElementById('af-never-called')||{}).checked,
+    createdAfter: (document.getElementById('af-created-after')||{}).value || '',
+    createdBefore: (document.getElementById('af-created-before')||{}).value || '',
+    lastActivityAfter: (document.getElementById('af-act-after')||{}).value || '',
+    lastActivityBefore: (document.getElementById('af-act-before')||{}).value || ''
+  };
+  if(owner === '__mine__') AN.repFilter = '__mine__';
+  else if(owner && owner !== '__none__') AN.repFilter = owner;
+  else if(owner !== '__none__') AN.repFilter = '';
+  if(AN.advancedFilters.status) AN.currentFilter = AN.advancedFilters.status;
+  var modal = document.getElementById('an-adv-filter-modal');
+  if(modal) modal.remove();
+  anOnFilterChanged();
+};
+
+window.anOpenSaveContactListModal = function(){
+  var name = prompt('Name this contact list:', '');
+  if(!name || !name.trim()) return;
+  var custom = [];
+  try { custom = JSON.parse(localStorage.getItem(AN_LISTS_KEY) || '[]'); } catch(e){}
+  if(!Array.isArray(custom)) custom = [];
+  var id = 'list-' + Date.now();
+  custom.push({ id:id, name:name.trim(), isSystem:false, filters:anCaptureListFilters() });
+  anSaveCustomContactLists(custom);
+  AN.activeListId = id;
+  if(typeof showToast === 'function') showToast('List saved: ' + name.trim());
+  anRefreshContactListUI();
+};
+
+window.anDeleteContactList = function(id){
+  if(!confirm('Delete this contact list?')) return;
+  var custom = [];
+  try { custom = JSON.parse(localStorage.getItem(AN_LISTS_KEY) || '[]'); } catch(e){}
+  custom = custom.filter(function(l){ return l.id !== id; });
+  anSaveCustomContactLists(custom);
+  if(AN.activeListId === id) anApplyContactList('sys-all');
+  else anRefreshContactListUI();
+};
+
 // ── Filter leads ──────────────────────────────────────────────
 AN.filtered = function(){
-  var cacheKey = (AN.searchQ||'')+'|'+(AN.currentFilter||'')+'|'+(AN.repFilter||'')+'|'+AN.leads.length+'|'+(AN.sortField||'')+'|'+(AN.sortDir||'');
+  var patchN = 0;
+  try { patchN = Object.keys(anGetOwnerPatches()).length; } catch(e){}
+  var advKey = '';
+  try { advKey = JSON.stringify(AN.advancedFilters || {}); } catch(e){}
+  var cacheKey = (AN.activeListId||'')+'|'+(AN.searchQ||'')+'|'+(AN.currentFilter||'')+'|'+(AN.repFilter||'')+'|'+AN.leads.length+'|'+patchN+'|'+advKey+'|'+(AN.sortField||'')+'|'+(AN.sortDir||'');
   if(AN._filteredCache && AN._filteredCache.key === cacheKey) return AN._filteredCache.list.slice();
-  var q = AN.searchQ.toLowerCase();
+  var q = (AN.searchQ || '').toLowerCase();
+  var adv = AN.advancedFilters || {};
   var list = AN.leads.filter(function(l){
     if(!anIsProspect(l)) return false;
     if(!AN.isAdmin && l._repEmail && l._repEmail!==AN.currentRepEmail) return false;
-    if(AN.repFilter && l._repEmail!==AN.repFilter) return false;
-    if(AN.currentFilter==='hot') {
+    if(AN.repFilter === '__mine__'){
+      if(l._repEmail && l._repEmail !== AN.currentRepEmail) return false;
+    } else if(AN.repFilter && l._repEmail !== AN.repFilter) return false;
+    if(adv.status){
+      if((l.status||'new') !== adv.status) return false;
+    } else if(AN.currentFilter==='hot') {
       if(['new','contacted','followup','emailed'].indexOf(l.status||'new') < 0) return false;
     } else if(AN.currentFilter==='demo') {
       if(l.status !== 'booked_demo') return false;
     } else if(AN.currentFilter==='followup') {
       if(!l.nextFollowUp) return false;
     } else if(AN.currentFilter!=='all' && l.status!==AN.currentFilter) return false;
+    if(!anMatchesAdvancedFilters(l, adv)) return false;
     if(q){
       var hay = (l.firstName+l.lastName+l.company+l.email+l.phone+l.state+(l.title||'')+(l.source||'')+(l.notes||'')).toLowerCase();
       var qDigits = q.replace(/\D/g,'');
@@ -8988,8 +9509,14 @@ AN.filtered = function(){
     }
     return true;
   });
+  var sortField = AN.sortField || 'created';
   list.sort(function(a,b){
-    var av=(a[AN.sortField]||'').toString(), bv=(b[AN.sortField]||'').toString();
+    var av, bv;
+    if(sortField === 'lastContactDate'){
+      av = anLeadLastActivityDate(a); bv = anLeadLastActivityDate(b);
+    } else {
+      av = (a[sortField]||'').toString(); bv = (b[sortField]||'').toString();
+    }
     return AN.sortDir==='asc'?av.localeCompare(bv):bv.localeCompare(av);
   });
   AN._filteredCache = { key: cacheKey, list: list };
@@ -9001,14 +9528,29 @@ window.renderCRM = function(){
   var sec = document.getElementById('section-crm');
   if(!sec) return;
 
+  if(AN.leadsReady && AN.leads.length && document.getElementById('crm-content')){
+    if(typeof anRefreshFilterChips === 'function') anRefreshFilterChips();
+    if(typeof anRefreshContactListUI === 'function') anRefreshContactListUI();
+    renderLeadsTable();
+    if(typeof anUpdateBulkBar === 'function') anUpdateBulkBar();
+    return;
+  }
+
   sec.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:60vh;">'
     +'<div style="text-align:center"><div class="loading-spinner" style="margin:0 auto 12px;"></div>'
-    +'<div style="font-size:13px;color:var(--text-muted);">Loading CRM...</div></div></div>';
+    +'<div style="font-size:13px;color:var(--text-muted);">'+(AN.leadsLoading ? 'Loading '+((AN.leads&&AN.leads.length)||0).toLocaleString()+' leads...' : 'Loading CRM...')+'</div></div></div>';
 
   AN.load(function(){
+    try { var ps = localStorage.getItem('an-crm-page-size'); if(ps) AN.pageSize = Math.min(1000, Math.max(25, parseInt(ps, 10) || 100)); } catch(e){}
+    try { AN.activeListId = localStorage.getItem('an-crm-active-list') || AN.activeListId || 'sys-all'; } catch(e){ AN.activeListId = AN.activeListId || 'sys-all'; }
+    if(!anGetContactListById(AN.activeListId)) AN.activeListId = 'sys-all';
+    var activeList = anGetContactListById(AN.activeListId);
+    if(activeList) anApplyListFiltersToState(activeList.filters);
     sec.innerHTML = buildCRMShell();
     anBindCRMEvents();
+    if(typeof anRefreshFilterChips === 'function') anRefreshFilterChips();
     renderLeadsTable();
+    if(typeof anUpdateBulkBar === 'function') anUpdateBulkBar();
   });
 };
 
@@ -9037,7 +9579,7 @@ function buildCRMShell(){
     {id:'followup',label:'📅 Follow Up'}
   ].map(function(f){
     var active = AN.currentFilter===f.id;
-    return '<button onclick="AN.currentFilter=\''+f.id+'\';anResetLeadsPage();renderLeadsTable();" '
+    return '<button onclick="AN.currentFilter=\''+f.id+'\';anOnFilterChanged();" '
       +'style="padding:5px 13px;border-radius:20px;border:1.5px solid '+(active?'#6366f1':'var(--divider)')+';background:'+(active?'rgba(99,102,241,0.1)':'transparent')+';color:'+(active?'#6366f1':'var(--text-secondary)')+';font-size:12.5px;font-weight:'+(active?'700':'500')+';cursor:pointer;font-family:var(--sans);white-space:nowrap;">'+f.label+'</button>';
   }).join('');
 
@@ -9068,7 +9610,7 @@ function buildCRMShell(){
     +'<h1 style="font-size:22px;font-weight:900;letter-spacing:-0.5px;color:var(--text-primary);margin:0;">Lead Pipeline</h1></div>'
     +'<div style="display:flex;gap:8px;align-items:center;">'
     +'<div style="position:relative;">'
-    +'<input id="crm-search" type="text" placeholder="Search leads..." value="'+anEsc(AN.searchQ)+'" oninput="AN.searchQ=this.value;anResetLeadsPage();renderLeadsTable()" '
+    +'<input id="crm-search" type="text" placeholder="Search contacts..." value="'+anEsc(AN.searchQ)+'" oninput="AN.searchQ=this.value;anOnFilterChanged()" '
     +'style="padding:8px 12px 8px 32px;border:1.5px solid var(--divider);border-radius:8px;font-size:13px;color:var(--text-primary);background:var(--card-bg);outline:none;width:200px;font-family:var(--sans);" '
     +'onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'">'
     +'<span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;color:var(--text-muted);">🔍</span>'
@@ -9078,6 +9620,12 @@ function buildCRMShell(){
     +'<button onclick="anOpenFixFromCSV()" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px solid #fde68a;border-radius:8px;font-size:13px;font-weight:600;color:#b45309;background:#fffbeb;cursor:pointer;font-family:var(--sans);">🔧 Fix from CSV</button>'
     +'<button onclick="anNewLead()" style="display:flex;align-items:center;gap:6px;padding:8px 16px;border:none;border-radius:8px;font-size:13px;font-weight:700;color:#fff;background:#6366f1;cursor:pointer;font-family:var(--sans);box-shadow:0 2px 8px rgba(99,102,241,0.3);">+ Add Lead</button>'
     +'</div></div>'
+
+    // Contact list tabs (saved views)
+    + (typeof anBuildContactListTabs === 'function' ? anBuildContactListTabs() : '')
+
+    // Sort + advanced filter toolbar
+    + (typeof anBuildContactFilterBar === 'function' ? anBuildContactFilterBar() : '')
 
     // Stats
     +'<div style="display:flex;background:var(--card-bg);border-bottom:1px solid var(--divider);flex-shrink:0;overflow-x:auto;">'+statsHTML+'</div>'
@@ -9118,18 +9666,37 @@ function anLeadsPageSlice(list){
   return { pageList: list.slice(start, start + pageSize), totalPages: totalPages, start: start };
 }
 
+function anSetLeadsPageSize(n){
+  n = parseInt(n, 10);
+  if(isNaN(n) || n < 25) n = 100;
+  if(n > 1000) n = 1000;
+  AN.pageSize = n;
+  try { localStorage.setItem('an-crm-page-size', String(n)); } catch(e){}
+  anResetLeadsPage();
+  renderLeadsTable();
+}
+
 function anRenderLeadsPagination(list, totalPages, start){
-  if(list.length <= (AN.pageSize || 100)) return '';
-  var end = Math.min(start + (AN.pageSize || 100), list.length);
-  return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--divider);background:var(--card-bg);flex-shrink:0;gap:10px;flex-wrap:wrap;">'
-    +'<div style="font-size:12px;color:var(--text-muted);">Showing '+(start+1)+'–'+end+' of '+list.length+'</div>'
-    +'<div style="display:flex;gap:6px;align-items:center;">'
+  var pageSize = AN.pageSize || 100;
+  var end = Math.min(start + pageSize, list.length);
+  var pageOpts = [100, 250, 500, 1000].map(function(n){
+    return '<option value="'+n+'"'+(pageSize===n?' selected':'')+'>'+n+'</option>';
+  }).join('');
+  var pagNav = list.length <= pageSize ? '' :
+    '<div style="display:flex;gap:6px;align-items:center;">'
     +'<button onclick="AN.listPage=0;renderLeadsTable()" '+(AN.listPage<=0?'disabled':'')+' style="padding:5px 10px;border-radius:6px;border:1px solid var(--divider);background:var(--body-bg);font-size:11px;font-weight:600;cursor:pointer;">First</button>'
     +'<button onclick="AN.listPage=Math.max(0,AN.listPage-1);renderLeadsTable()" '+(AN.listPage<=0?'disabled':'')+' style="padding:5px 10px;border-radius:6px;border:1px solid var(--divider);background:var(--body-bg);font-size:11px;font-weight:600;cursor:pointer;">Prev</button>'
     +'<span style="font-size:12px;font-weight:700;color:var(--text-secondary);min-width:90px;text-align:center;">Page '+(AN.listPage+1)+' / '+totalPages+'</span>'
     +'<button onclick="AN.listPage=Math.min('+(totalPages-1)+',AN.listPage+1);renderLeadsTable()" '+(AN.listPage>=totalPages-1?'disabled':'')+' style="padding:5px 10px;border-radius:6px;border:1px solid var(--divider);background:var(--body-bg);font-size:11px;font-weight:600;cursor:pointer;">Next</button>'
     +'<button onclick="AN.listPage='+(totalPages-1)+';renderLeadsTable()" '+(AN.listPage>=totalPages-1?'disabled':'')+' style="padding:5px 10px;border-radius:6px;border:1px solid var(--divider);background:var(--body-bg);font-size:11px;font-weight:600;cursor:pointer;">Last</button>'
-    +'</div></div>';
+    +'</div>';
+  return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--divider);background:var(--card-bg);flex-shrink:0;gap:10px;flex-wrap:wrap;">'
+    +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+    +'<div style="font-size:12px;color:var(--text-muted);">Showing '+(start+1).toLocaleString()+'–'+end.toLocaleString()+' of '+list.length.toLocaleString()+'</div>'
+    +'<label style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">Per page <select onchange="anSetLeadsPageSize(this.value)" style="border:1px solid var(--divider);border-radius:6px;padding:4px 8px;font-size:11px;font-family:var(--sans);background:var(--card-bg);color:var(--text-primary);">'+pageOpts+'</select></label>'
+    +'</div>'
+    + pagNav
+    +'</div>';
 }
 
 function renderLeadsTable(){
@@ -9138,7 +9705,14 @@ function renderLeadsTable(){
   var list = AN.filtered();
   var el = document.getElementById('crm-content');
   var countEl = document.getElementById('crm-count');
-  if(countEl) countEl.textContent = list.length+' of '+AN.leads.length;
+  if(countEl) countEl.textContent = list.length.toLocaleString()+' of '+AN.leads.length.toLocaleString();
+  if(typeof anRefreshContactListUI === 'function'){
+    clearTimeout(window._anListTabTimer);
+    window._anListTabTimer = setTimeout(function(){
+      anRefreshContactListUI();
+      if(typeof anRefreshTransferFilteredBtn === 'function') anRefreshTransferFilteredBtn();
+    }, 250);
+  }
   if(!el) return;
 
   if(AN.currentView==='kanban'){
@@ -9223,7 +9797,7 @@ function renderLeadsTable(){
   el.innerHTML = '<div style="display:flex;flex-direction:column;min-height:100%;">'
     +'<div style="flex:1;overflow:auto;"><table style="width:100%;border-collapse:collapse;font-size:13.5px;min-width:800px;">'
     +'<thead><tr>'
-    +'<th style="width:36px;padding:9px 12px;border-bottom:2px solid var(--divider);vertical-align:bottom;"><input type="checkbox" id="crm-select-all" onclick="anToggleSelectAll(this.checked)" title="Select this page only" style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;"><div style="font-size:8px;color:var(--text-muted);margin-top:3px;white-space:nowrap;"><a href="#" onclick="event.preventDefault();anSelectAllFilteredLeads()" style="color:#6366f1;text-decoration:none;">all filtered</a></div></th>'
+    +'<th style="width:52px;padding:9px 8px;border-bottom:2px solid var(--divider);vertical-align:bottom;"><input type="checkbox" id="crm-select-all" onclick="anToggleSelectAll(this.checked)" title="Select leads on this page only ('+(AN.pageSize||100)+' max)" style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;"><div style="font-size:8px;color:var(--text-muted);margin-top:3px;line-height:1.35;"><span style="display:block;">this page</span><a href="#" onclick="event.preventDefault();anSelectAllFilteredLeads()" style="color:#6366f1;text-decoration:none;font-weight:700;">all '+list.length.toLocaleString()+'</a></div></th>'
     +th('Name','lastName')+th('Company','company')+th('State','state')+th('Size','size')+th('Phone','phone')+th('Status','status')
     +(anShowOwnerColumn()?'<th style="padding:9px 12px;border-bottom:2px solid var(--divider);font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#f59e0b;">Owner</th>':'')
     +th('Follow Up','nextFollowUp')+th('Last Activity','lastContactDate')
@@ -9700,6 +10274,44 @@ function anPatchOwnerCells(leadIds, email){
   });
 }
 
+function anRemoveLeadRows(leadIds){
+  var idSet = {};
+  leadIds.forEach(function(id){ idSet[id] = true; });
+  document.querySelectorAll('#crm-content tbody tr').forEach(function(tr){
+    var cb = tr.querySelector('.lead-cb');
+    if(cb && idSet[cb.getAttribute('data-id')]) tr.remove();
+  });
+}
+
+window.anRefreshRepCounts = function(){
+  AN._knownRepEmailsCache = null;
+  var bar = document.querySelector('#section-crm span[style*="Rep:"]');
+  if(!bar || !bar.parentElement) return;
+  var wrap = bar.parentElement;
+  var reps = [];
+  AN.leads.forEach(function(l){ if(l._repEmail && reps.indexOf(l._repEmail) < 0) reps.push(l._repEmail); });
+  reps.sort();
+  wrap.querySelectorAll('button[onclick*="AN.repFilter"]').forEach(function(btn){
+    var onclick = btn.getAttribute('onclick') || '';
+    var m = onclick.match(/AN\.repFilter='([^']*)'/);
+    if(!m) return;
+    var email = m[1];
+    if(!email){
+      btn.textContent = 'All';
+      return;
+    }
+    var cnt = AN.leads.filter(function(l){ return l._repEmail === email; }).length;
+    var name = typeof anGetRepName === 'function' ? anGetRepName(email) : email.split('@')[0];
+    var col = anColor(email);
+    var active = AN.repFilter === email;
+    btn.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:'+col+';flex-shrink:0;"></span>'
+      + name + ' (' + cnt.toLocaleString() + ')';
+    btn.style.borderColor = active ? col : 'var(--divider)';
+    btn.style.background = active ? col + '1a' : 'transparent';
+    btn.style.color = active ? col : 'var(--text-secondary)';
+  });
+};
+
 function anRefreshLeadPanelOwner(leadId, email){
   if(!leadId) return;
   var panel = document.getElementById('an-side-panel');
@@ -9724,6 +10336,7 @@ window.anOpenOwnerPicker = function(opts) {
   opts = opts || {};
   var leadIds = [];
   if (opts.leadId) leadIds = [opts.leadId];
+  else if (opts.useFiltered) leadIds = AN.filtered().map(function(l){ return l.id; });
   else if (opts.leadIds && opts.leadIds.length) leadIds = opts.leadIds.slice();
   else if (opts.companyName) {
     AN.leads.forEach(function(l) {
@@ -9751,12 +10364,15 @@ window.anOpenOwnerPicker = function(opts) {
   var knownEmails = anGetKnownRepEmails();
   var title = opts.companyName
     ? 'Assign company owner — ' + opts.companyName
-    : (leadIds.length > 1 ? 'Assign owner — ' + leadIds.length.toLocaleString() + ' records' : 'Change owner');
+    : (opts.useFiltered ? 'Transfer contact list — ' + leadIds.length.toLocaleString() + ' leads'
+      : (leadIds.length > 1 ? 'Assign owner — ' + leadIds.length.toLocaleString() + ' records' : 'Change owner'));
   var subtitle = opts.companyName
     ? 'Sets owner on all '+leadIds.length.toLocaleString()+' contacts at this company.'
-    : (leadIds.length > 1
-      ? 'Applies to all '+leadIds.length.toLocaleString()+' selected leads. Save may take a moment on large lists.'
-      : 'Select the rep who owns this record.');
+    : (opts.useFiltered
+      ? 'Transfers every lead in your current filtered view. Wait for the save confirmation before refreshing.'
+      : (leadIds.length > 1
+        ? 'Applies to all '+leadIds.length.toLocaleString()+' leads. Save may take a moment on large lists.'
+        : 'Select the rep who owns this record.'));
 
   var pop = document.createElement('div');
   pop.id = 'an-reassign-popover';
@@ -9809,6 +10425,56 @@ window.anOpenOwnerPicker = function(opts) {
   pop.onclick = function(e) { if (e.target === pop) pop.remove(); };
 };
 
+function anConfirmLargeTransfer(count, label){
+  if(count <= 500) return true;
+  return confirm('Transfer ' + count.toLocaleString() + ' ' + (label || 'leads') + ' to a new owner?\n\nThis can take 30–90 seconds on large lists. Please wait for the save confirmation before refreshing.');
+}
+
+function anFinishOwnerAssignment(appliedIds, email){
+  anRecordOwnerPatches(appliedIds, email);
+  AN.invalidateLeadCaches();
+  var pop = document.getElementById('an-reassign-popover');
+  if (pop) pop.remove();
+  if(appliedIds.length <= 500){
+    anPatchOwnerCells(appliedIds, email);
+    var hideForRep = AN.repFilter || (!AN.isAdmin ? AN.currentRepEmail : '');
+    if(hideForRep && hideForRep !== email) anRemoveLeadRows(appliedIds);
+  } else if(typeof renderLeadsTable === 'function'){
+    renderLeadsTable();
+  }
+  if(window._anPanelLeadId) anRefreshLeadPanelOwner(window._anPanelLeadId, email);
+  if(typeof anRefreshRepCounts === 'function') anRefreshRepCounts();
+  if(typeof anRefreshTransferFilteredBtn === 'function') anRefreshTransferFilteredBtn();
+  if(typeof showToast === 'function') showToast('Assigned to ' + anGetRepName(email) + (appliedIds.length > 1 ? ' (' + appliedIds.length.toLocaleString() + ' leads)' : '') + ' — saving...');
+  if (appliedIds.length > 0 && AN.selectedIds && AN.selectedIds.length) {
+    var assigned = {};
+    appliedIds.forEach(function(id){ assigned[id] = true; });
+    AN.selectedIds = AN.selectedIds.filter(function(id){ return !assigned[id]; });
+    document.querySelectorAll('#crm-content .lead-cb').forEach(function(cb){
+      if (assigned[cb.getAttribute('data-id')]) cb.checked = false;
+    });
+    if (typeof anUpdateBulkBar === 'function') anUpdateBulkBar();
+  }
+  AN._ownerAssignBusy = true;
+  if(appliedIds.length > 200) anShowOwnerSaveOverlay(true, 'Saving ' + appliedIds.length.toLocaleString() + ' owner changes...');
+  clearTimeout(AN._ownerSaveTimer);
+  var delay = appliedIds.length > 5000 ? 2000 : (appliedIds.length > 500 ? 1500 : (appliedIds.length > 50 ? 400 : 80));
+  AN._ownerSaveTimer = setTimeout(function(){
+    AN.save(function(ok, err, where) {
+      AN._ownerAssignBusy = false;
+      anShowOwnerSaveOverlay(false);
+      AN.invalidateLeadCaches();
+      if(ok !== false && where !== 'failed') anClearOwnerPatches(appliedIds);
+      if(typeof anRefreshRepCounts === 'function') anRefreshRepCounts();
+      if(typeof anRefreshTransferFilteredBtn === 'function') anRefreshTransferFilteredBtn();
+      var msg = (ok !== false && where !== 'failed') ? 'Owner saved' : 'Save failed — try again';
+      if(where === 'idb' || where === 'local') msg = 'Owner saved in browser';
+      if(typeof showToast === 'function') showToast(msg + ' — ' + anGetRepName(email) + (appliedIds.length > 1 ? ' (' + appliedIds.length.toLocaleString() + ')' : ''));
+      if(typeof renderLeadsTable === 'function') renderLeadsTable();
+    });
+  }, delay);
+}
+
 window.anApplyOwnerAssignment = function(leadIds, email) {
   if(AN._ownerAssignBusy){
     if(typeof showToast === 'function') showToast('Still saving previous assignment — one moment');
@@ -9820,50 +10486,56 @@ window.anApplyOwnerAssignment = function(leadIds, email) {
     return;
   }
   email = email.trim().toLowerCase();
-  var count = 0;
-  leadIds.forEach(function(id) {
-    var lead = AN.leadById(id);
-    if (!lead || !anCanReassignOwner(lead)) return;
-    lead._repEmail = email;
-    lead.updated = new Date().toISOString();
-    count++;
-  });
-  if (!count) return;
+  leadIds = leadIds || [];
+  if(!leadIds.length) return;
 
-  AN._ownerAssignBusy = true;
-  var pop = document.getElementById('an-reassign-popover');
-  if (pop) pop.remove();
+  if(leadIds.length > 200){
+    anShowOwnerSaveOverlay(true, 'Updating ' + leadIds.length.toLocaleString() + ' leads...');
+  }
 
-  anPatchOwnerCells(leadIds, email);
-  if(window._anPanelLeadId) anRefreshLeadPanelOwner(window._anPanelLeadId, email);
-  if(typeof showToast === 'function') showToast('Assigned to ' + anGetRepName(email) + (count > 1 ? ' (' + count.toLocaleString() + ' leads)' : '') + ' — saving...');
-
-  AN.save(function(ok) {
-    AN._ownerAssignBusy = false;
-    AN.invalidateLeadCaches();
-    if (leadIds.length > 1 && AN.selectedIds && AN.selectedIds.length) {
-      var assigned = {};
-      leadIds.forEach(function(id){ assigned[id] = true; });
-      AN.selectedIds = AN.selectedIds.filter(function(id){ return !assigned[id]; });
-      document.querySelectorAll('#crm-content .lead-cb').forEach(function(cb){
-        if (assigned[cb.getAttribute('data-id')]) cb.checked = false;
-      });
-      if (typeof anUpdateBulkBar === 'function') anUpdateBulkBar();
+  var appliedIds = [];
+  var i = 0;
+  var CHUNK = 600;
+  function processChunk(){
+    var end = Math.min(i + CHUNK, leadIds.length);
+    for(; i < end; i++){
+      var lead = AN.leadById(leadIds[i]);
+      if (!lead || !anCanReassignOwner(lead)) continue;
+      lead._repEmail = email;
+      lead.updated = new Date().toISOString();
+      appliedIds.push(leadIds[i]);
     }
-    if (typeof showToast === 'function') showToast((ok !== false ? 'Owner saved' : 'Saved locally') + ' — ' + anGetRepName(email) + (count > 1 ? ' (' + count.toLocaleString() + ')' : ''));
-  });
+    if(i < leadIds.length){
+      setTimeout(processChunk, 0);
+    } else {
+      anShowOwnerSaveOverlay(false);
+      if(!appliedIds.length) return;
+      anFinishOwnerAssignment(appliedIds, email);
+    }
+  }
+  setTimeout(processChunk, 0);
 };
 
 window.anBulkReassignOwner = function() {
   if (typeof anSanitizeSelection === 'function') anSanitizeSelection();
   if (!AN.selectedIds || !AN.selectedIds.length) {
     if (typeof anUpdateBulkBar === 'function') anUpdateBulkBar();
-    if (typeof showToast === 'function') showToast('No leads selected');
+    if (typeof showToast === 'function') showToast('No leads selected — use "Transfer list" to move all filtered leads, or click all filtered under the checkbox');
     return;
   }
   var ids = AN.selectedIds.slice();
-  if (ids.length > 500 && !confirm('Assign owner to ' + ids.length.toLocaleString() + ' selected leads?')) return;
+  if (!anConfirmLargeTransfer(ids.length, 'selected leads')) return;
   anOpenOwnerPicker({ leadIds: ids });
+};
+
+window.anBulkReassignFilteredOwner = function(){
+  var ids = AN.filtered().map(function(l){ return l.id; });
+  if(!ids.length){
+    if(typeof showToast === 'function') showToast('No leads in current list — adjust filters first');
+    return;
+  }
+  if(!anConfirmLargeTransfer(ids.length, 'leads in this list')) return;
+  anOpenOwnerPicker({ useFiltered: true, leadIds: ids });
 };
 
 window.anInlineReassign = function(leadId) { anOpenOwnerPicker({ leadId: leadId }); };
@@ -14783,8 +15455,12 @@ function hdRender() {
   var todayStr = now.getFullYear()+'-'+pad2(now.getMonth()+1)+'-'+pad2(now.getDate());
 
   // ── Gather data from AN.leads (sync cache if memory empty) ──
-  if (typeof AN !== 'undefined' && (!AN.leads || !AN.leads.length)) {
-    try { AN.leads = anNormalizeLeads(JSON.parse(localStorage.getItem('an-crm-leads') || '[]')); } catch(e) {}
+  if (typeof AN !== 'undefined' && (!AN.leads || !AN.leads.length) && !AN.leadsLoading) {
+    try {
+      if (localStorage.getItem('an-crm-leads-idb') !== '1') {
+        AN.leads = anApplyOwnerPatches(anNormalizeLeads(JSON.parse(localStorage.getItem('an-crm-leads') || '[]')));
+      }
+    } catch(e) {}
   }
   var leads = (typeof AN !== 'undefined' && AN.leads) ? AN.leads : [];
   var myEmail = (typeof AN !== 'undefined' && AN.currentRepEmail) || '';
@@ -16457,7 +17133,7 @@ window.anEnsureLeadsLoaded = function(cb) {
   try {
     if (!AN.leads || !AN.leads.length) {
       if (localStorage.getItem('an-crm-leads-idb') !== '1') {
-        AN.leads = anNormalizeLeads(JSON.parse(localStorage.getItem('an-crm-leads') || '[]'));
+        AN.leads = anApplyOwnerPatches(anNormalizeLeads(JSON.parse(localStorage.getItem('an-crm-leads') || '[]')));
         if (AN.leads.length) AN.leadsReady = true;
       } else {
         AN.leadsLoading = true;
