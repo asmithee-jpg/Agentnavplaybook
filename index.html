@@ -8907,13 +8907,16 @@ function anGetOwnerPatches(){
 }
 
 function anRecordOwnerPatches(leadIds, email){
-  if(!leadIds || !leadIds.length || !email) return;
+  if(!leadIds || !leadIds.length) return;
   if(leadIds.length > 3000) return;
   try {
     var patches = anGetOwnerPatches();
     var n = 0;
     leadIds.forEach(function(id){
-      if(id && n < 3000){ patches[id] = email; n++; }
+      if(!id || n >= 3000) return;
+      if(email && email.indexOf('@') > 0) patches[id] = email.toLowerCase();
+      else delete patches[id];
+      n++;
     });
     localStorage.setItem(AN_OWNER_PATCH_KEY, JSON.stringify(patches));
   } catch(e){ console.warn('[CRM] Owner patch write failed:', e); }
@@ -9547,6 +9550,7 @@ window.anBuildContactFilterBar = function(){
     +'<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);font-weight:600;">Transfer'
     +'<input id="crm-transfer-count" type="number" min="1" max="100000" value="'+transferN+'" onchange="anPersistTransferBatchCount();anRefreshTransferFilteredBtn()" onkeydown="if(event.key===\'Enter\'){anPersistTransferBatchCount();anBulkReassignFilteredOwner();}" style="width:72px;border:1.5px solid var(--divider);border-radius:6px;padding:5px 8px;font-size:12px;font-weight:700;font-family:var(--sans);background:var(--card-bg);color:var(--text-primary);outline:none;">'
     +'<span id="crm-transfer-hint" style="white-space:nowrap;">of '+filteredN.toLocaleString()+'</span></label>'
+    +(AN.isAdmin ? '<button type="button" id="crm-split-leads-btn" onclick="anOpenSplitLeadsModal()" style="padding:5px 11px;border-radius:8px;border:1.5px solid #c7d2fe;background:#eef2ff;color:#4338ca;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);white-space:nowrap;">✂️ Split '+filteredN.toLocaleString()+' leads</button>' : '')
     +'<button type="button" id="crm-transfer-filtered-btn" onclick="anBulkReassignFilteredOwner()" style="padding:5px 11px;border-radius:8px;border:1.5px solid #fde68a;background:#fffbeb;color:#b45309;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);white-space:nowrap;">👤 Transfer</button>'
     +'<button type="button" onclick="anOpenSaveContactListModal()" style="padding:5px 11px;border-radius:8px;border:1.5px solid var(--divider);background:var(--card-bg);color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);">💾 Save list</button>'
     +'</div></div>';
@@ -9554,12 +9558,14 @@ window.anBuildContactFilterBar = function(){
 
 window.anRefreshTransferFilteredBtn = function(){
   var btn = document.getElementById('crm-transfer-filtered-btn');
+  var splitBtn = document.getElementById('crm-split-leads-btn');
   var hint = document.getElementById('crm-transfer-hint');
   var total = 0;
   try { total = AN.filtered().length; } catch(e){}
   var count = typeof anGetTransferBatchCount === 'function' ? anGetTransferBatchCount() : 100;
   var transferN = Math.min(count, total || count);
   if(btn) btn.textContent = '👤 Transfer ' + transferN.toLocaleString();
+  if(splitBtn) splitBtn.textContent = '✂️ Split ' + total.toLocaleString() + ' leads';
   if(hint) hint.textContent = 'of ' + total.toLocaleString();
 };
 
@@ -10851,6 +10857,10 @@ function anConfirmLargeTransfer(count, label){
 function anFinishOwnerAssignment(appliedIds, email){
   anRecordOwnerPatches(appliedIds, email);
   AN.invalidateLeadCaches();
+  if (appliedIds.length && typeof coSyncOwnerForCompanyName === 'function') {
+    var firstLead = AN.leadById(appliedIds[0]);
+    if (firstLead && firstLead.company) coSyncOwnerForCompanyName(firstLead.company.trim(), email);
+  }
   var pop = document.getElementById('an-reassign-popover');
   if (pop) pop.remove();
   var hideForRep = AN.repFilter || (!AN.isAdmin ? AN.currentRepEmail : '');
@@ -10960,6 +10970,211 @@ window.anBulkReassignFilteredOwner = function(){
   var ids = all.slice(0, count).map(function(l){ return l.id; });
   if(!anConfirmLargeTransfer(ids.length, 'leads in this list')) return;
   anOpenOwnerPicker({ leadIds: ids, batchTransfer: true });
+};
+
+function anFinishSplitAssignment(allIds, syncEmails){
+  AN.invalidateLeadCaches();
+  var pop = document.getElementById('an-split-modal');
+  if(pop) pop.remove();
+  if(typeof anRefreshCRMUI === 'function') anRefreshCRMUI();
+  if(typeof showToast === 'function'){
+    showToast('Split complete — ' + allIds.length.toLocaleString() + ' leads reassigned — saving...');
+  }
+  AN._ownerAssignBusy = true;
+  if(allIds.length > 200) anShowOwnerSaveOverlay(true, 'Saving ' + allIds.length.toLocaleString() + ' lead assignments...');
+  clearTimeout(AN._ownerSaveTimer);
+  var delay = allIds.length > 5000 ? 2000 : (allIds.length > 500 ? 1500 : 400);
+  AN._ownerSaveTimer = setTimeout(function(){
+    AN.save(function(ok, err, where){
+      AN._ownerAssignBusy = false;
+      anShowOwnerSaveOverlay(false);
+      if(ok !== false && where !== 'failed') anClearOwnerPatches(allIds);
+      if(AN.isAdmin && typeof anSyncRepLeadsToCloud === 'function'){
+        anSyncRepLeadsToCloud({ onlyEmails: syncEmails || [] }, function(){
+          if(typeof showToast === 'function') showToast('Split saved and synced to rep accounts');
+          if(typeof anRefreshCRMUI === 'function') anRefreshCRMUI();
+        });
+      } else if(typeof anRefreshCRMUI === 'function'){
+        anRefreshCRMUI();
+      }
+    });
+  }, delay);
+}
+
+window.anApplySplitDistribution = function(splits){
+  if(AN._ownerAssignBusy){
+    if(typeof showToast === 'function') showToast('Still saving previous assignment — one moment');
+    return;
+  }
+  if(!AN.isAdmin){
+    if(typeof showToast === 'function') showToast('Only admins can split leads');
+    return;
+  }
+  var leadIds = AN.filtered().map(function(l){ return l.id; });
+  if(!leadIds.length){
+    if(typeof showToast === 'function') showToast('No leads in current list');
+    return;
+  }
+  splits = (splits || []).map(function(s){
+    return { email: s.email, count: Math.max(0, parseInt(s.count, 10) || 0) };
+  }).filter(function(s){ return s.count > 0; });
+  var totalWanted = splits.reduce(function(sum, s){ return sum + s.count; }, 0);
+  if(!totalWanted){
+    if(typeof showToast === 'function') showToast('Enter how many leads each person should get');
+    return;
+  }
+  if(totalWanted > leadIds.length){
+    if(typeof showToast === 'function') showToast('Total assigned (' + totalWanted.toLocaleString() + ') exceeds list size (' + leadIds.length.toLocaleString() + ')');
+    return;
+  }
+  if(totalWanted > 500 && !confirm('Split ' + totalWanted.toLocaleString() + ' leads across ' + splits.length + ' people?\n\nThis may take 30–90 seconds on large lists.')) return;
+
+  var modal = document.getElementById('an-split-modal');
+  if(modal) modal.remove();
+  anShowOwnerSaveOverlay(true, 'Splitting ' + totalWanted.toLocaleString() + ' leads...');
+
+  var idx = 0;
+  var allApplied = [];
+  var syncEmails = {};
+  var splitPos = 0;
+
+  function processNextSplit(){
+    if(splitPos >= splits.length){
+      anShowOwnerSaveOverlay(false);
+      anFinishSplitAssignment(allApplied, Object.keys(syncEmails));
+      return;
+    }
+    var s = splits[splitPos++];
+    var email = s.email === '__none__' ? '' : (s.email || '').toLowerCase();
+    var batch = leadIds.slice(idx, idx + s.count);
+    idx += s.count;
+    var i = 0;
+    var CHUNK = 600;
+    function processChunk(){
+      var end = Math.min(i + CHUNK, batch.length);
+      for(; i < end; i++){
+        var lead = AN.leadById(batch[i]);
+        if(!lead || !anCanReassignOwner(lead)) continue;
+        if(email) lead._repEmail = email;
+        else lead._repEmail = '';
+        lead.updated = new Date().toISOString();
+        allApplied.push(batch[i]);
+      }
+      if(i < batch.length){
+        setTimeout(processChunk, 0);
+      } else {
+        if(batch.length) anRecordOwnerPatches(batch, email);
+        if(email) syncEmails[email] = 1;
+        processNextSplit();
+      }
+    }
+    setTimeout(processChunk, 0);
+  }
+  processNextSplit();
+};
+
+window.anUpdateSplitLeadsTotals = function(total){
+  var assigned = 0;
+  document.querySelectorAll('[data-split-count]').forEach(function(inp){
+    assigned += Math.max(0, parseInt(inp.value, 10) || 0);
+  });
+  var remaining = Math.max(0, total - assigned);
+  var assignedEl = document.getElementById('an-split-assigned');
+  var remainEl = document.getElementById('an-split-remaining');
+  var errEl = document.getElementById('an-split-error');
+  var btn = document.getElementById('an-split-apply-btn');
+  if(assignedEl) assignedEl.textContent = assigned.toLocaleString();
+  if(remainEl) remainEl.textContent = remaining.toLocaleString();
+  var over = assigned > total;
+  if(errEl) errEl.textContent = over ? ('Too many — remove ' + (assigned - total).toLocaleString()) : (assigned ? '' : 'Enter counts for each rep');
+  if(btn){
+    var disabled = over || assigned <= 0;
+    btn.disabled = disabled;
+    btn.style.opacity = disabled ? '0.5' : '1';
+    btn.style.cursor = disabled ? 'not-allowed' : 'pointer';
+  }
+};
+
+window.anOpenSplitLeadsModal = function(){
+  if(!AN.isAdmin){
+    if(typeof showToast === 'function') showToast('Only admins can split leads');
+    return;
+  }
+  var pool = AN.filtered();
+  if(!pool.length){
+    if(typeof showToast === 'function') showToast('No leads in current list — adjust filters first');
+    return;
+  }
+  var total = pool.length;
+  var adminEmail = (AN.currentRepEmail || AN_CRM_ADMIN_EMAIL || '').toLowerCase();
+  var repEmails = anGetKnownRepEmails().filter(function(e){ return e && e.indexOf('@') > 0; });
+
+  var rows = [];
+  repEmails.forEach(function(em){
+    if(em.toLowerCase() === adminEmail) return;
+    rows.push({ email: em.toLowerCase(), label: anGetRepName(em), sub: em, color: anColor(em) });
+  });
+  rows.push({ email: adminEmail, label: 'Keep with me (' + anGetRepName(adminEmail) + ')', sub: adminEmail, color: '#6366f1', isKeep: true });
+  rows.push({ email: '__none__', label: 'Leave unassigned', sub: 'No owner — stays in admin pool', color: '#a1a1aa' });
+
+  var old = document.getElementById('an-split-modal');
+  if(old) old.remove();
+
+  var modal = document.createElement('div');
+  modal.id = 'an-split-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10003;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML = '<div style="background:var(--card-bg);border-radius:14px;padding:22px;width:440px;max-width:95vw;max-height:88vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,0.28);" onclick="event.stopPropagation()">'
+    +'<div style="font-size:17px;font-weight:800;color:var(--text-primary);margin-bottom:4px;">Split ' + total.toLocaleString() + ' leads</div>'
+    +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;">How many from your <strong>current filtered list</strong> should each person get? Leads are assigned top-to-bottom in sort order. Any leftover stays with the current owner.</div>'
+    +'<div style="display:flex;gap:12px;margin-bottom:14px;padding:10px 12px;background:var(--body-bg);border-radius:8px;border:1px solid var(--divider);">'
+    +'<div style="flex:1;text-align:center;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Assigning</div><div id="an-split-assigned" style="font-size:20px;font-weight:900;color:#6366f1;">0</div></div>'
+    +'<div style="flex:1;text-align:center;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Remaining</div><div id="an-split-remaining" style="font-size:20px;font-weight:900;color:var(--text-primary);">' + total.toLocaleString() + '</div></div>'
+    +'<div style="flex:1;text-align:center;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">In list</div><div style="font-size:20px;font-weight:900;color:var(--text-secondary);">' + total.toLocaleString() + '</div></div>'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">'
+    + rows.map(function(r){
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1.5px solid var(--divider);border-radius:8px;background:var(--body-bg);">'
+        +'<span style="width:8px;height:8px;border-radius:50%;background:'+r.color+';flex-shrink:0;"></span>'
+        +'<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:var(--text-primary);">'+anEsc(r.label)+'</div>'
+        +'<div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;">'+anEsc(r.sub)+'</div></div>'
+        +'<input type="number" min="0" max="'+total+'" value="0" data-split-email="'+anEsc(r.email)+'" data-split-count '
+        +'oninput="anUpdateSplitLeadsTotals('+total+')" style="width:80px;border:1.5px solid var(--divider);border-radius:6px;padding:6px 8px;font-size:13px;font-weight:700;text-align:center;font-family:var(--sans);background:var(--card-bg);color:var(--text-primary);outline:none;">'
+        +(r.isKeep ? '<button type="button" onclick="anSplitFillRemaining(\''+r.email+'\')" style="font-size:10px;font-weight:700;color:#6366f1;background:transparent;border:none;cursor:pointer;font-family:var(--sans);white-space:nowrap;">+ rest</button>' : '')
+        +'</div>';
+    }).join('')
+    +'</div>'
+    +'<div id="an-split-error" style="font-size:11px;color:#ef4444;min-height:16px;margin-bottom:10px;"></div>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<button type="button" id="an-split-apply-btn" disabled onclick="anSubmitSplitLeadsModal()" style="flex:1;background:#6366f1;color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);opacity:0.5;">Split & assign</button>'
+    +'<button type="button" onclick="document.getElementById(\'an-split-modal\').remove()" style="padding:11px 16px;background:transparent;border:1px solid var(--divider);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--text-secondary);">Cancel</button>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--text-muted);margin-top:12px;line-height:1.45;">Tip: filter by current owner first (e.g. Adrian), then split to Andy, Joel, etc. Reps see their leads after cloud sync.</div>'
+    +'</div>';
+  document.body.appendChild(modal);
+  modal.onclick = function(e){ if(e.target === modal) modal.remove(); };
+  anUpdateSplitLeadsTotals(total);
+};
+
+window.anSubmitSplitLeadsModal = function(){
+  var splits = [];
+  document.querySelectorAll('[data-split-count]').forEach(function(inp){
+    var n = parseInt(inp.value, 10) || 0;
+    if(n > 0) splits.push({ email: inp.getAttribute('data-split-email'), count: n });
+  });
+  anApplySplitDistribution(splits);
+};
+
+window.anSplitFillRemaining = function(email){
+  var total = AN.filtered().length;
+  var assigned = 0;
+  document.querySelectorAll('[data-split-count]').forEach(function(inp){
+    if(inp.getAttribute('data-split-email') !== email) assigned += Math.max(0, parseInt(inp.value, 10) || 0);
+  });
+  var remain = Math.max(0, total - assigned);
+  document.querySelectorAll('[data-split-count]').forEach(function(inp){
+    if(inp.getAttribute('data-split-email') === email) inp.value = remain;
+  });
+  anUpdateSplitLeadsTotals(total);
 };
 
 window.anInlineReassign = function(leadId) { anOpenOwnerPicker({ leadId: leadId }); };
@@ -12192,7 +12407,12 @@ function anSyncCompaniesFromLeads(){
     if(!cn || !coIsValidCompanyName(cn)) return;
     var key = coNormName(cn);
     if(!compMap[key]){
-      companies.push({ id:'co-'+Date.now()+'-'+Math.random().toString(36).slice(2,6), name:cn, industry:'Insurance Agency', notes:'', website:'', lifecycleStage:'', created:new Date().toISOString() });
+      companies.push({
+        id:'co-'+Date.now()+'-'+Math.random().toString(36).slice(2,6), name:cn, industry:'Insurance Agency',
+        notes:'', website:'', lifecycleStage:'', ownerEmail:(l._repEmail||'').toLowerCase(),
+        created:new Date().toISOString(), updated:new Date().toISOString(),
+        updatedBy:(typeof AN !== 'undefined' ? AN.currentRepEmail : '') || ''
+      });
       compMap[key] = companies[companies.length-1];
       changed = true;
     }
@@ -16260,45 +16480,78 @@ console.log('[HOME DASHBOARD] Rendered successfully.');
 }
 .an-onboard-btn:hover { transform: translateY(-1px); }
 
-/* ── Companies view ─────────────────────────────────────── */
+/* ── Companies board ────────────────────────────────────── */
 #section-companies { overflow: hidden !important; }
-#co-root { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; height: 100%; min-height: 0; width: 100%; max-width: 100%; background: #f7f7f9; display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; }
-#co-split-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
-#co-list-pane { width: 300px; min-width: 260px; max-width: 340px; flex-shrink: 0; background: #fff; border-right: 1px solid #e9e9ef; display: flex; flex-direction: column; overflow: hidden; }
+#co-root {
+  font-family: var(--sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  height: 100%; min-height: 0; width: 100%; background: var(--body-bg, #f7f7f9);
+  display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box;
+}
+#co-page-header { flex-shrink: 0; background: var(--card-bg, #fff); border-bottom: 1px solid var(--divider, #e9e9ef); }
 #co-page-header .co-header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 #co-page-header .co-header-actions button { white-space: nowrap; }
-#co-detail-pane { flex: 1; min-width: 0; overflow: hidden; display: flex; flex-direction: column; }
-.co-detail-grid { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; width: 100%; }
-.co-detail-left { width: 260px; min-width: 220px; max-width: 280px; flex-shrink: 0; border-right: 1px solid #e9e9ef; background: #fff; padding: 20px; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; }
-.co-detail-center { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; overflow: hidden; background: #f7f7f9; }
-.co-detail-right { width: 260px; min-width: 220px; max-width: 280px; flex-shrink: 0; border-left: 1px solid #e9e9ef; background: #fff; padding: 16px 18px 16px 16px; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; }
-.co-table-wrap { flex: 1; overflow: auto; padding: 0 16px 16px; }
-.co-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.co-table th { padding: 9px 12px; text-align: left; font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #71717a; border-bottom: 2px solid #e9e9ef; white-space: nowrap; }
-.co-table td { padding: 10px 12px; border-bottom: 1px solid #f0f0f5; vertical-align: middle; }
-.co-table tr:hover td { background: rgba(99,102,241,0.04); }
-.co-bulk-bar { display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: #fef2f2; border-bottom: 1px solid #fecaca; font-size: 13px; color: #b91c1c; flex-shrink: 0; }
-.co-list-header { padding: 18px 16px 12px; border-bottom: 1px solid #f0f0f5; display: flex; align-items: center; gap: 8px; }
-.co-list-header h2 { font-size: 16px; font-weight: 800; color: #09090b; flex: 1; margin: 0; }
-.co-add-btn { background: #6366f1; color: #fff; border: none; border-radius: 8px; padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
-.co-search { padding: 10px 12px; border-bottom: 1px solid #f0f0f5; }
-.co-search input { width: 100%; border: 1.5px solid #e4e4e7; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-family: inherit; outline: none; box-sizing: border-box; }
-.co-search input:focus { border-color: #6366f1; }
-#co-company-list { flex: 1; overflow-y: auto; }
-.co-company-row {
-  padding: 12px 16px; border-bottom: 1px solid #f5f5f8; cursor: pointer;
-  display: flex; align-items: center; gap: 12px; transition: background 0.1s;
+.co-add-btn { background: #6366f1; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.co-add-btn:hover { filter: brightness(1.05); }
+.co-search-wrap { position: relative; min-width: 200px; }
+.co-search-wrap input {
+  width: 100%; min-width: 220px; border: 1.5px solid var(--divider, #e4e4e7); border-radius: 8px;
+  padding: 8px 12px 8px 34px; font-size: 13px; font-family: inherit; outline: none; box-sizing: border-box;
+  background: var(--card-bg, #fff); color: var(--text-primary, #09090b);
 }
-.co-company-row:hover, .co-company-row.active { background: #f4f4ff; }
-.co-company-row.active { border-left: 3px solid #6366f1; }
-.co-co-avatar {
-  width: 36px; height: 36px; border-radius: 9px; display: flex;
-  align-items: center; justify-content: center; font-size: 15px; font-weight: 800;
-  color: #fff; flex-shrink: 0;
+.co-search-wrap input:focus { border-color: #6366f1; }
+.co-search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--text-muted, #a1a1aa); pointer-events: none; }
+.co-filter-row { display: flex; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--divider, #e9e9ef); background: var(--card-bg, #fff); flex-wrap: wrap; overflow-x: auto; }
+.co-chip { padding: 5px 12px; border-radius: 20px; border: 1.5px solid var(--divider, #e4e4e7); background: var(--card-bg, #fff); font-size: 12px; font-weight: 600; color: var(--text-secondary, #52525b); cursor: pointer; font-family: inherit; white-space: nowrap; }
+.co-chip.active { background: #6366f1; border-color: #6366f1; color: #fff; }
+.co-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--divider, #e9e9ef); background: var(--card-bg, #fff); }
+@media (max-width: 900px) { .co-metrics { grid-template-columns: repeat(2, 1fr); } }
+.co-metric { background: var(--body-bg, #f7f7f9); border: 1px solid var(--divider, #e9e9ef); border-radius: 10px; padding: 12px 14px; }
+.co-metric-val { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; line-height: 1.1; }
+.co-metric-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted, #71717a); margin-top: 4px; }
+.co-co-avatar { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; color: #fff; flex-shrink: 0; }
+.co-kanban-wrap { flex: 1; min-height: 0; overflow: auto; padding: 16px 20px 28px; }
+.co-kanban-board { display: flex; gap: 12px; align-items: stretch; min-height: calc(100vh - 280px); }
+.co-kanban-col { flex: 1 1 0; min-width: 220px; background: var(--body-bg, #f4f4f5); border: 1px solid var(--divider, #e9e9ef); border-radius: 12px; display: flex; flex-direction: column; max-height: calc(100vh - 200px); }
+.co-kanban-col-head { padding: 12px 14px; border-bottom: 1px solid var(--divider, #e9e9ef); display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0; background: var(--card-bg, #fff); border-radius: 12px 12px 0 0; }
+.co-kanban-col-body { flex: 1; overflow-y: auto; padding: 10px; }
+.co-kanban-card {
+  background: var(--card-bg, #fff); border: 1px solid var(--divider, #e9e9ef); border-radius: 10px;
+  padding: 12px 12px 10px; margin-bottom: 8px; cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s, transform 0.12s;
 }
-.co-co-name { font-size: 13.5px; font-weight: 700; color: #09090b; }
-.co-co-meta { font-size: 11.5px; color: #9999aa; margin-top: 1px; }
-.co-co-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; margin-left: auto; flex-shrink: 0; }
+.co-kanban-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.07); border-color: #c7d2fe; transform: translateY(-1px); }
+.co-kanban-card.active { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,0.18); }
+.co-kanban-card[draggable="true"] { cursor: grab; }
+.co-kanban-card.dragging { opacity: 0.42; transform: scale(0.97); cursor: grabbing; }
+.co-kanban-col-body.drop-target { background: rgba(99,102,241,0.07); outline: 2px dashed rgba(99,102,241,0.35); border-radius: 8px; }
+.co-drag-hint { font-size: 10px; color: var(--text-muted, #a1a1aa); letter-spacing: 0.02em; }
+.co-sync-badge { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
+.co-sync-badge.synced { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.co-sync-badge.saving { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.co-sync-badge.local { background: #f4f4f5; color: #71717a; border: 1px solid #e4e4e7; }
+.co-sync-badge.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.co-card-mrr { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 12px; white-space: nowrap; }
+.co-card-foot { display: flex; align-items: center; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--divider, #f0f0f5); }
+#co-company-panel {
+  position: fixed; top: 0; right: 0; width: min(520px, 100vw); height: 100vh;
+  background: var(--card-bg, #fff); border-left: 1px solid var(--divider, #e9e9ef);
+  box-shadow: -12px 0 40px rgba(0,0,0,0.14); z-index: 9000; display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform 0.28s ease;
+}
+#co-company-panel.open { transform: translateX(0); }
+#co-panel-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 8999; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+#co-panel-backdrop.open { opacity: 1; pointer-events: auto; }
+.co-panel-hero { padding: 20px 20px 16px; background: linear-gradient(135deg, #0f0f1a 0%, #1e1b4b 100%); color: #fff; flex-shrink: 0; }
+.co-panel-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--divider, #e9e9ef); background: var(--card-bg, #fff); flex-shrink: 0; }
+.co-panel-tab { padding: 11px 16px; border: none; border-bottom: 2px solid transparent; background: transparent; font-size: 13px; font-weight: 600; color: var(--text-muted, #a1a1aa); cursor: pointer; font-family: inherit; }
+.co-panel-tab.active { border-bottom-color: #6366f1; color: #6366f1; font-weight: 700; }
+.co-panel-body { flex: 1; overflow-y: auto; padding: 16px 20px 24px; }
+.co-panel-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--divider, #f0f0f5); gap: 12px; }
+.co-panel-row span:first-child { font-size: 12px; color: var(--text-muted, #71717a); flex-shrink: 0; }
+.co-panel-row span:last-child, .co-panel-row input { font-size: 12.5px; font-weight: 700; color: var(--text-primary, #09090b); text-align: right; }
+.co-contact-row { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border: 1px solid var(--divider, #e9e9ef); border-radius: 10px; margin-bottom: 8px; cursor: pointer; transition: background 0.12s, border-color 0.12s; }
+.co-contact-row:hover { background: #f4f4ff; border-color: #c7d2fe; }
+.co-revenue-card { background: linear-gradient(135deg, #0a0a14, #1a1640); border-radius: 12px; padding: 16px; color: #fff; margin-bottom: 16px; }
 </style>
 
 <script>
@@ -16529,42 +16782,207 @@ var CO_KEY = 'agentnav-companies';
 var _coData = [];   // in-memory cache
 var CO = window.CO || {};
 CO.selectedIds = CO.selectedIds || [];
-CO.currentView = CO.currentView || 'split'; // split | table
+CO.searchQuery = CO.searchQuery || '';
+CO.stageFilter = CO.stageFilter || '';
+CO.sortBy = CO.sortBy || 'mrr';
+CO.currentView = 'board';
+var _coSearchTimer = null;
+var CO_STAGES = [
+  { id: 'Customer', label: 'Customer', color: '#22c55e', dot: '#22c55e' },
+  { id: 'Opportunity', label: 'Opportunity', color: '#8b5cf6', dot: '#8b5cf6' },
+  { id: 'Lead', label: 'Lead', color: '#6366f1', dot: '#6366f1' },
+  { id: 'Unknown', label: 'Unknown', color: '#a1a1aa', dot: '#a1a1aa' }
+];
+var CO_KANBAN_COL_LIMIT = 80;
+var _coStatsCache = null;
+var _coStatsCacheKey = '';
+var _coDragId = null;
+var _coDidDrag = false;
+CO.syncStatus = CO.syncStatus || 'local';
+CO.lastSynced = CO.lastSynced || '';
+
+function coTouchCompany(co) {
+  if (!co) return;
+  co.updated = new Date().toISOString();
+  co.updatedBy = (typeof AN !== 'undefined' && AN.currentRepEmail) || (typeof _currentUser !== 'undefined' && _currentUser ? _currentUser.email : '') || '';
+}
+
+function coMergeCompanies(local, remote) {
+  var map = {};
+  (local || []).forEach(function(c) { if (c && c.id) map[c.id] = c; });
+  (remote || []).forEach(function(c) {
+    if (!c || !c.id) return;
+    var existing = map[c.id];
+    if (!existing) { map[c.id] = c; return; }
+    var eT = new Date(existing.updated || existing.created || 0).getTime();
+    var rT = new Date(c.updated || c.created || 0).getTime();
+    map[c.id] = rT >= eT ? Object.assign({}, existing, c) : existing;
+  });
+  return Object.keys(map).map(function(id) { return map[id]; });
+}
+
+function coUpdateSyncBadge() {
+  var el = document.getElementById('co-sync-badge');
+  if (!el) return;
+  var labels = { synced: '☁️ Synced', saving: '↑ Saving…', local: '💾 Local only', error: '⚠ Sync failed' };
+  el.className = 'co-sync-badge ' + (CO.syncStatus || 'local');
+  el.textContent = labels[CO.syncStatus] || labels.local;
+  if (CO.syncStatus === 'synced' && CO.lastSynced) {
+    try {
+      var d = new Date(CO.lastSynced);
+      el.title = 'Last synced ' + d.toLocaleString();
+    } catch(e) { el.title = ''; }
+  }
+}
 
 function coLoad(callback) {
-  // Always return from cache immediately for fast UI
-  try { _coData = JSON.parse(localStorage.getItem(CO_KEY) || '[]'); } catch(e) { _coData = []; }
-  if (callback) callback(_coData);
+  var localRaw = localStorage.getItem(CO_KEY) || '[]';
+  var local = [];
+  try { local = JSON.parse(localRaw); } catch(e) { local = []; }
 
-  // Then fetch from Supabase in background and refresh
   var sb = typeof getSupabase === 'function' ? getSupabase() : null;
-  if (sb && typeof _currentUser !== 'undefined' && _currentUser) {
-    sb.from('admin_content').select('value').eq('key', 'companies').then(function(r) {
-      if (r.data && r.data[0] && r.data[0].value) {
-        try {
-          var remote = JSON.parse(r.data[0].value);
-          _coData = remote;
-          localStorage.setItem(CO_KEY, JSON.stringify(_coData));
-          if (callback) callback(_coData); // re-run with fresh data
-        } catch(e) {}
-      }
+  if (!sb || typeof _currentUser === 'undefined' || !_currentUser) {
+    _coData = local;
+    CO.syncStatus = 'local';
+    if (callback) callback(_coData);
+    return;
+  }
+
+  CO.syncStatus = 'saving';
+  coUpdateSyncBadge();
+  sb.from('admin_content').select('value, updated_at').eq('key', 'companies').then(function(r) {
+    var remote = [];
+    if (r.data && r.data[0] && r.data[0].value) {
+      try { remote = JSON.parse(r.data[0].value); } catch(e) { remote = []; }
+    }
+    _coData = remote.length ? coMergeCompanies(local, remote) : local;
+    localStorage.setItem(CO_KEY, JSON.stringify(_coData));
+    CO.syncStatus = r.error ? 'error' : 'synced';
+    CO.lastSynced = (r.data && r.data[0] && r.data[0].updated_at) ? r.data[0].updated_at : new Date().toISOString();
+    coInvalidateStatsCache();
+    coUpdateSyncBadge();
+    if (callback) callback(_coData);
+  }).catch(function() {
+    _coData = local;
+    CO.syncStatus = 'local';
+    coUpdateSyncBadge();
+    if (callback) callback(_coData);
+  });
+}
+
+function coInvalidateStatsCache() {
+  _coStatsCache = null;
+  _coStatsCacheKey = '';
+}
+
+function coComputeStats(leads, co) {
+  var won = leads.filter(function(l){ return l.status === 'won'; });
+  var pipeline = leads.filter(function(l){ return ['demo','showed','proposal','won'].indexOf(l.status) >= 0; });
+  var activeMRR = won.reduce(function(s,l){ return s + coLeadMRR(l); }, 0);
+  var pipelineMRR = pipeline.reduce(function(s,l){ return s + (coLeadMRR(l) || 79); }, 0);
+  var primaryPlan = '—';
+  if (won.length) {
+    var top = won.slice().sort(function(a,b){ return coLeadMRR(b) - coLeadMRR(a); })[0];
+    var psz = (typeof AN_SIZES !== 'undefined') ? AN_SIZES.find(function(s){ return s.id === top.size; }) : null;
+    primaryPlan = psz ? (psz.label + ' · $' + psz.price + '/mo') : ('$' + coLeadMRR(top) + '/mo');
+  } else if (pipeline.length) {
+    var pt = pipeline[0];
+    var psz2 = (typeof AN_SIZES !== 'undefined') ? AN_SIZES.find(function(s){ return s.id === pt.size; }) : null;
+    primaryPlan = psz2 ? (psz2.label + ' (pipeline)') : 'In pipeline';
+  }
+  var lifecycle = co && co.lifecycleStage ? co.lifecycleStage
+    : (won.length ? 'Customer' : pipeline.length ? 'Opportunity' : leads.length ? 'Lead' : 'Unknown');
+  var reps = {};
+  leads.forEach(function(l){ if (l._repEmail) reps[l._repEmail] = true; });
+  var ownerEmail = (co && co.ownerEmail) || Object.keys(reps)[0] || '';
+  var lastActivity = '';
+  var nextFollowUp = '';
+  var states = {};
+  leads.forEach(function(l) {
+    if (l.state) states[l.state] = (states[l.state] || 0) + 1;
+    if (l.lastContactDate && (!lastActivity || l.lastContactDate > lastActivity)) lastActivity = l.lastContactDate;
+    if (l.nextFollowUp && (!nextFollowUp || l.nextFollowUp < nextFollowUp)) nextFollowUp = l.nextFollowUp;
+    (l.callLog || []).forEach(function(c) {
+      var d = (c.date || '') + (c.time ? 'T' + c.time : '');
+      if (d && (!lastActivity || d > lastActivity)) lastActivity = c.date || lastActivity;
+    });
+  });
+  var topState = Object.keys(states).sort(function(a, b) { return states[b] - states[a]; })[0] || '';
+  return {
+    leads: leads, won: won, pipeline: pipeline,
+    activeUsers: won.length,
+    activeMRR: activeMRR,
+    pipelineMRR: pipelineMRR,
+    primaryPlan: primaryPlan,
+    lifecycle: lifecycle,
+    ownerEmail: ownerEmail,
+    totalContacts: leads.length,
+    lastActivity: lastActivity,
+    nextFollowUp: nextFollowUp,
+    state: topState
+  };
+}
+
+function coCompanyBelongsToRep(co, statsMap) {
+  if (typeof AN === 'undefined' || AN.isAdmin) return true;
+  var myEmail = (AN.currentRepEmail || '').toLowerCase();
+  if (!myEmail) return true;
+  if ((co.ownerEmail || '').toLowerCase() === myEmail) return true;
+  var stats = statsMap ? statsMap[co.id] : coGetCompanyStats(co.name, co, co.id);
+  if (!stats || !stats.leads || !stats.leads.length) return !!(co.ownerEmail || '').toLowerCase() === myEmail;
+  return stats.leads.some(function(l) {
+    return typeof anLeadBelongsToRep === 'function' ? anLeadBelongsToRep(l) : (!l._repEmail || l._repEmail === AN.currentRepEmail);
+  });
+}
+
+function coBuildStatsCache(companies) {
+  var leadsLen = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.length : 0;
+  var key = companies.length + '|' + leadsLen + '|' + (CO.searchQuery || '');
+  if (_coStatsCache && _coStatsCacheKey === key) return _coStatsCache;
+
+  var byCompany = {};
+  if (typeof AN !== 'undefined' && AN.leads) {
+    AN.leads.forEach(function(l) {
+      if (!l.company) return;
+      var k = coNormName(l.company);
+      if (!byCompany[k]) byCompany[k] = [];
+      byCompany[k].push(l);
     });
   }
+
+  var statsMap = {};
+  companies.forEach(function(co) {
+    statsMap[co.id] = coComputeStats(byCompany[coNormName(co.name)] || [], co);
+  });
+
+  _coStatsCache = { byCompany: byCompany, statsMap: statsMap };
+  _coStatsCacheKey = key;
+  return _coStatsCache;
 }
 
 function coSave(data, callback) {
   _coData = data;
-  localStorage.setItem(CO_KEY, JSON.stringify(data));
+  coInvalidateStatsCache();
+  var raw = JSON.stringify(data);
+  localStorage.setItem(CO_KEY, raw);
+  CO.syncStatus = 'saving';
+  coUpdateSyncBadge();
 
   var sb = typeof getSupabase === 'function' ? getSupabase() : null;
   if (sb && typeof _currentUser !== 'undefined' && _currentUser) {
     sb.from('admin_content').upsert(
-      { key: 'companies', value: JSON.stringify(data), updated_by: _currentUser.email, updated_at: new Date().toISOString() },
+      { key: 'companies', value: raw, updated_by: _currentUser.email, updated_at: new Date().toISOString() },
       { onConflict: 'key' }
     ).then(function(r) {
+      CO.syncStatus = r.error ? 'error' : 'synced';
+      CO.lastSynced = new Date().toISOString();
+      coUpdateSyncBadge();
+      if (r.error && typeof showToast === 'function') showToast('Company save failed — kept locally');
       if (callback) callback(r);
     });
   } else {
+    CO.syncStatus = 'local';
+    coUpdateSyncBadge();
     if (callback) callback(null);
   }
 }
@@ -16590,6 +17008,9 @@ function coIsJunkCompanyName(name){
 }
 
 function coGetLeadsForCompany(coName){
+  if (_coStatsCache && _coStatsCache.byCompany) {
+    return _coStatsCache.byCompany[coNormName(coName)] || [];
+  }
   if(typeof AN === 'undefined' || !AN.leads) return [];
   return AN.leads.filter(function(l){ return l.company && coNormName(l.company) === coNormName(coName); });
 }
@@ -16600,63 +17021,146 @@ function coLeadMRR(l){
   return sz ? sz.price : 0;
 }
 
-function coGetCompanyStats(coName, co){
-  var leads = coGetLeadsForCompany(coName);
-  var won = leads.filter(function(l){ return l.status === 'won'; });
-  var pipeline = leads.filter(function(l){ return ['demo','showed','proposal','won'].indexOf(l.status) >= 0; });
-  var activeMRR = won.reduce(function(s,l){ return s + coLeadMRR(l); }, 0);
-  var pipelineMRR = pipeline.reduce(function(s,l){ return s + (coLeadMRR(l) || 79); }, 0);
-  var primaryPlan = '—';
-  if(won.length){
-    var top = won.slice().sort(function(a,b){ return coLeadMRR(b) - coLeadMRR(a); })[0];
-    var psz = AN_SIZES.find(function(s){ return s.id === top.size; });
-    primaryPlan = psz ? (psz.label + ' · $' + psz.price + '/mo') : ('$' + coLeadMRR(top) + '/mo');
-  } else if(pipeline.length){
-    var pt = pipeline[0];
-    var psz2 = AN_SIZES.find(function(s){ return s.id === pt.size; });
-    primaryPlan = psz2 ? (psz2.label + ' (pipeline)') : 'In pipeline';
+function coGetCompanyStats(coName, co, coId){
+  if (coId && _coStatsCache && _coStatsCache.statsMap && _coStatsCache.statsMap[coId]) {
+    return _coStatsCache.statsMap[coId];
   }
-  var lifecycle = co && co.lifecycleStage ? co.lifecycleStage
-    : (won.length ? 'Customer' : pipeline.length ? 'Opportunity' : leads.length ? 'Lead' : 'Unknown');
-  var reps = {};
-  leads.forEach(function(l){ if(l._repEmail) reps[l._repEmail] = true; });
-  var ownerEmail = (co && co.ownerEmail) || Object.keys(reps)[0] || '';
-  return {
-    leads: leads, won: won, pipeline: pipeline,
-    activeUsers: won.length,
-    activeMRR: activeMRR,
-    pipelineMRR: pipelineMRR,
-    primaryPlan: primaryPlan,
-    lifecycle: lifecycle,
-    ownerEmail: ownerEmail,
-    totalContacts: leads.length
-  };
+  return coComputeStats(coGetLeadsForCompany(coName), co);
 }
 
 function coRender() {
   var sec = document.getElementById('section-companies');
   if (!sec) return;
 
-  // Show loading state immediately using cached data
   var cached = _coData.length ? _coData : (function(){ try{ return JSON.parse(localStorage.getItem(CO_KEY)||'[]'); }catch(e){return [];} })();
   _coRenderWith(sec, cached);
 
-  // Then load fresh from Supabase
   coLoad(function(companies) {
     _coRenderWith(sec, companies);
   });
 }
 
-function _coRenderWith(sec, companies) {
-  var selectedCo = _coSelected ? companies.find(function(c){ return c.id===_coSelected; }) : null;
-  if (!selectedCo && companies.length > 0 && CO.currentView === 'split') { selectedCo = companies[0]; _coSelected = companies[0].id; }
+function coGetVisibleCompanies(companies, statsMap) {
+  return companies.filter(function(c) {
+    if (coIsJunkCompanyName(c.name)) return false;
+    if (!coCompanyBelongsToRep(c, statsMap)) return false;
+    if (CO.searchQuery && c.name.toLowerCase().indexOf(CO.searchQuery.toLowerCase()) < 0) return false;
+    if (CO.stageFilter) {
+      var st = (statsMap[c.id] || {}).lifecycle || 'Unknown';
+      if (st !== CO.stageFilter) return false;
+    }
+    return true;
+  });
+}
 
-  if (CO.currentView === 'table') {
-    sec.innerHTML = '<div id="co-root">' + coPageHeader(companies) + coTableView(companies) + '</div>';
-    return;
+function coSortCompanyItems(items) {
+  return items.slice().sort(function(a, b) {
+    if (CO.sortBy === 'name') return a.co.name.localeCompare(b.co.name);
+    if (CO.sortBy === 'contacts') return (b.stats.totalContacts || 0) - (a.stats.totalContacts || 0);
+    var am = (a.stats.activeMRR || a.stats.pipelineMRR || 0);
+    var bm = (b.stats.activeMRR || b.stats.pipelineMRR || 0);
+    if (bm !== am) return bm - am;
+    return (b.stats.totalContacts || 0) - (a.stats.totalContacts || 0);
+  });
+}
+
+function _coRenderWith(sec, companies) {
+  var cache = coBuildStatsCache(companies);
+  var visible = coGetVisibleCompanies(companies, cache.statsMap);
+  sec.innerHTML = '<div id="co-root">' + coPageHeader(companies, visible, cache.statsMap) + coKanbanView(visible, cache.statsMap) + '</div>';
+  coUpdateSyncBadge();
+  if (_coSelected) {
+    var card = document.querySelector('.co-kanban-card[data-co-id="'+_coSelected+'"]');
+    if (card) card.classList.add('active');
+  }
+  setTimeout(initCoDragDrop, 60);
+}
+
+function coRefreshBulkBar() {
+  var el = document.getElementById('co-bulk-bar');
+  if (el) el.outerHTML = coPageHeaderBulkBar(_coData);
+}
+
+function coKanbanCard(item, stage) {
+  var co = item.co;
+  var stats = item.stats;
+  var owner = stats.ownerEmail && typeof anGetRepName === 'function' ? anGetRepName(stats.ownerEmail) : '';
+  var mrr = stats.activeMRR || stats.pipelineMRR || 0;
+  var active = _coSelected === co.id;
+  var mrrBg = stats.activeMRR ? stage.color + '18' : '#fff7ed';
+  var mrrCol = stats.activeMRR ? stage.color : '#b45309';
+  var lastAct = stats.lastActivity ? (typeof anTimeAgo === 'function' ? anTimeAgo(stats.lastActivity) : stats.lastActivity) : '';
+  return '<div class="co-kanban-card'+(active?' active':'')+'" data-co-id="'+co.id+'" draggable="true" style="border-left:3px solid '+stage.color+';" onclick="coCardClick(\''+co.id+'\')">'
+    +'<div style="display:flex;align-items:flex-start;gap:10px;">'
+    +'<div class="co-co-avatar" style="background:'+coColor(co.name)+';">'+co.name.charAt(0).toUpperCase()+'</div>'
+    +'<div style="flex:1;min-width:0;">'
+    +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;">'
+    +'<div style="font-size:13px;font-weight:700;color:var(--text-primary,#09090b);line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">'+coEsc(co.name)+'</div>'
+    +(mrr ? '<span class="co-card-mrr" style="background:'+mrrBg+';color:'+mrrCol+';">$'+mrr+(stats.activeMRR?'':'†')+'</span>' : '')
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--text-muted,#71717a);margin-top:4px;">'
+    +stats.totalContacts+' contact'+(stats.totalContacts!==1?'s':'')
+    +(stats.activeUsers ? ' · <span style="color:#16a34a;font-weight:700;">'+stats.activeUsers+' live</span>' : '')
+    +'</div>'
+    +(owner ? '<div style="font-size:10.5px;color:var(--text-muted,#a1a1aa);margin-top:3px;">'+coEsc(owner)+(stats.state?' · '+coEsc(stats.state):'')+'</div>' : (stats.state ? '<div style="font-size:10.5px;color:var(--text-muted,#a1a1aa);margin-top:3px;">'+coEsc(stats.state)+'</div>' : ''))
+    +(lastAct ? '<div class="co-drag-hint" style="margin-top:3px;">Last: '+coEsc(lastAct)+'</div>' : '')
+    +'</div></div>'
+    +'<div class="co-card-foot" onclick="event.stopPropagation()">'
+    +'<span class="co-drag-hint" title="Drag to another column">⠿</span>'
+    +'<input type="checkbox" class="co-cb" data-id="'+co.id+'"'+(CO.selectedIds.indexOf(co.id)>=0?' checked':'')+' onchange="coToggleSelect(\''+co.id+'\',this.checked)" style="width:13px;height:13px;accent-color:#6366f1;cursor:pointer;" title="Select">'
+    +'<span style="font-size:10px;color:var(--text-muted,#a1a1aa);flex:1;">'+(co.industry||'Insurance')+'</span>'
+    +'<button onclick="coDeleteCompany(\''+co.id+'\')" title="Delete" style="padding:2px 7px;border-radius:5px;border:1px solid #fecaca;background:#fff;color:#ef4444;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">✕</button>'
+    +'</div></div>';
+}
+
+function coKanbanView(companies, statsMap) {
+  if (!companies.length) {
+    var msg = CO.searchQuery || CO.stageFilter
+      ? 'No companies match your filters'
+      : 'No companies yet — hit Sync from leads or add one manually';
+    return '<div style="padding:72px 24px;text-align:center;">'
+      +'<div style="font-size:44px;margin-bottom:14px;">🏢</div>'
+      +'<div style="font-size:16px;font-weight:700;color:var(--text-primary,#09090b);margin-bottom:6px;">'+msg+'</div>'
+      +'<div style="font-size:13px;color:var(--text-muted,#71717a);margin-bottom:18px;">Companies roll up from agency names on your leads.</div>'
+      +'<button onclick="coSyncFromLeads()" style="padding:9px 18px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Sync from leads</button>'
+      +'</div>';
   }
 
-  sec.innerHTML = '<div id="co-root">' + coPageHeader(companies) + '<div id="co-split-body">' + coListPane(companies, selectedCo) + coDetailPane(selectedCo, companies) + '</div></div>';
+  var stagesToShow = CO.stageFilter
+    ? CO_STAGES.filter(function(s){ return s.id === CO.stageFilter; })
+    : CO_STAGES;
+
+  var byStage = {};
+  CO_STAGES.forEach(function(s){ byStage[s.id] = []; });
+  companies.forEach(function(co) {
+    var stats = statsMap[co.id] || coGetCompanyStats(co.name, co, co.id);
+    var stage = stats.lifecycle || 'Unknown';
+    if (!byStage[stage]) byStage[stage] = [];
+    byStage[stage].push({ co: co, stats: stats });
+  });
+
+  var cols = stagesToShow.map(function(stage) {
+    var items = coSortCompanyItems(byStage[stage.id] || []);
+    var stageMRR = items.reduce(function(s, x) { return s + (x.stats.activeMRR || x.stats.pipelineMRR || 0); }, 0);
+    var shown = items.slice(0, CO_KANBAN_COL_LIMIT);
+    var cards = shown.map(function(item) { return coKanbanCard(item, stage); }).join('');
+
+    return '<div class="co-kanban-col" data-stage="'+stage.id+'">'
+      +'<div class="co-kanban-col-head">'
+      +'<div style="display:flex;align-items:center;gap:6px;min-width:0;">'
+      +'<span style="width:8px;height:8px;border-radius:50%;background:'+stage.dot+';flex-shrink:0;"></span>'
+      +'<span style="font-size:13px;font-weight:700;color:var(--text-primary,#09090b);">'+stage.label+'</span>'
+      +'<span style="background:var(--body-bg,#f4f4f5);border:1px solid var(--divider,#e4e4e7);border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700;color:var(--text-muted,#71717a);">'+items.length+'</span>'
+      +'</div>'
+      +(stageMRR ? '<span style="font-size:11px;font-weight:800;color:'+stage.color+';">$'+stageMRR.toLocaleString()+'/mo</span>' : '<span style="font-size:11px;color:var(--text-muted,#a1a1aa);">—</span>')
+      +'</div>'
+      +'<div class="co-kanban-col-body" data-stage="'+stage.id+'">'
+      +(cards || '<div style="text-align:center;padding:32px 12px;color:var(--text-muted,#a1a1aa);font-size:12px;">Empty</div>')
+      +(items.length > CO_KANBAN_COL_LIMIT ? '<div style="font-size:11px;color:var(--text-muted,#71717a);padding:8px 4px 12px;line-height:1.4;">+'+(items.length - CO_KANBAN_COL_LIMIT)+' more in this stage — search or filter to narrow down</div>' : '')
+      +'</div></div>';
+  }).join('');
+
+  return '<div class="co-kanban-wrap"><div class="co-kanban-board">'+cols+'</div></div>';
 }
 
 function coJunkBanner(junkCount){
@@ -16670,38 +17174,188 @@ function coJunkBanner(junkCount){
 }
 
 function coPageHeaderBulkBar(companies){
-  if(!CO.selectedIds.length) return '';
+  if(!CO.selectedIds.length) return '<div id="co-bulk-bar"></div>';
   var allSelected = companies.length > 0 && CO.selectedIds.length >= companies.length;
-  return '<div style="padding:10px 20px;background:#fef2f2;border-bottom:1px solid #fecaca;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
+  return '<div id="co-bulk-bar" style="padding:10px 20px;background:#fef2f2;border-bottom:1px solid #fecaca;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
     +'<span style="font-size:13px;font-weight:700;color:#b91c1c;">'+CO.selectedIds.length.toLocaleString()+' selected</span>'
     +'<div class="co-header-actions">'
     +'<button onclick="coToggleSelectAll('+(!allSelected)+')" style="padding:7px 14px;border-radius:7px;border:1.5px solid #e4e4e7;background:#fff;color:#52525b;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">'+(allSelected?'Deselect all':'Select all')+'</button>'
-    +'<button onclick="coDeleteSelected()" style="padding:7px 14px;border-radius:7px;border:none;background:#ef4444;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🗑 Delete selected</button>'
-    +'<button onclick="CO.selectedIds=[];coRender()" style="padding:7px 14px;border-radius:7px;border:1.5px solid #e4e4e7;background:#fff;color:#71717a;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Clear</button>'
+    +'<button onclick="coDeleteSelected()" style="padding:7px 14px;border-radius:7px;border:none;background:#ef4444;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Delete selected</button>'
+    +'<button onclick="CO.selectedIds=[];coRefreshBulkBar();coRender()" style="padding:7px 14px;border-radius:7px;border:1.5px solid #e4e4e7;background:#fff;color:#71717a;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Clear</button>'
     +'</div></div>';
 }
 
-function coPageHeader(companies) {
+function coStageChip(id, label, count, color) {
+  var active = CO.stageFilter === id;
+  return '<button type="button" class="co-chip'+(active?' active':'')+'" onclick="coSetStageFilter(\''+id+'\')" style="'+(active?'':(color?'border-color:'+color+'44;':'') )+'">'
+    +label+(count!=null?' <span style="opacity:0.75;">'+count+'</span>':'')
+    +'</button>';
+}
+
+function coPageHeader(companies, visible, statsMap) {
   var junkCount = companies.filter(function(c){ return coIsJunkCompanyName(c.name); }).length;
-  return '<div id="co-page-header" style="flex-shrink:0;background:#fff;border-bottom:1px solid #e9e9ef;">'
+  var shown = visible || companies.filter(function(c){ return !coIsJunkCompanyName(c.name); });
+  var map = statsMap || coBuildStatsCache(companies).statsMap;
+  var stageCounts = {};
+  var totalMRR = 0;
+  var totalActiveMRR = 0;
+  var totalContacts = 0;
+  var customers = 0;
+  shown.forEach(function(co) {
+    var st = (map[co.id] || {}).lifecycle || 'Unknown';
+    stageCounts[st] = (stageCounts[st] || 0) + 1;
+    var s = map[co.id] || {};
+    totalMRR += (s.activeMRR || s.pipelineMRR || 0);
+    totalActiveMRR += (s.activeMRR || 0);
+    totalContacts += (s.totalContacts || 0);
+    if (st === 'Customer') customers++;
+  });
+
+  var metrics = '<div class="co-metrics">'
+    +'<div class="co-metric"><div class="co-metric-val" style="color:var(--text-primary,#09090b);">'+shown.length.toLocaleString()+'</div><div class="co-metric-lbl">Accounts</div></div>'
+    +'<div class="co-metric"><div class="co-metric-val" style="color:#22c55e;">'+customers.toLocaleString()+'</div><div class="co-metric-lbl">Customers</div></div>'
+    +'<div class="co-metric"><div class="co-metric-val" style="color:#10b981;">$'+totalActiveMRR.toLocaleString()+'</div><div class="co-metric-lbl">Active MRR</div></div>'
+    +'<div class="co-metric"><div class="co-metric-val" style="color:#6366f1;">'+totalContacts.toLocaleString()+'</div><div class="co-metric-lbl">Contacts</div></div>'
+    +'</div>';
+
+  var filterRow = '<div class="co-filter-row">'
+    +'<span style="font-size:11px;font-weight:700;color:var(--text-muted,#71717a);text-transform:uppercase;letter-spacing:0.08em;margin-right:4px;">Stage</span>'
+    +coStageChip('', 'All', shown.length, '')
+    +CO_STAGES.map(function(st) { return coStageChip(st.id, st.label, stageCounts[st.id] || 0, st.color); }).join('')
+    +'<span style="width:1px;height:20px;background:var(--divider,#e4e4e7);margin:0 4px;"></span>'
+    +'<span style="font-size:11px;font-weight:700;color:var(--text-muted,#71717a);text-transform:uppercase;letter-spacing:0.08em;">Sort</span>'
+    +['mrr','contacts','name'].map(function(s) {
+      var labels = { mrr:'MRR', contacts:'Contacts', name:'A–Z' };
+      var active = CO.sortBy === s;
+      return '<button type="button" class="co-chip'+(active?' active':'')+'" onclick="coSetSort(\''+s+'\')">'+labels[s]+'</button>';
+    }).join('')
+    +(totalMRR > totalActiveMRR ? '<span style="margin-left:auto;font-size:11px;color:var(--text-muted,#71717a);">$'+totalMRR.toLocaleString()+'/mo incl. pipeline · † = pipe only</span>' : '')
+    +'</div>';
+
+  return '<div id="co-page-header">'
     +(junkCount ? coJunkBanner(junkCount) : '')
-    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;gap:12px;flex-wrap:wrap;">'
-    +'<div style="display:flex;align-items:baseline;gap:10px;min-width:0;">'
-    +'<h2 style="font-size:18px;font-weight:800;color:#09090b;margin:0;">🏢 Companies</h2>'
-    +'<span style="font-size:12px;color:#a1a1aa;white-space:nowrap;">'+companies.length.toLocaleString()+' total</span>'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px 10px;gap:12px;flex-wrap:wrap;">'
+    +'<div style="min-width:0;">'
+    +'<h2 style="font-size:20px;font-weight:800;color:var(--text-primary,#09090b);margin:0;letter-spacing:-0.3px;">Companies</h2>'
+    +'<p style="font-size:12px;color:var(--text-muted,#71717a);margin:4px 0 0;">'+(typeof AN !== 'undefined' && !AN.isAdmin ? 'Your accounts — drag to change stage · cloud synced' : 'Drag cards between columns · cloud synced for all reps')+(junkCount?' · '+junkCount.toLocaleString()+' junk hidden':'')+'</p>'
     +'</div>'
     +'<div class="co-header-actions">'
-    +'<div style="display:flex;background:#f4f4f5;border:1.5px solid #e4e4e7;border-radius:8px;padding:2px;">'
-    +'<button onclick="CO.currentView=\'table\';coRender()" style="padding:6px 14px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:'+(CO.currentView==='table'?'#6366f1':'transparent')+';color:'+(CO.currentView==='table'?'#fff':'#71717a')+';">Table</button>'
-    +'<button onclick="CO.currentView=\'split\';coRender()" style="padding:6px 14px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:'+(CO.currentView==='split'?'#6366f1':'transparent')+';color:'+(CO.currentView==='split'?'#fff':'#71717a')+';">Split</button>'
-    +'</div>'
-    +'<button class="co-add-btn" onclick="coNewCompany()">+ Add Company</button>'
-    +'<button onclick="coSyncFromLeads()" style="padding:7px 14px;border-radius:7px;border:1.5px solid #c7d2fe;background:#eef2ff;color:#4338ca;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Sync from leads</button>'
-    +(companies.length ? '<button onclick="coDeleteAll()" style="padding:7px 14px;border-radius:7px;border:1.5px solid #fca5a5;background:#fff;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Delete all</button>' : '')
+    +'<span id="co-sync-badge" class="co-sync-badge '+(CO.syncStatus||'local')+'">'+(CO.syncStatus==='synced'?'☁️ Synced':CO.syncStatus==='saving'?'↑ Saving…':'💾 Local')+'</span>'
+    +'<div class="co-search-wrap"><span class="co-search-icon">🔍</span><input id="co-search-input" type="text" placeholder="Search agencies..." oninput="coFilterBoard(this.value)" value="'+coEsc(CO.searchQuery||'')+'"></div>'
+    +'<button class="co-add-btn" onclick="coNewCompany()">+ Add</button>'
+    +'<button onclick="coSyncFromLeads()" style="padding:8px 14px;border-radius:8px;border:1.5px solid #c7d2fe;background:#eef2ff;color:#4338ca;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Sync</button>'
+    +'<button onclick="coForceCloudRefresh()" title="Pull latest from cloud" style="padding:8px 12px;border-radius:8px;border:1.5px solid var(--divider,#e4e4e7);background:var(--card-bg,#fff);color:var(--text-secondary,#52525b);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">↻</button>'
     +'</div></div>'
+    +metrics
+    +filterRow
     +coPageHeaderBulkBar(companies)
     +'</div>';
 }
+
+window.coSetStageFilter = function(stage) {
+  CO.stageFilter = stage;
+  coRender();
+};
+
+window.coSetSort = function(sort) {
+  CO.sortBy = sort;
+  var board = document.querySelector('.co-kanban-wrap');
+  if (board && _coData.length) {
+    var cache = coBuildStatsCache(_coData);
+    var visible = coGetVisibleCompanies(_coData, cache.statsMap);
+    board.outerHTML = coKanbanView(visible, cache.statsMap);
+    if (_coSelected) {
+      var card = document.querySelector('.co-kanban-card[data-co-id="'+_coSelected+'"]');
+      if (card) card.classList.add('active');
+    }
+    setTimeout(initCoDragDrop, 60);
+  } else coRender();
+};
+
+window.coForceCloudRefresh = function() {
+  coInvalidateStatsCache();
+  localStorage.removeItem(CO_KEY);
+  _coData = [];
+  coLoad(function() {
+    coRender();
+    if (typeof showToast === 'function') showToast('Companies refreshed from cloud');
+  });
+};
+
+window.coCardClick = function(coId) {
+  if (_coDidDrag) { _coDidDrag = false; return; }
+  coOpenCompanyPanel(coId);
+};
+
+window.coMoveCompanyStage = function(coId, stageId) {
+  if (!CO_STAGES.some(function(s) { return s.id === stageId; })) return;
+  var companies = (_coData || []).slice();
+  var co = companies.find(function(c) { return c.id === coId; });
+  if (!co) return;
+  var cache = coBuildStatsCache(companies);
+  if (!coCompanyBelongsToRep(co, cache.statsMap)) {
+    if (typeof showToast === 'function') showToast('You can only move your own accounts');
+    return;
+  }
+  co.lifecycleStage = stageId;
+  coTouchCompany(co);
+  coSave(companies, function() {
+    coInvalidateStatsCache();
+    coRender();
+    if (_coSelected === coId) coOpenCompanyPanel(coId);
+    if (typeof showToast === 'function') showToast('Moved to ' + stageId);
+  });
+};
+
+function initCoDragDrop() {
+  document.querySelectorAll('.co-kanban-card[draggable="true"]').forEach(function(card) {
+    if (card._coDragBound) return;
+    card._coDragBound = true;
+    card.addEventListener('dragstart', function(e) {
+      _coDragId = card.getAttribute('data-co-id');
+      _coDidDrag = false;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', _coDragId); } catch(err) {}
+    });
+    card.addEventListener('dragend', function() {
+      card.classList.remove('dragging');
+      document.querySelectorAll('.co-kanban-col-body.drop-target').forEach(function(el) { el.classList.remove('drop-target'); });
+      setTimeout(function() { _coDragId = null; }, 100);
+    });
+  });
+
+  document.querySelectorAll('.co-kanban-col-body[data-stage]').forEach(function(col) {
+    if (col._coDropBound) return;
+    col._coDropBound = true;
+    col.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      col.classList.add('drop-target');
+      e.dataTransfer.dropEffect = 'move';
+    });
+    col.addEventListener('dragleave', function(e) {
+      if (!col.contains(e.relatedTarget)) col.classList.remove('drop-target');
+    });
+    col.addEventListener('drop', function(e) {
+      e.preventDefault();
+      col.classList.remove('drop-target');
+      var coId = _coDragId;
+      try { if (!coId) coId = e.dataTransfer.getData('text/plain'); } catch(err) {}
+      if (!coId) return;
+      var stageId = col.getAttribute('data-stage');
+      _coDidDrag = true;
+      coMoveCompanyStage(coId, stageId);
+    });
+  });
+}
+
+window.anSetCompanyFilter = function(companyName) {
+  if (typeof AN === 'undefined') return;
+  AN.advancedFilters = AN.advancedFilters || {};
+  AN.advancedFilters.company = companyName || '';
+  if (typeof anOnFilterChanged === 'function') anOnFilterChanged();
+  else if (typeof renderLeadsTable === 'function') renderLeadsTable();
+};
 
 window.coSyncFromLeads = function(){
   if(typeof anSyncCompaniesFromLeads !== 'function'){
@@ -16709,275 +17363,144 @@ window.coSyncFromLeads = function(){
     return;
   }
   anSyncCompaniesFromLeads();
+  coInvalidateStatsCache();
   coRender();
   if(typeof showToast === 'function') showToast('Synced company pages from lead agency names');
 };
 
-function coTableView(companies) {
-  if (!companies.length) {
-    return '<div style="padding:64px;text-align:center;color:#a1a1aa;"><div style="font-size:40px;margin-bottom:12px;">🏢</div>No companies yet</div>';
-  }
-  var rows = companies.map(function(co, i) {
-    var stats = coGetCompanyStats(co.name, co);
-    var owner = stats.ownerEmail && typeof anGetRepName === 'function' ? anGetRepName(stats.ownerEmail) : '—';
-    var rowBg = i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.012)';
-    var checked = CO.selectedIds.indexOf(co.id) >= 0;
-    return '<tr style="cursor:pointer;background:'+rowBg+';" onclick="coSelect(\''+co.id+'\');CO.currentView=\'split\';coRender();" onmouseover="this.style.background=\'rgba(99,102,241,0.04)\'" onmouseout="this.style.background=\''+rowBg+'\'">'
-      +'<td onclick="event.stopPropagation()"><input type="checkbox" class="co-cb" data-id="'+co.id+'"'+(checked?' checked':'')+' onchange="coToggleSelect(\''+co.id+'\',this.checked)" style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;"></td>'
-      +'<td><div style="display:flex;align-items:center;gap:10px;"><div class="co-co-avatar" style="background:'+coColor(co.name)+';width:32px;height:32px;font-size:13px;">'+co.name.charAt(0).toUpperCase()+'</div>'
-      +'<div><div style="font-weight:700;color:#09090b;">'+coEsc(co.name)+'</div>'+(co.website?'<div style="font-size:11px;color:#6366f1;">'+coEsc(co.website)+'</div>':'')+'</div></div></td>'
-      +'<td>'+stats.totalContacts+'</td>'
-      +'<td>'+(stats.activeUsers || '—')+'</td>'
-      +'<td>'+coEsc(stats.primaryPlan)+'</td>'
-      +'<td>'+(stats.activeMRR ? '$'+stats.activeMRR+'/mo' : (stats.pipelineMRR ? '$'+stats.pipelineMRR+'/mo pipe' : '—'))+'</td>'
-      +'<td><span style="background:#eef2ff;color:#6366f1;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;">'+coEsc(stats.lifecycle)+'</span></td>'
-      +'<td style="color:#71717a;">'+coEsc(owner)+'</td>'
-      +'<td onclick="event.stopPropagation()" style="white-space:nowrap;">'
-      +'<button onclick="coDeleteCompany(\''+co.id+'\')" title="Delete company" style="padding:5px 10px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🗑</button>'
-      +'</td>'
-      +'</tr>';
-  }).join('');
-
-  var allChecked = companies.length > 0 && CO.selectedIds.length === companies.length;
-  return '<div class="co-table-wrap"><table class="co-table">'
-    +'<thead><tr>'
-    +'<th style="width:36px;"><input type="checkbox"'+(allChecked?' checked':'')+' onclick="coToggleSelectAll(this.checked)" style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;"></th>'
-    +'<th>Company</th><th>Contacts</th><th>Signed Up</th><th>Plan</th><th>MRR</th><th>Stage</th><th>Owner</th><th style="width:52px;"> </th>'
-    +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
-}
-
-function coListPane(companies, selected) {
-  var allChecked = companies.length > 0 && CO.selectedIds.length === companies.length;
-  return '<div id="co-list-pane">'
-    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #f0f0f5;background:#fafafa;font-size:11px;color:#71717a;">'
-    +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;">'
-    +'<input type="checkbox"'+(allChecked?' checked':'')+' onchange="coToggleSelectAll(this.checked)" style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;"> Select all'
-    +'</label>'
-    +(CO.selectedIds.length ? '<span style="color:#ef4444;font-weight:700;">'+CO.selectedIds.length+' selected</span>' : '<span>'+companies.length+' shown</span>')
-    +'</div>'
-    +'<div class="co-search"><input id="co-search-input" type="text" placeholder="Search companies..." oninput="coFilterList(this.value)" value=""></div>'
-    +'<div id="co-company-list">'
-    +(companies.length === 0 ? '<div style="padding:32px;text-align:center;color:#a1a1aa;font-size:13px;"><div style="font-size:32px;margin-bottom:8px;">🏢</div>No companies yet.<br><small>They\'ll appear here from your lead data, or add one manually.</small></div>' : '')
-    +companies.map(function(co) {
-      var active = selected && co.id === selected.id;
-      var stats = coGetCompanyStats(co.name, co);
-      var checked = CO.selectedIds.indexOf(co.id) >= 0;
-      return '<div class="co-company-row'+(active?' active':'')+'">'
-        +'<input type="checkbox" class="co-cb" data-id="'+co.id+'"'+(checked?' checked':'')+' onclick="event.stopPropagation()" onchange="coToggleSelect(\''+co.id+'\',this.checked)" style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;flex-shrink:0;">'
-        +'<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;cursor:pointer;" onclick="coSelect(\''+co.id+'\')">'
-        +'<div class="co-co-avatar" style="background:'+coColor(co.name)+';">'+co.name.charAt(0).toUpperCase()+'</div>'
-        +'<div style="flex:1;min-width:0;">'
-        +'<div class="co-co-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+coEsc(co.name)+'</div>'
-        +'<div class="co-co-meta">'+stats.totalContacts+' contact'+(stats.totalContacts!==1?'s':'')+(stats.activeUsers?' · '+stats.activeUsers+' signed up':'')+(stats.activeMRR?' · $'+stats.activeMRR+'/mo':'')+'</div>'
-        +'</div>'
-        +(stats.activeUsers ? '<span class="co-co-badge" style="background:#dcfce7;color:#16a34a;">✓ '+stats.activeUsers+'</span>' : (stats.totalContacts ? '<span class="co-co-badge" style="background:#eef2ff;color:#6366f1;">'+stats.lifecycle+'</span>' : ''))
-        +'<button onclick="event.stopPropagation();coDeleteCompany(\''+co.id+'\')" title="Delete" style="flex-shrink:0;padding:4px 8px;border-radius:6px;border:1px solid #fecaca;background:#fff;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;opacity:0.85;">🗑</button>'
-        +'</div></div>';
-    }).join('')
-    +'</div></div>';
-}
-
-function coDetailPane(co, allCompanies) {
-  if (!co) return '<div id="co-detail-pane" style="display:flex;align-items:center;justify-content:center;color:#a1a1aa;font-size:14px;flex:1;"><div style="text-align:center;"><div style="font-size:40px;margin-bottom:12px;">🏢</div>Select a company to view details</div></div>';
-
-  var stats = coGetCompanyStats(co.name, co);
+function coBuildCompanyPanelHTML(co, stats) {
   var leads = stats.leads.slice();
-  var statusColors = { new:'#6366f1', contacted:'#f59e0b', demo:'#8b5cf6', showed:'#10b981', proposal:'#06b6d4', won:'#22c55e', lost:'#ef4444', nurture:'#a1a1aa' };
-  var statusLabels = { new:'New', contacted:'Contacted', demo:'Demo Set', showed:'Showed', proposal:'Proposal', won:'Won', lost:'Lost', nurture:'Nurture' };
-  var dmTitles = ['owner','ceo','president','founder','director','vp','principal','partner','manager'];
-  var wonContacts = stats.won;
-  var showAgencyPitch = wonContacts.length >= 3;
-  var showGroupOppty  = leads.length >= 5 && !showAgencyPitch;
-  var statusOrder = { won:0, proposal:1, showed:2, demo:3, contacted:4, new:5, nurture:6, lost:7 };
-  var ownerName = stats.ownerEmail && typeof anGetRepName === 'function' ? anGetRepName(stats.ownerEmail) : (stats.ownerEmail ? stats.ownerEmail.split('@')[0] : 'Unassigned');
-  var totalCalls = leads.reduce(function(sum,l){ return sum + (l.callLog||[]).length; }, 0);
   var opps = stats.pipeline;
-
-  leads.sort(function(a,b) {
-    var aIsDM = dmTitles.some(function(t){ return (a.title||'').toLowerCase().indexOf(t)>=0; });
-    var bIsDM = dmTitles.some(function(t){ return (b.title||'').toLowerCase().indexOf(t)>=0; });
-    if (aIsDM !== bIsDM) return aIsDM ? -1 : 1;
-    return (statusOrder[a.status]||5) - (statusOrder[b.status]||5);
-  });
+  var ownerName = stats.ownerEmail && typeof anGetRepName === 'function' ? anGetRepName(stats.ownerEmail) : (stats.ownerEmail ? stats.ownerEmail.split('@')[0] : 'Unassigned');
+  var mrr = stats.activeMRR || stats.pipelineMRR || 0;
+  var stageCol = (CO_STAGES.find(function(s){ return s.id === stats.lifecycle; }) || { color: '#6366f1' }).color;
+  var statusOrder = { won:0, proposal:1, showed:2, demo:3, contacted:4, new:5, nurture:6, lost:7 };
+  leads.sort(function(a,b) { return (statusOrder[a.status]||5) - (statusOrder[b.status]||5); });
 
   var allCalls = [];
-  leads.forEach(function(l){
-    (l.callLog||[]).forEach(function(c){
-      allCalls.push({ date:c.date, time:c.time, outcome:c.outcome, notes:c.notes, contact:((l.firstName||'')+' '+(l.lastName||'')).trim() });
+  leads.forEach(function(l) {
+    (l.callLog||[]).forEach(function(c) {
+      allCalls.push({ date:c.date, time:c.time, outcome:c.outcome, notes:c.notes, contact:((l.firstName||'')+' '+(l.lastName||'')).trim(), leadId:l.id });
     });
   });
-  allCalls.sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+  allCalls.sort(function(a,b) { return (b.date||'').localeCompare(a.date||''); });
 
-  function keyRow(label, val, editableId, coField){
-    if(editableId){
-      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f5;gap:10px;">'
-        +'<span style="font-size:12px;color:#71717a;flex-shrink:0;">'+label+'</span>'
-        +'<input id="'+editableId+'" type="text" value="'+coEsc(val||'')+'" placeholder="Add..." onblur="coSaveField(\''+co.id+'\',\''+coField+'\',this.value)" style="border:none;border-bottom:1px solid #e4e4e7;padding:2px 4px;font-size:12.5px;font-weight:600;color:#09090b;background:transparent;outline:none;text-align:right;min-width:120px;max-width:180px;" onfocus="this.style.borderColor=\'#6366f1\'">'
-        +'</div>';
-    }
-    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f5;">'
-      +'<span style="font-size:12px;color:#71717a;">'+label+'</span>'
-      +'<span style="font-size:12.5px;font-weight:700;color:#09090b;text-align:right;">'+val+'</span></div>';
+  var callIcons = { pickup:'☎️', demo:'🎯', voicemail:'📬', noanswer:'📵', note:'📝' };
+  var safeName = co.name.replace(/'/g, "\\'");
+
+  function panelRow(label, val) {
+    return '<div class="co-panel-row"><span>'+label+'</span><span>'+val+'</span></div>';
   }
 
-  return '<div id="co-detail-pane"><div class="co-detail-grid">'
+  var contactsHTML = leads.length ? leads.map(function(l) {
+    var name = ((l.firstName||'')+' '+(l.lastName||'')).trim() || 'Unknown';
+    var st = (typeof anStatus === 'function') ? anStatus(l.status||'new') : { label: l.status||'new', color: '#6366f1' };
+    return '<div class="co-contact-row" onclick="coOpenContact(\''+l.id+'\')">'
+      +'<div style="width:34px;height:34px;border-radius:50%;background:'+st.color+'22;color:'+st.color+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;">'+name.charAt(0).toUpperCase()+'</div>'
+      +'<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:var(--text-primary,#09090b);">'+coEsc(name)+'</div>'
+      +'<div style="font-size:11px;color:var(--text-muted,#71717a);">'+(l.title?coEsc(l.title)+' · ':'')+(l.email||l.phone||'')+'</div></div>'
+      +'<span style="font-size:10px;font-weight:700;color:'+st.color+';background:'+st.color+'18;padding:3px 9px;border-radius:12px;white-space:nowrap;">'+st.label+'</span>'
+      +'<button onclick="event.stopPropagation();coLogCallForLead(\''+l.id+'\')" style="padding:4px 8px;border-radius:6px;border:1px solid #a7f3d0;background:#ecfdf5;color:#10b981;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">📞</button>'
+      +'</div>';
+  }).join('') : '<div style="text-align:center;padding:36px 12px;color:var(--text-muted,#71717a);"><div style="font-size:32px;margin-bottom:10px;">👤</div>No contacts — add one or sync from leads.</div>';
 
-    // ── LEFT: Company profile + key info (HubSpot-style) ──
-    +'<div class="co-detail-left">'
-    +'<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:18px;">'
-    +'<div style="width:48px;height:48px;border-radius:12px;background:'+coColor(co.name)+';display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;flex-shrink:0;">'+co.name.charAt(0).toUpperCase()+'</div>'
-    +'<div style="flex:1;min-width:0;"><div style="font-size:17px;font-weight:800;color:#09090b;">'+coEsc(co.name)+'</div>'
-    +'<input id="co-website-edit" type="text" value="'+coEsc(co.website||'')+'" placeholder="website.com" onblur="coSaveField(\''+co.id+'\',\'website\',this.value)" style="border:none;font-size:12px;color:#6366f1;background:transparent;outline:none;width:100%;margin-top:2px;" onfocus="this.style.borderColor=\'#6366f1\'">'
-    +'</div>'
-    +'<button onclick="coDeleteCompany(\''+co.id+'\')" title="Delete company" style="flex-shrink:0;padding:7px 12px;border-radius:8px;border:1px solid #fecaca;background:#fef2f2;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🗑 Delete</button>'
-    +'</div>'
-    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;">'
-    +'<button onclick="coAddContact(\''+co.id+'\')" style="padding:6px 12px;border-radius:20px;border:1px solid #e4e4e7;background:#fff;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;">📝 Note</button>'
-    +'<button onclick="coAddContact(\''+co.id+'\')" style="padding:6px 12px;border-radius:20px;border:1px solid #e4e4e7;background:#fff;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;">📞 Call</button>'
-    +'<button onclick="coAddContact(\''+co.id+'\')" style="padding:6px 12px;border-radius:20px;border:1px solid #e4e4e7;background:#fff;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;">👤 Contact</button>'
-    +'</div>'
-    +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#a1a1aa;margin-bottom:8px;">Key Information</div>'
-    + keyRow('Company owner', ownerName)
-    + keyRow('Lifecycle stage', stats.lifecycle, 'co-lifecycle-edit', 'lifecycleStage')
-    + keyRow('Signed up users', stats.activeUsers ? stats.activeUsers+' using AgentNav' : 'None yet')
-    + keyRow('Active plan', stats.primaryPlan)
-    + keyRow('Active MRR', stats.activeMRR ? '$'+stats.activeMRR+'/mo' : '—')
-    + keyRow('Pipeline MRR', stats.pipelineMRR ? '$'+stats.pipelineMRR+'/mo' : '—')
-    + keyRow('Total contacts', stats.totalContacts)
-    + keyRow('Industry', co.industry||'Insurance Agency', 'co-industry-edit', 'industry')
-    +'</div>'
-
-    // ── CENTER: Activities / Contacts tabs ──
-    +'<div class="co-detail-center">'
-    +'<div style="padding:0 20px;border-bottom:1px solid #e9e9ef;background:#fff;display:flex;gap:0;flex-shrink:0;">'
-    +'<button id="co-company-tab-activity" onclick="coSwitchCompanyTab(\'activity\')" style="padding:10px 16px;border:none;border-bottom:2px solid #6366f1;font-size:13px;font-weight:700;color:#6366f1;background:transparent;cursor:pointer;font-family:inherit;">Activities</button>'
-    +'<button id="co-company-tab-contacts" onclick="coSwitchCompanyTab(\'contacts\')" style="padding:10px 16px;border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;color:#a1a1aa;background:transparent;cursor:pointer;font-family:inherit;">Contacts ('+leads.length+')</button>'
-    +'</div>'
-    +(showAgencyPitch ? '<div style="margin:14px 20px 0;background:linear-gradient(135deg,#fef9c3,#fef3c7);border:1.5px solid #fde68a;border-radius:10px;padding:12px 14px;font-size:12px;color:#92400e;flex-shrink:0;"><strong>Agency opportunity:</strong> '+wonContacts.length+' users signed up — consider an enterprise pitch.</div>' : '')
-
-    // Activities pane
-    +'<div id="co-company-pane-activity" style="flex:1;overflow-y:auto;padding:16px 20px;">'
-    +(allCalls.length ? allCalls.slice(0,20).map(function(c){
-      return '<div style="background:#fff;border:1px solid #e9e9ef;border-radius:10px;padding:14px;margin-bottom:10px;">'
-        +'<div style="font-size:12px;font-weight:700;color:#6366f1;margin-bottom:4px;">'+(c.outcome||'Call').charAt(0).toUpperCase()+(c.outcome||'call').slice(1)+' with '+coEsc(c.contact)+'</div>'
-        +'<div style="font-size:11px;color:#a1a1aa;">'+coEsc(c.date)+(c.time?' · '+c.time:'')+'</div>'
-        +(c.notes?'<div style="font-size:12.5px;color:#52525b;margin-top:8px;line-height:1.5;">'+coEsc(c.notes)+'</div>':'')
-        +'</div>';
-    }).join('') : '<div style="text-align:center;padding:48px;color:#a1a1aa;"><div style="font-size:32px;margin-bottom:10px;">📋</div>No activity yet — log a call from a contact.</div>')
-    +'</div>'
-
-    // Contacts pane
-    +'<div id="co-company-pane-contacts" style="flex:1;overflow-y:auto;padding:16px 20px;display:none;">'
-    +(leads.length ? '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">'
-      +'<div style="font-size:13px;font-weight:700;color:#09090b;">'+leads.length+' contact'+(leads.length!==1?'s':'')+' at '+coEsc(co.name)+'</div>'
-      +'<button onclick="coAddContact(\''+co.id+'\')" style="background:#6366f1;color:#fff;border:none;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ Add Contact</button>'
+  var activityHTML = allCalls.length ? allCalls.slice(0, 30).map(function(c) {
+    var ic = callIcons[c.outcome] || '📞';
+    return '<div style="padding:12px 0;border-bottom:1px solid var(--divider,#f0f0f5);">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
+      +'<span>'+ic+'</span><span style="font-size:13px;font-weight:700;color:var(--text-primary,#09090b);">'+coEsc((c.outcome||'call').charAt(0).toUpperCase()+(c.outcome||'call').slice(1))+'</span>'
+      +'<span style="font-size:12px;color:var(--text-muted,#71717a);">with '+coEsc(c.contact)+'</span>'
+      +'<span style="margin-left:auto;font-size:11px;color:var(--text-muted,#a1a1aa);">'+coEsc(c.date)+(c.time?' '+c.time:'')+'</span>'
       +'</div>'
-      + leads.map(function(l){
-        var name = ((l.firstName||'')+' '+(l.lastName||'')).trim() || 'Unknown';
-        var stCol = statusColors[l.status] || '#a1a1aa';
-        var stLbl = statusLabels[l.status] || l.status;
-        var isDM = dmTitles.some(function(t){ return (l.title||'').toLowerCase().indexOf(t)>=0; });
-        var lastCall = (l.callLog&&l.callLog.length) ? l.callLog.slice().sort(function(a,b){return b.date.localeCompare(a.date);})[0] : null;
-        return '<div style="display:flex;align-items:center;gap:12px;padding:14px;background:#fff;border:1px solid #e9e9ef;border-radius:10px;margin-bottom:8px;cursor:pointer;" onclick="coOpenContact(\''+l.id+'\')" onmouseover="this.style.borderColor=\'#6366f1\'" onmouseout="this.style.borderColor=\'#e9e9ef\'">'
-          +'<div style="width:40px;height:40px;border-radius:50%;background:'+stCol+';display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;flex-shrink:0;position:relative;">'+name.charAt(0).toUpperCase()
-          +(isDM?'<span style="position:absolute;bottom:-2px;right:-2px;font-size:10px;">⭐</span>':'')+'</div>'
-          +'<div style="flex:1;min-width:0;">'
-          +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
-          +'<span style="font-size:14px;font-weight:700;color:#09090b;">'+coEsc(name)+'</span>'
-          +(isDM?'<span style="font-size:10px;font-weight:700;background:#fff7ed;color:#f59e0b;border-radius:4px;padding:1px 6px;">DM</span>':'')
-          +(l.status==='won'?'<span style="font-size:10px;font-weight:700;background:#dcfce7;color:#16a34a;border-radius:4px;padding:1px 6px;">Signed Up</span>':'')
-          +'</div>'
-          +'<div style="font-size:12px;color:#71717a;margin-top:2px;">'
-          +(l.title?coEsc(l.title)+' · ':'')+(l.email?coEsc(l.email):'')+(l.email&&l.phone?' · ':'')+(l.phone?coEsc(anFormatPhone(l.phone)):'')
-          +'</div>'
-          +(lastCall?'<div style="font-size:11px;color:#a1a1aa;margin-top:3px;">Last: '+coEsc(lastCall.date)+' — '+coEsc(lastCall.outcome||'call')+'</div>':'')
-          +'</div>'
-          +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">'
-          +'<span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:'+stCol+'18;color:'+stCol+';">'+coEsc(stLbl)+'</span>'
-          +'<div style="display:flex;gap:4px;">'
-          +'<button onclick="event.stopPropagation();coLogCallForLead(\''+l.id+'\')" style="background:#ecfdf5;color:#10b981;border:1px solid #a7f3d0;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">📞</button>'
-          +'<button onclick="event.stopPropagation();coOpenContact(\''+l.id+'\')" style="background:#eef2ff;color:#6366f1;border:1px solid #c7d2fe;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">✏️</button>'
-          +'</div></div></div>';
-      }).join('')
-      : '<div style="text-align:center;padding:48px 20px;color:#a1a1aa;"><div style="font-size:36px;margin-bottom:12px;">👤</div><div style="font-size:14px;font-weight:600;color:#71717a;margin-bottom:8px;">No contacts yet</div><div style="font-size:13px;margin-bottom:16px;">Add a contact or import leads with this company name.</div><button onclick="coAddContact(\''+co.id+'\')" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">+ Add Contact</button></div>')
+      +(c.notes?'<div style="font-size:12.5px;color:var(--text-secondary,#52525b);background:var(--body-bg,#f7f7f9);border-radius:8px;padding:10px;line-height:1.5;">'+coEsc(c.notes)+'</div>':'')
+      +'</div>';
+  }).join('') : '<div style="text-align:center;padding:36px 12px;color:var(--text-muted,#71717a);"><div style="font-size:32px;margin-bottom:10px;">📋</div>No calls logged yet.</div>';
+
+  var dealsHTML = opps.length ? opps.map(function(o) {
+    var st = (typeof anStatus === 'function') ? anStatus(o.status||'demo') : { label: o.status, color: '#6366f1' };
+    return '<div onclick="coOpenContact(\''+o.id+'\')" style="border:1px solid var(--divider,#e9e9ef);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;border-left:3px solid '+st.color+';">'
+      +'<div style="font-size:13px;font-weight:700;">'+coEsc(((o.firstName||'')+' '+(o.lastName||'')).trim())+'</div>'
+      +'<div style="font-size:11px;color:var(--text-muted,#71717a);margin-top:3px;">$'+(coLeadMRR(o)||79)+'/mo · '+st.label+'</div></div>';
+  }).join('') : '<div style="text-align:center;padding:28px;color:var(--text-muted,#71717a);font-size:13px;">No deals in pipeline.</div>';
+
+  return ''
+    +'<div class="co-panel-hero">'
+    +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">'
+    +'<div style="display:flex;align-items:center;gap:14px;min-width:0;">'
+    +'<div class="co-co-avatar" style="background:'+coColor(co.name)+';width:52px;height:52px;font-size:22px;">'+co.name.charAt(0).toUpperCase()+'</div>'
+    +'<div style="min-width:0;"><div style="font-size:19px;font-weight:800;letter-spacing:-0.3px;">'+coEsc(co.name)+'</div>'
+    +'<div style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:4px;">'+stats.totalContacts+' contacts · <span style="color:'+stageCol+';font-weight:700;">'+coEsc(stats.lifecycle)+'</span></div></div>'
+    +'</div>'
+    +'<button onclick="coCloseCompanyPanel()" style="background:rgba(255,255,255,0.12);border:none;color:rgba(255,255,255,0.7);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;flex-shrink:0;">✕</button>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">'
+    +'<button onclick="typeof anNewLeadForCompany===\'function\'?anNewLeadForCompany(\''+safeName+'\'):coAddContact(\''+co.id+'\')" style="padding:7px 13px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">+ Contact</button>'
+    +'<button onclick="typeof logCallForCompany===\'function\'?logCallForCompany(\''+safeName+'\'):void 0" style="padding:7px 13px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">📞 Log call</button>'
+    +'<button onclick="coViewInPipeline(\''+safeName+'\')" style="padding:7px 13px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Pipeline →</button>'
     +'</div></div>'
 
-    // ── RIGHT: Associated records ──
-    +'<div class="co-detail-right">'
-
-    // Contacts widget
-    +'<div style="margin-bottom:20px;">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
-    +'<span style="font-size:12px;font-weight:700;color:#09090b;">Contacts ('+leads.length+')</span>'
-    +'<button onclick="coAddContact(\''+co.id+'\')" style="font-size:11px;font-weight:700;color:#6366f1;background:none;border:none;cursor:pointer;font-family:inherit;">+ Add</button>'
-    +'</div>'
-    +(leads.length ? leads.slice(0,6).map(function(l){
-      var name = ((l.firstName||'')+' '+(l.lastName||'')).trim() || 'Unknown';
-      var stCol = statusColors[l.status] || '#a1a1aa';
-      var isSignedUp = l.status === 'won';
-      return '<div onclick="typeof anOpenLeadPanel===\'function\'?anOpenLeadPanel(\''+l.id+'\'):anOpenLead&&anOpenLead(\''+l.id+'\')" style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;cursor:pointer;margin-bottom:4px;" onmouseover="this.style.background=\'#f4f4ff\'" onmouseout="this.style.background=\'transparent\'">'
-        +'<div style="width:28px;height:28px;border-radius:50%;background:'+stCol+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;">'+name.charAt(0).toUpperCase()+'</div>'
-        +'<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:600;color:#09090b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+coEsc(name)+'</div>'
-        +'<div style="font-size:10.5px;color:#a1a1aa;">'+(isSignedUp?'✓ Signed up · ':'')+(l.email||(l.phone?anFormatPhone(l.phone):'')||'')+'</div></div></div>';
-    }).join('') + (leads.length>6?'<div onclick="coSwitchCompanyTab(\'contacts\')" style="font-size:11px;color:#6366f1;padding:6px 8px;cursor:pointer;font-weight:600;">View all '+leads.length+' contacts →</div>':'')
-      : '<div style="font-size:12px;color:#a1a1aa;padding:8px 0;">No contacts — import CSV or add manually.</div>')
+    +'<div class="co-revenue-card" style="margin:16px 20px 0;">'
+    +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.45);">Revenue</div>'
+    +'<div style="font-size:28px;font-weight:900;margin-top:6px;">$'+mrr+'<span style="font-size:14px;font-weight:600;opacity:0.5;">/mo</span></div>'
+    +'<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;">'+(stats.activeUsers?stats.activeUsers+' signed up · ':'')+coEsc(stats.primaryPlan)+'</div>'
     +'</div>'
 
-    // Deals / pricing widget
-    +'<div style="margin-bottom:20px;">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
-    +'<span style="font-size:12px;font-weight:700;color:#09090b;">Deals ('+opps.length+')</span>'
-    +'<button onclick="showSection(\'opportunities\',null)" style="font-size:11px;font-weight:700;color:#6366f1;background:none;border:none;cursor:pointer;font-family:inherit;">+ Add</button>'
-    +'</div>'
-    +(opps.length ? opps.slice(0,4).map(function(o){
-      var mrr = coLeadMRR(o) || 79;
-      var stCol = statusColors[o.status] || '#6366f1';
-      return '<div style="border:1px solid #e9e9ef;border-radius:8px;padding:10px;margin-bottom:6px;border-left:3px solid '+stCol+';">'
-        +'<div style="font-size:12px;font-weight:700;color:#09090b;">'+coEsc(((o.firstName||'')+' '+(o.lastName||'')).trim())+'</div>'
-        +'<div style="font-size:11px;color:#71717a;margin-top:2px;">$'+mrr+'/mo · '+coEsc(statusLabels[o.status]||o.status)+'</div></div>';
-    }).join('') : '<div style="font-size:12px;color:#a1a1aa;line-height:1.5;">Track revenue opportunities for this company.</div>')
+    +'<div class="co-panel-tabs" style="margin-top:16px;">'
+    +'<button type="button" id="co-panel-tab-overview" class="co-panel-tab active" onclick="coPanelTab(\'overview\')">Overview</button>'
+    +'<button type="button" id="co-panel-tab-contacts" class="co-panel-tab" onclick="coPanelTab(\'contacts\')">Contacts ('+leads.length+')</button>'
+    +'<button type="button" id="co-panel-tab-activity" class="co-panel-tab" onclick="coPanelTab(\'activity\')">Activity</button>'
+    +'<button type="button" id="co-panel-tab-deals" class="co-panel-tab" onclick="coPanelTab(\'deals\')">Deals ('+opps.length+')</button>'
     +'</div>'
 
-    // Pricing summary
-    +'<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);border-radius:10px;padding:14px;color:#fff;">'
-    +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.45);margin-bottom:8px;">Company Revenue</div>'
-    +'<div style="font-size:24px;font-weight:900;letter-spacing:-1px;">$'+(stats.activeMRR||stats.pipelineMRR||0)+'<span style="font-size:13px;font-weight:600;opacity:0.5;">/mo</span></div>'
-    +'<div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:6px;line-height:1.5;">'
-    +(stats.activeUsers ? stats.activeUsers+' user'+(stats.activeUsers!==1?'s':'')+' signed up' : 'No signed-up users yet')
-    +(stats.primaryPlan !== '—' ? ' · '+stats.primaryPlan : '')
-    +'</div></div>'
-
-    // Notes
-    +'<div style="margin-top:16px;">'
-    +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#a1a1aa;margin-bottom:6px;">Notes</div>'
-    +'<textarea id="co-notes-ta" rows="3" placeholder="Strategy, pricing notes..." onblur="coSaveField(\''+co.id+'\',\'notes\',this.value)" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:8px 10px;font-size:12px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;color:#09090b;">'+coEsc(co.notes||'')+'</textarea>'
-    +'<button onclick="coDeleteCompany(\''+co.id+'\')" style="margin-top:10px;width:100%;background:#fef2f2;color:#ef4444;border:1px solid #fecaca;border-radius:8px;padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Remove Company</button>'
+    +'<div class="co-panel-body">'
+    +'<div id="co-panel-pane-overview">'
+    +'<div class="co-panel-row"><span>Owner</span>'
+    +'<button type="button" onclick="anOpenOwnerPicker({companyName:\''+safeName+'\'})" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">'+coEsc(ownerName)+' ▾</button></div>'
+    +panelRow('Signed up', stats.activeUsers || '0')
+    +panelRow('Active MRR', stats.activeMRR ? '$'+stats.activeMRR+'/mo' : '—')
+    +panelRow('Pipeline MRR', stats.pipelineMRR ? '$'+stats.pipelineMRR+'/mo' : '—')
+    +panelRow('State', stats.state ? coEsc(stats.state) : '—')
+    +panelRow('Last activity', stats.lastActivity ? (typeof anTimeAgo === 'function' ? anTimeAgo(stats.lastActivity) : coEsc(stats.lastActivity)) : '—')
+    +panelRow('Next follow-up', stats.nextFollowUp ? (typeof anDate === 'function' ? anDate(stats.nextFollowUp) : coEsc(stats.nextFollowUp)) : '—')
+    +'<div class="co-panel-row"><span>Website</span><input type="text" value="'+coEsc(co.website||'')+'" placeholder="website.com" onblur="coSaveField(\''+co.id+'\',\'website\',this.value)" style="border:none;border-bottom:1px solid var(--divider,#e4e4e7);background:transparent;outline:none;min-width:140px;text-align:right;font-family:inherit;"></div>'
+    +'<div class="co-panel-row"><span>Industry</span><input type="text" value="'+coEsc(co.industry||'Insurance Agency')+'" placeholder="Industry" onblur="coSaveField(\''+co.id+'\',\'industry\',this.value)" style="border:none;border-bottom:1px solid var(--divider,#e4e4e7);background:transparent;outline:none;min-width:140px;text-align:right;font-family:inherit;"></div>'
+    +'<div class="co-panel-row"><span>Lifecycle</span><select onchange="coSaveField(\''+co.id+'\',\'lifecycleStage\',this.value);coRender();if(_coSelected===\''+co.id+'\')coOpenCompanyPanel(\''+co.id+'\');" style="border:1.5px solid var(--divider,#e4e4e7);border-radius:6px;padding:4px 8px;font-size:12px;font-weight:600;font-family:inherit;background:var(--card-bg,#fff);color:var(--text-primary,#09090b);">'
+    +CO_STAGES.map(function(s) {
+      var sel = (co.lifecycleStage || stats.lifecycle) === s.id ? ' selected' : '';
+      return '<option value="'+s.id+'"'+sel+'>'+s.label+'</option>';
+    }).join('')
+    +'</select></div>'
+    +'<div style="margin-top:16px;"><div style="font-size:10px;font-weight:700;color:var(--text-muted,#a1a1aa);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Notes</div>'
+    +'<textarea rows="4" placeholder="Strategy, pricing notes..." onblur="coSaveField(\''+co.id+'\',\'notes\',this.value)" style="width:100%;border:1.5px solid var(--divider,#e4e4e7);border-radius:8px;padding:10px;font-size:12px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;">'+coEsc(co.notes||'')+'</textarea></div>'
+    +'<button onclick="coDeleteCompany(\''+co.id+'\')" style="margin-top:16px;width:100%;padding:10px;border-radius:8px;border:1px solid #fecaca;background:#fef2f2;color:#ef4444;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Remove company</button>'
     +'</div>'
-
-    +'</div></div></div>';
-}
-
-function coStatCard(val, label, color) {
-  return '<div style="background:#fff;border:1.5px solid #e9e9ef;border-radius:10px;padding:14px;text-align:center;border-top:3px solid '+color+';">'
-    +'<div style="font-size:22px;font-weight:900;color:'+color+';">'+val+'</div>'
-    +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9999aa;margin-top:3px;">'+label+'</div>'
+    +'<div id="co-panel-pane-contacts" style="display:none;">'+contactsHTML+'</div>'
+    +'<div id="co-panel-pane-activity" style="display:none;">'+activityHTML+'</div>'
+    +'<div id="co-panel-pane-deals" style="display:none;">'+dealsHTML+'</div>'
     +'</div>';
 }
 
 function coEsc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-window.coSwitchCompanyTab = function(tab) {
-  ['activity','contacts'].forEach(function(t){
-    var pane = document.getElementById('co-company-pane-'+t);
-    var btn = document.getElementById('co-company-tab-'+t);
-    if(pane) pane.style.display = t === tab ? 'block' : 'none';
-    if(btn){
-      btn.style.borderBottomColor = t === tab ? '#6366f1' : 'transparent';
-      btn.style.color = t === tab ? '#6366f1' : '#a1a1aa';
-      btn.style.fontWeight = t === tab ? '700' : '600';
+window.coPanelTab = function(tab) {
+  ['overview','contacts','activity','deals'].forEach(function(t) {
+    var pane = document.getElementById('co-panel-pane-'+t);
+    var btn = document.getElementById('co-panel-tab-'+t);
+    if (pane) pane.style.display = t === tab ? 'block' : 'none';
+    if (btn) {
+      btn.classList.toggle('active', t === tab);
     }
   });
 };
+
+window.coViewInPipeline = function(companyName) {
+  coCloseCompanyPanel();
+  if (typeof showSection === 'function') showSection('crm');
+  setTimeout(function() {
+    if (typeof anSetCompanyFilter === 'function') anSetCompanyFilter(companyName);
+  }, 200);
+};
+
 
 window.coOpenContact = function(leadId) {
   if(typeof anOpenLeadPanel === 'function') anOpenLeadPanel(leadId);
@@ -16990,15 +17513,74 @@ window.coLogCallForLead = function(leadId) {
 };
 
 window.coSelect = function(id) {
-  _coSelected = id;
-  if (CO.currentView !== 'split') CO.currentView = 'split';
-  coRender();
+  coOpenCompanyPanel(id);
+};
+
+window.coFilterBoard = function(q) {
+  CO.searchQuery = (q || '').trim();
+  clearTimeout(_coSearchTimer);
+  _coSearchTimer = setTimeout(function() {
+    coInvalidateStatsCache();
+    coRender();
+  }, 220);
+};
+
+window.coCloseCompanyPanel = function() {
+  var panel = document.getElementById('co-company-panel');
+  var backdrop = document.getElementById('co-panel-backdrop');
+  _coSelected = null;
+  document.querySelectorAll('.co-kanban-card.active').forEach(function(el) { el.classList.remove('active'); });
+  if (panel) panel.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('open');
+  setTimeout(function() {
+    if (panel && !panel.classList.contains('open')) panel.remove();
+    if (backdrop && !backdrop.classList.contains('open')) backdrop.remove();
+  }, 300);
+};
+
+window.coOpenCompanyPanel = function(coId) {
+  var co = (_coData || []).find(function(c){ return c.id === coId; });
+  if (!co) return;
+  _coSelected = coId;
+  document.querySelectorAll('.co-kanban-card').forEach(function(el) {
+    el.classList.toggle('active', el.getAttribute('data-co-id') === coId);
+  });
+
+  var stats = coGetCompanyStats(co.name, co, co.id);
+  var existing = document.getElementById('co-company-panel');
+  var existingBackdrop = document.getElementById('co-panel-backdrop');
+
+  if (existing) {
+    existing.innerHTML = coBuildCompanyPanelHTML(co, stats);
+    if (!existing.classList.contains('open')) {
+      requestAnimationFrame(function() { existing.classList.add('open'); });
+    }
+    if (existingBackdrop && !existingBackdrop.classList.contains('open')) {
+      requestAnimationFrame(function() { existingBackdrop.classList.add('open'); });
+    }
+    return;
+  }
+
+  if (existingBackdrop) existingBackdrop.remove();
+  var backdrop = document.createElement('div');
+  backdrop.id = 'co-panel-backdrop';
+  backdrop.onclick = coCloseCompanyPanel;
+  document.body.appendChild(backdrop);
+
+  var panel = document.createElement('div');
+  panel.id = 'co-company-panel';
+  panel.innerHTML = coBuildCompanyPanelHTML(co, stats);
+  document.body.appendChild(panel);
+  requestAnimationFrame(function() {
+    backdrop.classList.add('open');
+    panel.classList.add('open');
+  });
 };
 
 window.coToggleSelect = function(id, checked) {
   if (checked) { if (CO.selectedIds.indexOf(id) < 0) CO.selectedIds.push(id); }
   else { CO.selectedIds = CO.selectedIds.filter(function(x){ return x !== id; }); }
-  coRender();
+  coRefreshBulkBar();
 };
 
 window.coToggleSelectAll = function(checked) {
@@ -17047,6 +17629,10 @@ window.coDeleteSelected = function() {
 };
 
 window.coDeleteAll = function() {
+  if (typeof AN !== 'undefined' && !AN.isAdmin) {
+    if (typeof showToast === 'function') showToast('Only admin can delete all companies');
+    return;
+  }
   var n = _coData.length;
   if (!n) return;
   if (!confirm('Delete ALL '+n.toLocaleString()+' companies?\n\nLeads in Lead Pipeline are NOT deleted.')) return;
@@ -17067,22 +17653,26 @@ window.coDeleteJunkCompanies = function() {
 };
 
 window.coFilterList = function(q) {
-  var rows = document.querySelectorAll('#co-company-list .co-company-row');
-  rows.forEach(function(row) {
-    var name = row.querySelector('.co-co-name');
-    if (!name) return;
-    row.style.display = name.textContent.toLowerCase().indexOf(q.toLowerCase()) >= 0 ? '' : 'none';
-  });
+  coFilterBoard(q);
 };
 
 window.coNewCompany = function() {
   var name = prompt('Company name:');
   if (!name || !name.trim()) return;
   var companies = _coData.slice();
-  var co = { id:'co-'+Date.now(), name:name.trim(), industry:'Insurance Agency', website:'', lifecycleStage:'', notes:'', created:new Date().toISOString() };
+  var co = {
+    id:'co-'+Date.now(), name:name.trim(), industry:'Insurance Agency', website:'',
+    lifecycleStage:'Lead', notes:'', ownerEmail:(typeof AN !== 'undefined' ? AN.currentRepEmail : '') || '',
+    created:new Date().toISOString(), updated:new Date().toISOString(),
+    updatedBy:(typeof AN !== 'undefined' ? AN.currentRepEmail : '') || ''
+  };
   companies.unshift(co);
   _coSelected = co.id;
-  coSave(companies, function() { coRender(); });
+  coInvalidateStatsCache();
+  coSave(companies, function() {
+    coRender();
+    coOpenCompanyPanel(co.id);
+  });
 };
 
 window.coAddContact = function(coId) {
@@ -17122,17 +17712,47 @@ window.coAddContact = function(coId) {
   }, 500);
 };
 
+window.coSyncOwnerForCompanyName = function(companyName, email) {
+  if (!companyName || typeof coSave !== 'function') return;
+  var companies = (_coData || []).slice();
+  var key = coNormName(companyName);
+  var changed = false;
+  companies.forEach(function(c) {
+    if (coNormName(c.name) === key) {
+      c.ownerEmail = (email || '').toLowerCase();
+      coTouchCompany(c);
+      changed = true;
+    }
+  });
+  if (changed) {
+    coInvalidateStatsCache();
+    coSave(companies, function() {
+      if (typeof coRender === 'function') coRender();
+      if (_coSelected && typeof coOpenCompanyPanel === 'function') {
+        var co = companies.find(function(c) { return c.id === _coSelected; });
+        if (co && coNormName(co.name) === key) coOpenCompanyPanel(_coSelected);
+      }
+    });
+  }
+};
+
 window.coSaveField = function(coId, field, value) {
   var companies = _coData.slice();
   var co = companies.find(function(c){ return c.id===coId; });
   if (!co) return;
   co[field] = value;
-  coSave(companies); // fire and forget — no need to re-render
+  coTouchCompany(co);
+  coSave(companies);
 };
 
 window.coDeleteCompany = function(coId, skipConfirm) {
   var co = (_coData || []).find(function(c){ return c.id === coId; });
   if(!co) return;
+  var cache = coBuildStatsCache(_coData || []);
+  if (!coCompanyBelongsToRep(co, cache.statsMap)) {
+    if (typeof showToast === 'function') showToast('You can only remove accounts you own');
+    return;
+  }
   if(!skipConfirm && !confirm('Delete "'+co.name+'"?\n\nLeads in Lead Pipeline are kept — only this company page is removed.')) return;
   coRemoveCompaniesByIds([coId], true);
 };
@@ -17143,7 +17763,7 @@ window.showSection = function(id, btn) {
   if (typeof _origShowSection_co === 'function') _origShowSection_co(id, btn);
   if (id === 'companies') {
     setTimeout(function() {
-      var renderCo = function() { coLoad(function() { coRender(); }); };
+      var renderCo = function() { coInvalidateStatsCache(); coRender(); };
       if (typeof AN !== 'undefined' && typeof AN.load === 'function') AN.load(renderCo);
       else renderCo();
     }, 60);
