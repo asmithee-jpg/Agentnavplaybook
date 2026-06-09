@@ -8822,6 +8822,7 @@ function anNormalizeLeads(arr){
   if(arr.length && Array.isArray(arr[0]) && !arr[0].id) return arr.reduce(function(flat, item){ return flat.concat(item); }, []);
   return arr.map(function(l){
     if(l && l.phone) l.phone = anNormalizePhone(l.phone);
+    if(l && typeof anHydrateLeadState === 'function') anHydrateLeadState(l);
     return anSanitizeLeadStatus(l);
   });
 }
@@ -10242,7 +10243,7 @@ function renderLeadsTable(){
       +(lead.email?'<div style="font-size:11.5px;color:var(--text-muted);">'+anEsc(lead.email)+'</div>':'')
       +'</td>'
       +'<td style="padding:10px 12px;font-size:13px;color:var(--text-secondary);">'+anEsc(lead.company||'—')+'</td>'
-      +'<td style="padding:10px 12px;font-size:13px;color:var(--text-secondary);">'+anEsc(lead.state||'—')+'</td>'
+      +'<td style="padding:10px 12px;font-size:13px;color:var(--text-secondary);">'+anEsc((typeof anResolveLeadState==='function'?anResolveLeadState(lead):lead.state)||'—')+'</td>'
       +'<td style="padding:10px 12px;">'+(lead.size?'<span style="background:var(--body-bg);border:1px solid var(--divider);border-radius:5px;padding:2px 8px;font-size:11.5px;font-weight:600;color:var(--text-secondary);">'+anEsc(sz.label)+'</span>':'<span style="color:var(--text-muted);font-size:12px;">—</span>')+'</td>'
       +'<td style="padding:10px 12px;"><a href="tel:'+anEsc(anTelPhone(lead.phone)||'')+'" onclick="event.stopPropagation()" style="color:var(--text-secondary);text-decoration:none;font-size:13px;">'+anEsc(anPhoneDisplay(lead.phone))+'</a></td>'
       +'<td style="padding:10px 12px;"><span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap;">'+st.label+'</span></td>'
@@ -10555,6 +10556,127 @@ window.anGetLeadLangLabel = function(code) {
   return code || 'English';
 };
 
+var AN_STATE_ABBR_TO_NAME = {
+  AL:'Alabama', AK:'Alaska', AZ:'Arizona', AR:'Arkansas', CA:'California', CO:'Colorado',
+  CT:'Connecticut', DE:'Delaware', FL:'Florida', GA:'Georgia', HI:'Hawaii', ID:'Idaho',
+  IL:'Illinois', IN:'Indiana', IA:'Iowa', KS:'Kansas', KY:'Kentucky', LA:'Louisiana',
+  ME:'Maine', MD:'Maryland', MA:'Massachusetts', MI:'Michigan', MN:'Minnesota',
+  MS:'Mississippi', MO:'Missouri', MT:'Montana', NE:'Nebraska', NV:'Nevada',
+  NH:'New Hampshire', NJ:'New Jersey', NM:'New Mexico', NY:'New York',
+  NC:'North Carolina', ND:'North Dakota', OH:'Ohio', OK:'Oklahoma', OR:'Oregon',
+  PA:'Pennsylvania', RI:'Rhode Island', SC:'South Carolina', SD:'South Dakota',
+  TN:'Tennessee', TX:'Texas', UT:'Utah', VT:'Vermont', VA:'Virginia', WA:'Washington',
+  WV:'West Virginia', WI:'Wisconsin', WY:'Wyoming', DC:'District of Columbia'
+};
+
+window.anNormalizeLeadStateValue = function(raw) {
+  if (raw === null || raw === undefined) return '';
+  var s = String(raw).trim();
+  if (!s || s === '—' || s === '-') return '';
+  s = s.split(',')[0].trim();
+  s = s.replace(/\s*\(.*\)\s*$/, '').trim();
+  var upper = s.toUpperCase();
+  if (upper.length === 2 && AN_STATE_ABBR_TO_NAME[upper]) return AN_STATE_ABBR_TO_NAME[upper];
+  var states = (typeof US_STATES !== 'undefined' && US_STATES.length) ? US_STATES : US_STATES_DASH;
+  for (var i = 0; i < states.length; i++) {
+    if (states[i].toLowerCase() === s.toLowerCase()) return states[i];
+  }
+  return s;
+};
+
+window.anExtractStateFromNotes = function(notes) {
+  if (!notes) return '';
+  var m = notes.match(/(?:state\s*\/\s*region|state\s*code|ip\s*state|region)\s*[:=]\s*([A-Za-z .]+?)(?:\n|$|,|;)/i);
+  if (m && m[1]) return anNormalizeLeadStateValue(m[1].trim());
+  return '';
+};
+
+window.anResolveLeadState = function(lead) {
+  if (!lead) return '';
+  var candidates = [lead.state, lead.State, lead.stateRegion, lead.state_region, lead.region, lead.ip_state, lead.ipState];
+  for (var i = 0; i < candidates.length; i++) {
+    var norm = anNormalizeLeadStateValue(candidates[i]);
+    if (norm) return norm;
+  }
+  return anExtractStateFromNotes(lead.notes || '');
+};
+
+window.anHydrateLeadState = function(lead, opts) {
+  opts = opts || {};
+  if (!lead) return '';
+  var resolved = anResolveLeadState(lead);
+  if (!resolved) return lead.state || '';
+  var normCurrent = anNormalizeLeadStateValue(lead.state || '');
+  if (!normCurrent || normCurrent !== resolved) {
+    lead.state = resolved;
+    if (opts.save) {
+      lead.updated = new Date().toISOString();
+      if (typeof AN !== 'undefined' && AN.save) AN.save();
+    }
+  }
+  return lead.state;
+};
+
+window.anBuildLeadStateOptions = function(selected) {
+  var states = (typeof US_STATES !== 'undefined' && US_STATES.length) ? US_STATES : US_STATES_DASH;
+  var sel = anNormalizeLeadStateValue(selected || '');
+  return '<option value="">— Select state —</option>'
+    + states.map(function(s) {
+      return '<option value="'+s+'"'+(sel === s ? ' selected' : '')+'>'+s+'</option>';
+    }).join('');
+};
+
+window.anUpdateLeadState = function(leadId, state) {
+  var lead = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.find(function(l){ return l.id === leadId; }) : null;
+  if (!lead) return false;
+  lead.state = anNormalizeLeadStateValue((state || '').trim());
+  lead.updated = new Date().toISOString();
+  if (typeof AN.save === 'function') AN.save();
+  if (document.getElementById('an-cs-lead-panel') && typeof anRenderCallSessionLeadPanel === 'function') {
+    anRenderCallSessionLeadPanel(leadId);
+  }
+  if (document.getElementById('an-side-panel') && window._anPanelLeadId === leadId && typeof anRefreshLeadPanel === 'function') {
+    anRefreshLeadPanel(leadId);
+  }
+  if (typeof renderLeadsTable === 'function') renderLeadsTable();
+  if (typeof showToast === 'function') showToast(lead.state ? ('State: ' + lead.state) : 'State cleared');
+  return true;
+};
+
+window.anBuildLeadOwnerCardHtml = function(lead, opts) {
+  opts = opts || {};
+  if (!lead) return '';
+  var ownerEmail = (lead._repEmail || '').toLowerCase();
+  var ownerName = ownerEmail && typeof anGetRepName === 'function' ? anGetRepName(ownerEmail) : '';
+  var ownerCol = ownerEmail && typeof anColor === 'function' ? anColor(ownerEmail) : '#a1a1aa';
+  var initials = ownerName ? ownerName.charAt(0).toUpperCase() : '?';
+  var canChange = typeof anCanReassignOwner === 'function' ? anCanReassignOwner(lead) : !!AN.isAdmin;
+  var changeBtn = canChange
+    ? '<button type="button" onclick="anOpenOwnerPicker({leadId:\''+lead.id+'\'})" style="flex-shrink:0;background:'+ownerCol+'14;color:'+ownerCol+';border:1px solid '+ownerCol+'44;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">Change</button>'
+    : '';
+  if (!ownerEmail) {
+    return '<div style="background:var(--body-bg);border:1.5px solid var(--divider);border-radius:10px;padding:12px 14px;margin-bottom:12px;">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Lead Owner</div>'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
+      +'<div style="display:flex;align-items:center;gap:10px;min-width:0;">'
+      +'<div style="width:38px;height:38px;border-radius:50%;background:rgba(161,161,170,0.12);border:1.5px dashed #a1a1aa;display:flex;align-items:center;justify-content:center;font-size:16px;color:#a1a1aa;flex-shrink:0;">—</div>'
+      +'<div style="min-width:0;"><div style="font-size:14px;font-weight:700;color:var(--text-secondary);">Unassigned</div>'
+      +'<div style="font-size:11px;color:var(--text-muted);">No rep owns this lead yet</div></div></div>'
+      +(canChange ? '<button type="button" onclick="anOpenOwnerPicker({leadId:\''+lead.id+'\'})" style="flex-shrink:0;background:#eef2ff;color:#6366f1;border:1px solid #c7d2fe;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">Assign</button>' : '')
+      +'</div></div>';
+  }
+  return '<div style="background:var(--body-bg);border:1.5px solid '+ownerCol+'33;border-radius:10px;padding:12px 14px;margin-bottom:12px;">'
+    +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Lead Owner</div>'
+    +'<div style="display:flex;align-items:center;gap:10px;">'
+    +'<div style="width:38px;height:38px;border-radius:50%;background:'+ownerCol+'22;border:2px solid '+ownerCol+'55;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:'+ownerCol+';flex-shrink:0;">'+initials+'</div>'
+    +'<div style="flex:1;min-width:0;">'
+    +'<div style="font-size:14px;font-weight:800;color:var(--text-primary);line-height:1.2;">'+anEsc(ownerName)+'</div>'
+    +'<div style="font-size:11px;color:var(--text-muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+anEsc(ownerEmail)+'</div>'
+    +'</div>'
+    +changeBtn
+    +'</div></div>';
+};
+
 window.anUpdateLeadPreferredLang = function(leadId, lang) {
   var lead = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.find(function(l){ return l.id === leadId; }) : null;
   if (!lead) return false;
@@ -10581,7 +10703,7 @@ window.anSaveLead = function(id){
   if(!lead) return;
   var g = function(eid){ var el=document.getElementById(eid); return el?el.value:''; };
   lead.firstName=g('alf-fn'); lead.lastName=g('alf-ln'); lead.company=g('alf-co');
-  lead.title=g('alf-title'); lead.email=g('alf-em'); lead.phone=anNormalizePhone(g('alf-ph')); lead.state=g('alf-st');
+  lead.title=g('alf-title'); lead.email=g('alf-em'); lead.phone=anNormalizePhone(g('alf-ph')); lead.state=typeof anNormalizeLeadStateValue==='function'?anNormalizeLeadStateValue(g('alf-st')):g('alf-st');
   lead.size=g('alf-sz'); lead.status=g('alf-sta'); lead.source=g('alf-src');
   lead.preferredLang=g('alf-lang') || 'en';
   lead.nextFollowUp=g('alf-fu');
@@ -11091,16 +11213,12 @@ window.anRefreshRepCounts = function(){
 
 function anRefreshLeadPanelOwner(leadId, email){
   if(!leadId) return;
+  if(document.getElementById('an-side-panel') && window._anPanelLeadId === leadId && typeof anRefreshLeadPanel === 'function'){
+    anRefreshLeadPanel(leadId);
+    return;
+  }
   var panel = document.getElementById('an-side-panel');
   if(!panel) return;
-  var ownerBtn = panel.querySelector('[data-panel-owner-btn]');
-  if(ownerBtn){
-    var repCol = anColor(email);
-    ownerBtn.style.background = repCol + '18';
-    ownerBtn.style.color = repCol;
-    ownerBtn.style.borderColor = repCol + '44';
-    ownerBtn.textContent = anGetRepName(email) + ' ▾';
-  }
   var hdrCo = panel.querySelector('[data-panel-company]');
   var lead = AN.leadById(leadId);
   if(hdrCo && lead){
@@ -11223,6 +11341,9 @@ function anFinishOwnerAssignment(appliedIds, email){
   if(hideForRep && hideForRep !== email) anRemoveLeadRows(appliedIds);
   else if(appliedIds.length <= 500) anPatchOwnerCells(appliedIds, email);
   if(window._anPanelLeadId) anRefreshLeadPanelOwner(window._anPanelLeadId, email);
+  if(window._anCsLeadPanelId && appliedIds.indexOf(window._anCsLeadPanelId) >= 0 && typeof anRenderCallSessionLeadPanel === 'function'){
+    anRenderCallSessionLeadPanel(window._anCsLeadPanelId);
+  }
   if(typeof anRefreshCRMUI === 'function') anRefreshCRMUI();
   if(typeof showToast === 'function') showToast('Assigned to ' + anGetRepName(email) + (appliedIds.length > 1 ? ' (' + appliedIds.length.toLocaleString() + ' leads)' : '') + ' — saving...');
   if (appliedIds.length > 0 && AN.selectedIds && AN.selectedIds.length) {
@@ -11568,7 +11689,9 @@ var AN_CSV_ALIASES = {
   phone: 'phone', 'phone number': 'phone', mobilephone: 'phone', mobile: 'phone', cell: 'phone', workphone: 'phone',
   'work phone': 'phone', 'mobile phone': 'phone', 'direct phone': 'phone', 'contact phone': 'phone',
   'mobile phone number': 'phone',
-  state: 'state', 'state/region': 'state', region: 'state', province: 'state', 'state region': 'state',
+  state: 'state', 'state/region': 'state', 'state region': 'state', 'state/region code': 'state',
+  region: 'state', province: 'state', 'ip state': 'state', ipstate: 'state', 'hs state': 'state',
+  'state code': 'state', 'mailing state': 'state', 'billing state': 'state',
   status: 'status', 'lifecycle stage': 'status', lifecyclestage: 'status', leadstatus: 'status',
   'lead status': 'status', stage: 'status', 'marketing contact status': 'status',
   source: 'source', leadsource: 'source', 'lead source': 'source', 'original source': 'source',
@@ -12255,6 +12378,7 @@ function anBuildContactsFromMapping(mapping, limit, assignEmailOverride, rawData
       else if(field.key === 'company'){
         if(typeof coIsValidCompanyName !== 'function' || coIsValidCompanyName(v)) c.company = v;
       }
+      else if(field.key === 'state') c.state = typeof anNormalizeLeadStateValue === 'function' ? anNormalizeLeadStateValue(v) : v;
       else c[field.key] = v;
     });
     var extraNoteLines = [];
@@ -12262,6 +12386,11 @@ function anBuildContactsFromMapping(mapping, limit, assignEmailOverride, rawData
       if(usedColIdx[colIdx]) return;
       var extraVal = (vals[colIdx] || '').trim();
       if(!extraVal) return;
+      var hLow = (h || '').toLowerCase();
+      if(!c.state && (hLow.indexOf('state') >= 0 || hLow === 'region' || hLow.indexOf('state/region') >= 0)) {
+        c.state = typeof anNormalizeLeadStateValue === 'function' ? anNormalizeLeadStateValue(extraVal) : extraVal;
+        return;
+      }
       extraNoteLines.push(h + ': ' + extraVal);
     });
     if(extraNoteLines.length){
@@ -13408,9 +13537,32 @@ window.anSaveCall = function(leadId) {
 };
 
 // ── 3. LEAD SIDE PANEL (detail view) ─────────────────────────
+window.anBuildLeadDetailRowHtml = function(label, value, opts) {
+  opts = opts || {};
+  var rv = (value === null || value === undefined) ? '' : String(value).trim();
+  if (!rv || rv === '—') return '';
+  var href = opts.href || '';
+  var allowWrap = !!opts.wrap;
+  var valStyle = 'font-size:12.5px;font-weight:600;text-align:right;'
+    + (allowWrap
+      ? 'color:#6366f1;text-decoration:none;word-break:break-all;max-width:220px;line-height:1.4;'
+      : 'color:var(--text-primary);white-space:nowrap;');
+  var val = href
+    ? '<a href="'+href+'" style="'+valStyle+'">'+anEsc(rv)+'</a>'
+    : '<span style="'+valStyle+'">'+anEsc(rv)+'</span>';
+  var copyBtn = opts.copy
+    ? '<button type="button" onclick="anCopyToClipboard(\''+String(rv).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')" title="Copy" style="flex-shrink:0;background:none;border:1px solid var(--divider);border-radius:4px;padding:1px 6px;font-size:10px;color:var(--text-muted);cursor:pointer;">📋</button>'
+    : '';
+  return '<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 16px;align-items:center;padding:8px 0;border-bottom:1px solid var(--divider);">'
+    +'<span style="font-size:12px;color:var(--text-muted);line-height:1.35;">'+label+'</span>'
+    +'<span style="display:inline-flex;align-items:center;justify-content:flex-end;gap:5px;flex-shrink:0;min-width:0;">'+val+copyBtn+'</span>'
+    +'</div>';
+};
+
 window.anOpenLeadPanel = function(leadId) {
   var lead = AN.leadById(leadId);
   if (!lead) return;
+  if (typeof anHydrateLeadState === 'function') anHydrateLeadState(lead);
   if (typeof anRepOwnsLead === 'function' && !anRepOwnsLead(lead)) {
     if (typeof showToast === 'function') showToast('You can only view contacts assigned to you');
     return;
@@ -13425,21 +13577,25 @@ window.anOpenLeadPanel = function(leadId) {
     var callSessionOpen = document.body.classList.contains('call-panel-open') || !!document.getElementById('mcm-panel-wrap');
     var rightOffset = callSessionOpen ? '420px' : '0';
     var panelWidth  = callSessionOpen ? '440px' : '440px';
-    panel.style.cssText = 'position:fixed;top:0;right:' + rightOffset + ';width:' + panelWidth + ';height:100vh;background:var(--card-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.15);z-index:' + (callSessionOpen ? '19999' : '8888') + ';display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);';
+    panel.style.cssText = 'position:fixed;top:0;right:' + rightOffset + ';width:' + panelWidth + ';max-width:100vw;height:100vh;background:var(--card-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.15);z-index:' + (callSessionOpen ? '19999' : '8888') + ';display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);box-sizing:border-box;';
     document.body.appendChild(panel);
     setTimeout(function(){ panel.style.transform = 'translateX(0)'; }, 10);
   } else if (!sameLead) {
     panel.remove();
     panel = document.createElement('div');
     panel.id = 'an-side-panel';
-    panel.style.cssText = 'position:fixed;top:0;right:0;width:440px;height:100vh;background:var(--card-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.15);z-index:8888;display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);';
+    panel.style.cssText = 'position:fixed;top:0;right:0;width:440px;max-width:100vw;height:100vh;background:var(--card-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.15);z-index:8888;display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);box-sizing:border-box;';
     document.body.appendChild(panel);
     setTimeout(function(){ panel.style.transform = 'translateX(0)'; }, 10);
   }
 
   function refreshPanel() {
+    if (panel.dataset) delete panel.dataset.callAgainPatched;
     var st = anStatus(lead.status||'new');
     var sz = lead.size ? AN_SIZES.find(function(s){return s.id===lead.size;}) : null;
+    var leadState = typeof anResolveLeadState === 'function' ? anResolveLeadState(lead) : (lead.state || '');
+    var today = new Date().toISOString().split('T')[0];
+    var todayCalls = (lead.callLog || []).filter(function(c){ return c.date === today && c.outcome !== 'emailed'; }).length;
     var calls = (lead.callLog||[]).slice().sort(function(a,b){return b.date.localeCompare(a.date);});
     var callIcons = {pickup:'☎️',demo:'🎯',voicemail:'📬',noanswer:'📵',note:'📝'};
     var callColors = {pickup:'#10b981',demo:'#f59e0b',voicemail:'#6366f1',noanswer:'#a1a1aa',note:'#06b6d4'};
@@ -13466,7 +13622,15 @@ window.anOpenLeadPanel = function(leadId) {
       +['<div style="background:rgba(255,255,255,0.06);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#fff;">'+totalCalls+'</div><div style="font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.1em;">Calls</div></div>',
         '<div style="background:rgba(255,255,255,0.06);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#10b981;">'+pickups+'</div><div style="font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.1em;">Pickups</div></div>',
         '<div style="background:rgba(255,255,255,0.06);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#f59e0b;">'+demosSet+'</div><div style="font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.1em;">Demos</div></div>'
-      ].join('')+'</div></div>'
+      ].join('')+'</div>'
+      +'<div data-call-again style="margin-top:10px;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;gap:10px;">'
+      +'<span id="sp-call-counter-'+lead.id+'" style="font-size:12px;color:rgba(255,255,255,0.55);white-space:nowrap;">'
+      +(todayCalls > 0 ? todayCalls + ' call attempt' + (todayCalls !== 1 ? 's' : '') + ' today' : 'No calls logged today')
+      +'</span>'
+      +(lead.phone
+        ? '<button type="button" onclick="anCallAgain(\''+lead.id+'\')" style="flex-shrink:0;background:rgba(16,185,129,0.18);border:1px solid rgba(16,185,129,0.35);border-radius:7px;padding:6px 12px;font-size:12px;font-weight:700;color:#6ee7b7;cursor:pointer;font-family:var(--sans);white-space:nowrap;">📞 Call Again</button>'
+        : '<button type="button" onclick="openMobileCallMode(\''+lead.id+'\')" style="flex-shrink:0;background:rgba(99,102,241,0.18);border:1px solid rgba(99,102,241,0.35);border-radius:7px;padding:6px 12px;font-size:12px;font-weight:700;color:#c7d2fe;cursor:pointer;font-family:var(--sans);white-space:nowrap;">📞 Start Call</button>')
+      +'</div></div>'
 
       // Action buttons
       +'<div style="padding:12px 16px;border-bottom:1px solid var(--divider);display:flex;gap:7px;flex-shrink:0;">'
@@ -13476,10 +13640,12 @@ window.anOpenLeadPanel = function(leadId) {
       +'</div>'
 
       // Scrollable content
-      +'<div style="flex:1;overflow-y:auto;padding:16px 18px;">'
+      +'<div style="flex:1;overflow-y:auto;padding:16px 18px;min-width:0;">'
+
+      + (typeof anBuildLeadOwnerCardHtml === 'function' ? anBuildLeadOwnerCardHtml(lead) : '')
 
       // Contact details card
-      +'<div style="background:var(--body-bg);border-radius:10px;padding:14px;margin-bottom:14px;">'
+      +'<div style="background:var(--body-bg);border-radius:10px;padding:14px;margin-bottom:14px;min-width:0;">'
       +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:10px;">Contact Details</div>'
       +'<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--divider);">'
       +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">🏢 Company / Agency</div>'
@@ -13497,36 +13663,16 @@ window.anOpenLeadPanel = function(leadId) {
       +'</div>'
       + anBuildTitleQuickPicksLight(lead.id, 'sp-title-input')
       +'</div>'
-      +[
-        ['📧 Email', lead.email, lead.email ? 'mailto:'+lead.email : null],
-        ['📞 Phone', lead.phone ? anPhoneDisplay(lead.phone) : '', lead.phone ? 'tel:'+anTelPhone(lead.phone) : null],
-        ['📍 State', lead.state, null],
-        ['🌐 Preferred Language', anGetLeadLangLabel(lead.preferredLang || 'en'), null],
-        ['🏢 Size', sz?sz.label:'—', null],
-        ['🔗 Source', lead.source, null],
-        ['📅 Next Follow-Up', lead.nextFollowUp?anDate(lead.nextFollowUp):'—', null],
-        ['🔄 Status', st.label, null],
-        ['⏱ Last Contact', anTimeAgo(lead.lastContactDate||lead.created), null],
-        ['📆 Created', anDate(lead.created), null]
-      ].filter(function(r){return r[1] && r[1] !== '—';}).map(function(row){
-        var isCopy = row[2] && (row[2].indexOf('mailto:')===0 || row[2].indexOf('tel:')===0);
-        var rv = row[1]||'';
-        var val = row[2]
-          ? '<a href="'+row[2]+'" style="font-size:12.5px;font-weight:600;color:#6366f1;text-decoration:none;">'+anEsc(rv)+'</a>'
-          : '<span style="font-size:12.5px;font-weight:600;color:var(--text-primary);text-align:right;max-width:55%;word-break:break-word;">'+anEsc(rv)+'</span>';
-        var cb = isCopy ? '<button onclick="anCopyToClipboard(this.dataset.v)" data-v="'+anEsc(rv)+'" title="Copy" style="margin-left:4px;background:none;border:1px solid var(--divider);border-radius:4px;padding:1px 5px;font-size:10px;color:var(--text-muted);cursor:pointer;" onmouseover="this.style.borderColor=\'#6366f1\';this.style.color=\'#6366f1\'" onmouseout="this.style.borderColor=\'var(--divider)\';this.style.color=\'var(--text-muted)\'">📋</button>' : '';
-        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--divider);">'
-          +'<span style="font-size:12px;color:var(--text-muted);flex-shrink:0;">'+row[0]+'</span>'
-          +'<span style="display:flex;align-items:center;">'+val+cb+'</span>'
-          +'</div>';
-      }).join('')
-      +'<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--divider);">'
-      +'<span style="font-size:12px;color:var(--text-muted);">👤 Owner</span>'
-      +(anCanReassignOwner(lead)
-        ? '<button type="button" data-panel-owner-btn onclick="anOpenOwnerPicker({leadId:\''+lead.id+'\'})" style="background:'+(lead._repEmail?anColor(lead._repEmail)+'18':'var(--body-bg)')+';color:'+(lead._repEmail?anColor(lead._repEmail):'#b45309')+';border:1px solid '+(lead._repEmail?anColor(lead._repEmail)+'44':'#fde68a')+';border-radius:6px;padding:3px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);">'
-          +(lead._repEmail?anEsc(anGetRepName(lead._repEmail)):'Assign owner')+' ▾</button>'
-        : '<span style="font-size:12.5px;font-weight:600;color:var(--text-primary);text-align:right;">'+anEsc(lead._repEmail?anGetRepName(lead._repEmail):'—')+'</span>')
-      +'</div>'
+      + anBuildLeadDetailRowHtml('📧 Email', lead.email, { href: lead.email ? 'mailto:'+lead.email : '', wrap: true, copy: !!lead.email })
+      + anBuildLeadDetailRowHtml('📞 Phone', lead.phone ? anPhoneDisplay(lead.phone) : '', { href: lead.phone ? 'tel:'+anTelPhone(lead.phone) : '', copy: !!lead.phone })
+      + anBuildLeadDetailRowHtml('📍 State', leadState)
+      + anBuildLeadDetailRowHtml('🌐 Preferred Language', anGetLeadLangLabel(lead.preferredLang || 'en'))
+      + anBuildLeadDetailRowHtml('🏢 Size', sz ? sz.label : '')
+      + anBuildLeadDetailRowHtml('🔗 Source', lead.source, { wrap: true })
+      + anBuildLeadDetailRowHtml('📅 Next Follow-Up', lead.nextFollowUp ? anDate(lead.nextFollowUp) : '')
+      + anBuildLeadDetailRowHtml('🔄 Status', st.label)
+      + anBuildLeadDetailRowHtml('⏱ Last Contact', anTimeAgo(lead.lastContactDate || lead.created))
+      + anBuildLeadDetailRowHtml('📆 Created', anDate(lead.created))
       +'</div>'
 
       // Notes
@@ -13601,6 +13747,8 @@ window.anRenderCallSessionLeadPanel = function(leadId) {
 
   document.body.classList.add('call-session-dual');
 
+  var leadState = typeof anHydrateLeadState === 'function' ? anHydrateLeadState(lead) : (lead.state || '');
+
   var st = anStatus(lead.status || 'new');
   var sz = lead.size ? AN_SIZES.find(function(s){ return s.id === lead.size; }) : null;
   var meta = anGetLeadActivityMeta();
@@ -13610,21 +13758,12 @@ window.anRenderCallSessionLeadPanel = function(leadId) {
   var emailsSent = calls.filter(function(c){ return c.outcome === 'emailed'; }).length;
   var mode = (typeof anGetCallPanelMode === 'function') ? anGetCallPanelMode(lead) : 'lead';
   var modeLabel = mode === 'opportunity' ? 'Deal' : 'Lead';
-  var csOwnerEmail = lead._repEmail || (typeof AN !== 'undefined' ? AN.currentRepEmail : '') || '';
-  var csOwnerName = csOwnerEmail && typeof anGetRepName === 'function' ? anGetRepName(csOwnerEmail) : '—';
-  var csOwnerCol = csOwnerEmail && typeof anColor === 'function' ? anColor(csOwnerEmail) : '#6366f1';
-  var csLocation = [lead.city, lead.state].filter(Boolean).join(', ') || lead.state || '';
   var csLang = lead.preferredLang || 'en';
   var csLangLabel = anGetLeadLangLabel(csLang);
   var csLangHighlight = csLang !== 'en';
-  var csMetaRow = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;align-items:center;">'
-    +(csLocation ? '<span style="font-size:11px;color:rgba(255,255,255,0.55);display:inline-flex;align-items:center;gap:4px;">📍 '+anEsc(csLocation)+'</span>' : '')
-    +'<span style="display:inline-flex;align-items:center;gap:4px;background:'+(csLangHighlight?'rgba(245,158,11,0.18)':'rgba(255,255,255,0.06)')+';border:1px solid '+(csLangHighlight?'rgba(245,158,11,0.45)':'rgba(255,255,255,0.12)')+';border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;color:'+(csLangHighlight?'#fcd34d':'rgba(255,255,255,0.65)')+';" title="Speak in this language">🌐 '+anEsc(csLangLabel)+'</span>'
-    +(csOwnerName !== '—'
-      ? '<span style="display:inline-flex;align-items:center;gap:5px;background:'+csOwnerCol+'22;border:1px solid '+csOwnerCol+'44;border-radius:20px;padding:2px 9px 2px 4px;">'
-        +'<span style="width:17px;height:17px;border-radius:50%;background:'+csOwnerCol+'33;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:'+csOwnerCol+';">'+csOwnerName.charAt(0).toUpperCase()+'</span>'
-        +'<span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.8);">'+anEsc(csOwnerName)+'</span></span>'
-      : '')
+  var csMetaRow = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center;">'
+    +'<span style="display:inline-flex;align-items:center;gap:5px;background:'+(leadState ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.06)')+';border:1px solid '+(leadState ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.12)')+';border-radius:20px;padding:3px 11px;font-size:11px;font-weight:700;color:'+(leadState ? '#c7d2fe' : 'rgba(255,255,255,0.45)')+';">📍 '+anEsc(leadState || 'State not set')+'</span>'
+    +'<span style="display:inline-flex;align-items:center;gap:4px;background:'+(csLangHighlight?'rgba(245,158,11,0.18)':'rgba(255,255,255,0.06)')+';border:1px solid '+(csLangHighlight?'rgba(245,158,11,0.45)':'rgba(255,255,255,0.12)')+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:'+(csLangHighlight?'#fcd34d':'rgba(255,255,255,0.65)')+';" title="Speak in this language">🌐 '+anEsc(csLangLabel)+'</span>'
     +'</div>';
 
   panel.innerHTML =
@@ -13654,8 +13793,17 @@ window.anRenderCallSessionLeadPanel = function(leadId) {
 
     +'<div style="flex:1;overflow-y:auto;padding:14px 16px;">'
 
+    + anBuildLeadOwnerCardHtml(lead)
+
     +'<div style="background:var(--body-bg);border-radius:10px;padding:12px;margin-bottom:12px;">'
     +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Contact</div>'
+    +'<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--divider);">'
+    +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">📍 State</div>'
+    +(leadState ? '<div style="font-size:12.5px;font-weight:600;color:var(--text-primary);margin-bottom:6px;">'+anEsc(leadState)+'</div>' : '<div style="font-size:11px;color:#b45309;margin-bottom:6px;">Not set — pick their state</div>')
+    +'<select id="cs-state-select" onchange="anUpdateLeadState(\''+lead.id+'\', this.value)" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:7px 10px;font-size:12px;background:var(--card-bg);color:var(--text-primary);outline:none;font-family:var(--sans);cursor:pointer;">'
+    +anBuildLeadStateOptions(leadState)
+    +'</select>'
+    +'</div>'
     +'<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--divider);">'
     +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">🏢 Company / Agency</div>'
     +(lead.company ? '<div style="font-size:12.5px;font-weight:600;color:var(--text-primary);margin-bottom:6px;">'+anEsc(lead.company)+'</div>' : '<div style="font-size:11px;color:#b45309;margin-bottom:6px;">Not set — add if they tell you on the call</div>')
@@ -15672,6 +15820,7 @@ window.openMobileCallMode = function(leadId) {
   mcmCloseCallPanelOnly();
   var lead = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.find(function(l){ return l.id===leadId; }) : null;
   if (!lead) return;
+  if (typeof anHydrateLeadState === 'function') anHydrateLeadState(lead);
 
   var mode = anGetCallPanelMode(lead);
   var name = ((lead.firstName||'') + ' ' + (lead.lastName||'')).trim() || lead.company || (mode === 'opportunity' ? 'Deal' : 'Lead');
@@ -15679,10 +15828,6 @@ window.openMobileCallMode = function(leadId) {
   var telPhone = anTelPhone(lead.phone || '');
   var rawPhone = lead.phone || '';
   var rawEmail = lead.email || '';
-  var ownerEmail = lead._repEmail || (typeof AN !== 'undefined' ? AN.currentRepEmail : '') || '';
-  var ownerName = ownerEmail && typeof anGetRepName === 'function' ? anGetRepName(ownerEmail) : '';
-  var ownerCol = ownerEmail && typeof anColor === 'function' ? anColor(ownerEmail) : '#6366f1';
-
   var statuses = mode === 'opportunity'
     ? AN_OPP_STATUSES.map(function(s){ return { v:s.id, l:s.label, c:s.color }; })
     : AN_LEAD_STATUSES.map(function(s){ return { v:s.id, l:s.label, c:s.color }; });
@@ -15706,8 +15851,13 @@ window.openMobileCallMode = function(leadId) {
       ];
 
   var sessionBadge = mode === 'opportunity'
-    ? '<div style="font-size:10px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px;">💎 Deal Session</div>'
-    : '<div style="font-size:10px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px;">📞 Lead Session</div>';
+    ? '<div style="font-size:10px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:3px;">💎 Deal Session</div>'
+    : '<div style="font-size:10px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:3px;">📞 Lead Session</div>';
+  var sessionStatusLabel = typeof anStatus === 'function' ? anStatus(lead.status || 'new').label : (lead.status || 'new');
+  var sessionMeta = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;align-items:center;font-size:10px;font-weight:600;color:rgba(255,255,255,0.45);">'
+    +(lead.state ? '<span>📍 '+mcmEsc(lead.state)+'</span><span style="color:rgba(255,255,255,0.25);">·</span>' : '')
+    +'<span style="font-weight:700;color:rgba(255,255,255,0.55);">'+mcmEsc(sessionStatusLabel)+'</span>'
+    +'</div>';
 
   var wrap = document.createElement('div');
   wrap.id = 'mcm-panel-wrap';
@@ -15723,9 +15873,10 @@ window.openMobileCallMode = function(leadId) {
     +'<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;flex-shrink:0;">'+name.charAt(0).toUpperCase()+'</div>'
     +'<div>'
     +sessionBadge
-    +'<div style="font-size:16px;font-weight:800;color:#fff;">'+mcmEsc(name)+'</div>'
+    +'<div style="font-size:16px;font-weight:800;color:#fff;line-height:1.2;">'+mcmEsc(name)+'</div>'
     +(lead.title ? '<div style="font-size:12px;color:#c4b5fd;font-weight:600;margin-top:2px;">'+mcmEsc(lead.title)+'</div>' : '')
     +(lead.company ? '<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px;">'+mcmEsc(lead.company)+'</div>' : '<div style="font-size:11px;color:#fcd34d;margin-top:2px;">No agency on file</div>')
+    +sessionMeta
     +'</div></div>'
     +'<button onclick="mcmClose()" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>'
     +'</div>'
@@ -15762,9 +15913,14 @@ window.openMobileCallMode = function(leadId) {
         +'<div style="flex:1;min-width:0;">'
         +'<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:4px;">Phone Number</div>'
         +'<div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:0.05em;">'+mcmEsc(phone)+'</div>'
+        +'<div id="mcm-attempt-badge" style="font-size:11px;color:rgba(110,231,183,0.85);margin-top:6px;line-height:1.45;"></div>'
         +'</div>'
-        +'<button type="button" onclick="anCopyToClipboard(\''+mcmEsc(rawPhone)+'\')" style="flex-shrink:0;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#c7d2fe;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">📋 Copy</button>'
+        +'<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">'
+        +'<button type="button" onclick="anCopyToClipboard(\''+mcmEsc(rawPhone)+'\')" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#c7d2fe;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">📋 Copy</button>'
+        +(telPhone ? '<a href="tel:'+mcmEsc(telPhone)+'" style="text-align:center;background:rgba(16,185,129,0.22);border:1px solid rgba(16,185,129,0.45);color:#6ee7b7;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;text-decoration:none;font-family:inherit;">📞 Dial</a>' : '')
         +'</div></div>'
+        +'<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:10px;line-height:1.5;">Manual dial workflow: pick an outcome → <strong style="color:#6ee7b7;">Log Call &amp; Stay</strong> to log and call again on this lead (like Outreach redial).</div>'
+        +'</div>'
       : '<div style="background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.1);border-radius:14px;padding:16px 20px;text-align:center;margin-bottom:10px;">'
         +'<div style="font-size:13px;color:rgba(255,255,255,0.4);">No phone number on file</div>'
         +'<button onclick="mcmEditPhone(\''+leadId+'\')" style="margin-top:8px;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ Add Phone Number</button>'
@@ -15826,9 +15982,11 @@ window.openMobileCallMode = function(leadId) {
     +'</div>'
 
     // Save + next actions
-    +'<div style="padding:16px 18px 24px;display:flex;flex-direction:column;gap:10px;flex-shrink:0;">'
-    +'<button onclick="mcmSaveAndNext(\''+leadId+'\')" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 20px rgba(99,102,241,0.35);">✓ Save & Next →</button>'
-    +'<button onclick="mcmNextLead(\''+leadId+'\')" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.7);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">⏭ Skip to Next (no log)</button>'
+    +'<div id="mcm-action-buttons" style="padding:16px 18px 24px;display:flex;flex-direction:column;gap:10px;flex-shrink:0;">'
+    +'<button id="mcm-btn-save-stay" onclick="mcmSaveAndStay(\''+leadId+'\')" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 20px rgba(16,185,129,0.35);">📞 Log Call &amp; Stay</button>'
+    +'<button id="mcm-btn-save-next" onclick="mcmSaveAndNext(\''+leadId+'\')" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid rgba(99,102,241,0.45);background:rgba(99,102,241,0.12);color:#c7d2fe;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">✓ Log &amp; Next →</button>'
+    +'<button id="mcm-btn-skip" onclick="mcmNextLead(\''+leadId+'\')" style="width:100%;padding:11px;border-radius:12px;border:1.5px solid rgba(255,255,255,0.12);background:transparent;color:rgba(255,255,255,0.55);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">⏭ Skip to Next (no log)</button>'
+    +'<div style="font-size:10px;color:rgba(255,255,255,0.35);text-align:center;line-height:1.45;">Shortcuts: <strong style="color:rgba(255,255,255,0.5);">S</strong> stay · <strong style="color:rgba(255,255,255,0.5);">N</strong> next</div>'
     +'<button onclick="mcmClose()" style="width:100%;padding:10px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,0.3);font-size:13px;cursor:pointer;font-family:inherit;">Close panel</button>'
     +'</div>';
 
@@ -15850,9 +16008,35 @@ window.openMobileCallMode = function(leadId) {
 
   if (typeof anRenderCallScript === 'function') anRenderCallScript(leadId);
   if (typeof anRenderCallSessionLeadPanel === 'function') anRenderCallSessionLeadPanel(leadId);
+  if (typeof mcmRefreshAttemptBadge === 'function') mcmRefreshAttemptBadge(leadId);
 };
 
 function mcmEsc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function mcmCountTodayAttempts(lead) {
+  if (!lead || !lead.callLog || !lead.callLog.length) return 0;
+  var today = new Date().toISOString().split('T')[0];
+  return lead.callLog.filter(function(c) {
+    return c.date === today && c.outcome !== 'emailed';
+  }).length;
+}
+
+window.mcmRefreshAttemptBadge = function(leadId) {
+  var lead = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.find(function(l){ return l.id === leadId; }) : null;
+  var el = document.getElementById('mcm-attempt-badge');
+  if (!el) return;
+  var n = mcmCountTodayAttempts(lead);
+  el.textContent = n
+    ? (n + ' call attempt' + (n !== 1 ? 's' : '') + ' logged today — dial again anytime')
+    : 'No calls logged today yet';
+};
+
+window.mcmSaveAndStay = function(leadId) {
+  if (!mcmSave(leadId, { keepOpen: true })) return;
+  if (typeof mcmRefreshAttemptBadge === 'function') mcmRefreshAttemptBadge(leadId);
+  var noteEl = document.getElementById('mcm-note');
+  if (noteEl) noteEl.focus();
+};
 
 window.mcmSetOutcome = function(outcome, leadId) {
   var overlay = document.getElementById('mcm-overlay');
@@ -16184,8 +16368,9 @@ window.mcmRenderDemoForm = function(leadId) {
     + (overlay._demoTzConfirmed || !guessedTz ? '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);margin-bottom:6px;">Prospect timezone</div><div style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:12px;">'+tzBtns+'</div>' : '')
     + mcmBuildMiniCalendar(leadId)
     + (overlay._demoDate ? '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);margin-bottom:6px;">Pick a time' + (overlay._demoDate ? ' · ' + overlay._demoDate : '') + '</div>' + slotBtns : '<div style="font-size:11px;color:rgba(255,255,255,0.35);margin-bottom:8px;">Tap a date on the calendar — orange dots are already booked</div>')
-    +(preview ? '<div id="mcm-demo-preview" style="font-size:11px;color:rgba(255,255,255,0.55);padding:8px 10px;background:rgba(255,255,255,0.04);border-radius:8px;">'+mcmEsc(preview)+'</div>'
-      : '<div id="mcm-demo-preview" style="font-size:11px;color:rgba(255,255,255,0.35);">Select date & time — booked slots are blocked</div>')
+    +(preview ? '<div id="mcm-demo-preview" style="font-size:11px;color:rgba(255,255,255,0.55);padding:8px 10px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:10px;">'+mcmEsc(preview)+'</div>'
+      : '<div id="mcm-demo-preview" style="font-size:11px;color:rgba(255,255,255,0.35);margin-bottom:8px;">Select date & time — booked slots are blocked</div>')
+    +'<div style="font-size:10px;color:rgba(255,255,255,0.38);line-height:1.45;margin-bottom:4px;">After you pick a slot, click <strong style="color:#6ee7b7;">Log Call &amp; Stay</strong> or <strong style="color:#c7d2fe;">Log &amp; Next</strong> — the confirmation email &amp; task popup appears then.</div>'
     + upcomingHtml
     +'</div>';
 };
@@ -16310,6 +16495,7 @@ window.mcmSave = function(leadId, opts) {
 
   var mode = (overlay && overlay._callMode) || 'lead';
 
+  var demoJustBooked = false;
   if (mode === 'lead' && (outcome === 'demo' || newStatus === 'booked_demo')) {
     if (!mcmApplyDemoToLead(lead, overlay)) {
       mcmRenderDemoForm(leadId);
@@ -16319,6 +16505,7 @@ window.mcmSave = function(leadId, opts) {
     lead.isOpportunity = false;
     lead.status = 'booked_demo';
     newStatus = 'booked_demo';
+    demoJustBooked = true;
   } else if ((outcome === 'callback' || newStatus === 'followup') && mode === 'lead') {
     if (!mcmApplyFollowupToLead(lead, overlay)) {
       mcmRenderFollowupForm(leadId);
@@ -16360,12 +16547,16 @@ window.mcmSave = function(leadId, opts) {
   } else if (typeof anRenderCallSessionLeadPanel === 'function') {
     anRenderCallSessionLeadPanel(leadId);
     if (noteEl) noteEl.value = '';
-    if (overlay) overlay._outcome = null;
+    if (overlay) {
+      overlay._outcome = null;
+      overlay._status = lead.status;
+    }
     document.querySelectorAll('[id^="mcm-outcome-"]').forEach(function(btn) {
       btn.style.background = 'rgba(255,255,255,0.04)';
       btn.style.borderColor = 'rgba(255,255,255,0.1)';
       btn.style.color = 'rgba(255,255,255,0.7)';
     });
+    if (typeof mcmRefreshAttemptBadge === 'function') mcmRefreshAttemptBadge(leadId);
   }
 
   if (typeof anSyncCallToDashboard === 'function') anSyncCallToDashboard(lead, outcome, newStatus);
@@ -16386,6 +16577,11 @@ window.mcmSave = function(leadId, opts) {
     };
     showToast(labels[outcome] || 'Activity logged');
   }
+
+  if (demoJustBooked && typeof anMaybeShowDemoAutomationPanel === 'function') {
+    anMaybeShowDemoAutomationPanel(lead);
+  }
+
   return true;
 };
 
@@ -19690,16 +19886,12 @@ window._anEnhanceCallPanel = function(leadId) {
         +'<span style="font-size:11px;color:rgba(255,255,255,0.45);">'+prog.done+' done today</span>';
       header.parentNode.insertBefore(progBar, header.nextSibling);
     }
-    var saveBtn = overlay.querySelector('button[onclick*="mcmSave"]');
-    if (saveBtn) {
-      saveBtn.textContent = '✓ Save & Next →';
-      saveBtn.setAttribute('onclick', 'mcmSaveAndNext(\''+leadId+'\')');
-    }
-    var nextBtn = overlay.querySelector('button[onclick*="mcmNextLead"]');
-    if (nextBtn) nextBtn.textContent = '⏭ Skip to Next (no log)';
-  } else {
-    var saveBtn2 = overlay.querySelector('button[onclick*="mcmSave"]');
-    if (saveBtn2) saveBtn2.setAttribute('onclick', 'mcmSaveAndNext(\''+leadId+'\')');
+    var stayBtn = document.getElementById('mcm-btn-save-stay');
+    var nextBtn = document.getElementById('mcm-btn-save-next');
+    var skipBtn = document.getElementById('mcm-btn-skip');
+    if (stayBtn) stayBtn.textContent = '📞 Log Call & Stay';
+    if (nextBtn) nextBtn.textContent = '✓ Log & Next → ('+prog.pos+'/'+prog.total+')';
+    if (skipBtn) skipBtn.textContent = '⏭ Skip to Next (no log)';
   }
 
   // Show existing notes for context
@@ -19717,7 +19909,7 @@ window._anEnhanceCallPanel = function(leadId) {
   // Keyboard shortcuts
   overlay._keyHandler = function(e){
     if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
-      if (e.key === 'Enter' && e.metaKey) { e.preventDefault(); mcmSaveAndNext(leadId); }
+      if (e.key === 'Enter' && e.metaKey) { e.preventDefault(); mcmSaveAndStay(leadId); }
       return;
     }
     if (e.key === '1') mcmSetOutcome('noanswer', leadId);
@@ -19725,7 +19917,8 @@ window._anEnhanceCallPanel = function(leadId) {
     if (e.key === '3') mcmSetOutcome('pickup', leadId);
     if (e.key === '4') mcmSetOutcome('demo', leadId);
     if (e.key === '5') mcmSetOutcome('callback', leadId);
-    if (e.key === 'Enter' || e.key === 'n') { e.preventDefault(); mcmSaveAndNext(leadId); }
+    if (e.key === 's' || e.key === 'S') { e.preventDefault(); mcmSaveAndStay(leadId); }
+    if (e.key === 'n' || e.key === 'N') { e.preventDefault(); mcmSaveAndNext(leadId); }
   };
   document.addEventListener('keydown', overlay._keyHandler);
   var closeBtn = overlay.querySelector('button[onclick*="mcmClose"]');
@@ -22044,38 +22237,7 @@ window.anCallAgain = function(leadId) {
   if(typeof renderLeadsTable==='function') renderLeadsTable();
 };
 
-// ── CALL AGAIN BUTTON in side panel ──────────────────────────
-// Patch to add call counter + call again button
-var _origOpenLeadPanel_callAgain = window.anOpenLeadPanel;
-window.anOpenLeadPanel = function(leadId) {
-  if(typeof _origOpenLeadPanel_callAgain === 'function') _origOpenLeadPanel_callAgain(leadId);
-  setTimeout(function(){
-    var panel = document.getElementById('an-side-panel');
-    if(!panel || panel.dataset.callAgainPatched) return;
-    panel.dataset.callAgainPatched = '1';
-
-    var lead = AN.leads.find(function(l){ return l.id===leadId; });
-    if(!lead) return;
-
-    var today = new Date().toISOString().split('T')[0];
-    var todayCalls = (lead.callLog||[]).filter(function(c){ return c.date===today; }).length;
-
-    // Find stats row and add after it
-    var statsRow = panel.querySelector('[style*="grid-template-columns:repeat(3"]');
-    if(statsRow && !panel.querySelector('[data-call-again]')){
-      var callAgainBar = document.createElement('div');
-      callAgainBar.setAttribute('data-call-again','1');
-      callAgainBar.style.cssText = 'padding:10px 18px;border-bottom:1px solid var(--divider);background:rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;';
-      callAgainBar.innerHTML =
-        '<span id="sp-call-counter-'+leadId+'" style="font-size:12px;color:rgba(255,255,255,0.55);">'
-        +(todayCalls>0?todayCalls+' attempt'+(todayCalls!==1?'s':'')+' today':'No calls today')
-        +'</span>'
-        +'<button onclick="anCallAgain(\''+leadId+'\')" '
-        +'style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;color:#6ee7b7;cursor:pointer;font-family:var(--sans);">📞 Call Again</button>';
-      statsRow.insertAdjacentElement('afterend', callAgainBar);
-    }
-  }, 150);
-};
+// Call Again bar is built into anOpenLeadPanel template (no post-patch needed).
 
 // ── TASK SESSION ──────────────────────────────────────────────
 window.openTaskSession = function() {
@@ -22305,29 +22467,31 @@ window.anOpenLeadPanel = function(leadId) {
 // MCM call panel ownership badge is built into openMobileCallMode header
 
 // ── 2. DEMO AUTOMATION — no API keys needed ───────────────────
-// Fires when status is set to booked_demo or demo
-var _origMcmSetStatus = window.mcmSetStatus;
-window.mcmSetStatus = function(status, leadId) {
-  if (typeof _origMcmSetStatus === 'function') _origMcmSetStatus(status, leadId);
+// Pop the follow-through modal only after demo date/time are saved (not on Book Demo click).
 
-  if (status === 'booked_demo' || status === 'demo') {
-    setTimeout(function() {
-      var lead = AN.leads.find(function(l){ return l.id === leadId; });
-      if (!lead) return;
-      showDemoAutomationPanel(lead);
-    }, 400);
-  }
+window.anDemoIsFullyScheduled = function(lead) {
+  return !!(lead && lead.demoDate && lead.demoTime && lead.demoTz);
 };
 
-// Also fire from the lead side panel status changes
+window.anMaybeShowDemoAutomationPanel = function(lead, opts) {
+  opts = opts || {};
+  if (!lead || !anDemoIsFullyScheduled(lead)) return;
+  if (opts.onlyIfStatus && ['booked_demo', 'demo'].indexOf(lead.status || '') < 0) return;
+  setTimeout(function() {
+    if (typeof mcmHideDemoForm === 'function') mcmHideDemoForm();
+    showDemoAutomationPanel(lead);
+  }, opts.delay || 280);
+};
+
+// Also fire from the lead edit modal when demo fields are complete
 var _origAnSaveLead_demo = window.anSaveLead;
 window.anSaveLead = function(id) {
   var statusEl = document.getElementById('alf-sta');
   var newStatus = statusEl ? statusEl.value : '';
   if (typeof _origAnSaveLead_demo === 'function') _origAnSaveLead_demo(id);
-  if (newStatus === 'booked_demo' || newStatus === 'demo') {
-    var lead = AN.leads.find(function(l){ return l.id === id; });
-    if (lead) setTimeout(function(){ showDemoAutomationPanel(lead); }, 500);
+  var lead = AN.leads.find(function(l){ return l.id === id; });
+  if (lead && (newStatus === 'booked_demo' || newStatus === 'demo') && anDemoIsFullyScheduled(lead)) {
+    anMaybeShowDemoAutomationPanel(lead, { delay: 400 });
   }
 };
 
@@ -22367,9 +22531,15 @@ window.showDemoAutomationPanel = function(lead) {
     + 'Looking forward to it!\n'
     + ((typeof anGetRepName === 'function' && AN.currentRepEmail) ? anGetRepName(AN.currentRepEmail) : (AN.currentRep || 'Your AgentNav Rep'));
 
+  var overlay = document.getElementById('mcm-overlay');
+  if (lead.demoDate) demoDate = lead.demoDate;
+  if (lead.demoTime) demoTime = lead.demoTime;
+  if (!demoDate && overlay && overlay._demoDate) demoDate = overlay._demoDate;
+  if (!demoTime && overlay && overlay._demoTime) demoTime = overlay._demoTime;
+
   var m = document.createElement('div');
   m.id = 'demo-auto-modal';
-  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:10002;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:25001;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(8px);';
 
   m.innerHTML =
     '<div style="background:var(--card-bg);border-radius:16px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.35);">'
