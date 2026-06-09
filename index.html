@@ -3724,6 +3724,7 @@ window.dashLoad = function(callback) {
     if (saved._updatedAt) _dash._updatedAt = saved._updatedAt;
   } catch(e) {}
 
+  if (typeof anSyncAllOpportunitiesToPipeline === 'function') anSyncAllOpportunitiesToPipeline({ skipSave: true });
   if (typeof callback === 'function') callback();
 
   // Then overlay with Supabase if logged in
@@ -4755,7 +4756,13 @@ function getActivityForPeriod(period) {
   if (period === 'today') {
     var today = now.toISOString().split('T')[0];
     var e = log.filter(function(x){ return x.date === today; })[0];
-    if (e) { result.calls=e.calls||0; result.demos=e.demos||0; result.closes=e.closes||0; }
+    if (e) {
+      result.calls = e.calls || 0;
+      result.demos = e.demos || 0;
+      result.closes = e.closes || 0;
+      result.demos_showed = e.demos_showed || 0;
+      result.demos_converted = e.demos_converted || 0;
+    }
     return result;
   }
   var cutoff = new Date(now);
@@ -5794,7 +5801,10 @@ function buildPipelineHTML() {
   return '<div style="display:flex;flex-direction:column;gap:6px;">' + p.map(function(deal,i){
     var sz = SIZES_DASH.filter(function(x){return x.id===deal.size;})[0]||{label:deal.size||'',price:''};
     var sc = SC[deal.stage]||'#a1a1aa';
-    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f4f4f5;">'
+    var clickAttr = deal.leadId
+      ? ' onclick="showSection(\'opportunities\',null);setTimeout(function(){anOpenOppRecord(\''+String(deal.leadId).replace(/'/g, "\\'")+'\')},200)"'
+      : '';
+    return '<div'+clickAttr+' style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f4f4f5;'+(deal.leadId?'cursor:pointer;':'')+'">'
       +'<div style="flex:1;min-width:0;">'
       +'<div style="font-size:12px;font-weight:600;color:#09090b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+deal.name+'</div>'
       +'<div style="font-size:10px;color:#71717a;margin-top:1px;">'+(deal.state||'—')+' \u00b7 '+sz.label+' \u00b7 '+sz.price+'</div>'
@@ -8687,6 +8697,7 @@ var AN_LEAD_STATUSES = [
   { id:'followup',       label:'Following Up',    color:'#06b6d4', dot:'#22d3ee' },
   { id:'emailed',        label:'Sent Email',      color:'#8b5cf6', dot:'#a78bfa' },
   { id:'booked_demo',    label:'Booked Demo',     color:'#10b981', dot:'#34d399' },
+  { id:'demo_complete',  label:'Demo Complete',   color:'#06b6d4', dot:'#22d3ee' },
   { id:'nurture',        label:'Nurture',         color:'#a1a1aa', dot:'#d4d4d8' },
   { id:'not_interested', label:'Not Interested',  color:'#ef4444', dot:'#f87171' }
 ];
@@ -8714,6 +8725,436 @@ window.anIsProspect = function(lead) {
 
 window.anStatusesFor = function(lead) {
   return anIsOpportunity(lead) ? AN_OPP_STATUSES : AN_LEAD_STATUSES;
+};
+
+window.anCancelDemoCompleteConversion = function(leadId, prevStatus) {
+  var lead = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.find(function(l) { return l.id === leadId; }) : null;
+  if (!lead || anIsOpportunity(lead) || lead.status !== 'demo_complete') return;
+  lead.status = prevStatus || lead._demoCompletePrevStatus || 'booked_demo';
+  delete lead._demoCompletePrevStatus;
+  lead.updated = new Date().toISOString();
+  if (typeof AN !== 'undefined' && AN.save) AN.save();
+  if (typeof renderLeadsTable === 'function') renderLeadsTable();
+  var overlay = document.getElementById('mcm-overlay');
+  if (overlay && typeof openMobileCallMode === 'function') {
+    setTimeout(function() { openMobileCallMode(leadId); }, 80);
+  }
+};
+
+window.anTriggerDemoCompleteConversion = function(lead, opts) {
+  if (!lead || anIsOpportunity(lead)) return false;
+  opts = opts || {};
+  var prevStatus = opts.prevStatus || (lead.status !== 'demo_complete' ? lead.status : (lead._demoCompletePrevStatus || 'booked_demo'));
+  if (lead.status !== 'demo_complete') {
+    lead._demoCompletePrevStatus = prevStatus;
+    lead.status = 'demo_complete';
+    lead.updated = new Date().toISOString();
+  }
+  if (typeof anRecordDemoCompleted === 'function') anRecordDemoCompleted(lead, { source: 'demo_complete' });
+  if (opts.save !== false && typeof AN !== 'undefined' && AN.save) AN.save();
+  if (typeof renderLeadsTable === 'function') renderLeadsTable();
+  setTimeout(function() {
+    if (typeof anConvertToOpportunity === 'function') {
+      anConvertToOpportunity(lead.id, { fromDemoComplete: true, prevStatus: prevStatus });
+    }
+  }, opts.delay || 80);
+  if (typeof showToast === 'function' && opts.silent !== true) {
+    showToast('Demo complete — create the opportunity');
+  }
+  return true;
+};
+
+window.anApplyLeadStatusChange = function(lead, newStatus, opts) {
+  if (!lead || !newStatus) return lead ? lead.status : '';
+  opts = opts || {};
+  if (newStatus === 'demo_complete' && !anIsOpportunity(lead)) {
+    anTriggerDemoCompleteConversion(lead, {
+      save: opts.save !== false,
+      silent: !!opts.silent,
+      prevStatus: lead.status !== 'demo_complete' ? lead.status : undefined
+    });
+    return 'demo_complete';
+  }
+  lead.status = newStatus;
+  if (newStatus === 'booked_demo' && lead.demoDate && typeof anRecordDemoBooked === 'function') {
+    anRecordDemoBooked(lead, { source: opts.source || 'status_change' });
+  }
+  return newStatus;
+};
+
+window.anLeadHadDemoBooked = function(lead) {
+  if (!lead) return false;
+  if (lead.demoBookedAt || lead.demoDate) return true;
+  return (lead.demoLifecycle || []).some(function(e) { return e.type === 'booked'; });
+};
+
+window.anLeadInBookedDemoBucket = function(lead) {
+  if (!lead || typeof anIsProspect !== 'function' || !anIsProspect(lead)) return false;
+  if (['booked_demo', 'demo_complete'].indexOf(lead.status || '') >= 0) return true;
+  if (lead.demoDate && typeof anLeadHadDemoBooked === 'function' && anLeadHadDemoBooked(lead)) return true;
+  return false;
+};
+
+window.anCountBookedDemosToday = function(pool) {
+  var today = new Date().toISOString().split('T')[0];
+  var seen = {};
+  var count = 0;
+  (pool || []).forEach(function(lead) {
+    if (!lead || !lead.id || seen[lead.id]) return;
+    var bookedToday = false;
+    if (lead.demoBookedAt && String(lead.demoBookedAt).slice(0, 10) === today) bookedToday = true;
+    (lead.demoLifecycle || []).forEach(function(ev) {
+      if (ev.type === 'booked' && (ev.date === today || String(ev.at || '').slice(0, 10) === today)) bookedToday = true;
+    });
+    if (typeof _dash !== 'undefined' && _dash.demos) {
+      _dash.demos.forEach(function(d) {
+        if ((d.leadId === lead.id || d.id === 'demo-' + lead.id) && d.bookedDate === today) bookedToday = true;
+      });
+    }
+    if (bookedToday) { seen[lead.id] = true; count++; }
+  });
+  return count;
+};
+
+window.anOppStageToPipelineStage = function(status) {
+  var map = { demo: 'Demo Booked', showed: 'Demo Done', proposal: 'Proposal Sent', negotiation: 'Proposal Sent', won: 'Closed Won', lost: 'Closed Lost' };
+  return map[status] || 'Prospecting';
+};
+
+window.anSyncOpportunityToPipeline = function(lead, opts) {
+  if (!lead || typeof anIsOpportunityRecord !== 'function' || !anIsOpportunityRecord(lead)) return;
+  if (typeof _dash === 'undefined') return;
+  opts = opts || {};
+  if (!_dash.pipeline) _dash.pipeline = [];
+  var name = (lead.company || '').trim() || ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || 'Deal';
+  var stage = anOppStageToPipelineStage(lead.status || 'demo');
+  var entry = {
+    leadId: lead.id,
+    name: name,
+    state: lead.state || '',
+    size: lead.size || 'solo',
+    stage: stage,
+    notes: lead.oppNotes || lead.notes || '',
+    added: lead.convertedAt || lead.updated || new Date().toISOString(),
+    mrr: lead.oppMRR || 0
+  };
+  var idx = -1;
+  for (var i = 0; i < _dash.pipeline.length; i++) {
+    var d = _dash.pipeline[i];
+    if ((d.leadId && d.leadId === lead.id) || (d.name && name && d.name.toLowerCase() === name.toLowerCase())) { idx = i; break; }
+  }
+  if (idx >= 0) _dash.pipeline[idx] = Object.assign({}, _dash.pipeline[idx], entry);
+  else _dash.pipeline.unshift(entry);
+  if (!opts.skipSave && typeof dashSave === 'function') dashSave();
+  if (!opts.skipRefresh) {
+    var list = document.getElementById('dash-pipeline-list');
+    if (list && typeof buildPipelineHTML === 'function') list.innerHTML = buildPipelineHTML();
+  }
+};
+
+window.anSyncAllOpportunitiesToPipeline = function(opts) {
+  if (typeof AN === 'undefined' || !Array.isArray(AN.leads)) return;
+  opts = opts || {};
+  AN.leads.forEach(function(lead) {
+    if (typeof anIsOpportunityRecord === 'function' && anIsOpportunityRecord(lead)) {
+      anSyncOpportunityToPipeline(lead, { skipSave: true, skipRefresh: true });
+    }
+  });
+  if (!opts.skipSave && typeof dashSave === 'function') dashSave();
+  if (!opts.skipRefresh) {
+    var list = document.getElementById('dash-pipeline-list');
+    if (list && typeof buildPipelineHTML === 'function') list.innerHTML = buildPipelineHTML();
+  }
+};
+
+window.anBuildDailyLeaderboard = function(extraRows) {
+  var today = new Date().toISOString().split('T')[0];
+  var byEmail = {};
+  function ensure(email) {
+    email = (email || '').toLowerCase();
+    if (!email) return null;
+    if (!byEmail[email]) byEmail[email] = { email: email, calls: 0, demos: 0, showed: 0, closes: 0, points: 0 };
+    return byEmail[email];
+  }
+  function bump(email, field, n) {
+    var row = ensure(email);
+    if (!row) return;
+    row[field] = (row[field] || 0) + (n || 1);
+  }
+  function maxField(email, field, val) {
+    var row = ensure(email);
+    if (!row) return;
+    row[field] = Math.max(row[field] || 0, val || 0);
+  }
+  (typeof AN !== 'undefined' && AN.leads ? AN.leads : []).forEach(function(lead) {
+    var rep = (lead._repEmail || '').toLowerCase();
+    (lead.callLog || []).forEach(function(c) {
+      if (c.date !== today) return;
+      bump(rep, 'calls', 1);
+      if (c.outcome === 'demo') bump(rep, 'demos', 1);
+      if (c.outcome === 'won') bump(rep, 'closes', 1);
+    });
+    (lead.demoLifecycle || []).forEach(function(ev) {
+      var d = ev.date || String(ev.at || '').slice(0, 10);
+      if (d !== today) return;
+      if (ev.type === 'booked') bump(rep, 'demos', 1);
+      if (ev.type === 'completed') bump(rep, 'showed', 1);
+    });
+  });
+  (extraRows || []).forEach(function(row) {
+    var em = (row.rep_email || row.email || '').toLowerCase();
+    if (!em) return;
+    var entry = (row.activityLog || []).find(function(e) { return e.date === today; }) || row;
+    maxField(em, 'calls', entry.calls || row.calls || 0);
+    maxField(em, 'demos', entry.demos || row.demos || 0);
+    maxField(em, 'showed', entry.demos_showed || row.demos_showed || row.showed || 0);
+    maxField(em, 'closes', entry.closes || row.closes || 0);
+  });
+  var myEmail = (typeof AN !== 'undefined' && AN.currentRepEmail) ? AN.currentRepEmail.toLowerCase() : '';
+  if (myEmail && typeof getActivityForPeriod === 'function') {
+    var act = getActivityForPeriod('today');
+    maxField(myEmail, 'calls', act.calls || 0);
+    maxField(myEmail, 'demos', act.demos || 0);
+    maxField(myEmail, 'showed', act.demos_showed || 0);
+    maxField(myEmail, 'closes', act.closes || 0);
+  }
+  return Object.keys(byEmail).map(function(em) {
+    var s = byEmail[em];
+    s.points = (s.calls || 0) + (s.demos || 0) * 5 + (s.showed || 0) * 3 + (s.closes || 0) * 20;
+    return s;
+  }).sort(function(a, b) { return b.points - a.points || b.demos - a.demos || b.calls - a.calls; });
+};
+
+window.anLoadTeamDailyLeaderboard = function(cb) {
+  var local = anBuildDailyLeaderboard();
+  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
+  if (!sb || typeof _currentUser === 'undefined' || !_currentUser) { if (cb) cb(local); return; }
+  sb.from('sales_dashboard').select('rep_email, activity, activityLog').then(function(result) {
+    var merged = anBuildDailyLeaderboard((result.data && !result.error) ? result.data : []);
+    if (cb) cb(merged);
+  }).catch(function() { if (cb) cb(local); });
+};
+
+window.anRenderDailyLeaderboardHTML = function(rows) {
+  rows = rows || [];
+  if (!rows.length) {
+    return '<div class="hd-empty"><div class="hd-empty-icon">🏁</div>No SDR activity logged today yet — book a demo or log a call to climb the board.</div>';
+  }
+  var medals = ['🥇', '🥈', '🥉'];
+  return '<div style="display:flex;flex-direction:column;gap:8px;">' + rows.slice(0, 8).map(function(row, i) {
+    var name = (typeof anGetRepName === 'function') ? anGetRepName(row.email) : (row.email ? row.email.split('@')[0] : 'Rep');
+    var medal = medals[i] || (i + 1) + '.';
+    var isMe = (typeof AN !== 'undefined' && AN.currentRepEmail && row.email === AN.currentRepEmail.toLowerCase());
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:'+(isMe ? 'rgba(99,102,241,0.08)' : '#f8f8fc')+';border:1px solid '+(isMe ? 'rgba(99,102,241,0.2)' : '#eeeef2')+';">'
+      + '<span style="font-size:16px;width:24px;text-align:center;flex-shrink:0;">'+medal+'</span>'
+      + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:800;color:#09090b;">'+anEsc(name)+(isMe ? ' <span style="font-size:10px;color:#6366f1;">(you)</span>' : '')+'</div>'
+      + '<div style="font-size:10px;color:#71717a;margin-top:2px;">'+row.calls+' calls · '+row.demos+' demos · '+(row.showed||0)+' showed · '+row.closes+' closes</div></div>'
+      + '<div style="font-size:15px;font-weight:900;color:#6366f1;flex-shrink:0;">'+row.points+'<span style="font-size:9px;font-weight:600;color:#a1a1aa;"> pts</span></div>'
+      + '</div>';
+  }).join('') + '</div>';
+};
+
+window.anRecordDemoLifecycleEvent = function(lead, type, opts) {
+  if (!lead || !type) return;
+  opts = opts || {};
+  if (!lead.demoLifecycle) lead.demoLifecycle = [];
+  if (type === 'booked' && !opts.allowDuplicate) {
+    var priorBooked = lead.demoLifecycle.filter(function(e) { return e.type === 'booked'; });
+    if (priorBooked.length && lead.demoBookedAt && !opts.reschedule) return;
+  }
+  if ((type === 'completed' || type === 'showed') && !opts.allowDuplicate) {
+    if (lead.demoLifecycle.some(function(e) { return e.type === 'completed' || e.type === 'showed'; })) return;
+  }
+  if (type === 'converted' && !opts.allowDuplicate) {
+    if (lead.demoLifecycle.some(function(e) { return e.type === 'converted'; })) return;
+  }
+  var now = new Date();
+  var ev = {
+    type: type,
+    at: now.toISOString(),
+    date: opts.date || now.toISOString().split('T')[0],
+    demoDate: lead.demoDate || opts.demoDate || '',
+    demoTime: lead.demoTime || opts.demoTime || '',
+    source: opts.source || '',
+    notes: opts.notes || ''
+  };
+  lead.demoLifecycle.push(ev);
+  if (type === 'booked') {
+    lead.demoBookedAt = lead.demoBookedAt || ev.at;
+  }
+  if (type === 'completed' || type === 'showed') {
+    lead.demoCompletedAt = lead.demoCompletedAt || ev.at;
+    lead.demoShowed = true;
+  }
+  if (type === 'converted') {
+    lead.convertedToOppAt = lead.convertedToOppAt || ev.at;
+  }
+};
+
+window.anFindDashDemoForLead = function(lead) {
+  if (!lead || typeof _dash === 'undefined' || !_dash.demos) return null;
+  return _dash.demos.find(function(d) {
+    return d.leadId === lead.id || d.id === ('demo-' + lead.id);
+  }) || null;
+};
+
+window.anSyncLeadDemoToDashboard = function(lead, action, syncOpts) {
+  if (!lead || typeof _dash === 'undefined') return;
+  syncOpts = syncOpts || {};
+  if (!_dash.demos) _dash.demos = [];
+  var today = new Date().toISOString().split('T')[0];
+  var leadName = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || lead.company || 'Lead';
+  var existing = anFindDashDemoForLead(lead);
+
+  if (action === 'booked') {
+    if (!existing) {
+      _dash.demos.push({
+        id: 'demo-' + lead.id,
+        leadId: lead.id,
+        name: leadName,
+        state: lead.state || '',
+        size: lead.size || '',
+        scheduledDate: lead.demoDate || today,
+        scheduledTime: lead.demoTime || '',
+        status: 'booked',
+        bookedDate: lead.demoBookedAt ? String(lead.demoBookedAt).slice(0, 10) : today,
+        notes: ''
+      });
+      if (!syncOpts.silentActivity && typeof syncActivityFromCRM === 'function') syncActivityFromCRM('demos', 1);
+    } else {
+      existing.name = leadName;
+      existing.scheduledDate = lead.demoDate || existing.scheduledDate;
+      existing.scheduledTime = lead.demoTime || existing.scheduledTime;
+      if (existing.status !== 'showed') existing.status = 'booked';
+    }
+  } else if (action === 'showed') {
+    if (!existing) {
+      var bookDate = lead.demoBookedAt ? String(lead.demoBookedAt).slice(0, 10) : today;
+      _dash.demos.push({
+        id: 'demo-' + lead.id,
+        leadId: lead.id,
+        name: leadName,
+        state: lead.state || '',
+        size: lead.size || '',
+        scheduledDate: lead.demoDate || today,
+        scheduledTime: lead.demoTime || '',
+        status: 'showed',
+        bookedDate: bookDate,
+        completedDate: lead.demoCompletedAt ? String(lead.demoCompletedAt).slice(0, 10) : today,
+        notes: ''
+      });
+      existing = anFindDashDemoForLead(lead);
+    }
+    if (existing) {
+      var wasShowed = existing.status === 'showed';
+      existing.status = 'showed';
+      existing.completedDate = existing.completedDate || (lead.demoCompletedAt ? String(lead.demoCompletedAt).slice(0, 10) : today);
+      existing.name = leadName;
+      if (!wasShowed && !syncOpts.skipCounters) {
+        if (!_dash.activityLog) _dash.activityLog = [];
+        var entry = _dash.activityLog.find(function(e) { return e.date === today; });
+        if (!entry) { entry = { date: today, calls: 0, demos: 0, closes: 0, demos_showed: 0, demos_converted: 0 }; _dash.activityLog.push(entry); }
+        entry.demos_showed = (entry.demos_showed || 0) + 1;
+        if (_dash.activity) _dash.activity.demos_showed = (_dash.activity.demos_showed || 0) + 1;
+      }
+    }
+  } else if (action === 'converted') {
+    if (!existing && lead.demoDate) {
+      anSyncLeadDemoToDashboard(lead, 'showed', { skipCounters: true, silentActivity: true });
+      existing = anFindDashDemoForLead(lead);
+    }
+    if (existing) {
+      existing.convertedToOpp = true;
+      if (existing.status === 'booked') existing.status = 'showed';
+      existing.completedDate = existing.completedDate || today;
+    }
+    if (!syncOpts.skipCounters) {
+      if (!_dash.activityLog) _dash.activityLog = [];
+      var convEntry = _dash.activityLog.find(function(e) { return e.date === today; });
+      if (!convEntry) { convEntry = { date: today, calls: 0, demos: 0, closes: 0, demos_showed: 0, demos_converted: 0 }; _dash.activityLog.push(convEntry); }
+      convEntry.demos_converted = (convEntry.demos_converted || 0) + 1;
+    }
+  }
+  if (typeof dashSave === 'function') dashSave();
+};
+
+window.anRecordDemoBooked = function(lead, opts) {
+  if (!lead) return;
+  opts = opts || {};
+  var hadBooked = (lead.demoLifecycle || []).some(function(e) { return e.type === 'booked'; });
+  anRecordDemoLifecycleEvent(lead, 'booked', opts);
+  if (!opts.silentDashBook) anSyncLeadDemoToDashboard(lead, 'booked', opts);
+  lead.updated = new Date().toISOString();
+  return !hadBooked;
+};
+
+window.anRecordDemoCompleted = function(lead, opts) {
+  if (!lead) return;
+  opts = opts || {};
+  var already = (lead.demoLifecycle || []).some(function(e) { return e.type === 'completed'; });
+  anRecordDemoLifecycleEvent(lead, 'completed', opts);
+  anSyncLeadDemoToDashboard(lead, 'showed', already ? { skipCounters: true } : opts);
+  lead.updated = new Date().toISOString();
+};
+
+window.anRecordDemoConverted = function(lead, opts) {
+  if (!lead) return;
+  opts = opts || {};
+  if (!lead.demoCompletedAt && !(lead.demoLifecycle || []).some(function(e) { return e.type === 'completed'; })) {
+    anRecordDemoCompleted(lead, { source: opts.source || 'conversion', skipCounters: true });
+  }
+  anRecordDemoLifecycleEvent(lead, 'converted', opts);
+  anSyncLeadDemoToDashboard(lead, 'converted', opts);
+  lead.updated = new Date().toISOString();
+};
+
+window.anHydrateDemoLifecycle = function(lead) {
+  if (!lead) return lead;
+  if (!lead.demoLifecycle) lead.demoLifecycle = [];
+  if (lead.demoDate && !lead.demoBookedAt) {
+    var bookAt = lead.convertedAt || lead.updated || lead.created || new Date().toISOString();
+    lead.demoBookedAt = bookAt;
+    if (!lead.demoLifecycle.some(function(e) { return e.type === 'booked'; })) {
+      lead.demoLifecycle.push({
+        type: 'booked', at: bookAt, date: String(bookAt).slice(0, 10),
+        demoDate: lead.demoDate, demoTime: lead.demoTime || '', source: 'backfill'
+      });
+    }
+  }
+  if ((lead.isOpportunity || anIsOpportunityRecord(lead)) && lead.demoCompletedAt) {
+    if (!lead.demoLifecycle.some(function(e) { return e.type === 'completed'; })) {
+      lead.demoLifecycle.push({
+        type: 'completed', at: lead.demoCompletedAt, date: String(lead.demoCompletedAt).slice(0, 10),
+        demoDate: lead.demoDate || '', demoTime: lead.demoTime || '', source: 'backfill'
+      });
+    }
+  }
+  if (lead.isOpportunity && lead.convertedAt) {
+    if (!lead.demoLifecycle.some(function(e) { return e.type === 'converted'; })) {
+      lead.demoLifecycle.push({
+        type: 'converted', at: lead.convertedAt, date: String(lead.convertedAt).slice(0, 10),
+        demoDate: lead.demoDate || '', source: 'backfill'
+      });
+    }
+  }
+  return lead;
+};
+
+window.anBackfillDashboardDemosFromLeads = function(leads) {
+  if (!Array.isArray(leads) || typeof _dash === 'undefined') return;
+  leads.forEach(function(lead) {
+    if (!lead || typeof anLeadHadDemoBooked !== 'function' || !anLeadHadDemoBooked(lead)) return;
+    var action = 'booked';
+    if (lead.demoCompletedAt || lead.demoShowed || (lead.demoLifecycle || []).some(function(e) { return e.type === 'completed'; })) {
+      action = 'showed';
+    }
+    if (lead.isOpportunity || (typeof anIsOpportunityRecord === 'function' && anIsOpportunityRecord(lead))) {
+      action = 'converted';
+    }
+    if (typeof anSyncLeadDemoToDashboard === 'function') {
+      anSyncLeadDemoToDashboard(lead, action, { silentActivity: true, skipCounters: true });
+    }
+  });
 };
 
 window.anGetCallPanelMode = function(lead) {
@@ -8817,14 +9258,74 @@ function anSanitizeLeadStatus(lead) {
   return lead;
 }
 
+function anOppDedupeKey(lead) {
+  if (!lead) return '';
+  if (lead.phone) return 'p:' + anNormalizePhone(lead.phone);
+  if (lead.email) return 'e:' + (lead.email || '').toLowerCase().trim();
+  var name = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim().toLowerCase().replace(/\s+/g, ' ');
+  var co = (lead.company || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  if (!name && !co) return '';
+  if (!co || co === name) co = '';
+  return 'n:' + name + '|' + co;
+}
+
+function anIsOpportunityRecord(lead) {
+  return !!(lead && (lead.isOpportunity || ['demo', 'showed', 'proposal', 'negotiation', 'won', 'lost'].indexOf(lead.status || '') >= 0));
+}
+
+function anDedupeOpportunitiesForDisplay(opps) {
+  var seenKeys = {};
+  var seenIds = {};
+  return (opps || []).filter(function(l) {
+    if (!l || !l.id || seenIds[l.id]) return false;
+    seenIds[l.id] = true;
+    var key = anOppDedupeKey(l) || ('id:' + l.id);
+    if (seenKeys[key]) return false;
+    seenKeys[key] = true;
+    return true;
+  });
+}
+
+function anDedupeOpportunityLeads(arr) {
+  if (!Array.isArray(arr) || arr.length < 2) return arr;
+  var seen = {};
+  var removeIds = {};
+  arr.forEach(function(l) {
+    if (!l || !anIsOpportunityRecord(l)) return;
+    var key = anOppDedupeKey(l);
+    if (!key) return;
+    var prev = seen[key];
+    if (!prev) {
+      seen[key] = l;
+      return;
+    }
+    var keepNew = false;
+    if (l.isOpportunity && !prev.isOpportunity) keepNew = true;
+    else if (!l.isOpportunity && prev.isOpportunity) keepNew = false;
+    else if (anLeadUpdatedMs(l) > anLeadUpdatedMs(prev)) keepNew = true;
+    if (keepNew) {
+      removeIds[prev.id] = true;
+      seen[key] = l;
+    } else {
+      removeIds[l.id] = true;
+    }
+  });
+  var removed = Object.keys(removeIds).length;
+  if (!removed) return arr;
+  if (typeof console !== 'undefined') console.info('[CRM] Removed ' + removed + ' duplicate opportunit' + (removed === 1 ? 'y' : 'ies'));
+  return arr.filter(function(l) { return !removeIds[l.id]; });
+}
+
 function anNormalizeLeads(arr){
   if(!Array.isArray(arr)) return [];
   if(arr.length && Array.isArray(arr[0]) && !arr[0].id) return arr.reduce(function(flat, item){ return flat.concat(item); }, []);
-  return arr.map(function(l){
+  var normalized = arr.map(function(l){
     if(l && l.phone) l.phone = anNormalizePhone(l.phone);
     if(l && typeof anHydrateLeadState === 'function') anHydrateLeadState(l);
+    if(l && typeof anHydrateDemoLifecycle === 'function') anHydrateDemoLifecycle(l);
     return anSanitizeLeadStatus(l);
   });
+  return anDedupeOpportunityLeads(normalized);
 }
 
 var AN_OWNER_PATCH_KEY = 'an-crm-owner-patches';
@@ -9117,6 +9618,15 @@ AN.load = function(cb){
   function anLeadsLoadDone(){
     AN.leadsLoading = false;
     AN.leadsReady = true;
+    if (typeof dashLoad === 'function') {
+      dashLoad(function() {
+        if (typeof anBackfillDashboardDemosFromLeads === 'function') anBackfillDashboardDemosFromLeads(AN.leads);
+        if (typeof anSyncAllOpportunitiesToPipeline === 'function') anSyncAllOpportunitiesToPipeline();
+      });
+    } else {
+      if (typeof anBackfillDashboardDemosFromLeads === 'function') anBackfillDashboardDemosFromLeads(AN.leads);
+      if (typeof anSyncAllOpportunitiesToPipeline === 'function') anSyncAllOpportunitiesToPipeline();
+    }
     if(typeof hdRefreshCallableSlot === 'function') hdRefreshCallableSlot();
     if(cb) cb();
   }
@@ -9701,7 +10211,7 @@ window.anOpenOwnerFilter = function(){
 
 window.anOpenStatusFilter = function(){
   anCloseFilterPopover();
-  var opts = [{id:'all',l:'All statuses'},{id:'hot',l:'🔥 Hot'},{id:'new',l:'New'},{id:'contacted',l:'Contacted'},{id:'booked_demo',l:'Booked Demo'},{id:'followup',l:'📅 Follow Up Due'},{id:'nurture',l:'Nurture'}];
+  var opts = [{id:'all',l:'All statuses'},{id:'hot',l:'🔥 Hot'},{id:'new',l:'New'},{id:'contacted',l:'Contacted'},{id:'booked_demo',l:'Booked Demo'},{id:'demo_complete',l:'Demo Complete'},{id:'followup',l:'📅 Follow Up Due'},{id:'nurture',l:'Nurture'}];
   anOpenFilterPopover('Lead status', opts.map(function(o){
     return '<button type="button" onclick="AN.currentFilter=\''+o.id+'\';anOnFilterChanged();anCloseFilterPopover()" style="width:100%;text-align:left;padding:9px 12px;border:none;background:'+(AN.currentFilter===o.id?'rgba(99,102,241,0.1)':'transparent')+';border-radius:6px;font-size:13px;cursor:pointer;font-family:var(--sans);">'+o.l+'</button>';
   }).join(''));
@@ -9765,18 +10275,27 @@ window.anRefreshCRMStatsBar = function(){
   var statCounts = {};
   AN_LEAD_STATUSES.forEach(function(s){ statCounts[s.id] = 0; });
   pool.forEach(function(l){
+    if (typeof anLeadInBookedDemoBucket === 'function' && anLeadInBookedDemoBucket(l)) {
+      statCounts.booked_demo++;
+      return;
+    }
     var st = l.status || 'new';
-    if(statCounts[st] !== undefined) statCounts[st]++;
+    if (statCounts[st] !== undefined) statCounts[st]++;
   });
+  var demosToday = typeof anCountBookedDemosToday === 'function' ? anCountBookedDemosToday(AN.leads) : 0;
+  if (demosToday > statCounts.booked_demo) statCounts.booked_demo = demosToday;
   var activeStatus = (AN.advancedFilters && AN.advancedFilters.status) ? AN.advancedFilters.status : ((AN.currentFilter && AN.currentFilter !== 'all' && AN.currentFilter !== 'hot' && AN.currentFilter !== 'demo' && AN.currentFilter !== 'followup') ? AN.currentFilter : '');
   var html = AN_LEAD_STATUSES.map(function(s){
-    var active = activeStatus === s.id;
-    return '<div onclick="AN.currentFilter=\''+s.id+'\';if(AN.advancedFilters)AN.advancedFilters.status=\''+s.id+'\';anOnFilterChanged();" style="padding:12px 16px;cursor:pointer;border-right:1px solid var(--divider);flex:1;min-width:0;transition:background 0.15s;background:'+(active?'rgba(99,102,241,0.06)':'transparent')+';" onmouseover="this.style.background=\''+(active?'rgba(99,102,241,0.1)':'var(--body-bg)')+'\'" onmouseout="this.style.background=\''+(active?'rgba(99,102,241,0.06)':'transparent')+'\'">'
+    var active = activeStatus === s.id || (s.id === 'booked_demo' && AN.currentFilter === 'demo');
+    var count = statCounts[s.id];
+    var sub = (s.id === 'booked_demo' && demosToday > 0) ? '<div style="font-size:9px;font-weight:600;color:var(--text-muted);margin-top:2px;">'+demosToday+' booked today</div>' : '';
+    return '<div onclick="AN.currentFilter=\''+(s.id === 'booked_demo' ? 'demo' : s.id)+'\';if(AN.advancedFilters)AN.advancedFilters.status=\''+(s.id === 'booked_demo' ? '' : s.id)+'\';anOnFilterChanged();" style="padding:12px 16px;cursor:pointer;border-right:1px solid var(--divider);flex:1;min-width:0;transition:background 0.15s;background:'+(active?'rgba(99,102,241,0.06)':'transparent')+';" onmouseover="this.style.background=\''+(active?'rgba(99,102,241,0.1)':'var(--body-bg)')+'\'" onmouseout="this.style.background=\''+(active?'rgba(99,102,241,0.06)':'transparent')+'\'">'
       +'<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">'
       +'<span style="width:7px;height:7px;border-radius:50%;background:'+s.dot+';flex-shrink:0;"></span>'
       +'<span style="font-size:10px;font-weight:700;color:'+s.color+';text-transform:uppercase;letter-spacing:0.1em;white-space:nowrap;">'+s.label+'</span>'
       +'</div>'
-      +'<div style="font-size:22px;font-weight:900;color:var(--text-primary);letter-spacing:-1px;line-height:1;">'+statCounts[s.id].toLocaleString()+'</div>'
+      +'<div style="font-size:22px;font-weight:900;color:var(--text-primary);letter-spacing:-1px;line-height:1;">'+count.toLocaleString()+'</div>'
+      +sub
       +'</div>';
   }).join('');
   bar.innerHTML = html;
@@ -9950,7 +10469,9 @@ AN.filtered = function(){
     } else if(AN.currentFilter==='hot') {
       if(['new','contacted','followup','emailed'].indexOf(l.status||'new') < 0) return false;
     } else if(AN.currentFilter==='demo') {
-      if(l.status !== 'booked_demo') return false;
+      if (typeof anLeadInBookedDemoBucket === 'function') {
+        if (!anLeadInBookedDemoBucket(l)) return false;
+      } else if (l.status !== 'booked_demo') return false;
     } else if(AN.currentFilter==='followup') {
       if(!l.nextFollowUp) return false;
     } else if(AN.currentFilter!=='all' && l.status!==AN.currentFilter) return false;
@@ -9982,11 +10503,7 @@ window.renderCRM = function(){
   var sec = document.getElementById('section-crm');
   if(!sec) return;
 
-  if(AN.leadsReady && AN.leads.length && document.getElementById('crm-content')){
-    if(typeof anRefreshFilterChips === 'function') anRefreshFilterChips();
-    if(typeof anRefreshCRMStatsBar === 'function') anRefreshCRMStatsBar();
-    if(typeof anRefreshRepCounts === 'function') anRefreshRepCounts();
-    if(typeof anRefreshContactListUI === 'function') anRefreshContactListUI();
+  if(AN.leadsReady && document.getElementById('crm-content')){
     renderLeadsTable();
     if(typeof anUpdateBulkBar === 'function') anUpdateBulkBar();
     return;
@@ -10035,7 +10552,16 @@ function buildCRMShell(){
   var statCounts = {};
   AN_LEAD_STATUSES.forEach(function(s){ statCounts[s.id]=0; });
   var statPool = AN.isAdmin ? AN.leads : (typeof anFilterLeadsForCurrentRep === 'function' ? anFilterLeadsForCurrentRep(AN.leads) : AN.leads);
-  statPool.forEach(function(l){ if(anIsProspect(l) && statCounts[l.status]!==undefined) statCounts[l.status]++; });
+  statPool.forEach(function(l){
+    if (!anIsProspect(l)) return;
+    if (typeof anLeadInBookedDemoBucket === 'function' && anLeadInBookedDemoBucket(l)) {
+      statCounts.booked_demo++;
+      return;
+    }
+    if (statCounts[l.status] !== undefined) statCounts[l.status]++;
+  });
+  var shellDemosToday = typeof anCountBookedDemosToday === 'function' ? anCountBookedDemosToday(AN.leads) : 0;
+  if (shellDemosToday > statCounts.booked_demo) statCounts.booked_demo = shellDemosToday;
 
   // Stats bar
   var statsHTML = AN_LEAD_STATUSES.map(function(s){
@@ -10209,7 +10735,7 @@ function renderLeadsTable(){
       countEl.textContent = list.length.toLocaleString()+' of '+totalProspects.toLocaleString();
     }
   }
-  if(typeof anRefreshContactListUI === 'function'){
+  if(typeof anRefreshContactListUI === 'function' && document.getElementById('crm-list-tabs')){
     clearTimeout(window._anListTabTimer);
     window._anListTabTimer = setTimeout(function(){
       anRefreshContactListUI();
@@ -10263,22 +10789,22 @@ function renderLeadsTable(){
     var fuDue    = lead.nextFollowUp && lead.nextFollowUp <= today;
     var rowBg    = rowIndex%2===0?'transparent':'rgba(0,0,0,0.012)';
 
-    return '<tr style="border-bottom:1px solid var(--divider);background:'+rowBg+';cursor:pointer;" '
+    return '<tr data-lead-id="'+lead.id+'" style="border-bottom:1px solid var(--divider);background:'+rowBg+';cursor:pointer;" '
       +'onclick="anOpenLead(\''+lead.id+'\')" '
       +'onmouseover="this.style.background=\'rgba(99,102,241,0.04)\'" onmouseout="this.style.background=\''+rowBg+'\'">'
       +'<td style="padding:10px 12px;" onclick="event.stopPropagation()"><input type="checkbox" class="lead-cb" data-id="'+lead.id+'"'+(AN.selectedIds.indexOf(lead.id)>=0?' checked':'')+' onchange="anToggleSelect(\''+lead.id+'\',this.checked)" style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;"></td>'
-      +'<td style="padding:10px 12px;min-width:140px;">'
+      +'<td style="padding:10px 12px;min-width:140px;" title="Double-click to edit name">'
       +'<div style="font-size:13.5px;font-weight:700;color:var(--text-primary);">'+anEsc((lead.firstName||'')+' '+(lead.lastName||''))+'</div>'
       +(lead.title?'<div style="font-size:11px;color:var(--text-muted);">'+anEsc(lead.title)+'</div>':'')
       +(lead.email?'<div style="font-size:11.5px;color:var(--text-muted);">'+anEsc(lead.email)+'</div>':'')
       +'</td>'
-      +'<td style="padding:10px 12px;font-size:13px;color:var(--text-secondary);">'+anEsc(lead.company||'—')+'</td>'
-      +'<td style="padding:10px 12px;font-size:13px;color:var(--text-secondary);">'+anEsc((typeof anResolveLeadState==='function'?anResolveLeadState(lead):lead.state)||'—')+'</td>'
-      +'<td style="padding:10px 12px;">'+(lead.size?'<span style="background:var(--body-bg);border:1px solid var(--divider);border-radius:5px;padding:2px 8px;font-size:11.5px;font-weight:600;color:var(--text-secondary);">'+anEsc(sz.label)+'</span>':'<span style="color:var(--text-muted);font-size:12px;">—</span>')+'</td>'
-      +'<td style="padding:10px 12px;"><a href="tel:'+anEsc(anTelPhone(lead.phone)||'')+'" onclick="event.stopPropagation()" style="color:var(--text-secondary);text-decoration:none;font-size:13px;">'+anEsc(anPhoneDisplay(lead.phone))+'</a></td>'
-      +'<td style="padding:10px 12px;"><span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap;">'+st.label+'</span></td>'
+      +'<td data-field="company" style="padding:10px 12px;font-size:13px;color:var(--text-secondary);cursor:text;" title="Click to edit">'+anEsc(lead.company||'—')+'</td>'
+      +'<td data-field="state" style="padding:10px 12px;font-size:13px;color:var(--text-secondary);cursor:text;" title="Click to edit">'+anEsc((typeof anResolveLeadState==='function'?anResolveLeadState(lead):lead.state)||'—')+'</td>'
+      +'<td data-field="size" style="padding:10px 12px;cursor:text;" title="Click to edit">'+(lead.size?'<span style="background:var(--body-bg);border:1px solid var(--divider);border-radius:5px;padding:2px 8px;font-size:11.5px;font-weight:600;color:var(--text-secondary);">'+anEsc(sz.label)+'</span>':'<span style="color:var(--text-muted);font-size:12px;">—</span>')+'</td>'
+      +'<td data-field="phone" style="padding:10px 12px;cursor:text;" title="Click to edit"><a href="tel:'+anEsc(anTelPhone(lead.phone)||'')+'" onclick="event.stopPropagation()" style="color:var(--text-secondary);text-decoration:none;font-size:13px;">'+anEsc(anPhoneDisplay(lead.phone))+'</a></td>'
+      +'<td data-field="status" style="padding:10px 12px;cursor:text;" title="Click to edit"><span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap;">'+st.label+'</span></td>'
       +(anShowOwnerColumn()?'<td style="padding:10px 12px;" onclick="event.stopPropagation()">'+(repEmail?'<span style="background:'+repCol+'18;color:'+repCol+';border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;" title="Change owner" onclick="anOpenOwnerPicker({leadId:\''+lead.id+'\'})">'+anEsc(repName)+' ▾</span>':'<span style="color:var(--text-muted);font-size:12px;cursor:pointer;" onclick="anOpenOwnerPicker({leadId:\''+lead.id+'\'})">+ Assign ▾</span>')+'</td>':'')
-      +'<td style="padding:10px 12px;font-size:12.5px;color:'+(fuDue?'#ef4444':'var(--text-muted)')+';font-weight:'+(fuDue?'700':'400')+';">'+(lead.nextFollowUp?anDate(lead.nextFollowUp):'—')+'</td>'
+      +'<td data-field="nextFollowUp" style="padding:10px 12px;font-size:12.5px;color:'+(fuDue?'#ef4444':'var(--text-muted)')+';font-weight:'+(fuDue?'700':'400')+';cursor:text;" title="Click to edit">'+(lead.nextFollowUp?anDate(lead.nextFollowUp):'—')+'</td>'
       +'<td style="padding:10px 12px;">'+(function(){
         var lastCall=(lead.callLog&&lead.callLog.length)?lead.callLog.slice().sort(function(a,b){return b.date.localeCompare(a.date);})[0]:null;
         var actIcons={pickup:'☎️',demo:'🎯',voicemail:'📬',noanswer:'📵',note:'📝'};
@@ -10772,7 +11298,12 @@ window.anSaveLeadCore = function(id){
   lead.phone=anNormalizePhone(g('alf-ph'));
   lead.state=typeof anNormalizeLeadStateValue==='function'?anNormalizeLeadStateValue(g('alf-st')):g('alf-st');
   lead.size=g('alf-sz');
-  lead.status=g('alf-sta') || lead.status || 'new';
+  var nextStatus = g('alf-sta') || lead.status || 'new';
+  if (typeof anApplyLeadStatusChange === 'function') {
+    anApplyLeadStatusChange(lead, nextStatus, { save: false, source: 'lead_modal' });
+  } else {
+    lead.status = nextStatus;
+  }
   lead.source=(g('alf-src')||'').trim();
   lead.preferredLang=g('alf-lang') || 'en';
   lead.nextFollowUp=g('alf-fu');
@@ -11084,7 +11615,27 @@ window.anNewLead = function(){
 window.anDeleteLead = function(id){
   if(!confirm('Delete this lead?')) return;
   AN.leads=AN.leads.filter(function(l){ return l.id!==id; });
-  AN.save(); renderLeadsTable();
+  AN.selectedIds = (AN.selectedIds || []).filter(function(sid){ return sid !== id; });
+  AN.save();
+  if (typeof renderLeadsTable === 'function') renderLeadsTable();
+  if (typeof renderOpportunities === 'function') renderOpportunities();
+};
+
+window.anDeleteOpportunity = function(id) {
+  var lead = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.find(function(l) { return l.id === id; }) : null;
+  if (!lead) return;
+  var name = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || lead.company || 'this opportunity';
+  if (!confirm('Delete opportunity for ' + name + '? This cannot be undone.')) return;
+  AN.leads = AN.leads.filter(function(l) { return l.id !== id; });
+  AN.selectedIds = (AN.selectedIds || []).filter(function(sid) { return sid !== id; });
+  var modal = document.getElementById('an-opp-detail-modal');
+  if (modal) modal.remove();
+  if (typeof anCloseOppRecord === 'function') anCloseOppRecord();
+  AN.save(function() {
+    if (typeof renderOpportunities === 'function') renderOpportunities();
+    if (typeof renderLeadsTable === 'function') renderLeadsTable();
+    if (typeof showToast === 'function') showToast('Opportunity deleted');
+  });
 };
 
 // ── Selection + bulk delete ───────────────────────────────────
@@ -13434,10 +13985,13 @@ var _origShowSection_crm = window.showSection;
 window.showSection = function(id, btn){
   if(typeof _origShowSection_crm==='function') _origShowSection_crm(id, btn);
   if(id==='crm'){
+    if (AN.leadsReady && document.getElementById('crm-content')) {
+      if (typeof renderLeadsTable === 'function') renderLeadsTable();
+      return;
+    }
     setTimeout(function(){
-      var sec=document.getElementById('section-crm');
-      if(sec && typeof renderCRM==='function') renderCRM();
-    }, 50);
+      if(typeof renderCRM==='function') renderCRM();
+    }, 0);
   }
 };
 
@@ -13482,22 +14036,18 @@ console.log('[AN CRM] Native CRM loaded.');
 var _origRenderLeadsTable = window.renderLeadsTable;
 window.renderLeadsTable = function() {
   _origRenderLeadsTable && _origRenderLeadsTable();
-  // After table renders, attach inline edit handlers
-  setTimeout(attachInlineEdit, 50);
+  attachInlineEdit();
 };
 
 function attachInlineEdit() {
-  var tbody = document.querySelector('#crm-content tbody');
-  if (!tbody) return;
-
-  // Make each editable cell clickable
-  tbody.querySelectorAll('td[data-field]').forEach(function(td) {
-    td.addEventListener('click', function(e) {
-      e.stopPropagation();
-      if (td.querySelector('input,select')) return; // already editing
-      startInlineEdit(td);
-    });
-  });
+  if (window._anInlineEditDelegated) return;
+  window._anInlineEditDelegated = true;
+  document.addEventListener('click', function(e) {
+    var td = e.target.closest('#crm-content tbody td[data-field]');
+    if (!td || td.querySelector('input,select')) return;
+    e.stopPropagation();
+    startInlineEdit(td);
+  }, true);
 }
 
 function startInlineEdit(td) {
@@ -13515,7 +14065,7 @@ function startInlineEdit(td) {
   if (field === 'status') {
     var sel = document.createElement('select');
     sel.style.cssText = 'width:100%;border:1.5px solid #6366f1;border-radius:6px;padding:5px 8px;font-size:12px;font-family:var(--sans);background:var(--card-bg);color:var(--text-primary);outline:none;';
-    AN_STATUSES.forEach(function(s) {
+    (typeof anStatusesFor === 'function' ? anStatusesFor(lead) : AN_STATUSES).forEach(function(s) {
       var opt = document.createElement('option');
       opt.value = s.id; opt.textContent = s.label;
       if (s.id === val) opt.selected = true;
@@ -13558,15 +14108,25 @@ function startInlineEdit(td) {
 
 function saveInlineEdit(lead, field, value, td, original) {
   if (field === 'phone') value = anNormalizePhone(value);
-  if (lead[field] === value) { td.innerHTML = original; td.style.padding = ''; return; }
-  lead[field] = value;
-  lead.updated = new Date().toISOString();
+  if (field === 'status' && lead.status === value) { td.innerHTML = original; td.style.padding = ''; return; }
+  if (field !== 'status' && lead[field] === value) { td.innerHTML = original; td.style.padding = ''; return; }
 
-  // Auto-sync activity when status changes
   if (field === 'status') {
-    if (value === 'demo')  syncActivityFromCRM('demos',  1);
-    if (value === 'won')   syncActivityFromCRM('closes', 1);
+    if (typeof anApplyLeadStatusChange === 'function') {
+      anApplyLeadStatusChange(lead, value, { save: false });
+    } else {
+      lead.status = value;
+    }
+    if (value === 'booked_demo' && lead.demoDate && typeof anRecordDemoBooked === 'function') {
+      anRecordDemoBooked(lead, { source: 'inline_edit' });
+    } else if (value === 'demo' && typeof anRecordDemoBooked === 'function') {
+      anRecordDemoBooked(lead, { source: 'inline_edit_legacy' });
+    }
+    if (value === 'won') syncActivityFromCRM('closes', 1);
+  } else {
+    lead[field] = value;
   }
+  lead.updated = new Date().toISOString();
 
   AN.save();
   // Re-render just this cell
@@ -14441,42 +15001,7 @@ window.showSection = function(id, btn) {
 var _origRLT2 = window.renderLeadsTable;
 window.renderLeadsTable = function() {
   _origRLT2 && _origRLT2();
-  // Patch rows to add data attributes
-  setTimeout(function() {
-    var tbody = document.querySelector('#crm-content tbody');
-    if (!tbody) return;
-    var rows = tbody.querySelectorAll('tr');
-    rows.forEach(function(tr) {
-      // Get lead id from the onclick of the view button or checkbox
-      var cb = tr.querySelector('.lead-cb');
-      if (!cb) return;
-      var leadId = cb.dataset.id;
-      if (!leadId) return;
-      tr.dataset.leadId = leadId;
-
-      // Make the row click open side panel instead of full modal
-      tr.addEventListener('click', function(e) {
-        if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'A') return;
-        if (e.target.dataset.field) return; // editing a cell
-        anOpenLeadPanel(leadId);
-      }, true);
-
-      // Tag cells with field names for inline editing
-      var cells = tr.querySelectorAll('td');
-      // Map: 0=checkbox, 1=name, 2=company, 3=state, 4=size, 5=phone, 6=status, 7=rep(admin?), ...
-      var fieldMap = ['','','company','state','size','phone','status'];
-      if (AN.isAdmin) fieldMap.push(''); // rep column (not editable)
-      fieldMap.push('nextFollowUp');
-
-      fieldMap.forEach(function(field, i) {
-        if (!field || !cells[i]) return;
-        cells[i].dataset.field = field;
-        cells[i].style.cursor = 'text';
-        cells[i].title = 'Click to edit';
-      });
-    });
-    attachInlineEdit();
-  }, 80);
+  attachInlineEdit();
 };
 
 console.log('[UNIFIED CRM] Inline edit, side panel, opportunities, dashboard sync loaded.');
@@ -14596,28 +15121,49 @@ function expandNavGroup(group) {
 }
 
 // ── 3. OPPORTUNITY CONVERSION POPUP ──────────────────────────
-window.anConvertToOpportunity = function(leadId) {
+window.anCloseOppConvertModal = function(leadId) {
+  var m = document.getElementById('opp-convert-modal');
+  var fromDemo = m && m._fromDemoComplete;
+  var prev = m && m._prevStatus;
+  if (m) m.remove();
+  if (fromDemo && leadId && typeof anCancelDemoCompleteConversion === 'function') {
+    anCancelDemoCompleteConversion(leadId, prev);
+  }
+};
+
+window.anConvertToOpportunity = function(leadId, opts) {
+  opts = opts || {};
   var lead = AN.leads.find(function(l){ return l.id===leadId; });
   if (!lead) return;
 
   var old = document.getElementById('opp-convert-modal');
   if (old) old.remove();
 
+  var fromDemoComplete = !!opts.fromDemoComplete || lead.status === 'demo_complete';
+  var prevStatus = opts.prevStatus || lead._demoCompletePrevStatus || 'booked_demo';
   var SIZE_OPTS = '<option value="">Select size...</option>'+AN_SIZES.map(function(s){
     return '<option value="'+s.id+'"'+(lead.size===s.id?' selected':'')+'>'+s.label+' ($'+s.price+'/mo)</option>';
   }).join('');
+  var headerTitle = fromDemoComplete ? '✅ Demo Complete — Create Opportunity' : '💎 Convert to Opportunity';
+  var leadLine = anEsc((lead.firstName||'')+' '+(lead.lastName||''))+(lead.company?' · '+anEsc(lead.company):'');
+  var headerSub = fromDemoComplete
+    ? leadLine + ' · Fill in deal details to create the opportunity'
+    : leadLine;
 
   var m = document.createElement('div');
   m.id = 'opp-convert-modal';
+  m._fromDemoComplete = fromDemoComplete;
+  m._prevStatus = prevStatus;
+  m._leadId = leadId;
   m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:10001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
 
   m.innerHTML = '<div style="background:var(--card-bg);border-radius:16px;width:520px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,0.35);overflow:hidden;">'
     // Header
     +'<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);padding:22px 26px;display:flex;justify-content:space-between;align-items:center;">'
-    +'<div><div style="font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.4px;">💎 Convert to Opportunity</div>'
-    +'<div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:3px;">'+anEsc((lead.firstName||'')+' '+( lead.lastName||''))+(lead.company?' · '+anEsc(lead.company):'')+'</div>'
+    +'<div><div style="font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.4px;">'+headerTitle+'</div>'
+    +'<div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:3px;">'+headerSub+'</div>'
     +'</div>'
-    +'<button onclick="document.getElementById(\'opp-convert-modal\').remove()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px;">✕</button>'
+    +'<button onclick="anCloseOppConvertModal(\''+leadId+'\')" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px;">✕</button>'
     +'</div>'
 
     // Form
@@ -14659,12 +15205,12 @@ window.anConvertToOpportunity = function(leadId) {
     +'<div id="opp-value-preview" style="background:var(--body-bg);border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;gap:16px;flex-wrap:wrap;"></div>'
 
     +'<div style="display:flex;gap:8px;justify-content:flex-end;">'
-    +'<button onclick="document.getElementById(\'opp-convert-modal\').remove()" style="padding:10px 18px;border-radius:8px;border:1.5px solid var(--divider);background:transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--text-secondary);">Cancel</button>'
-    +'<button onclick="anFinalizeConversion(\''+leadId+'\')" style="padding:10px 20px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);box-shadow:0 2px 8px rgba(99,102,241,0.3);">💎 Convert to Opportunity</button>'
+    +'<button onclick="anCloseOppConvertModal(\''+leadId+'\')" style="padding:10px 18px;border-radius:8px;border:1.5px solid var(--divider);background:transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--text-secondary);">Cancel</button>'
+    +'<button onclick="anFinalizeConversion(\''+leadId+'\')" style="padding:10px 20px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);box-shadow:0 2px 8px rgba(99,102,241,0.3);">'+(fromDemoComplete ? '✅ Create Opportunity' : '💎 Convert to Opportunity')+'</button>'
     +'</div></div></div>';
 
   document.body.appendChild(m);
-  m.onclick = function(e){ if(e.target===m) m.remove(); };
+  m.onclick = function(e){ if(e.target===m) anCloseOppConvertModal(leadId); };
 
   // Auto-fill MRR from size selection
   document.getElementById('opp-size').addEventListener('change', function(){
@@ -14704,6 +15250,8 @@ function updateOppValuePreview() {
 window.anFinalizeConversion = function(leadId) {
   var lead = AN.leads.find(function(l){ return l.id===leadId; });
   if (!lead) return;
+  var modal = document.getElementById('opp-convert-modal');
+  var fromDemoComplete = modal && modal._fromDemoComplete;
   var size      = document.getElementById('opp-size')?.value||lead.size||'solo';
   var contract  = document.getElementById('opp-contract')?.value||'mrr';
   var mrr       = parseFloat(document.getElementById('opp-mrr')?.value)||0;
@@ -14713,7 +15261,7 @@ window.anFinalizeConversion = function(leadId) {
 
   // Update lead
   lead.size           = size;
-  lead.status         = 'demo';
+  lead.status         = fromDemoComplete ? 'showed' : 'demo';
   lead.oppContract    = contract;
   lead.oppMRR         = mrr||( AN_SIZES.find(function(s){return s.id===size;})||{price:79}).price;
   lead.oppAgents      = agents;
@@ -14721,14 +15269,260 @@ window.anFinalizeConversion = function(leadId) {
   lead.oppNotes       = notes;
   lead.isOpportunity  = true;
   lead.convertedAt    = new Date().toISOString();
+  if (fromDemoComplete) lead.demoCompletedAt = lead.demoCompletedAt || new Date().toISOString();
+  delete lead._demoCompletePrevStatus;
   lead.updated        = new Date().toISOString();
 
+  if (typeof anRecordDemoConverted === 'function') {
+    anRecordDemoConverted(lead, { source: fromDemoComplete ? 'demo_complete_modal' : 'convert_modal' });
+  }
+  if (typeof anSyncOpportunityToPipeline === 'function') anSyncOpportunityToPipeline(lead);
+  AN.leads = anDedupeOpportunityLeads(AN.leads);
+  if (typeof AN.invalidateLeadCaches === 'function') AN.invalidateLeadCaches();
   AN.save();
-  document.getElementById('opp-convert-modal').remove();
+  if (modal) modal.remove();
+  if (typeof renderLeadsTable === 'function') renderLeadsTable();
+  if (typeof renderOpportunities === 'function') renderOpportunities();
   var panel = document.getElementById('an-side-panel');
   if (panel) { panel.style.transform='translateX(100%)'; setTimeout(function(){panel.remove();},300); }
-  setTimeout(function(){ showSection('opportunities'); }, 350);
-  if (typeof showToast==='function') showToast('Converted to opportunity!');
+  var overlay = document.getElementById('mcm-overlay');
+  if (overlay && typeof openMobileCallMode === 'function') {
+    setTimeout(function() { openMobileCallMode(leadId); }, 350);
+  } else {
+    setTimeout(function(){ showSection('opportunities'); }, 350);
+  }
+  if (typeof showToast==='function') showToast(fromDemoComplete ? 'Opportunity created — demo complete!' : 'Converted to opportunity!');
+};
+
+// ── Opportunities views + full record ───────────────────────
+if (typeof AN !== 'undefined' && !AN.oppView) {
+  try { AN.oppView = localStorage.getItem('an-opp-view') || 'board'; } catch(e) { AN.oppView = 'board'; }
+  AN.oppSearchQ = AN.oppSearchQ || '';
+}
+
+window.anSetOppView = function(view) {
+  if (!AN) return;
+  AN.oppView = view || 'board';
+  try { localStorage.setItem('an-opp-view', AN.oppView); } catch(e) {}
+  if (typeof renderOpportunities === 'function') renderOpportunities();
+};
+
+function anFilterOppsForSearch(opps) {
+  var q = (AN && AN.oppSearchQ || '').toLowerCase().trim();
+  if (!q) return opps;
+  return opps.filter(function(o) {
+    var hay = ((o.firstName||'')+(o.lastName||'')+(o.company||'')+(o.email||'')+(o.phone||'')).toLowerCase();
+    return hay.indexOf(q) >= 0;
+  });
+}
+
+function anBuildOppTableHTML(opps, stages) {
+  if (!opps.length) return '<div style="text-align:center;padding:48px;color:var(--text-muted);">No deals match your search.</div>';
+  var stageMap = {};
+  stages.forEach(function(s) { stageMap[s.id] = s; });
+  var rows = opps.map(function(o) {
+    var st = stageMap[o.status] || { label: o.status, color: '#6366f1' };
+    var mrr = o.oppMRR || (AN_SIZES.find(function(s){ return s.id === o.size; }) || { price: 79 }).price;
+    var owner = o._repEmail && typeof anGetRepName === 'function' ? anGetRepName(o._repEmail) : (o._repEmail || '—');
+    var name = ((o.firstName||'')+' '+(o.lastName||'')).trim() || o.company || 'Deal';
+    return '<tr onclick="anOpenOppRecord(\''+o.id+'\')" style="border-bottom:1px solid var(--divider);cursor:pointer;" onmouseover="this.style.background=\'rgba(99,102,241,0.04)\'" onmouseout="this.style.background=\'transparent\'">'
+      +'<td style="padding:12px 14px;font-weight:700;color:var(--text-primary);">'+anEsc(name)+'</td>'
+      +'<td style="padding:12px 14px;color:var(--text-secondary);">'+anEsc(o.company||'—')+'</td>'
+      +'<td style="padding:12px 14px;"><span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">'+anEsc(st.label)+'</span></td>'
+      +'<td style="padding:12px 14px;font-weight:800;color:#6366f1;">$'+mrr+'/mo</td>'
+      +'<td style="padding:12px 14px;color:var(--text-muted);">'+(o.oppCloseDate ? anDate(o.oppCloseDate) : '—')+'</td>'
+      +'<td style="padding:12px 14px;color:var(--text-muted);font-size:12px;">'+anEsc(owner)+'</td>'
+      +'</tr>';
+  }).join('');
+  return '<div class="opp-table-wrap"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:720px;">'
+    +'<thead><tr style="background:var(--body-bg);">'
+    +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Deal</th>'
+    +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Company</th>'
+    +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Stage</th>'
+    +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Value</th>'
+    +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Close Date</th>'
+    +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Owner</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+
+function anBuildOppCalendarHTML(opps) {
+  if (!opps.length) return '<div style="text-align:center;padding:48px;color:var(--text-muted);">No deals with close dates yet.</div>';
+  var byMonth = {};
+  opps.forEach(function(o) {
+    var d = o.oppCloseDate || 'Unscheduled';
+    if (d !== 'Unscheduled') d = d.slice(0, 7);
+    if (!byMonth[d]) byMonth[d] = [];
+    byMonth[d].push(o);
+  });
+  var months = Object.keys(byMonth).sort();
+  return months.map(function(m) {
+    var label = m === 'Unscheduled' ? 'No close date' : (function() {
+      try { return new Date(m + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); } catch(e) { return m; }
+    })();
+    var items = byMonth[m].map(function(o) {
+      var name = ((o.firstName||'')+' '+(o.lastName||'')).trim() || o.company || 'Deal';
+      var st = (typeof anStatus === 'function') ? anStatus(o.status || 'demo') : { label: o.status, color: '#6366f1' };
+      var mrr = o.oppMRR || 79;
+      return '<div onclick="anOpenOppRecord(\''+o.id+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid var(--divider);border-radius:10px;margin-bottom:8px;cursor:pointer;background:var(--card-bg);" onmouseover="this.style.borderColor=\'#c7d2fe\'" onmouseout="this.style.borderColor=\'var(--divider)\'">'
+        +'<div><div style="font-weight:700;color:var(--text-primary);">'+anEsc(name)+'</div>'
+        +'<div style="font-size:12px;color:var(--text-muted);">'+(o.oppCloseDate ? anDate(o.oppCloseDate) : 'TBD')+' · $'+mrr+'/mo</div></div>'
+        +'<span style="font-size:11px;font-weight:700;color:'+st.color+';background:'+st.color+'18;padding:4px 10px;border-radius:20px;">'+anEsc(st.label)+'</span>'
+        +'</div>';
+    }).join('');
+    return '<div class="opp-cal-month"><h3>'+anEsc(label)+' ('+byMonth[m].length+')</h3>'+items+'</div>';
+  }).join('');
+}
+
+function oppBuildRecordHTML(lead) {
+  var st = (typeof anStatus === 'function') ? anStatus(lead.status || 'demo') : { label: lead.status, color: '#6366f1' };
+  var sz = lead.size ? (AN_SIZES.find(function(s){ return s.id === lead.size; }) || { label: lead.size, price: 79 }) : { label: 'Solo Agent', price: 79 };
+  var mrr = lead.oppMRR || sz.price;
+  var ctLabel = { mrr: 'Monthly (MRR)', arr: 'Annual (ARR)', '2yr': '2-Year Prepaid', '3yr': '3-Year Prepaid' }[lead.oppContract || 'mrr'] || 'Monthly';
+  var name = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || lead.company || 'Deal';
+  var safeId = lead.id.replace(/'/g, "\\'");
+  var STATUS_OPTS = AN_OPP_STATUSES.map(function(s) {
+    return '<option value="'+s.id+'"'+(lead.status === s.id ? ' selected' : '')+'>'+s.label+'</option>';
+  }).join('');
+
+  var demoLabels = { booked: 'Demo booked', completed: 'Demo completed', converted: 'Demo → opportunity' };
+  var timeline = [];
+  (lead.demoLifecycle || []).forEach(function(ev) {
+    timeline.push({
+      date: ev.date || (ev.at ? ev.at.slice(0, 10) : ''),
+      time: ev.at ? ev.at.slice(11, 16) : '',
+      label: demoLabels[ev.type] || ('Demo ' + ev.type),
+      detail: (ev.demoDate ? 'Scheduled ' + ev.demoDate + (ev.demoTime ? ' ' + ev.demoTime : '') : '') + (ev.source ? (ev.demoDate ? ' · ' : '') + ev.source : ''),
+      type: 'demo_lifecycle',
+      demoType: ev.type
+    });
+  });
+  if (lead.convertedAt) timeline.push({ date: lead.convertedAt.slice(0, 10), label: 'Converted to opportunity', detail: 'Deal created in pipeline' });
+  if (lead.demoCompletedAt && !(lead.demoLifecycle || []).some(function(e) { return e.type === 'completed'; })) {
+    timeline.push({ date: lead.demoCompletedAt.slice(0, 10), label: 'Demo completed', detail: 'Ready for proposal / next step' });
+  }
+  (lead.callLog || []).forEach(function(c) {
+    timeline.push({ date: c.date, time: c.time, label: (c.outcome || 'Call').charAt(0).toUpperCase() + (c.outcome || 'call').slice(1), detail: c.notes || '', type: 'call', outcome: c.outcome });
+  });
+  timeline.sort(function(a, b) { return (b.date || '').localeCompare(a.date || ''); });
+
+  var callIcons = { pickup: '☎️', demo: '🎯', voicemail: '📬', noanswer: '📵', connected: '✅', objection: '🛡', next_step: '📋', won: '🏆' };
+  var demoIcons = { booked: '📅', completed: '✅', converted: '💎' };
+  var activityHTML = timeline.length ? timeline.slice(0, 40).map(function(ev) {
+    var ic = ev.type === 'demo_lifecycle' ? (demoIcons[ev.demoType] || '🎯') : (ev.outcome ? (callIcons[ev.outcome] || '📞') : '💎');
+    return '<div style="padding:14px 0;border-bottom:1px solid var(--divider);">'
+      +'<div style="display:flex;align-items:flex-start;gap:10px;">'
+      +'<span style="font-size:16px;">'+ic+'</span>'
+      +'<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:var(--text-primary);">'+anEsc(ev.label)+'</div>'
+      +'<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">'+anEsc(ev.date)+(ev.time ? ' '+ev.time : '')+'</div>'
+      +(ev.detail ? '<div style="font-size:12.5px;color:var(--text-secondary);margin-top:6px;line-height:1.5;background:var(--body-bg);border-radius:8px;padding:10px;">'+anEsc(ev.detail)+'</div>' : '')
+      +'</div></div></div>';
+  }).join('') : '<div style="text-align:center;padding:40px;color:var(--text-muted);">No activity yet — log a call or note from quick actions.</div>';
+
+  var companyName = (lead.company || '').trim();
+  var companyHTML = companyName
+    ? '<div class="co-contact-row" onclick="typeof anOpenFullCompanyRecord===\'function\'?anOpenFullCompanyRecord(\''+companyName.replace(/'/g, "\\'")+'\'):void(0)">'
+      +'<div style="width:34px;height:34px;border-radius:10px;background:#6366f122;color:#6366f1;display:flex;align-items:center;justify-content:center;font-weight:800;">'+companyName.charAt(0).toUpperCase()+'</div>'
+      +'<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;">'+anEsc(companyName)+'</div><div style="font-size:11px;color:var(--text-muted);">View company record →</div></div></div>'
+    : '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:12px;">No company linked</div>';
+
+  return ''
+    +'<div class="co-record-layout">'
+    +'<aside class="co-record-left">'
+    +'<button type="button" class="co-record-back" onclick="anCloseOppRecord()">← Deals</button>'
+    +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">'
+    +'<div style="width:48px;height:48px;border-radius:12px;background:'+st.color+'22;color:'+st.color+';display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;">💎</div>'
+    +'<div style="min-width:0;"><div style="font-size:20px;font-weight:800;color:var(--text-primary);line-height:1.2;">'+anEsc(name)+'</div>'
+    +'<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Sales Pipeline</div></div></div>'
+    +'<div class="co-quick-actions">'
+    +'<button type="button" class="co-quick-btn" title="Log activity" onclick="anLogCall(\''+safeId+'\')">📞</button>'
+    +'<button type="button" class="co-quick-btn" title="Email" onclick="anQuickLogEmail(\''+safeId+'\')">✉️</button>'
+    +'<button type="button" class="co-quick-btn" title="Deal session" onclick="typeof openMobileCallMode===\'function\'?openMobileCallMode(\''+safeId+'\'):void(0)">💎</button>'
+    +'<button type="button" class="co-quick-btn" title="Delete" onclick="anDeleteOpportunity(\''+safeId+'\')">🗑</button>'
+    +'</div>'
+    +'<div class="co-key-info"><div class="co-key-info-head">About this deal</div>'
+    +'<div class="co-panel-row"><span>Amount</span><span style="color:#6366f1;font-weight:800;">$'+mrr+'/mo</span></div>'
+    +'<div class="co-panel-row"><span>Close date</span><input type="date" value="'+(lead.oppCloseDate||'')+'" onchange="anOppSaveField(\''+safeId+'\',\'oppCloseDate\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;font-family:inherit;font-size:12px;text-align:right;"></div>'
+    +'<div class="co-panel-row"><span>Deal stage</span><span style="color:'+st.color+';">'+anEsc(st.label)+'</span></div>'
+    +'<div class="co-panel-row"><span>Contract</span><span>'+anEsc(ctLabel)+'</span></div>'
+    +'<div class="co-panel-row"><span>Agency size</span><span>'+anEsc(sz.label)+'</span></div>'
+    +'<div class="co-panel-row"><span>Agents</span><span>'+(lead.oppAgents || 1)+'</span></div>'
+    +'<div class="co-panel-row"><span>Owner</span>'
+    +(typeof anCanReassignOwner === 'function' && anCanReassignOwner(lead)
+      ? '<button type="button" onclick="anOpenOwnerPicker({leadId:\''+safeId+'\'})" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">'+anEsc(lead._repEmail ? anGetRepName(lead._repEmail) : 'Assign')+' ▾</button>'
+      : '<span>'+anEsc(lead._repEmail ? anGetRepName(lead._repEmail) : '—')+'</span>')
+    +'</div>'
+    +'<div style="padding:12px 14px;"><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Move stage</label>'
+    +'<select onchange="anMoveOppStage(\''+safeId+'\',this.value);anOpenOppRecord(\''+safeId+'\')" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:8px 10px;font-size:13px;background:var(--card-bg);font-family:inherit;">'+STATUS_OPTS+'</select></div>'
+    +'</div>'
+    +'<div style="margin-top:14px;"><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Deal notes</div>'
+    +'<textarea rows="4" placeholder="Pain points, timeline, competitors..." onblur="anOppSaveField(\''+safeId+'\',\'oppNotes\',this.value)" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:10px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box;">'+anEsc(lead.oppNotes || lead.notes || '')+'</textarea></div>'
+    +'</aside>'
+    +'<main class="co-record-center">'
+    +'<div class="co-activity-head"><div style="font-size:14px;font-weight:800;">Activities</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Calls, stage changes, and notes on this deal</div></div>'
+    +'<div class="co-activity-feed">'+activityHTML+'</div>'
+    +'</main>'
+    +'<aside class="co-record-right">'
+    +'<div class="co-assoc-card"><div class="co-assoc-head"><span>Contact</span><button type="button" onclick="anOpenLeadPanel(\''+safeId+'\')" style="background:none;border:none;color:#6366f1;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Profile →</button></div>'
+    +'<div class="co-assoc-body"><div class="co-contact-row" onclick="anOpenLeadPanel(\''+safeId+'\')">'
+    +'<div style="width:34px;height:34px;border-radius:50%;background:'+st.color+'22;color:'+st.color+';display:flex;align-items:center;justify-content:center;font-weight:800;">'+name.charAt(0).toUpperCase()+'</div>'
+    +'<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;">'+anEsc(name)+'</div>'
+    +'<div style="font-size:11px;color:var(--text-muted);">'+(lead.title ? anEsc(lead.title)+' · ' : '')+(lead.email || lead.phone || '')+'</div></div></div>'
+    +(lead.email ? '<div style="padding:8px 10px;font-size:12px;"><a href="mailto:'+anEsc(lead.email)+'" style="color:#6366f1;">'+anEsc(lead.email)+'</a></div>' : '')
+    +(lead.phone ? '<div style="padding:4px 10px 10px;font-size:12px;"><a href="tel:'+anEsc(anTelPhone(lead.phone))+'" style="color:var(--text-secondary);">'+anEsc(anFormatPhone(lead.phone))+'</a></div>' : '')
+    +'</div></div>'
+    +'<div class="co-assoc-card"><div class="co-assoc-head"><span>Company</span></div><div class="co-assoc-body">'+companyHTML+'</div></div>'
+    +'<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);border-radius:10px;padding:14px;color:#fff;margin-top:8px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;opacity:0.55;">Pipeline value</div><div style="font-size:26px;font-weight:900;margin-top:4px;">$'+mrr+'<span style="font-size:13px;opacity:0.5;">/mo</span></div></div>'
+    +'</aside></div>';
+}
+
+window.anOpenOppRecord = function(leadId) {
+  window._anOppDetailLeadId = leadId;
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (!lead) return;
+  var existing = document.getElementById('opp-record-panel');
+  var existingBackdrop = document.getElementById('opp-panel-backdrop');
+  if (existing) {
+    existing.innerHTML = oppBuildRecordHTML(lead);
+    if (!existing.classList.contains('open')) requestAnimationFrame(function() { existing.classList.add('open'); });
+    if (existingBackdrop && !existingBackdrop.classList.contains('open')) requestAnimationFrame(function() { existingBackdrop.classList.add('open'); });
+    return;
+  }
+  if (existingBackdrop) existingBackdrop.remove();
+  var modal = document.getElementById('an-opp-detail-modal');
+  if (modal) modal.remove();
+  var backdrop = document.createElement('div');
+  backdrop.id = 'opp-panel-backdrop';
+  backdrop.onclick = anCloseOppRecord;
+  document.body.appendChild(backdrop);
+  var panel = document.createElement('div');
+  panel.id = 'opp-record-panel';
+  panel.innerHTML = oppBuildRecordHTML(lead);
+  document.body.appendChild(panel);
+  requestAnimationFrame(function() {
+    backdrop.classList.add('open');
+    panel.classList.add('open');
+  });
+};
+
+window.anCloseOppRecord = function() {
+  var panel = document.getElementById('opp-record-panel');
+  var backdrop = document.getElementById('opp-panel-backdrop');
+  if (panel) panel.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('open');
+  setTimeout(function() {
+    if (panel && !panel.classList.contains('open')) panel.remove();
+    if (backdrop && !backdrop.classList.contains('open')) backdrop.remove();
+  }, 300);
+};
+
+window.anOppSaveField = function(leadId, field, value) {
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (!lead) return;
+  lead[field] = value;
+  if (field === 'oppNotes') lead.notes = value;
+  lead.updated = new Date().toISOString();
+  AN.save();
+  if (typeof renderOpportunities === 'function') renderOpportunities();
 };
 
 // ── 4. OVERRIDE renderOpportunities with DRAGGABLE KANBAN ─────
@@ -14736,10 +15530,23 @@ window.renderOpportunities = function() {
   var sec = document.getElementById('section-opportunities');
   if (!sec) return;
 
+  var beforeCount = AN.leads.length;
+  AN.leads = anDedupeOpportunityLeads(AN.leads);
+  if (AN.leads.length < beforeCount) {
+    if (typeof AN.invalidateLeadCaches === 'function') AN.invalidateLeadCaches();
+    clearTimeout(window._anOppDedupeSaveTimer);
+    window._anOppDedupeSaveTimer = setTimeout(function() {
+      if (typeof AN.save === 'function') AN.save();
+    }, 600);
+  }
+
   var opps = AN.leads.filter(function(l){
-    return l.isOpportunity || ['demo','showed','proposal','won','lost'].indexOf(l.status||'') >= 0;
+    return anIsOpportunityRecord(l);
   });
   if (!AN.isAdmin) opps = opps.filter(function(l){ return typeof anRepOwnsLead === 'function' ? anRepOwnsLead(l) : (l._repEmail === AN.currentRepEmail); });
+  opps = anDedupeOpportunitiesForDisplay(opps);
+  opps = anFilterOppsForSearch(opps);
+  var oppView = (AN && AN.oppView) || 'board';
 
   var stages = [
     {id:'demo',     label:'Demo Set',    color:'#8b5cf6'},
@@ -14770,11 +15577,12 @@ window.renderOpportunities = function() {
         var sz     = opp.size ? (AN_SIZES.find(function(s){return s.id===opp.size;})||{label:opp.size}) : {label:'Solo'};
         var ctLabel= {mrr:'Monthly',arr:'Annual','2yr':'2-Year','3yr':'3-Year'}[opp.oppContract||'mrr']||'Monthly';
         return '<div class="opp-card" data-lead-id="'+opp.id+'" draggable="true" '
-          +'onclick="anOpenOppDetail(\''+opp.id+'\')" '
-          +'style="background:var(--card-bg);border:1px solid var(--divider);border-radius:10px;padding:14px;margin-bottom:8px;cursor:pointer;border-left:3px solid '+stage.color+';transition:box-shadow 0.15s,transform 0.15s;" '
+          +'onclick="anOpenOppRecord(\''+opp.id+'\')" '
+          +'style="background:var(--card-bg);border:1px solid var(--divider);border-radius:10px;padding:14px;margin-bottom:8px;cursor:pointer;border-left:3px solid '+stage.color+';transition:box-shadow 0.15s,transform 0.15s;position:relative;" '
           +'onmouseover="this.style.boxShadow=\'0 4px 16px rgba(0,0,0,0.1)\';this.style.transform=\'translateY(-1px)\'" '
           +'onmouseout="this.style.boxShadow=\'none\';this.style.transform=\'none\'">'
-          +'<div style="font-size:13.5px;font-weight:700;color:var(--text-primary);margin-bottom:2px;">'+anEsc((opp.firstName||'')+' '+(opp.lastName||''))+'</div>'
+          +'<button type="button" onclick="event.stopPropagation();anDeleteOpportunity(\''+opp.id+'\')" title="Delete opportunity" style="position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;color:#ef4444;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;">🗑</button>'
+          +'<div style="font-size:13.5px;font-weight:700;color:var(--text-primary);margin-bottom:2px;padding-right:28px;">'+anEsc((opp.firstName||'')+' '+(opp.lastName||''))+'</div>'
           +(opp.company?'<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">'+anEsc(opp.company)+'</div>':'<div style="margin-bottom:8px;"></div>')
           +'<div style="display:flex;justify-content:space-between;align-items:center;">'
           +'<div><div style="font-size:14px;font-weight:800;color:'+stage.color+';">$'+mrr+'/mo</div>'
@@ -14805,17 +15613,28 @@ window.renderOpportunities = function() {
     return anLeadBelongsToRep(l) && anIsOpportunity(l) && l.status !== 'won' && l.status !== 'lost';
   }).length;
 
+  var viewToggle = '<div class="opp-toolbar">'
+    +'<div class="co-view-toggle">'
+    +'<button type="button" class="co-view-btn'+(oppView==='board'?' active':'')+'" onclick="anSetOppView(\'board\')">▦ Board</button>'
+    +'<button type="button" class="co-view-btn'+(oppView==='table'?' active':'')+'" onclick="anSetOppView(\'table\')">☰ Table</button>'
+    +'<button type="button" class="co-view-btn'+(oppView==='calendar'?' active':'')+'" onclick="anSetOppView(\'calendar\')">📅 Calendar</button>'
+    +'</div>'
+    +'<div style="position:relative;"><span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;color:var(--text-muted);">🔍</span>'
+    +'<input type="search" class="opp-search" placeholder="Search deals..." value="'+anEsc(AN.oppSearchQ||'')+'" oninput="AN.oppSearchQ=this.value;renderOpportunities()"></div>'
+    +'</div>';
+
+  var mainView = oppView === 'table' ? anBuildOppTableHTML(opps, stages)
+    : oppView === 'calendar' ? anBuildOppCalendarHTML(opps)
+    : kanbanHTML;
+
   sec.innerHTML = '<div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">'
     +'<div><div class="page-label">Pipeline</div>'
-    +'<h1>Opportunities</h1>'
-    +'<p>Active deals — separate from lead prospecting. Use Deal Session to work through your pipeline.</p></div>'
+    +'<h1>Deals</h1>'
+    +'<p>HubSpot-style pipeline — board, table, or calendar. Click any deal for the full record.</p></div>'
     +'<button onclick="anOpenOppCallSessionSetup()" style="display:flex;align-items:center;gap:6px;padding:10px 18px;border:1.5px solid #fde68a;border-radius:10px;font-size:13px;font-weight:700;color:#b45309;background:#fffbeb;cursor:pointer;font-family:var(--sans);flex-shrink:0;">💎 Deal Session'+(oppCallable?' ('+oppCallable+')':'')+'</button>'
-    +'</div><div class="content">'+statsHTML
-    +'<div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:12px;">Pipeline Board</div>'
-    +kanbanHTML+'</div>';
+    +'</div><div class="content">'+statsHTML+viewToggle+mainView+'</div>';
 
-  // Init drag and drop
-  setTimeout(initOppDragDrop, 80);
+  if (oppView === 'board') setTimeout(initOppDragDrop, 80);
 };
 
 // ── 5. DRAG AND DROP ──────────────────────────────────────────
@@ -14864,106 +15683,21 @@ function initOppDragDrop() {
   });
 }
 
-// ── 6. OPP DETAIL MODAL ───────────────────────────────────────
+// ── 6. OPP DETAIL (full record) ─────────────────────────────
 window.anOpenOppDetail = function(leadId) {
-  window._anOppDetailLeadId = leadId;
-  var lead = AN.leads.find(function(l){ return l.id===leadId; });
-  if (!lead) return;
-  var st   = anStatus(lead.status||'new');
-  var sz   = lead.size ? (AN_SIZES.find(function(s){return s.id===lead.size;})||{label:lead.size,price:79}) : {label:'Solo Agent',price:79};
-  var mrr  = lead.oppMRR||sz.price;
-  var arr1 = Math.round(mrr*12*0.80);
-  var arr2 = Math.round(mrr*24*0.75);
-  var arr3 = Math.round(mrr*36*0.72);
-  var ctLabel = {mrr:'Monthly (MRR)',arr:'Annual (ARR)','2yr':'2-Year Prepaid','3yr':'3-Year Prepaid'}[lead.oppContract||'mrr']||'Monthly';
-
-  var old = document.getElementById('an-opp-detail-modal');
-  if (old) old.remove();
-
-  var m = document.createElement('div');
-  m.id = 'an-opp-detail-modal';
-  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px;overflow-y:auto;backdrop-filter:blur(4px);';
-
-  var STATUS_OPTS = AN_OPP_STATUSES.map(function(s){
-    return '<option value="'+s.id+'"'+(lead.status===s.id?' selected':'')+'>'+s.label+'</option>';
-  }).join('');
-
-  var callLog = (lead.callLog||[]).slice().sort(function(a,b){return b.date.localeCompare(a.date);});
-  var callColors={pickup:'#10b981',demo:'#f59e0b',voicemail:'#6366f1',noanswer:'#a1a1aa'};
-  var callIcons={pickup:'☎️',demo:'🎯',voicemail:'📬',noanswer:'📵'};
-
-  m.innerHTML = '<div style="background:var(--card-bg);border-radius:16px;width:720px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,0.3);overflow:hidden;">'
-    // Header
-    +'<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);padding:20px 26px;display:flex;justify-content:space-between;align-items:center;">'
-    +'<div><div style="font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.5px;">'+anEsc((lead.firstName||'')+' '+(lead.lastName||''))+'</div>'
-    +'<div style="font-size:13px;color:rgba(255,255,255,0.45);margin-top:2px;">'+anEsc([lead.company,lead.state].filter(Boolean).join(' · '))+'</div>'
-    +'</div>'
-    +'<div style="display:flex;gap:8px;align-items:center;">'
-    +'<span style="background:'+st.color+'28;color:'+st.color+';border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;">'+st.label+'</span>'
-    +'<button onclick="anLogCall(\''+lead.id+'\')" style="background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);border-radius:7px;padding:6px 12px;font-size:12px;font-weight:700;color:#6ee7b7;cursor:pointer;font-family:var(--sans);">⚡ Activity</button>'
-    +'<button onclick="document.getElementById(\'an-opp-detail-modal\').remove()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px;">✕</button>'
-    +'</div></div>'
-
-    // Value cards
-    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--divider);">'
-    +[{l:'MRR',v:'$'+mrr+'/mo',c:'#6366f1'},{l:'1-Yr ARR',v:'$'+arr1,c:'#10b981'},{l:'2-Yr ARR',v:'$'+arr2,c:'#f59e0b'},{l:'3-Yr ARR',v:'$'+arr3,c:'#8b5cf6'}]
-    .map(function(v){ return '<div style="padding:14px;text-align:center;border-right:1px solid var(--divider);">'
-      +'<div style="font-size:9px;font-weight:700;color:'+v.c+';text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">'+v.l+'</div>'
-      +'<div style="font-size:18px;font-weight:800;color:var(--text-primary);">'+v.v+'</div>'
-      +'</div>'; }).join('')
-    +'</div>'
-
-    // Details grid
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid var(--divider);">'
-    +'<div style="padding:18px 22px;border-right:1px solid var(--divider);">'
-    +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:12px;">Opportunity Details</div>'
-    +'<div style="display:flex;flex-direction:column;gap:8px;">'
-    +[['Contract',ctLabel],['Agency Size',sz.label],['Agents',lead.oppAgents||1],['Expected Close',lead.oppCloseDate?anDate(lead.oppCloseDate):'—']]
-    .map(function(r){ return '<div style="display:flex;justify-content:space-between;"><span style="font-size:12px;color:var(--text-muted);">'+r[0]+'</span><span style="font-size:12.5px;font-weight:600;color:var(--text-primary);">'+anEsc(String(r[1]))+'</span></div>'; }).join('')
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;"><span style="font-size:12px;color:var(--text-muted);">Owner</span>'
-    +(anCanReassignOwner(lead)
-      ? '<button type="button" onclick="anOpenOwnerPicker({leadId:\''+lead.id+'\'})" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);">'+anEsc(lead._repEmail?anGetRepName(lead._repEmail):'Assign owner')+' ▾</button>'
-      : '<span style="font-size:12.5px;font-weight:600;color:var(--text-primary);">'+anEsc(lead._repEmail?anGetRepName(lead._repEmail):'—')+'</span>')
-    +'</div>'
-    +'</div>'
-    // Stage selector
-    +'<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--divider);">'
-    +'<label style="font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">Move Stage</label>'
-    +'<select id="opp-stage-sel" onchange="anMoveOppStage(\''+lead.id+'\',this.value)" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--text-primary);background:var(--card-bg);outline:none;font-family:var(--sans);">'+STATUS_OPTS+'</select>'
-    +'</div></div>'
-
-    +'<div style="padding:18px 22px;">'
-    +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:10px;">Call Activity ('+callLog.length+')</div>'
-    +'<div style="max-height:200px;overflow-y:auto;">'
-    +(callLog.length?callLog.map(function(c){
-      var col=callColors[c.outcome]||'#a1a1aa';
-      return '<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--divider);">'
-        +'<span style="font-size:14px;">'+(callIcons[c.outcome]||'📞')+'</span>'
-        +'<div><div style="font-size:12.5px;font-weight:700;color:'+col+';">'+(c.outcome||'Call')+'</div>'
-        +'<div style="font-size:11px;color:var(--text-muted);">'+anDate(c.date)+(c.duration?' · '+c.duration+'m':'')+'</div>'
-        +(c.notes?'<div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">'+anEsc(c.notes)+'</div>':'')
-        +'</div></div>';
-    }).join(''):'<div style="color:var(--text-muted);font-size:12px;padding:12px 0;">No calls yet</div>')
-    +'</div></div></div>'
-
-    // Notes
-    +(lead.oppNotes||lead.notes?'<div style="padding:16px 22px;border-top:1px solid var(--divider);background:var(--body-bg);">'
-      +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:6px;">Notes</div>'
-      +'<div style="font-size:13px;color:var(--text-secondary);line-height:1.7;">'+anEsc(lead.oppNotes||lead.notes||'')+'</div>'
-      +'</div>':'')
-    +'</div>';
-
-  document.body.appendChild(m);
-  m.onclick = function(e){ if(e.target===m) m.remove(); };
+  if (typeof anOpenOppRecord === 'function') anOpenOppRecord(leadId);
 };
 
 window.anMoveOppStage = function(leadId, newStage) {
   var lead = AN.leads.find(function(l){ return l.id===leadId; });
   if (!lead) return;
   lead.status = newStage;
+  lead.isOpportunity = true;
   lead.updated = new Date().toISOString();
   if (newStage==='won') syncActivityFromCRM('closes',1);
   AN.save();
+  if (typeof renderOpportunities === 'function') renderOpportunities();
+  if (document.getElementById('opp-record-panel') && typeof anOpenOppRecord === 'function') anOpenOppRecord(leadId);
   if (typeof showToast==='function') showToast('Stage updated');
 };
 
@@ -16291,15 +17025,16 @@ window.mcmRenderDayGoalsWidget = function() {
     { key: 'demos', label: 'Demos', color: '#14b8a6' },
     { key: 'closes', label: 'Closes', color: '#f59e0b' }
   ];
-  var act = (typeof getActivityForPeriod === 'function') ? getActivityForPeriod('today') : { calls: 0, demos: 0, closes: 0 };
+  var act = (typeof getActivityForPeriod === 'function') ? getActivityForPeriod('today') : { calls: 0, demos: 0, closes: 0, demos_showed: 0 };
   var rows = items.map(function(it) {
     var actual = act[it.key] || 0;
     var goal = (typeof getGoalForPeriod === 'function') ? getGoalForPeriod(it.key, 'today') : 0;
     var pct = goal > 0 ? Math.min(100, Math.round((actual / goal) * 100)) : (actual > 0 ? 100 : 0);
+    var sub = (it.key === 'demos' && act.demos_showed) ? ' <span style="font-size:8px;color:rgba(255,255,255,0.35);">('+act.demos_showed+' showed)</span>' : '';
     return '<div style="min-width:0;">'
       + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">'
       + '<span style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.55);">'+it.label+'</span>'
-      + '<span style="font-size:11px;font-weight:800;color:'+it.color+';">'+actual+'<span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.35);">/'+(goal || '—')+'</span></span>'
+      + '<span style="font-size:11px;font-weight:800;color:'+it.color+';">'+actual+'<span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.35);">/'+(goal || '—')+'</span>'+sub+'</span>'
       + '</div>'
       + '<div style="background:rgba(255,255,255,0.08);border-radius:6px;height:4px;overflow:hidden;">'
       + '<div style="width:'+pct+'%;height:100%;background:'+it.color+';border-radius:6px;transition:width 0.3s;"></div>'
@@ -16396,6 +17131,7 @@ window.openMobileCallMode = function(leadId) {
         { v:'voicemail', l:'📬 Voicemail',    c:'#6366f1' },
         { v:'emailed',   l:'✉️ Sent Email',   c:'#8b5cf6' },
         { v:'demo',      l:'🎯 Book Demo',    c:'#f59e0b' },
+        { v:'demo_complete', l:'✅ Demo Done', c:'#06b6d4' },
         { v:'callback',  l:'⏰ Follow Up',    c:'#06b6d4' }
       ];
 
@@ -16574,7 +17310,7 @@ window.anCloseDemoAutoModal = function() {
 
 window.mcmHighlightOutcome = function(outcome) {
   var outcomeColors = {
-    pickup:'#10b981', noanswer:'#a1a1aa', voicemail:'#6366f1', demo:'#f59e0b', callback:'#06b6d4', emailed:'#8b5cf6',
+    pickup:'#10b981', noanswer:'#a1a1aa', voicemail:'#6366f1', demo:'#f59e0b', demo_complete:'#06b6d4', callback:'#06b6d4', emailed:'#8b5cf6',
     connected:'#10b981', objection:'#f59e0b', next_step:'#06b6d4', won:'#10b981'
   };
   document.querySelectorAll('[id^="mcm-outcome-"]').forEach(function(btn) {
@@ -16687,6 +17423,10 @@ window.mcmSetOutcome = function(outcome, leadId) {
   if (mode === 'lead') {
     if (outcome === 'demo') {
       mcmEnterDemoScheduling(leadId);
+      return;
+    }
+    if (outcome === 'demo_complete') {
+      mcmSetStatus('demo_complete', leadId);
       return;
     }
     if (overlay._pendingDemo || overlay._demoModalShown || overlay._outcome === 'demo') {
@@ -17046,6 +17786,7 @@ window.mcmApplyDemoToLead = function(lead, overlay) {
     SC.bookedSlots[lead.demoDate + '_tz_' + lead.demoTime] = lead.demoTz;
   }
   if (typeof scSaveBooked === 'function') scSaveBooked();
+  if (typeof anRecordDemoBooked === 'function') anRecordDemoBooked(lead, { source: 'call_session' });
   return true;
 };
 
@@ -17055,6 +17796,15 @@ window.mcmSetStatus = function(status, leadId) {
   if (mode === 'lead' && status === 'booked_demo') {
     mcmEnterDemoScheduling(leadId);
     return;
+  }
+  if (mode === 'lead' && status === 'demo_complete') {
+    var lead = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.find(function(l){ return l.id === leadId; }) : null;
+    if (lead && typeof anTriggerDemoCompleteConversion === 'function') {
+      mcmUpdateStatusPills('demo_complete');
+      if (overlay) overlay._status = 'demo_complete';
+      anTriggerDemoCompleteConversion(lead, { save: true, silent: true });
+      return;
+    }
   }
   if (mode === 'lead' && (overlay._pendingDemo || overlay._demoModalShown || overlay._outcome === 'demo')) {
     mcmDismissDemoFlow(leadId);
@@ -17136,6 +17886,13 @@ window.mcmSave = function(leadId, opts) {
     }
     lead.status = 'followup';
     newStatus = 'followup';
+  } else if (mode === 'lead' && (outcome === 'demo_complete' || newStatus === 'demo_complete') && !anIsOpportunity(lead)) {
+    if (typeof anTriggerDemoCompleteConversion === 'function') {
+      anTriggerDemoCompleteConversion(lead, { save: false, silent: true });
+      newStatus = 'demo_complete';
+    } else {
+      lead.status = newStatus;
+    }
   } else {
     lead.status = newStatus;
     if (mode === 'opportunity' || anIsOpportunity(lead)) {
@@ -17194,7 +17951,7 @@ window.mcmSave = function(leadId, opts) {
   if (typeof showToast === 'function') {
     var labels = {
       pickup:'📞 Call logged', noanswer:'📵 No answer logged', voicemail:'📬 Voicemail logged',
-      demo:'🎯 Demo scheduled!', callback:'⏰ Follow-up logged', emailed:'✉️ Email logged',
+      demo:'🎯 Demo scheduled!', demo_complete:'✅ Demo complete — create the opportunity', callback:'⏰ Follow-up logged', emailed:'✉️ Email logged',
       connected:'📞 Connected', objection:'🛡 Objection noted', next_step:'📋 Next step set', won:'🏆 Won logged'
     };
     showToast(labels[outcome] || 'Activity logged');
@@ -17585,6 +18342,24 @@ window.hdRefreshCallableSlot = function() {
   if (title) title.textContent = activeSession ? 'Call Session in progress' : 'Start a Call Session';
 };
 
+window.hdOpenHotLead = function(leadId) {
+  var lead = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.find(function(l) { return l.id === leadId; }) : null;
+  if (!lead) return;
+  if (typeof showSection === 'function') showSection('crm', null);
+  setTimeout(function() {
+    if (typeof anOpenLeadPanel === 'function') anOpenLeadPanel(leadId);
+    else if (typeof anOpenLead === 'function') anOpenLead(leadId);
+  }, 280);
+};
+
+window.hdOpenHotDeal = function(leadId) {
+  if (typeof showSection === 'function') showSection('opportunities', null);
+  setTimeout(function() {
+    if (typeof anOpenOppRecord === 'function') anOpenOppRecord(leadId);
+    else if (typeof anOpenOppDetail === 'function') anOpenOppDetail(leadId);
+  }, 280);
+};
+
 function hdBuildShoutCardSection() {
   var shouts = (typeof anGetTeamShouts === 'function') ? anGetTeamShouts() : [];
   var stats = hdGetTodayDashStats();
@@ -17628,12 +18403,25 @@ function hdRender() {
   var followupsToday = followups.filter(function(l){ return l.nextFollowUp === todayStr; });
 
   // Today's demos
-  var todayDemos = myLeads.filter(function(l){ return l.demoDate === todayStr && l.status === 'demo'; });
+  var todayDemos = myLeads.filter(function(l){
+    if (!l.demoDate || l.demoDate !== todayStr) return false;
+    return l.status === 'booked_demo' || l.status === 'demo' || l.status === 'demo_complete'
+      || (typeof anLeadHadDemoBooked === 'function' && anLeadHadDemoBooked(l));
+  });
 
-  // Hot leads — booked demos & active opportunities only
+  // Hot leads — prospecting only (opportunities live in Deals / Opportunities)
   var hotLeads = myLeads.filter(function(l){
-    return l.status === 'booked_demo' || l.status === 'demo' || l.status === 'proposal' || (l.isOpportunity && l.status === 'showed');
+    if (typeof anIsProspect === 'function' ? !anIsProspect(l) : (typeof anIsOpportunityRecord === 'function' && anIsOpportunityRecord(l))) return false;
+    return ['booked_demo', 'contacted', 'followup', 'emailed'].indexOf(l.status || '') >= 0;
+  }).sort(function(a, b) {
+    if (a.status === 'booked_demo' && b.status !== 'booked_demo') return -1;
+    if (b.status === 'booked_demo' && a.status !== 'booked_demo') return 1;
+    return anLeadUpdatedMs(b) - anLeadUpdatedMs(a);
   }).slice(0, 5);
+
+  var hotDeals = myLeads.filter(function(l){
+    return typeof anIsOpportunityRecord === 'function' && anIsOpportunityRecord(l) && l.status !== 'won' && l.status !== 'lost';
+  }).sort(function(a, b) { return anLeadUpdatedMs(b) - anLeadUpdatedMs(a); }).slice(0, 5);
 
   // Pipeline counts
   var statuses = ['new','contacted','booked_demo','followup','demo','showed','proposal','won'];
@@ -17713,6 +18501,14 @@ function hdRender() {
 
     // ── Team Shout-Outs (fixed first — no async insert layout jump) ──
     + hdBuildShoutCardSection()
+
+    // ── Daily SDR Leaderboard ──
+    +'<div class="hd-card" id="hd-leaderboard-card" style="grid-column:1/-1;">'
+    +'<div class="hd-card-header"><span class="hd-card-title">🏆 SDR Leaderboard — Today</span>'
+    +'<span style="font-size:10px;color:#9999aa;">Calls +5 demos · +3 showed · +20 closes</span></div>'
+    +'<div class="hd-card-body" id="hd-leaderboard-body">'
+    + anRenderDailyLeaderboardHTML(anBuildDailyLeaderboard())
+    +'</div></div>'
 
     // ── Call Session hero card ──
     +'<div class="hd-card hd-cs-card" style="grid-column:1/-1;">'
@@ -17803,7 +18599,7 @@ function hdRender() {
 
     // ── Card 4: Pipeline Overview ──
     +'<div class="hd-card">'
-    +'<div class="hd-card-header"><span class="hd-card-title">📊 Pipeline</span><button class="hd-card-action" onclick="showSection(\'crm\',null)">View Pipeline →</button></div>'
+    +'<div class="hd-card-header"><span class="hd-card-title">📊 Pipeline</span><button class="hd-card-action" onclick="showSection(\'opportunities\',null)">View Deals →</button></div>'
     +'<div class="hd-card-body">'
     +'<div class="hd-pipe-bar">'
     +statuses.map(function(s) {
@@ -17831,7 +18627,7 @@ function hdRender() {
       var col = statusColors[l.status] || '#a1a1aa';
       var label = statusLabels[l.status] || l.status;
       var lastCall = (l.callLog && l.callLog.length) ? l.callLog.slice().sort(function(a,b){ return b.date.localeCompare(a.date); })[0] : null;
-      return '<div class="hd-list-item" onclick="showSection(\'crm\',null)">'
+      return '<div class="hd-list-item" onclick="hdOpenHotLead(\''+l.id+'\')" style="cursor:pointer;">'
         +'<div class="hd-avatar" style="background:'+col+';">'+hdEsc(name.charAt(0).toUpperCase())+'</div>'
         +'<div class="hd-item-main">'
         +'<div class="hd-item-name">'+hdEsc(name)+'</div>'
@@ -17840,6 +18636,25 @@ function hdRender() {
         +'<span class="hd-item-badge" style="background:'+col+'15;color:'+col+';">'+hdEsc(label)+'</span>'
         +'</div>';
     }).join('') : '<div class="hd-empty"><div class="hd-empty-icon">💤</div>No hot leads right now<br><button onclick="anNewLead&&anNewLead()" style="margin-top:10px;background:#6366f1;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ Add Lead</button></div>')
+    +'</div></div>'
+
+    // ── Card 5b: Active Deals ──
+    +'<div class="hd-card">'
+    +'<div class="hd-card-header"><span class="hd-card-title">💎 Active Deals</span><button class="hd-card-action" onclick="showSection(\'opportunities\',null)">All Deals →</button></div>'
+    +'<div class="hd-card-body">'
+    +(hotDeals.length ? hotDeals.map(function(l) {
+      var name = ((l.firstName||'') + ' ' + (l.lastName||'')).trim() || l.company || 'Deal';
+      var st = (typeof anStatus === 'function') ? anStatus(l.status || 'demo') : { label: l.status, color: '#6366f1' };
+      var mrr = l.oppMRR || (AN_SIZES && AN_SIZES.find(function(s){ return s.id === l.size; }) || { price: 79 }).price;
+      return '<div class="hd-list-item" onclick="hdOpenHotDeal(\''+l.id+'\')" style="cursor:pointer;">'
+        +'<div class="hd-avatar" style="background:'+st.color+';">'+hdEsc(name.charAt(0).toUpperCase())+'</div>'
+        +'<div class="hd-item-main">'
+        +'<div class="hd-item-name">'+hdEsc(name)+'</div>'
+        +'<div class="hd-item-sub">$'+mrr+'/mo'+(l.oppCloseDate ? ' · Close '+l.oppCloseDate : '')+'</div>'
+        +'</div>'
+        +'<span class="hd-item-badge" style="background:'+st.color+'15;color:'+st.color+';">'+hdEsc(st.label)+'</span>'
+        +'</div>';
+    }).join('') : '<div class="hd-empty"><div class="hd-empty-icon">💎</div>No active deals<br><button onclick="showSection(\'opportunities\',null)" style="margin-top:10px;background:#6366f1;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">View Opportunities</button></div>')
     +'</div></div>'
 
     // ── Card 6: Activity Feed ──
@@ -17865,6 +18680,15 @@ function hdRender() {
     +'</div></div>'
 
     +'</div>'; // end hd-body
+
+  if (typeof anLoadTeamDailyLeaderboard === 'function') {
+    anLoadTeamDailyLeaderboard(function(rows) {
+      var body = document.getElementById('hd-leaderboard-body');
+      if (body && typeof anRenderDailyLeaderboardHTML === 'function') {
+        body.innerHTML = anRenderDailyLeaderboardHTML(rows);
+      }
+    });
+  }
 }
 
 function hdStatTile(num, label, color) {
@@ -18085,6 +18909,21 @@ body.co-full-record-over-call #an-cs-company-panel { display: none !important; }
 .co-view-toggle { display: flex; background: var(--body-bg, #f4f4f5); border: 1.5px solid var(--divider, #e4e4e7); border-radius: 8px; padding: 2px; gap: 2px; }
 .co-view-btn { padding: 5px 12px; border-radius: 6px; border: none; font-size: 12px; cursor: pointer; font-family: inherit; background: transparent; color: var(--text-muted); font-weight: 600; }
 .co-view-btn.active { background: #6366f1; color: #fff; }
+#opp-record-panel {
+  position: fixed; top: 0; left: var(--sb-width, 228px); right: 0; height: 100vh;
+  background: var(--body-bg, #f7f7f9); border-left: 1px solid var(--divider, #e9e9ef);
+  box-shadow: -12px 0 40px rgba(0,0,0,0.14); z-index: 9005; display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform 0.28s ease;
+}
+body.sb-collapsed #opp-record-panel { left: 68px; }
+#opp-record-panel.open { transform: translateX(0); }
+#opp-panel-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 9004; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+#opp-panel-backdrop.open { opacity: 1; pointer-events: auto; }
+.opp-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.opp-search { padding: 8px 12px 8px 32px; border: 1.5px solid var(--divider); border-radius: 8px; font-size: 13px; width: 220px; font-family: var(--sans); background: var(--card-bg); color: var(--text-primary); outline: none; }
+.opp-table-wrap { overflow: auto; border: 1px solid var(--divider); border-radius: 12px; background: var(--card-bg); }
+.opp-cal-month { margin-bottom: 20px; }
+.opp-cal-month h3 { font-size: 14px; font-weight: 800; margin: 0 0 10px; color: var(--text-primary); }
 </style>
 
 <script>
@@ -19070,7 +19909,8 @@ function coBuildCompanyPanelHTML(co, stats) {
 
   var dealsHTML = opps.length ? opps.map(function(o) {
     var st = (typeof anStatus === 'function') ? anStatus(o.status||'demo') : { label: o.status, color: '#6366f1' };
-    return '<div onclick="coOpenContact(\''+o.id+'\')" style="border:1px solid var(--divider,#e9e9ef);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;border-left:3px solid '+st.color+';">'
+    var openDeal = (typeof anIsOpportunityRecord === 'function' && anIsOpportunityRecord(o)) ? 'showSection(\'opportunities\',null);setTimeout(function(){anOpenOppRecord(\''+o.id+'\')},200)' : 'coOpenContact(\''+o.id+'\')';
+    return '<div onclick="'+openDeal+'" style="border:1px solid var(--divider,#e9e9ef);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;border-left:3px solid '+st.color+';">'
       +'<div style="font-size:13px;font-weight:700;">'+coEsc(((o.firstName||'')+' '+(o.lastName||'')).trim())+'</div>'
       +'<div style="font-size:11px;color:var(--text-muted,#71717a);margin-top:3px;">$'+(coLeadMRR(o)||79)+'/mo · '+st.label+'</div></div>';
   }).join('') : '<div style="text-align:center;padding:28px;color:var(--text-muted,#71717a);font-size:13px;">No deals in pipeline.</div>';
@@ -19150,6 +19990,14 @@ window.coViewInPipeline = function(companyName) {
 
 
 window.coOpenContact = function(leadId) {
+  var lead = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.find(function(l) { return l.id === leadId; }) : null;
+  if (lead && typeof anIsOpportunityRecord === 'function' && anIsOpportunityRecord(lead)) {
+    if (typeof showSection === 'function') showSection('opportunities', null);
+    setTimeout(function() {
+      if (typeof anOpenOppRecord === 'function') anOpenOppRecord(leadId);
+    }, 200);
+    return;
+  }
   if(typeof anOpenLeadPanel === 'function') anOpenLeadPanel(leadId);
   else if(typeof anOpenLead === 'function') anOpenLead(leadId);
   else if(typeof anOpenLeadModal === 'function') anOpenLeadModal(leadId);
@@ -20947,30 +21795,21 @@ window.anSyncCallToDashboard = function(lead, outcome, newStatus) {
   var hr = new Date().getHours();
   e.calls_by_hour[hr] = (e.calls_by_hour[hr] || 0) + 1;
 
-  var leadName = ((lead.firstName||'')+' '+(lead.lastName||'')).trim() || lead.company || 'Lead';
-  var isDemo = outcome === 'demo' || newStatus === 'demo';
+  var isDemoBooked = outcome === 'demo' || newStatus === 'booked_demo' || newStatus === 'demo';
+  var isDemoComplete = newStatus === 'demo_complete' || outcome === 'demo_complete';
   var isWon = newStatus === 'won';
 
-  if (isDemo) {
-    e.demos = (e.demos || 0) + 1;
-    _dash.activity.demos = (_dash.activity.demos || 0) + 1;
-    if (!_dash.demos) _dash.demos = [];
-    _dash.demos.push({
-      id: 'demo-'+Date.now(),
-      name: leadName,
-      state: lead.state || '',
-      size: lead.size || '',
-      scheduledDate: lead.demoDate || today,
-      status: 'booked',
-      notes: '',
-      bookedDate: today
-    });
+  if (isDemoBooked && typeof anRecordDemoBooked === 'function') {
+    anRecordDemoBooked(lead, { source: 'call_log' });
+  } else if (isDemoComplete && typeof anRecordDemoCompleted === 'function') {
+    anRecordDemoCompleted(lead, { source: 'call_log' });
   }
 
   if (isWon) {
     e.closes = (e.closes || 0) + 1;
     _dash.activity.closes = (_dash.activity.closes || 0) + 1;
     if (!_dash.pipeline) _dash.pipeline = [];
+    var leadName = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || lead.company || 'Lead';
     var wonName = lead.company || leadName;
     var hasDeal = _dash.pipeline.some(function(d){
       return d.stage === 'Closed Won' && d.name && wonName && d.name.toLowerCase() === wonName.toLowerCase();
@@ -20988,6 +21827,7 @@ window.anSyncCallToDashboard = function(lead, outcome, newStatus) {
   }
 
   if (typeof dashSave === 'function') dashSave();
+  if (typeof anRefreshCRMStatsBar === 'function') anRefreshCRMStatsBar();
   if (typeof mcmRenderDayGoalsWidget === 'function') mcmRenderDayGoalsWidget();
   if (typeof mcmRenderDockBar === 'function') mcmRenderDockBar();
   var dashSec = document.getElementById('section-dashboard');
@@ -21144,7 +21984,7 @@ console.log('[CALL SYNC] Side panel + dashboard tracking + team shouts loaded.')
     _renderTimer = setTimeout(function(){
       _renderTimer = null;
       if(typeof _renderImmediate === 'function') _renderImmediate();
-    }, 120);
+    }, 32);
   };
 
   var _panelChain = window.anOpenLeadPanel;
