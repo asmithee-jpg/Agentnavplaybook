@@ -9110,6 +9110,7 @@ function anSaveLeadsToIDB(leads, cb){
 }
 
 AN.load = function(cb){
+  function runLeadLoad(){
   var sb = typeof getSupabase==='function'?getSupabase():null;
   var localLeads = anLoadLeadsFromLocal();
   function anLeadsLoadDone(){
@@ -9140,6 +9141,12 @@ AN.load = function(cb){
     if(!sb||!_currentUser){ anLeadsLoadDone(); return; }
   }
   anFinishCloudLeadLoad(sb, anLeadsLoadDone);
+  }
+  if (typeof loadSupabaseConfig === 'function') {
+    loadSupabaseConfig().finally(runLeadLoad);
+  } else {
+    runLeadLoad();
+  }
 };
 
 function anFinishCloudLeadLoad(sb, cb){
@@ -10201,10 +10208,17 @@ function renderLeadsTable(){
   }
 
   if(!list.length){
+    var notSignedIn = (typeof _currentUser === 'undefined' || !_currentUser);
+    var sbMissing = (typeof getSupabase === 'function' && !getSupabase());
     el.innerHTML = '<div style="text-align:center;padding:64px 20px;">'
       +'<div style="font-size:48px;margin-bottom:14px;">👥</div>'
       +'<div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:6px;">No leads found</div>'
-      +'<div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Try adjusting your filters or import from HubSpot</div>'
+      +(notSignedIn
+        ? '<div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;max-width:420px;margin-left:auto;margin-right:auto;line-height:1.55;">Your leads are saved in the cloud. <strong>Sign in</strong> (bottom of sidebar) to load them on this device.</div>'
+          +'<button onclick="openAuthModal()" style="padding:10px 20px;border-radius:8px;border:none;background:#6366f1;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--sans);margin-bottom:16px;">Sign In to Load Leads</button>'
+        : sbMissing
+          ? '<div style="font-size:13px;color:#b45309;margin-bottom:20px;max-width:420px;margin-left:auto;margin-right:auto;line-height:1.55;">Supabase is not connected. Add <strong>SUPABASE_ANON_KEY</strong> in Netlify environment variables, then redeploy.</div>'
+          : '<div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Try adjusting your filters, switch to <strong>All contacts</strong>, or import from CSV</div>')
       +'<div style="display:flex;gap:10px;justify-content:center;">'
       +'<button onclick="anOpenImport()" style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--divider);background:var(--card-bg);font-size:13px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:var(--sans);">📂 Import CSV</button>'
       +'<button onclick="anNewLead()" style="padding:9px 16px;border-radius:8px;border:none;background:#6366f1;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--sans);">+ Add Lead</button>'
@@ -13344,9 +13358,16 @@ window.onUserLoggedIn = function(user){
     AN.currentRepEmail = user.email;
     AN.isAdmin = user.email === AN_CRM_ADMIN_EMAIL;
     AN.currentRep = (user.user_metadata&&user.user_metadata.full_name)||user.email.split('@')[0];
+    AN.leadsReady = false;
+    if (typeof AN.invalidateLeadCaches === 'function') AN.invalidateLeadCaches();
     if (typeof AN.load === 'function') {
       AN.load(function(){
         if (typeof anEnforceRepLeadScope === 'function') anEnforceRepLeadScope();
+        var crmSec = document.getElementById('section-crm');
+        if (crmSec && crmSec.classList.contains('active') && typeof renderCRM === 'function') {
+          AN.leadsReady = false;
+          renderCRM();
+        }
         var homeSec = document.getElementById('section-home');
         if (homeSec && homeSec.classList.contains('active') && typeof hdRender === 'function') hdRender();
       });
