@@ -13804,7 +13804,7 @@ window.anCloseCallSessionLeadPanel = function() {
       panel._removeTimer = null;
     }, 260);
   }
-  document.body.classList.remove('call-session-dual');
+  document.body.classList.remove('call-session-dual', 'call-lead-front');
 };
 
 window.anGetCompanyLeadsForRep = function(name) {
@@ -13832,7 +13832,7 @@ window.anCloseCallSessionCompanyPanel = function() {
     panel.style.transform = 'translateX(100%)';
     setTimeout(function(){ if (panel.parentNode) panel.remove(); }, 260);
   }
-  document.body.classList.remove('call-company-open');
+  document.body.classList.remove('call-company-open', 'call-company-front');
   window._anCsCompanyName = null;
   var btn = document.getElementById('mcm-company-toggle');
   if (btn) btn.style.background = 'rgba(255,255,255,0.08)';
@@ -13974,9 +13974,9 @@ window.anOpenCallSessionCompanyPanel = function(name) {
 };
 
 window.mcmToggleCompanyPanel = function(companyName) {
-  var panel = document.getElementById('an-cs-company-panel');
-  if (panel && panel.style.transform !== 'translateX(100%)') {
+  if (document.body.classList.contains('call-company-open')) {
     anCloseCallSessionCompanyPanel();
+    document.body.classList.remove('call-company-front');
     return;
   }
   if (!companyName) {
@@ -13985,6 +13985,17 @@ window.mcmToggleCompanyPanel = function(companyName) {
     var lead = leadId && AN.leads && AN.leads.find(function(l){ return l.id === leadId; });
     companyName = lead && lead.company;
   }
+  if (!companyName) {
+    if (typeof showToast === 'function') showToast('No agency on this lead — add one in the lead profile');
+    if (window.innerWidth <= 900 && !document.body.classList.contains('call-lead-collapsed')) {
+      document.body.classList.add('call-lead-front');
+    } else if (window.innerWidth <= 900) {
+      mcmToggleLeadPanel();
+    }
+    return;
+  }
+  document.body.classList.remove('call-lead-front');
+  if (window.innerWidth <= 900) document.body.classList.add('call-company-front');
   anOpenCallSessionCompanyPanel(companyName);
 };
 
@@ -16091,18 +16102,25 @@ window.mcmCloseCallPanelOnly = function(){
   if (backdrop) backdrop.remove();
   var dock = document.getElementById('mcm-dock-bar');
   if (dock) dock.remove();
-  document.body.classList.remove('call-panel-open', 'call-panel-minimized', 'call-lead-collapsed', 'call-session-dual');
+  document.body.classList.remove('call-panel-open', 'call-panel-minimized', 'call-lead-collapsed', 'call-session-dual', 'call-lead-front', 'call-company-front');
   if (typeof anRenderCallSessionBanner === 'function') anRenderCallSessionBanner();
 };
 
 window.mcmToggleLeadPanel = function() {
   var collapsed = !document.body.classList.contains('call-lead-collapsed');
   document.body.classList.toggle('call-lead-collapsed', collapsed);
+  if (window.innerWidth <= 900) {
+    document.body.classList.toggle('call-lead-front', !collapsed);
+    if (!collapsed) {
+      document.body.classList.remove('call-company-front');
+      if (typeof anCloseCallSessionCompanyPanel === 'function') anCloseCallSessionCompanyPanel();
+    }
+  }
   var btn = document.getElementById('mcm-lead-toggle');
   if (btn) {
     btn.textContent = '👤';
     btn.title = collapsed ? 'Show lead profile' : 'Hide lead profile';
-    btn.style.background = collapsed ? 'rgba(99,102,241,0.22)' : 'rgba(255,255,255,0.08)';
+    btn.style.background = collapsed ? 'rgba(255,255,255,0.08)' : 'rgba(99,102,241,0.22)';
   }
   var panelHide = document.getElementById('mcm-lead-panel-hide');
   if (panelHide) panelHide.style.display = collapsed ? 'none' : 'flex';
@@ -16110,9 +16128,27 @@ window.mcmToggleLeadPanel = function() {
   if (typeof anRepositionCallSessionCompanyPanel === 'function') anRepositionCallSessionCompanyPanel();
 };
 
+window.mcmWireCallPanelHeader = function() {
+  var overlay = document.getElementById('mcm-overlay');
+  if (!overlay) return;
+  var companyBtn = document.getElementById('mcm-company-toggle');
+  var leadBtn = document.getElementById('mcm-lead-toggle');
+  var minBtn = overlay.querySelector('button[title="Minimize"]');
+  var closeBtn = document.getElementById('mcm-header-close');
+  if (companyBtn) companyBtn.onclick = function(e){ e.preventDefault(); e.stopPropagation(); mcmToggleCompanyPanel(); };
+  if (leadBtn) leadBtn.onclick = function(e){ e.preventDefault(); e.stopPropagation(); mcmToggleLeadPanel(); };
+  if (minBtn) minBtn.onclick = function(e){ e.preventDefault(); e.stopPropagation(); mcmToggleMinimize(true); };
+  if (closeBtn) closeBtn.onclick = function(e){
+    e.preventDefault(); e.stopPropagation();
+    if (overlay._keyHandler) document.removeEventListener('keydown', overlay._keyHandler);
+    mcmClose();
+  };
+};
+
 window.mcmToggleMinimize = function(forceMin) {
   var minimized = typeof forceMin === 'boolean' ? forceMin : !document.body.classList.contains('call-panel-minimized');
   document.body.classList.toggle('call-panel-minimized', minimized);
+  if (minimized) document.body.classList.remove('call-lead-front', 'call-company-front');
   if (typeof mcmRenderDockBar === 'function') mcmRenderDockBar();
   if (!minimized && typeof mcmRenderDayGoalsWidget === 'function') mcmRenderDayGoalsWidget();
 };
@@ -16251,14 +16287,14 @@ window.openMobileCallMode = function(leadId) {
 
   overlay.innerHTML =
     // Header — compact; title/agency live in the lead profile panel
-    '<div style="background:linear-gradient(135deg,#1a1640,#0f0f1f);padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;">'
+    '<div id="mcm-call-header" style="background:linear-gradient(135deg,#1a1640,#0f0f1f);padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;position:sticky;top:0;z-index:12;">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">'
     +sessionBadge
-    +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
-    +'<button type="button" id="mcm-company-toggle" onclick="mcmToggleCompanyPanel()" title="Agency profile" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);width:30px;height:30px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit;line-height:1;">🏢</button>'
-    +'<button type="button" id="mcm-lead-toggle" onclick="mcmToggleLeadPanel()" title="Hide lead profile" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);width:30px;height:30px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit;line-height:1;">👤</button>'
-    +'<button type="button" onclick="mcmToggleMinimize(true)" title="Minimize" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);width:30px;height:30px;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1;">−</button>'
-    +'<button onclick="mcmClose()" title="Close session" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);width:30px;height:30px;border-radius:8px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>'
+    +'<div class="mcm-header-toolbar" style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
+    +'<button type="button" id="mcm-company-toggle" title="Agency profile" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);width:34px;height:34px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit;line-height:1;touch-action:manipulation;">🏢</button>'
+    +'<button type="button" id="mcm-lead-toggle" title="Hide lead profile" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);width:34px;height:34px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit;line-height:1;touch-action:manipulation;">👤</button>'
+    +'<button type="button" title="Minimize" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);width:34px;height:34px;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1;touch-action:manipulation;">−</button>'
+    +'<button type="button" id="mcm-header-close" title="Close session" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);width:34px;height:34px;border-radius:8px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;touch-action:manipulation;">×</button>'
     +'</div></div>'
     +'<div id="mcm-header-name" style="font-size:17px;font-weight:800;color:#fff;letter-spacing:-0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;">'+mcmEsc(name)+'</div>'
     +sessionMeta
@@ -16269,32 +16305,23 @@ window.openMobileCallMode = function(leadId) {
     // Phone + Call button
     +'<div style="padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.06);">'
     +(phone
-      ? '<div style="background:rgba(16,185,129,0.08);border:1.5px solid rgba(16,185,129,0.2);border-radius:14px;padding:16px 20px;margin-bottom:10px;">'
-        +'<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
-        +'<div style="flex:1;min-width:0;">'
+      ? '<div style="background:rgba(16,185,129,0.08);border:1.5px solid rgba(16,185,129,0.2);border-radius:12px;padding:12px 16px;margin-bottom:10px;">'
         +'<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:4px;">Phone Number</div>'
-        +'<div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:0.05em;">'+mcmEsc(phone)+'</div>'
-        +'<div id="mcm-attempt-badge" style="font-size:11px;color:rgba(110,231,183,0.85);margin-top:6px;line-height:1.45;"></div>'
-        +'</div>'
-        +'<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">'
-        +'<button type="button" onclick="anCopyToClipboard(\''+mcmEsc(rawPhone)+'\')" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#c7d2fe;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">📋 Copy</button>'
-        +(telPhone ? '<a href="tel:'+mcmEsc(telPhone)+'" style="text-align:center;background:rgba(16,185,129,0.22);border:1px solid rgba(16,185,129,0.45);color:#6ee7b7;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;text-decoration:none;font-family:inherit;">📞 Dial</a>' : '')
-        +'</div></div>'
-        +'<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:10px;line-height:1.5;">Manual dial workflow: pick an outcome → <strong style="color:#6ee7b7;">Log Call &amp; Stay</strong> to log and call again on this lead (like Outreach redial).</div>'
+        +(telPhone
+          ? '<a href="tel:'+mcmEsc(telPhone)+'" style="display:block;font-size:16px;font-weight:700;color:#fff;letter-spacing:0.03em;text-decoration:none;">'+mcmEsc(phone)+'</a>'
+          : '<div style="font-size:16px;font-weight:700;color:#fff;letter-spacing:0.03em;">'+mcmEsc(phone)+'</div>')
+        +'<div id="mcm-attempt-badge" style="font-size:10px;color:rgba(110,231,183,0.85);margin-top:5px;line-height:1.45;"></div>'
+        +'<div style="font-size:10px;color:rgba(255,255,255,0.38);margin-top:8px;line-height:1.5;">Tap number to dial · pick an outcome → <strong style="color:#6ee7b7;">Log Call &amp; Stay</strong> to redial</div>'
         +'</div>'
       : '<div style="background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.1);border-radius:14px;padding:16px 20px;text-align:center;margin-bottom:10px;">'
         +'<div style="font-size:13px;color:rgba(255,255,255,0.4);">No phone number on file</div>'
         +'<button onclick="mcmEditPhone(\''+leadId+'\')" style="margin-top:8px;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ Add Phone Number</button>'
         +'</div>')
     +(rawEmail
-      ? '<div style="background:rgba(99,102,241,0.08);border:1.5px solid rgba(99,102,241,0.2);border-radius:14px;padding:14px 18px;">'
-        +'<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
-        +'<div style="flex:1;min-width:0;">'
+      ? '<div style="background:rgba(99,102,241,0.08);border:1.5px solid rgba(99,102,241,0.2);border-radius:12px;padding:12px 16px;">'
         +'<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:4px;">Email</div>'
-        +'<div style="font-size:14px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+mcmEsc(rawEmail)+'</div>'
+        +'<a href="mailto:'+mcmEsc(rawEmail)+'" style="display:block;font-size:13px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none;">'+mcmEsc(rawEmail)+'</a>'
         +'</div>'
-        +'<button type="button" onclick="anCopyToClipboard(\''+mcmEsc(rawEmail)+'\')" style="flex-shrink:0;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#c7d2fe;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">📋 Copy</button>'
-        +'</div></div>'
       : '')
     +'</div>'
 
@@ -16374,6 +16401,7 @@ window.openMobileCallMode = function(leadId) {
   if (typeof anRenderCallScript === 'function') anRenderCallScript(leadId);
   if (typeof anRenderCallSessionLeadPanel === 'function') anRenderCallSessionLeadPanel(leadId);
   if (typeof mcmRefreshAttemptBadge === 'function') mcmRefreshAttemptBadge(leadId);
+  if (typeof mcmWireCallPanelHeader === 'function') mcmWireCallPanelHeader();
 };
 
 function mcmEsc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -20636,13 +20664,7 @@ window._anEnhanceCallPanel = function(leadId) {
     if (e.key === 'n' || e.key === 'N') { e.preventDefault(); mcmSaveAndNext(leadId); }
   };
   document.addEventListener('keydown', overlay._keyHandler);
-  var closeBtn = overlay.querySelector('button[onclick*="mcmClose"]');
-  if (closeBtn) {
-    closeBtn.onclick = function(){
-      document.removeEventListener('keydown', overlay._keyHandler);
-      mcmClose();
-    };
-  }
+  if (typeof mcmWireCallPanelHeader === 'function') mcmWireCallPanelHeader();
 };
 
 window.openMobileCallMode = function(leadId){
@@ -20766,8 +20788,11 @@ console.log('[CALL SESSION] Queue workflow loaded.');
       + 'body.call-panel-open #call-panel-backdrop{display:none!important;}'
       + 'body.call-lead-collapsed #an-cs-lead-panel{display:none!important;}'
       + 'body.call-panel-minimized #mcm-panel-wrap,body.call-panel-minimized #an-cs-lead-panel,body.call-panel-minimized #an-cs-company-panel{transform:translateX(110%);pointer-events:none;opacity:0;}'
+      + '#mcm-call-header .mcm-header-toolbar button{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}'
       + '@media(max-width:1200px){body.call-session-dual #an-cs-lead-panel{width:340px;right:360px;}}'
-      + '@media(max-width:900px){#mcm-panel-wrap{width:100vw;}#an-cs-lead-panel{right:0;width:100vw;max-width:100vw;}}'
+      + '@media(max-width:900px){#mcm-panel-wrap{width:100vw;}#an-cs-lead-panel{right:0;width:100vw;max-width:100vw;}'
+      + 'body.call-lead-front:not(.call-lead-collapsed) #an-cs-lead-panel{z-index:20003!important;right:0!important;width:100vw!important;max-width:100vw!important;}'
+      + 'body.call-company-front #an-cs-company-panel{z-index:20004!important;right:0!important;width:100vw!important;max-width:100vw!important;}}'
       + 'body.sb-collapsed #an-cs-banner{left:68px;max-width:calc(100vw - 500px);}';
     document.head.appendChild(st);
   }
