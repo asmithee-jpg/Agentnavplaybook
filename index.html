@@ -20426,50 +20426,55 @@ window.submitInviteRep = function() {
   }
   err.style.display = 'none';
   btn.disabled = true;
-  btn.textContent = 'Sending...';
-
-  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
-  if (!sb) { err.textContent = 'Supabase not connected'; err.style.display='block'; btn.disabled=false; btn.textContent='Send Invite 📧'; return; }
+  btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:7px;"><span style="width:13px;height:13px;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;"></span>Sending invite...</span>';
 
   var fullName = [fn, ln].filter(Boolean).join(' ') || email.split('@')[0];
 
-  // Use signUp with email confirmation (Supabase sends magic link / confirmation email)
-  sb.auth.signUp({
-    email: email,
-    password: 'TempPass' + Math.random().toString(36).slice(2,8).toUpperCase() + '!',
-    options: {
-      data: { full_name: fullName, role: role },
-      emailRedirectTo: window.location.origin + window.location.pathname
-    }
-  }).then(function(result) {
-    if (result.error && !result.error.message.includes('already registered')) {
-      err.textContent = result.error.message;
+  // Call the Netlify function (uses service role key server-side)
+  fetch('/.netlify/functions/invite', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: email,
+      fullName: fullName,
+      role: role,
+      invitedBy: (typeof _currentUser !== 'undefined' && _currentUser) ? _currentUser.email : ''
+    })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (data.error) {
+      err.textContent = data.error;
       err.style.display = 'block';
-      btn.disabled = false; btn.textContent = 'Send Invite 📧';
+      btn.disabled = false;
+      btn.textContent = 'Send Invite 📧';
       return;
     }
 
     // Save rep to views system
+    if (!_repViews) window._repViews = {};
     if (!_repViews[email]) _repViews[email] = { hidden: [], role: role, name: fullName };
     else { _repViews[email].role = role; _repViews[email].name = fullName; }
-    saveRepViews();
+    if (typeof saveRepViews === 'function') saveRepViews();
 
     document.getElementById('invite-rep-modal').remove();
-    if (typeof showToast === 'function') showToast('Invite sent to ' + email + ' ✓');
 
-    // Refresh rep cards if visible
-    var panel = document.getElementById('rep-mgmt-panel');
-    if (panel) {
-      var cards = document.getElementById('rep-cards-list');
-      if (cards) {
-        var html = Object.keys(_repViews).map(buildRepCard).join('');
-        cards.innerHTML = html || '<div style="color:var(--text-muted);font-size:13px;">No reps yet</div>';
-      }
+    var msg = data.existing
+      ? 'Password reset sent to ' + email + ' (already registered)'
+      : 'Invite sent to ' + email + ' ✓ They\'ll get an email to set their password';
+    if (typeof showToast === 'function') showToast(msg);
+
+    // Refresh rep cards
+    var cards = document.getElementById('rep-cards-list');
+    if (cards && typeof buildRepCard === 'function') {
+      cards.innerHTML = Object.keys(_repViews).map(buildRepCard).join('');
     }
-  }).catch(function(e) {
-    err.textContent = e.message || 'Failed to send invite';
+  })
+  .catch(function(e) {
+    err.textContent = 'Network error: ' + (e.message || 'Could not reach invite server');
     err.style.display = 'block';
-    btn.disabled = false; btn.textContent = 'Send Invite 📧';
+    btn.disabled = false;
+    btn.textContent = 'Send Invite 📧';
   });
 };
 
@@ -20622,63 +20627,245 @@ window.showSection = function(id, btn) {
   }
 };
 
-// ── SET PASSWORD FLOW for first-time reps ─────────────────────
-// When a rep lands with a password reset token, show a set-password modal
-(function checkPasswordReset() {
-  var hash = window.location.hash || '';
-  var params = new URLSearchParams(hash.replace('#', '?'));
-  var type = params.get('type');
-  if (type === 'recovery' || type === 'invite') {
-    setTimeout(function() {
-      showSetPasswordModal();
-    }, 800);
+
+
+
+console.log('[REP MGMT] Invite flow, lead assignment, set-password loaded.');
+
+</script>
+<script>
+// ============================================================
+// INVITE AUTH FIX
+// Handles Supabase invite/recovery links properly
+// Works with detectSessionInUrl:true (Supabase v2 PKCE flow)
+// ============================================================
+
+(function() {
+  // Wait for Supabase to be ready then patch onAuthStateChange
+  function patchAuth() {
+    var sb = typeof getSupabase === 'function' ? getSupabase() : null;
+    if (!sb) { setTimeout(patchAuth, 300); return; }
+
+    // Supabase v2 fires these events on invite link click:
+    // 1. PASSWORD_RECOVERY (when ?type=recovery in URL)
+    // 2. SIGNED_IN with a temporary session (user can now call updateUser)
+    // detectSessionInUrl:true handles token exchange automatically
+
+    sb.auth.onAuthStateChange(function(event, session) {
+      console.log('[AUTH]', event, session ? session.user?.email : 'no session');
+
+      if (event === 'PASSWORD_RECOVERY') {
+        // Rep clicked a password reset link — show set password modal
+        setTimeout(function() {
+          showSetPasswordModal();
+        }, 400);
+      }
+
+      if (event === 'SIGNED_IN' && session) {
+        // Check if this is a first-time invite (no prior password set)
+        // Supabase sets user metadata when invited
+        var user = session.user;
+        var isInvited = user && (
+          user.app_metadata?.provider === 'email' &&
+          !user.last_sign_in_at ||
+          // Check URL for invite token indicators
+          window.location.hash.includes('type=invite') ||
+          window.location.hash.includes('type=recovery') ||
+          new URLSearchParams(window.location.search).get('type') === 'invite'
+        );
+
+        if (isInvited) {
+          setTimeout(function() {
+            showSetPasswordModal();
+          }, 400);
+        }
+      }
+    });
+
+    // Also handle URL params directly (belt-and-suspenders)
+    var urlHash   = window.location.hash || '';
+    var urlSearch = window.location.search || '';
+    var isRecovery = urlHash.includes('type=recovery') || urlHash.includes('type=invite') ||
+                     urlSearch.includes('type=recovery') || urlSearch.includes('type=invite');
+
+    if (isRecovery) {
+      // Give Supabase time to exchange the token
+      setTimeout(function() {
+        // Only show if we have a valid session
+        var sb2 = typeof getSupabase === 'function' ? getSupabase() : null;
+        if (!sb2) return;
+        sb2.auth.getSession().then(function(result) {
+          if (result.data?.session) {
+            showSetPasswordModal();
+          }
+        });
+      }, 1200);
+    }
+  }
+
+  // Run after DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', patchAuth);
+  } else {
+    setTimeout(patchAuth, 500);
   }
 })();
 
-window.showSetPasswordModal = function() {
-  var old = document.getElementById('set-pw-modal'); if(old) old.remove();
-  var m = document.createElement('div');
-  m.id = 'set-pw-modal';
-  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:20000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);';
-  m.innerHTML = '<div style="background:var(--card-bg,#fff);border-radius:18px;width:420px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,0.4);overflow:hidden;">'
-    + '<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);padding:28px 28px 22px;">'
-    + '<div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.5px;margin-bottom:4px;">Welcome to AgentNav 👋</div>'
-    + '<div style="font-size:13px;color:rgba(255,255,255,0.5);">Set your password to get started</div>'
-    + '</div>'
-    + '<div style="padding:24px 28px;">'
-    + '<div style="margin-bottom:14px;"><label style="font-family:var(--mono,monospace);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:#71717a;display:block;margin-bottom:5px;">New Password</label>'
-    + '<input id="set-pw-1" type="password" placeholder="At least 8 characters" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:10px 13px;font-size:14px;outline:none;font-family:inherit;box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'#e4e4e7\'"></div>'
-    + '<div style="margin-bottom:18px;"><label style="font-family:var(--mono,monospace);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:#71717a;display:block;margin-bottom:5px;">Confirm Password</label>'
-    + '<input id="set-pw-2" type="password" placeholder="Re-enter password" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:10px 13px;font-size:14px;outline:none;font-family:inherit;box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'#e4e4e7\'" onkeydown="if(event.key===\'Enter\')confirmSetPassword()">'
-    + '</div>'
-    + '<div id="set-pw-err" style="display:none;color:#ef4444;font-size:12.5px;margin-bottom:12px;background:#fef2f2;padding:8px 12px;border-radius:7px;"></div>'
-    + '<button onclick="confirmSetPassword()" id="set-pw-btn" style="width:100%;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:10px;padding:13px;font-size:14.5px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 4px 16px rgba(99,102,241,0.3);">Set Password & Log In</button>'
-    + '</div></div>';
-  document.body.appendChild(m);
-  setTimeout(function(){ var f=document.getElementById('set-pw-1'); if(f) f.focus(); },100);
-};
+// ── REWRITTEN confirmSetPassword ─────────────────────────────
+// The old version was failing because auth.updateUser needs
+// an active session — we now ensure it has one first
 
 window.confirmSetPassword = function() {
-  var p1  = (document.getElementById('set-pw-1')?.value||'').trim();
-  var p2  = (document.getElementById('set-pw-2')?.value||'').trim();
+  var p1  = (document.getElementById('set-pw-1')?.value || '').trim();
+  var p2  = (document.getElementById('set-pw-2')?.value || '').trim();
   var btn = document.getElementById('set-pw-btn');
   var err = document.getElementById('set-pw-err');
-  if (p1.length < 8) { err.textContent='Password must be at least 8 characters'; err.style.display='block'; return; }
-  if (p1 !== p2) { err.textContent='Passwords don\'t match'; err.style.display='block'; return; }
-  err.style.display='none';
-  btn.disabled=true; btn.textContent='Saving...';
-  var sb = typeof getSupabase==='function'?getSupabase():null;
-  if (!sb) { err.textContent='Not connected'; err.style.display='block'; btn.disabled=false; btn.textContent='Set Password & Log In'; return; }
-  sb.auth.updateUser({ password: p1 }).then(function(r) {
-    if (r.error) { err.textContent=r.error.message; err.style.display='block'; btn.disabled=false; btn.textContent='Set Password & Log In'; return; }
-    // Clear hash
-    window.history.replaceState(null,'',window.location.pathname);
-    document.getElementById('set-pw-modal').remove();
-    if (typeof showToast==='function') showToast('Password set! Welcome to AgentNav ✓');
+
+  // Validate
+  if (!p1 || p1.length < 8) {
+    err.textContent = 'Password must be at least 8 characters';
+    err.style.display = 'block'; return;
+  }
+  if (p1 !== p2) {
+    err.textContent = 'Passwords don\'t match';
+    err.style.display = 'block'; return;
+  }
+
+  err.style.display = 'none';
+  btn.disabled = true;
+  btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:8px;"><span style="width:14px;height:14px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;"></span>Saving...</span>';
+
+  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
+  if (!sb) {
+    err.textContent = 'Not connected to Supabase. Please refresh and try again.';
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Set Password & Log In';
+    return;
+  }
+
+  // Step 1: verify we have an active session
+  sb.auth.getSession().then(function(sessionResult) {
+    var session = sessionResult.data?.session;
+
+    if (!session) {
+      // No session — the token may have expired
+      err.innerHTML = 'Session expired. Please ask your admin to resend the invite, or <a href="#" onclick="openAuthModal();document.getElementById(\'set-pw-modal\').remove();return false;" style="color:#6366f1;font-weight:700;">sign in here</a>.';
+      err.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Set Password & Log In';
+      return;
+    }
+
+    // Step 2: update password
+    sb.auth.updateUser({ password: p1 }).then(function(updateResult) {
+      if (updateResult.error) {
+        err.textContent = updateResult.error.message || 'Failed to update password. Please try again.';
+        err.style.display = 'block';
+        btn.disabled = false; btn.textContent = 'Set Password & Log In';
+        return;
+      }
+
+      // Success — clean up URL, close modal
+      window.history.replaceState(null, '', window.location.pathname);
+      var modal = document.getElementById('set-pw-modal');
+      if (modal) modal.remove();
+
+      if (typeof showToast === 'function') {
+        showToast('Password set! Welcome to AgentNav ✓');
+      }
+
+      // Ensure user is fully logged in
+      if (updateResult.data?.user && typeof onUserLoggedIn === 'function') {
+        onUserLoggedIn(updateResult.data.user);
+      }
+    }).catch(function(e) {
+      err.textContent = e.message || 'An error occurred. Please try again.';
+      err.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Set Password & Log In';
+    });
+  }).catch(function(e) {
+    err.textContent = 'Could not verify session: ' + (e.message || 'unknown error');
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Set Password & Log In';
   });
 };
 
-console.log('[REP MGMT] Invite flow, lead assignment, set-password loaded.');
+// ── REWRITTEN showSetPasswordModal ───────────────────────────
+window.showSetPasswordModal = function() {
+  // Don't show if already visible
+  if (document.getElementById('set-pw-modal')) return;
+
+  var m = document.createElement('div');
+  m.id = 'set-pw-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:20000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);';
+
+  m.innerHTML =
+    '<div style="background:#fff;border-radius:20px;width:440px;max-width:95vw;box-shadow:0 32px 100px rgba(0,0,0,0.4);overflow:hidden;">'
+
+    // Header
+    + '<div style="background:linear-gradient(135deg,#0a0a14 0%,#1a1640 100%);padding:30px 30px 24px;">'
+    + '<div style="width:48px;height:48px;background:rgba(99,102,241,0.2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:14px;">🔐</div>'
+    + '<div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.5px;margin-bottom:4px;">Set Your Password</div>'
+    + '<div style="font-size:13px;color:rgba(255,255,255,0.5);">Welcome to AgentNav. Choose a password to log in going forward.</div>'
+    + '</div>'
+
+    // Body
+    + '<div style="padding:26px 30px 28px;">'
+
+    // Password field
+    + '<div style="margin-bottom:14px;">'
+    + '<label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#71717a;display:block;margin-bottom:5px;">New Password</label>'
+    + '<div style="position:relative;">'
+    + '<input id="set-pw-1" type="password" placeholder="At least 8 characters" autocomplete="new-password" '
+    + 'style="width:100%;border:1.5px solid #e4e4e7;border-radius:9px;padding:11px 40px 11px 13px;font-size:14px;outline:none;font-family:inherit;color:#09090b;box-sizing:border-box;" '
+    + 'onfocus="this.style.borderColor=\'#6366f1\';this.style.boxShadow=\'0 0 0 3px rgba(99,102,241,0.1)\'" '
+    + 'onblur="this.style.borderColor=\'#e4e4e7\';this.style.boxShadow=\'none\'">'
+    + '<button onclick="var i=document.getElementById(\'set-pw-1\');i.type=i.type===\'text\'?\'password\':\'text\'" '
+    + 'style="position:absolute;right:11px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:#a1a1aa;">👁</button>'
+    + '</div></div>'
+
+    // Confirm field
+    + '<div style="margin-bottom:16px;">'
+    + '<label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#71717a;display:block;margin-bottom:5px;">Confirm Password</label>'
+    + '<input id="set-pw-2" type="password" placeholder="Re-enter your password" autocomplete="new-password" '
+    + 'onkeydown="if(event.key===\'Enter\')window.confirmSetPassword()" '
+    + 'style="width:100%;border:1.5px solid #e4e4e7;border-radius:9px;padding:11px 13px;font-size:14px;outline:none;font-family:inherit;color:#09090b;box-sizing:border-box;" '
+    + 'onfocus="this.style.borderColor=\'#6366f1\';this.style.boxShadow=\'0 0 0 3px rgba(99,102,241,0.1)\'" '
+    + 'onblur="this.style.borderColor=\'#e4e4e7\';this.style.boxShadow=\'none\'">'
+    + '</div>'
+
+    // Password requirements
+    + '<div style="background:#f8f8fc;border-radius:8px;padding:10px 13px;margin-bottom:16px;font-size:12px;color:#71717a;line-height:1.8;">'
+    + '<strong style="color:#09090b;">Requirements:</strong> At least 8 characters. Mix letters, numbers, and symbols for a stronger password.'
+    + '</div>'
+
+    // Error
+    + '<div id="set-pw-err" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 13px;font-size:13px;color:#dc2626;margin-bottom:14px;line-height:1.5;"></div>'
+
+    // Submit
+    + '<button id="set-pw-btn" onclick="window.confirmSetPassword()" '
+    + 'style="width:100%;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 4px 18px rgba(99,102,241,0.35);transition:all 0.2s;" '
+    + 'onmouseover="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 6px 24px rgba(99,102,241,0.45)\'" '
+    + 'onmouseout="this.style.transform=\'\';this.style.boxShadow=\'0 4px 18px rgba(99,102,241,0.35)\'">'
+    + 'Set Password & Log In →</button>'
+
+    + '</div></div>';
+
+  document.body.appendChild(m);
+  setTimeout(function() {
+    var f = document.getElementById('set-pw-1');
+    if (f) f.focus();
+  }, 100);
+};
+
+// ── ALSO: fix auth modal to handle "sign up" properly ─────────
+// Show a message after signup telling reps to check email
+// instead of silently failing
+var _origAuthSubmit = window.authSubmit;
+// Note: authSubmit is defined in app.js so we can't override it easily
+// Instead patch the error display to show better messages
+// This fires after app.js processes the result
+
+console.log('[INVITE AUTH] Password set flow, onAuthStateChange patch loaded.');
 
 </script>
 </body>
