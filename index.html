@@ -10529,11 +10529,8 @@ window.anBuildTitleQuickPicksLight = function(leadId, inputId) {
 window.anSetLeadTitleQuick = function(leadId, inputId, title, saveNow) {
   var input = document.getElementById(inputId);
   if (input) input.value = title;
-  if (saveNow || inputId === 'mcm-title-input') {
-    anUpdateLeadTitle(leadId, title, { silent: inputId === 'mcm-title-input' });
-    if (inputId === 'mcm-title-input' && typeof openMobileCallMode === 'function') {
-      openMobileCallMode(leadId);
-    }
+  if (saveNow || inputId === 'mcm-title-input' || inputId === 'cs-title-input') {
+    anUpdateLeadTitle(leadId, title, { silent: inputId === 'mcm-title-input' || inputId === 'cs-title-input' });
   }
 };
 
@@ -10577,6 +10574,9 @@ window.anUpdateLeadCompany = function(leadId, companyName, opts){
       hdrCo.textContent = cn || 'No company — add below';
       hdrCo.style.color = cn ? 'rgba(255,255,255,0.5)' : '#fcd34d';
     }
+  }
+  if (document.body.classList.contains('call-company-open') && typeof anRefreshCallSessionCompanyPanel === 'function') {
+    anRefreshCallSessionCompanyPanel(leadId);
   }
   if(!opts.silent && typeof showToast === 'function') showToast(cn ? 'Company saved on lead' : 'Company removed');
   return true;
@@ -13697,7 +13697,9 @@ window.anOpenLeadPanel = function(leadId) {
       +'<div>'
       +'<div style="font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.4px;">'+anEsc((lead.firstName||'')+' '+(lead.lastName||''))+'</div>'
       +(lead.title?'<div style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:2px;">'+anEsc(lead.title)+'</div>':'')
-      +'<div data-panel-company style="font-size:13px;margin-top:2px;color:'+(lead.company?'rgba(255,255,255,0.5)':'#fcd34d')+';">'+anEsc(lead.company||'No company — add below')+'</div>'
+      +((lead.company && (document.body.classList.contains('call-panel-open') || document.getElementById('mcm-panel-wrap')) && typeof anBuildClickableCompanyHtml === 'function')
+        ? '<div data-panel-company style="font-size:13px;margin-top:2px;color:rgba(255,255,255,0.5);">'+anBuildClickableCompanyHtml(lead.company, 'color:rgba(255,255,255,0.5);')+'</div>'
+        : '<div data-panel-company style="font-size:13px;margin-top:2px;color:'+(lead.company?'rgba(255,255,255,0.5)':'#fcd34d')+';">'+anEsc(lead.company||'No company — add below')+'</div>')
       +'</div>'
       +'<div style="display:flex;gap:7px;align-items:center;">'
       +'<span style="background:'+st.color+'28;color:'+st.color+';border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;">'+st.label+'</span>'
@@ -13805,6 +13807,195 @@ window.anCloseCallSessionLeadPanel = function() {
   document.body.classList.remove('call-session-dual');
 };
 
+window.anGetCompanyLeadsForRep = function(name) {
+  var cn = (name || '').trim();
+  if (!cn || typeof AN === 'undefined' || !Array.isArray(AN.leads)) return [];
+  var leads = AN.leads.filter(function(l){ return (l.company || '').trim() === cn; });
+  if (!AN.isAdmin) {
+    leads = leads.filter(function(l){
+      return typeof anRepOwnsLead === 'function' ? anRepOwnsLead(l) : (l._repEmail === AN.currentRepEmail);
+    });
+  }
+  return leads;
+};
+
+window.anGetCsCompanyPanelRight = function() {
+  if (window.innerWidth <= 900) return 0;
+  var callW = 360;
+  var leadW = document.body.classList.contains('call-lead-collapsed') ? 0 : (window.innerWidth <= 1200 ? 340 : 400);
+  return callW + leadW;
+};
+
+window.anCloseCallSessionCompanyPanel = function() {
+  var panel = document.getElementById('an-cs-company-panel');
+  if (panel) {
+    panel.style.transform = 'translateX(100%)';
+    setTimeout(function(){ if (panel.parentNode) panel.remove(); }, 260);
+  }
+  document.body.classList.remove('call-company-open');
+  window._anCsCompanyName = null;
+  var btn = document.getElementById('mcm-company-toggle');
+  if (btn) btn.style.background = 'rgba(255,255,255,0.08)';
+};
+
+window.anRepositionCallSessionCompanyPanel = function() {
+  var panel = document.getElementById('an-cs-company-panel');
+  if (!panel) return;
+  if (window.innerWidth <= 900) {
+    panel.style.right = '0';
+    panel.style.width = '100vw';
+    panel.style.maxWidth = '100vw';
+    return;
+  }
+  panel.style.right = anGetCsCompanyPanelRight() + 'px';
+  panel.style.width = '380px';
+  panel.style.maxWidth = 'calc(100vw - 380px)';
+};
+
+window.anBuildClickableCompanyHtml = function(companyName, style) {
+  if (!companyName) return '';
+  var escJs = String(companyName).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return '<span role="button" tabindex="0" onclick="event.stopPropagation();anOpenCallSessionCompanyPanel(\'' + escJs + '\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();anOpenCallSessionCompanyPanel(\'' + escJs + '\');}" style="' + (style || '') + 'cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;" title="View agency profile">' + anEsc(companyName) + '</span>';
+};
+
+window.anOpenCallSessionCompanyPanel = function(name) {
+  name = (name || '').trim();
+  if (!name) {
+    if (typeof showToast === 'function') showToast('No company on this lead — add agency name first');
+    return;
+  }
+  if (!document.getElementById('mcm-panel-wrap') && !document.getElementById('an-cs-lead-panel')) {
+    if (typeof openCompanyDetail === 'function') { openCompanyDetail(name); return; }
+  }
+
+  var leads = anGetCompanyLeadsForRep(name);
+  var cd = typeof getCoData === 'function' ? getCoData(name) : { stage: 'prospecting', notes: '', industry: '' };
+  var col = typeof anColor === 'function' ? anColor(name) : '#6366f1';
+  var st = typeof coStage === 'function' ? coStage(cd.stage || 'prospecting') : { label: 'Prospecting', color: '#6366f1' };
+  var totalCalls = leads.reduce(function(s, l){ return s + (l.callLog || []).length; }, 0);
+  var dmReached = leads.filter(function(l){
+    return (l.callLog || []).some(function(c){ return c.outcome === 'pickup' || c.outcome === 'demo' || c.outcome === 'connected'; });
+  }).length;
+  var currentLeadId = ((document.getElementById('mcm-overlay') || {})._leadId) || window._anCsLeadPanelId || '';
+  var allCalls = [];
+  leads.forEach(function(l){
+    (l.callLog || []).forEach(function(c){
+      allCalls.push(Object.assign({}, c, { _cname: (l.firstName || '') + ' ' + (l.lastName || ''), _lid: l.id }));
+    });
+  });
+  allCalls.sort(function(a, b){ return (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')); });
+  var callColors = { pickup: '#10b981', demo: '#f59e0b', voicemail: '#6366f1', noanswer: '#a1a1aa', connected: '#10b981', emailed: '#8b5cf6' };
+  var callIcons = { pickup: '☎️', demo: '🎯', voicemail: '📬', noanswer: '📵', connected: '☎️', emailed: '✉️' };
+  var escName = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+  var contactRows = leads.slice().sort(function(a, b){
+    if (a.id === currentLeadId) return -1;
+    if (b.id === currentLeadId) return 1;
+    var ad = (a.callLog || []).some(function(c){ return c.outcome === 'pickup' || c.outcome === 'demo'; });
+    var bd = (b.callLog || []).some(function(c){ return c.outcome === 'pickup' || c.outcome === 'demo'; });
+    return (bd ? 1 : 0) - (ad ? 1 : 0);
+  }).map(function(l) {
+    var isCurrent = l.id === currentLeadId;
+    var isDM = (l.callLog || []).some(function(c){ return c.outcome === 'pickup' || c.outcome === 'demo' || c.outcome === 'connected'; });
+    var lastC = (l.callLog || []).slice().sort(function(a, b){ return b.date.localeCompare(a.date); })[0];
+    var lc = typeof anColor === 'function' ? anColor((l.firstName || '') + (l.lastName || '')) : '#6366f1';
+    return '<div onclick="anRenderCallSessionLeadPanel(\'' + l.id + '\')" style="padding:10px 12px;border-bottom:1px solid var(--divider);display:flex;align-items:center;gap:9px;cursor:pointer;background:' + (isCurrent ? 'rgba(99,102,241,0.08)' : 'transparent') + ';" onmouseover="if(!' + isCurrent + ')this.style.background=\'var(--body-bg)\'" onmouseout="this.style.background=\'' + (isCurrent ? 'rgba(99,102,241,0.08)' : 'transparent') + '\'">'
+      + '<div style="width:28px;height:28px;border-radius:50%;background:' + lc + '18;border:1.5px solid ' + lc + '33;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:' + lc + ';flex-shrink:0;">' + ((l.firstName || '?')[0].toUpperCase()) + '</div>'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:12.5px;font-weight:700;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + anEsc((l.firstName || '') + ' ' + (l.lastName || '')) + (isCurrent ? ' <span style="font-size:9px;color:#6366f1;">(on call)</span>' : '') + '</div>'
+      + '<div style="font-size:10.5px;color:var(--text-muted);">' + (l.title ? anEsc(l.title) + ' · ' : '') + (lastC ? anTimeAgo(lastC.date) : 'No calls') + '</div>'
+      + '</div>'
+      + (isDM ? '<span style="font-size:9px;font-weight:700;background:#ecfdf5;color:#10b981;border-radius:4px;padding:2px 5px;flex-shrink:0;">DM</span>' : '')
+      + '</div>';
+  }).join('');
+
+  var activityRows = allCalls.slice(0, 12).map(function(c) {
+    var col2 = callColors[c.outcome] || '#a1a1aa';
+    return '<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--divider);">'
+      + '<div style="width:26px;height:26px;border-radius:50%;background:' + col2 + '15;border:1.5px solid ' + col2 + '44;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;">' + (callIcons[c.outcome] || '📞') + '</div>'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:11.5px;font-weight:600;color:var(--text-primary);">' + anEsc(c._cname) + ' <span style="color:' + col2 + ';font-weight:700;">' + (c.outcome || 'call') + '</span></div>'
+      + '<div style="font-size:10px;color:var(--text-muted);">' + anDate(c.date) + (c.time ? ' · ' + c.time : '') + '</div>'
+      + (c.notes ? '<div style="font-size:11px;color:var(--text-secondary);margin-top:3px;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + anEsc(c.notes) + '</div>' : '')
+      + '</div></div>';
+  }).join('');
+
+  var existing = document.getElementById('an-cs-company-panel');
+  if (existing) existing.remove();
+
+  var panel = document.createElement('div');
+  panel.id = 'an-cs-company-panel';
+  panel.dataset.company = name;
+  panel.style.cssText = 'position:fixed;top:0;right:' + anGetCsCompanyPanelRight() + 'px;bottom:0;width:380px;max-width:calc(100vw - 380px);background:var(--card-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.12);z-index:19998;display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);';
+
+  panel.innerHTML =
+    '<div style="background:linear-gradient(135deg,#0f172a,#1e293b);padding:16px 18px;flex-shrink:0;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+    + '<div style="display:flex;gap:12px;align-items:center;min-width:0;">'
+    + '<div style="width:38px;height:38px;border-radius:9px;background:' + col + '22;border:2px solid ' + col + '44;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;color:' + col + ';flex-shrink:0;">' + name[0].toUpperCase() + '</div>'
+    + '<div style="min-width:0;">'
+    + '<div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:3px;">Agency Profile</div>'
+    + '<div style="font-size:16px;font-weight:800;color:#fff;letter-spacing:-0.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + anEsc(name) + '</div>'
+    + (cd.industry ? '<div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:2px;">' + anEsc(cd.industry) + '</div>' : '')
+    + '</div></div>'
+    + '<button onclick="anCloseCallSessionCompanyPanel()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.55);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;flex-shrink:0;">✕</button>'
+    + '</div>'
+    + '<div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;">'
+    + '<span style="background:' + st.color + '22;color:' + st.color + ';border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;">' + st.label + '</span>'
+    + '<span style="background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.55);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;">' + leads.length + ' contact' + (leads.length !== 1 ? 's' : '') + '</span>'
+    + '<span style="background:rgba(16,185,129,0.15);color:#6ee7b7;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;">' + dmReached + ' DM' + (dmReached !== 1 ? 's' : '') + ' reached</span>'
+    + '</div></div>'
+    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--divider);flex-shrink:0;">'
+    + [{ l: 'Contacts', v: leads.length, c: '#6366f1' }, { l: 'Calls', v: totalCalls, c: '#f59e0b' }, { l: 'Reached', v: dmReached, c: '#10b981' }]
+      .map(function(s, i){
+        return '<div style="padding:10px;text-align:center;border-right:' + (i < 2 ? '1px solid var(--divider)' : 'none') + ';"><div style="font-size:18px;font-weight:900;color:' + s.c + ';">' + s.v + '</div><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-top:2px;">' + s.l + '</div></div>';
+      }).join('')
+    + '</div>'
+    + '<div style="flex:1;overflow-y:auto;">'
+    + '<div style="padding:12px 14px 6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-muted);">Contacts at Agency</div>'
+    + (contactRows || '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:12px;">No contacts</div>')
+    + '<div style="padding:12px 14px 6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-muted);border-top:1px solid var(--divider);margin-top:4px;">Recent Activity</div>'
+    + '<div style="padding:0 14px 12px;">' + (activityRows || '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:12px;">No calls logged yet</div>') + '</div>'
+    + '<div style="padding:12px 14px 6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-muted);border-top:1px solid var(--divider);">Company Notes</div>'
+    + '<div style="padding:0 14px 16px;">'
+    + '<textarea id="cs-co-notes" rows="4" placeholder="Pain points, objections, agency size..." onblur="typeof saveCoData===\'function\'&&saveCoData(\'' + escName + '\',{notes:this.value})" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:10px;font-size:12px;color:var(--text-primary);background:var(--body-bg);outline:none;resize:vertical;font-family:var(--sans);line-height:1.6;box-sizing:border-box;">' + anEsc(cd.notes || '') + '</textarea>'
+    + '</div></div>'
+    + '<div style="padding:10px 14px;border-top:1px solid var(--divider);flex-shrink:0;display:flex;gap:6px;">'
+    + '<button onclick="(function(){var c=(_coData||[]).find(function(x){return typeof coNormName===\'function\'&&coNormName(x.name)===coNormName(\'' + escName + '\');});if(c&&typeof coOpenCompanyPanel===\'function\'){anCloseCallSessionCompanyPanel();if(typeof showSection===\'function\')showSection(\'companies\');setTimeout(function(){coOpenCompanyPanel(c.id);},120);}else if(typeof openCompanyDetail===\'function\')openCompanyDetail(\'' + escName + '\');})()" style="flex:1;padding:8px;border:1.5px solid var(--divider);border-radius:8px;background:var(--card-bg);font-size:11px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:var(--sans);">Open full record</button>'
+    + '<button onclick="typeof anNewLeadForCompany===\'function\'&&anNewLeadForCompany(\'' + escName + '\')" style="flex:1;padding:8px;border:none;border-radius:8px;background:#6366f1;font-size:11px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--sans);">+ Contact</button>'
+    + '</div>';
+
+  document.body.appendChild(panel);
+  setTimeout(function(){ panel.style.transform = 'translateX(0)'; }, 10);
+  document.body.classList.add('call-company-open');
+  window._anCsCompanyName = name;
+  var btn = document.getElementById('mcm-company-toggle');
+  if (btn) btn.style.background = 'rgba(99,102,241,0.22)';
+};
+
+window.mcmToggleCompanyPanel = function(companyName) {
+  var panel = document.getElementById('an-cs-company-panel');
+  if (panel && panel.style.transform !== 'translateX(100%)') {
+    anCloseCallSessionCompanyPanel();
+    return;
+  }
+  if (!companyName) {
+    var ov = document.getElementById('mcm-overlay');
+    var leadId = ov && ov._leadId;
+    var lead = leadId && AN.leads && AN.leads.find(function(l){ return l.id === leadId; });
+    companyName = lead && lead.company;
+  }
+  anOpenCallSessionCompanyPanel(companyName);
+};
+
+window.anRefreshCallSessionCompanyPanel = function(leadId) {
+  if (!document.body.classList.contains('call-company-open')) return;
+  var lead = AN.leads && AN.leads.find(function(l){ return l.id === leadId; });
+  var co = (lead && lead.company || '').trim();
+  if (!co) { anCloseCallSessionCompanyPanel(); return; }
+  anOpenCallSessionCompanyPanel(co);
+};
+
 window.anGetLeadActivityMeta = function() {
   return {
     icons: { pickup:'☎️', demo:'🎯', voicemail:'📬', noanswer:'📵', note:'📝', emailed:'✉️', callback:'⏰', connected:'☎️', objection:'🛡️', next_step:'📋', won:'🏆' },
@@ -13858,13 +14049,16 @@ window.anRenderCallSessionLeadPanel = function(leadId) {
     +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">'
     +'<div>'
     +'<div style="font-size:10px;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">'+modeLabel+' Profile</div>'
-    +'<div style="font-size:17px;font-weight:800;color:#fff;letter-spacing:-0.4px;">'+anEsc((lead.firstName || '') + ' ' + (lead.lastName || ''))+'</div>'
+    +'<div style="font-size:17px;font-weight:800;color:#fff;letter-spacing:-0.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+anEsc((lead.firstName || '') + ' ' + (lead.lastName || ''))+'</div>'
     +(lead.title ? '<div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:2px;">'+anEsc(lead.title)+'</div>' : '')
-    +(lead.company ? '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px;">'+anEsc(lead.company)+'</div>' : '<div style="font-size:11px;color:#fcd34d;margin-top:2px;">No agency on file</div>')
+    +(lead.company
+      ? '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px;">'+(typeof anBuildClickableCompanyHtml === 'function' ? anBuildClickableCompanyHtml(lead.company, 'color:rgba(255,255,255,0.55);') : anEsc(lead.company))+'</div>'
+      : '<div style="font-size:11px;color:#fcd34d;margin-top:2px;">No agency on file</div>')
     +csMetaRow
     +'</div>'
     +'<div style="display:flex;gap:6px;align-items:center;">'
     +'<span style="background:'+st.color+'28;color:'+st.color+';border-radius:20px;padding:4px 11px;font-size:10px;font-weight:700;">'+st.label+'</span>'
+    +'<button type="button" id="mcm-lead-panel-hide" onclick="mcmToggleLeadPanel()" title="Hide lead profile" style="display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.55);width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:13px;line-height:1;">✕</button>'
     +'</div></div>'
     +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;">'
     +'<div style="background:rgba(255,255,255,0.06);border-radius:8px;padding:7px;text-align:center;"><div style="font-size:16px;font-weight:800;color:#fff;">'+totalCalls+'</div><div style="font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;">Calls</div></div>'
@@ -15906,10 +16100,14 @@ window.mcmToggleLeadPanel = function() {
   document.body.classList.toggle('call-lead-collapsed', collapsed);
   var btn = document.getElementById('mcm-lead-toggle');
   if (btn) {
-    btn.textContent = collapsed ? '👤 Show Lead' : '👤 Hide Lead';
+    btn.textContent = '👤';
+    btn.title = collapsed ? 'Show lead profile' : 'Hide lead profile';
     btn.style.background = collapsed ? 'rgba(99,102,241,0.22)' : 'rgba(255,255,255,0.08)';
   }
+  var panelHide = document.getElementById('mcm-lead-panel-hide');
+  if (panelHide) panelHide.style.display = collapsed ? 'none' : 'flex';
   try { localStorage.setItem('mcm-lead-collapsed', collapsed ? '1' : '0'); } catch(e) {}
+  if (typeof anRepositionCallSessionCompanyPanel === 'function') anRepositionCallSessionCompanyPanel();
 };
 
 window.mcmToggleMinimize = function(forceMin) {
@@ -15998,6 +16196,7 @@ window.mcmClose = function(){
   }
   mcmCloseCallPanelOnly();
   if (typeof anCloseCallSessionLeadPanel === 'function') anCloseCallSessionLeadPanel();
+  if (typeof anCloseCallSessionCompanyPanel === 'function') anCloseCallSessionCompanyPanel();
 };
 
 window.openMobileCallMode = function(leadId) {
@@ -16035,12 +16234,12 @@ window.openMobileCallMode = function(leadId) {
       ];
 
   var sessionBadge = mode === 'opportunity'
-    ? '<div style="font-size:10px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:3px;">💎 Deal Session</div>'
-    : '<div style="font-size:10px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:3px;">📞 Lead Session</div>';
+    ? '<span style="font-size:10px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:0.1em;">💎 Deal Session</span>'
+    : '<span style="font-size:10px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;">📞 Lead Session</span>';
   var sessionStatusLabel = typeof anStatus === 'function' ? anStatus(lead.status || 'new').label : (lead.status || 'new');
-  var sessionMeta = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;align-items:center;font-size:10px;font-weight:600;color:rgba(255,255,255,0.45);">'
-    +(lead.state ? '<span>📍 '+mcmEsc(lead.state)+'</span><span style="color:rgba(255,255,255,0.25);">·</span>' : '')
-    +'<span style="font-weight:700;color:rgba(255,255,255,0.55);">'+mcmEsc(sessionStatusLabel)+'</span>'
+  var sessionMeta = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">'
+    +(lead.state ? '<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.45);">📍 '+mcmEsc(lead.state)+'</span>' : '')
+    +'<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.55);background:rgba(255,255,255,0.08);border-radius:20px;padding:2px 9px;">'+mcmEsc(sessionStatusLabel)+'</span>'
     +'</div>';
 
   var wrap = document.createElement('div');
@@ -16051,48 +16250,21 @@ window.openMobileCallMode = function(leadId) {
   overlay.style.cssText = 'width:100%;height:100%;background:#0a0a14;display:flex;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;';
 
   overlay.innerHTML =
-    // Header
-    '<div style="background:linear-gradient(135deg,#1a1640,#0f0f1f);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;">'
-    +'<div style="display:flex;align-items:center;gap:12px;">'
-    +'<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;flex-shrink:0;">'+name.charAt(0).toUpperCase()+'</div>'
-    +'<div>'
+    // Header — compact; title/agency live in the lead profile panel
+    '<div style="background:linear-gradient(135deg,#1a1640,#0f0f1f);padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">'
     +sessionBadge
-    +'<div style="font-size:16px;font-weight:800;color:#fff;line-height:1.2;">'+mcmEsc(name)+'</div>'
-    +(lead.title ? '<div style="font-size:12px;color:#c4b5fd;font-weight:600;margin-top:2px;">'+mcmEsc(lead.title)+'</div>' : '')
-    +(lead.company ? '<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px;">'+mcmEsc(lead.company)+'</div>' : '<div style="font-size:11px;color:#fcd34d;margin-top:2px;">No agency on file</div>')
+    +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
+    +'<button type="button" id="mcm-company-toggle" onclick="mcmToggleCompanyPanel()" title="Agency profile" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);width:30px;height:30px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit;line-height:1;">🏢</button>'
+    +'<button type="button" id="mcm-lead-toggle" onclick="mcmToggleLeadPanel()" title="Hide lead profile" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);width:30px;height:30px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit;line-height:1;">👤</button>'
+    +'<button type="button" onclick="mcmToggleMinimize(true)" title="Minimize" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);width:30px;height:30px;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1;">−</button>'
+    +'<button onclick="mcmClose()" title="Close session" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);width:30px;height:30px;border-radius:8px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>'
+    +'</div></div>'
+    +'<div id="mcm-header-name" style="font-size:17px;font-weight:800;color:#fff;letter-spacing:-0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;">'+mcmEsc(name)+'</div>'
     +sessionMeta
-    +'</div></div>'
-    +'<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">'
-    +'<button type="button" id="mcm-lead-toggle" onclick="mcmToggleLeadPanel()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);padding:6px 10px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">👤 Hide Lead</button>'
-    +'<button type="button" onclick="mcmToggleMinimize(true)" title="Minimize — keep working in the app" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);width:32px;height:32px;border-radius:8px;font-size:18px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1;">−</button>'
-    +'<button onclick="mcmClose()" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>'
-    +'</div></div>'
+    +'</div>'
 
     +'<div id="mcm-day-goals-slot"></div>'
-
-    // Title / Role — editable on the call
-    +'<div style="padding:12px 18px;border-bottom:1px solid rgba(255,255,255,0.06);">'
-    +'<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Title / Role</div>'
-    +'<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:8px;line-height:1.45;">Who are you talking to? Owner, agent, producer — helps personalize the script.</div>'
-    +'<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">'
-    +'<input id="mcm-title-input" type="text" value="'+mcmEsc(lead.title||'')+'" placeholder="e.g. Owner, Agent, Agency Owner" '
-    +'style="flex:1;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px;font-size:13px;color:#fff;font-family:inherit;outline:none;box-sizing:border-box;" '
-    +'onfocus="this.style.borderColor=\'rgba(139,92,246,0.6)\'" onblur="this.style.borderColor=\'rgba(255,255,255,0.12)\'">'
-    +'<button type="button" onclick="mcmSaveTitle(\''+leadId+'\')" style="flex-shrink:0;background:rgba(139,92,246,0.25);border:1px solid rgba(139,92,246,0.5);color:#ddd6fe;border-radius:10px;padding:10px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Save</button>'
-    +'</div>'
-    + anBuildTitleQuickPicks(leadId, 'mcm-title-input')
-    +'</div>'
-
-    // Agency / Company — editable on the call
-    +'<div style="padding:12px 18px;border-bottom:1px solid rgba(255,255,255,0.06);">'
-    +'<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Agency / Company</div>'
-    +(lead.company ? '' : '<div style="font-size:11px;color:rgba(252,211,77,0.9);margin-bottom:8px;line-height:1.45;">Imported without a company? Add the agency name if they tell you on the call.</div>')
-    +'<div style="display:flex;gap:8px;align-items:center;">'
-    +'<input id="mcm-company-input" type="text" value="'+mcmEsc(lead.company||'')+'" placeholder="e.g. Network Insurance" '
-    +'style="flex:1;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px;font-size:13px;color:#fff;font-family:inherit;outline:none;box-sizing:border-box;" '
-    +'onfocus="this.style.borderColor=\'rgba(99,102,241,0.6)\'" onblur="this.style.borderColor=\'rgba(255,255,255,0.12)\'">'
-    +'<button type="button" onclick="mcmSaveCompany(\''+leadId+'\')" style="flex-shrink:0;background:rgba(99,102,241,0.25);border:1px solid rgba(99,102,241,0.5);color:#c7d2fe;border-radius:10px;padding:10px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Save</button>'
-    +'</div></div>'
 
     // Phone + Call button
     +'<div style="padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.06);">'
@@ -16751,17 +16923,17 @@ window.mcmEditPhone = function(leadId) {
 };
 
 window.mcmSaveCompany = function(leadId) {
-  var input = document.getElementById('mcm-company-input');
+  var input = document.getElementById('mcm-company-input') || document.getElementById('cs-company-input');
   var cn = input ? input.value : '';
   if(!anUpdateLeadCompany(leadId, cn)) return;
-  openMobileCallMode(leadId);
+  if (document.getElementById('mcm-overlay')) openMobileCallMode(leadId);
 };
 
 window.mcmSaveTitle = function(leadId) {
-  var input = document.getElementById('mcm-title-input');
+  var input = document.getElementById('mcm-title-input') || document.getElementById('cs-title-input');
   var t = input ? input.value : '';
   if (!anUpdateLeadTitle(leadId, t)) return;
-  openMobileCallMode(leadId);
+  if (document.getElementById('mcm-overlay')) openMobileCallMode(leadId);
 };
 
 window.mcmSave = function(leadId, opts) {
@@ -16770,11 +16942,11 @@ window.mcmSave = function(leadId, opts) {
   var lead = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.find(function(l){ return l.id===leadId; }) : null;
   if (!lead) { mcmClose(); return; }
 
-  var titleIn = document.getElementById('mcm-title-input');
+  var titleIn = document.getElementById('mcm-title-input') || document.getElementById('cs-title-input');
   if (titleIn && titleIn.value.trim() !== (lead.title || '').trim()) {
     anUpdateLeadTitle(leadId, titleIn.value, { silent: true });
   }
-  var companyIn = document.getElementById('mcm-company-input');
+  var companyIn = document.getElementById('mcm-company-input') || document.getElementById('cs-company-input');
   if (companyIn && companyIn.value.trim() !== (lead.company || '').trim()) {
     anUpdateLeadCompany(leadId, companyIn.value, { silent: true });
   }
@@ -17714,25 +17886,41 @@ console.log('[HOME DASHBOARD] Rendered successfully.');
 .co-card-mrr { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 12px; white-space: nowrap; }
 .co-card-foot { display: flex; align-items: center; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--divider, #f0f0f5); }
 #co-company-panel {
-  position: fixed; top: 0; right: 0; width: min(520px, 100vw); height: 100vh;
-  background: var(--card-bg, #fff); border-left: 1px solid var(--divider, #e9e9ef);
+  position: fixed; top: 0; left: var(--sb-width, 228px); right: 0; width: auto; height: 100vh;
+  background: var(--body-bg, #f7f7f9); border-left: 1px solid var(--divider, #e9e9ef);
   box-shadow: -12px 0 40px rgba(0,0,0,0.14); z-index: 9000; display: flex; flex-direction: column;
   transform: translateX(100%); transition: transform 0.28s ease;
 }
+body.sb-collapsed #co-company-panel { left: 68px; }
 #co-company-panel.open { transform: translateX(0); }
-#co-panel-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 8999; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+#co-panel-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 8999; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
 #co-panel-backdrop.open { opacity: 1; pointer-events: auto; }
-.co-panel-hero { padding: 20px 20px 16px; background: linear-gradient(135deg, #0f0f1a 0%, #1e1b4b 100%); color: #fff; flex-shrink: 0; }
-.co-panel-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--divider, #e9e9ef); background: var(--card-bg, #fff); flex-shrink: 0; }
-.co-panel-tab { padding: 11px 16px; border: none; border-bottom: 2px solid transparent; background: transparent; font-size: 13px; font-weight: 600; color: var(--text-muted, #a1a1aa); cursor: pointer; font-family: inherit; }
-.co-panel-tab.active { border-bottom-color: #6366f1; color: #6366f1; font-weight: 700; }
-.co-panel-body { flex: 1; overflow-y: auto; padding: 16px 20px 24px; }
-.co-panel-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--divider, #f0f0f5); gap: 12px; }
+.co-record-layout { display: grid; grid-template-columns: minmax(260px, 300px) minmax(0, 1fr) minmax(260px, 320px); height: 100%; min-height: 0; overflow: hidden; }
+.co-record-left { border-right: 1px solid var(--divider, #e9e9ef); overflow-y: auto; padding: 18px 20px 24px; background: var(--card-bg, #fff); }
+.co-record-center { overflow-y: auto; background: var(--body-bg, #f7f7f9); min-width: 0; }
+.co-record-right { border-left: 1px solid var(--divider, #e9e9ef); overflow-y: auto; padding: 16px; background: var(--card-bg, #fff); }
+.co-record-back { background: none; border: none; color: #6366f1; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0; margin-bottom: 16px; font-family: inherit; }
+.co-record-back:hover { text-decoration: underline; }
+.co-quick-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 20px; }
+.co-quick-btn { width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--divider, #e4e4e7); background: var(--card-bg, #fff); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: border-color 0.15s, background 0.15s; }
+.co-quick-btn:hover { border-color: #c7d2fe; background: #f5f3ff; }
+.co-key-info { border: 1px solid var(--divider, #e9e9ef); border-radius: 10px; overflow: hidden; }
+.co-key-info-head { padding: 10px 14px; font-size: 12px; font-weight: 700; color: var(--text-primary); background: var(--body-bg, #f7f7f9); border-bottom: 1px solid var(--divider, #e9e9ef); }
+.co-panel-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--divider, #f0f0f5); gap: 12px; }
+.co-panel-row:last-child { border-bottom: none; }
 .co-panel-row span:first-child { font-size: 12px; color: var(--text-muted, #71717a); flex-shrink: 0; }
-.co-panel-row span:last-child, .co-panel-row input { font-size: 12.5px; font-weight: 700; color: var(--text-primary, #09090b); text-align: right; }
-.co-contact-row { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border: 1px solid var(--divider, #e9e9ef); border-radius: 10px; margin-bottom: 8px; cursor: pointer; transition: background 0.12s, border-color 0.12s; }
-.co-contact-row:hover { background: #f4f4ff; border-color: #c7d2fe; }
-.co-revenue-card { background: linear-gradient(135deg, #0a0a14, #1a1640); border-radius: 12px; padding: 16px; color: #fff; margin-bottom: 16px; }
+.co-panel-row span:last-child, .co-panel-row input, .co-panel-row select { font-size: 12.5px; font-weight: 600; color: var(--text-primary, #09090b); text-align: right; max-width: 58%; }
+.co-activity-head { padding: 14px 20px; border-bottom: 1px solid var(--divider, #e9e9ef); background: var(--card-bg, #fff); position: sticky; top: 0; z-index: 2; }
+.co-activity-feed { padding: 8px 20px 24px; }
+.co-assoc-card { border: 1px solid var(--divider, #e9e9ef); border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+.co-assoc-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--body-bg, #f7f7f9); border-bottom: 1px solid var(--divider, #e9e9ef); font-size: 12px; font-weight: 700; color: var(--text-primary); }
+.co-assoc-body { padding: 8px 10px 10px; max-height: 280px; overflow-y: auto; }
+.co-contact-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; margin-bottom: 4px; cursor: pointer; transition: background 0.12s; }
+.co-contact-row:hover { background: #f4f4ff; }
+.co-table-wrap { flex: 1; min-height: 0; overflow: auto; background: var(--card-bg, #fff); }
+.co-view-toggle { display: flex; background: var(--body-bg, #f4f4f5); border: 1.5px solid var(--divider, #e4e4e7); border-radius: 8px; padding: 2px; gap: 2px; }
+.co-view-btn { padding: 5px 12px; border-radius: 6px; border: none; font-size: 12px; cursor: pointer; font-family: inherit; background: transparent; color: var(--text-muted); font-weight: 600; }
+.co-view-btn.active { background: #6366f1; color: #fff; }
 </style>
 
 <script>
@@ -17966,14 +18154,88 @@ CO.selectedIds = CO.selectedIds || [];
 CO.searchQuery = CO.searchQuery || '';
 CO.stageFilter = CO.stageFilter || '';
 CO.sortBy = CO.sortBy || 'mrr';
-CO.currentView = 'board';
+CO.currentView = CO.currentView || 'table';
 var _coSearchTimer = null;
 var CO_STAGES = [
-  { id: 'Customer', label: 'Customer', color: '#22c55e', dot: '#22c55e' },
-  { id: 'Opportunity', label: 'Opportunity', color: '#8b5cf6', dot: '#8b5cf6' },
-  { id: 'Lead', label: 'Lead', color: '#6366f1', dot: '#6366f1' },
-  { id: 'Unknown', label: 'Unknown', color: '#a1a1aa', dot: '#a1a1aa' }
+  { id: 'prospecting', label: 'Prospecting',      color: '#6366f1', dot: '#6366f1' },
+  { id: 'demo',        label: 'Demo Scheduled',   color: '#8b5cf6', dot: '#8b5cf6' },
+  { id: 'proposal',    label: 'Proposal Out',     color: '#f59e0b', dot: '#f59e0b' },
+  { id: 'negotiating', label: 'Negotiating',      color: '#06b6d4', dot: '#06b6d4' },
+  { id: 'won',         label: 'Closed Won',       color: '#10b981', dot: '#10b981' },
+  { id: 'lost',        label: 'Not Interested',   color: '#a1a1aa', dot: '#a1a1aa' }
 ];
+
+function coStage(id) { return CO_STAGES.find(function(s) { return s.id === id; }) || CO_STAGES[0]; }
+
+function coNormalizeLifecycleStage(stage) {
+  if (!stage) return '';
+  var s = String(stage).trim();
+  var legacy = {
+    Customer: 'won', Opportunity: 'demo', Lead: 'prospecting', Unknown: 'prospecting',
+    customer: 'won', opportunity: 'demo', lead: 'prospecting', unknown: 'prospecting'
+  };
+  if (legacy[s]) return legacy[s];
+  if (CO_STAGES.some(function(st) { return st.id === s; })) return s;
+  return '';
+}
+
+function coDeriveLifecycleFromLeads(leads, co) {
+  if (co && co.lifecycleStage) {
+    var norm = coNormalizeLifecycleStage(co.lifecycleStage);
+    if (norm) return norm;
+  }
+  if (!leads || !leads.length) return 'prospecting';
+  if (leads.some(function(l) { return l.status === 'won'; })) return 'won';
+  if (leads.some(function(l) { return l.status === 'proposal'; })) return 'proposal';
+  if (leads.some(function(l) { return ['demo', 'showed', 'booked_demo'].indexOf(l.status || '') >= 0 || l.isOpportunity; })) return 'demo';
+  if (leads.every(function(l) { return l.status === 'lost' || l.status === 'not_interested'; })) return 'lost';
+  if (leads.some(function(l) { return ['contacted', 'followup', 'nurture', 'emailed', 'callback'].indexOf(l.status || '') >= 0; })) return 'negotiating';
+  return 'prospecting';
+}
+
+function coEnsureSyncedFromLeads(done) {
+  if (typeof AN === 'undefined' || !Array.isArray(AN.leads)) {
+    if (done) done(_coData || []);
+    return;
+  }
+  if (typeof anSyncCompaniesFromLeads === 'function') anSyncCompaniesFromLeads();
+  var companies = (_coData && _coData.length) ? _coData.slice() : [];
+  if (!companies.length) {
+    try { companies = JSON.parse(localStorage.getItem(CO_KEY) || '[]'); } catch(e) { companies = []; }
+  }
+  var compMap = {};
+  companies.forEach(function(c) { if (c && c.name) compMap[coNormName(c.name)] = c; });
+  var changed = false;
+  AN.leads.forEach(function(l) {
+    var cn = (l.company || '').trim();
+    if (!cn || !coIsValidCompanyName(cn)) return;
+    var key = coNormName(cn);
+    if (!compMap[key]) {
+      companies.push({
+        id: 'co-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        name: cn,
+        industry: 'Insurance Agency',
+        notes: '', website: '', lifecycleStage: '',
+        ownerEmail: (l._repEmail || '').toLowerCase(),
+        created: new Date().toISOString(),
+        updated: new Date().toISOString(),
+        updatedBy: (AN.currentRepEmail || '')
+      });
+      compMap[key] = companies[companies.length - 1];
+      changed = true;
+    }
+    if (compMap[key] && l.companyId !== compMap[key].id) {
+      l.companyId = compMap[key].id;
+      changed = true;
+    }
+  });
+  if (changed && typeof coSave === 'function') {
+    coSave(companies, function() { if (done) done(companies); });
+  } else {
+    _coData = companies;
+    if (done) done(companies);
+  }
+}
 var CO_KANBAN_COL_LIMIT = 80;
 var _coStatsCache = null;
 var _coStatsCacheKey = '';
@@ -18071,8 +18333,7 @@ function coComputeStats(leads, co) {
     var psz2 = (typeof AN_SIZES !== 'undefined') ? AN_SIZES.find(function(s){ return s.id === pt.size; }) : null;
     primaryPlan = psz2 ? (psz2.label + ' (pipeline)') : 'In pipeline';
   }
-  var lifecycle = co && co.lifecycleStage ? co.lifecycleStage
-    : (won.length ? 'Customer' : pipeline.length ? 'Opportunity' : leads.length ? 'Lead' : 'Unknown');
+  var lifecycle = coDeriveLifecycleFromLeads(leads, co);
   var reps = {};
   leads.forEach(function(l){ if (l._repEmail) reps[l._repEmail] = true; });
   var ownerEmail = (co && co.ownerEmail) || Object.keys(reps)[0] || '';
@@ -18217,7 +18478,9 @@ function coRender() {
   _coRenderWith(sec, cached);
 
   coLoad(function(companies) {
-    _coRenderWith(sec, companies);
+    coEnsureSyncedFromLeads(function(synced) {
+      _coRenderWith(sec, synced && synced.length ? synced : companies);
+    });
   });
 }
 
@@ -18227,7 +18490,7 @@ function coGetVisibleCompanies(companies, statsMap) {
     if (!coCompanyBelongsToRep(c, statsMap)) return false;
     if (CO.searchQuery && c.name.toLowerCase().indexOf(CO.searchQuery.toLowerCase()) < 0) return false;
     if (CO.stageFilter) {
-      var st = (statsMap[c.id] || {}).lifecycle || 'Unknown';
+      var st = coNormalizeLifecycleStage((statsMap[c.id] || {}).lifecycle) || 'prospecting';
       if (st !== CO.stageFilter) return false;
     }
     return true;
@@ -18248,14 +18511,60 @@ function coSortCompanyItems(items) {
 function _coRenderWith(sec, companies) {
   var cache = coBuildStatsCache(companies);
   var visible = coGetVisibleCompanies(companies, cache.statsMap);
-  sec.innerHTML = '<div id="co-root">' + coPageHeader(companies, visible, cache.statsMap) + coKanbanView(visible, cache.statsMap) + '</div>';
+  var body = CO.currentView === 'board' ? coKanbanView(visible, cache.statsMap) : coTableView(visible, cache.statsMap);
+  sec.innerHTML = '<div id="co-root">' + coPageHeader(companies, visible, cache.statsMap) + body + '</div>';
   coUpdateSyncBadge();
   if (_coSelected) {
     var card = document.querySelector('.co-kanban-card[data-co-id="'+_coSelected+'"]');
     if (card) card.classList.add('active');
+    var row = document.querySelector('.co-table-row[data-co-id="'+_coSelected+'"]');
+    if (row) row.classList.add('active');
   }
-  setTimeout(initCoDragDrop, 60);
+  if (CO.currentView === 'board') setTimeout(initCoDragDrop, 60);
 }
+
+function coTableView(companies, statsMap) {
+  if (!companies.length) {
+    return coKanbanView(companies, statsMap);
+  }
+  var items = companies.map(function(co) {
+    return { co: co, stats: statsMap[co.id] || coGetCompanyStats(co.name, co, co.id) };
+  });
+  items = coSortCompanyItems(items);
+  var th = function(label, w) {
+    return '<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);border-bottom:2px solid var(--divider);white-space:nowrap;'+(w?'width:'+w+';':'')+'">'+label+'</th>';
+  };
+  var rows = items.map(function(item, i) {
+    var co = item.co;
+    var stats = item.stats;
+    var owner = stats.ownerEmail && typeof anGetRepName === 'function' ? anGetRepName(stats.ownerEmail) : (stats.ownerEmail ? stats.ownerEmail.split('@')[0] : 'No owner');
+    var stage = CO_STAGES.find(function(s) { return s.id === (coNormalizeLifecycleStage(stats.lifecycle) || 'prospecting'); }) || CO_STAGES[0];
+    var lastAct = stats.lastActivity ? (typeof anTimeAgo === 'function' ? anTimeAgo(stats.lastActivity) : stats.lastActivity) : '—';
+    var created = co.created ? (typeof anDate === 'function' ? anDate(co.created) : String(co.created).slice(0, 10)) : '—';
+    var phone = (stats.leads && stats.leads[0] && stats.leads[0].phone) ? (typeof anFormatPhone === 'function' ? anFormatPhone(stats.leads[0].phone) : stats.leads[0].phone) : '—';
+    var rowBg = i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.012)';
+    var active = _coSelected === co.id;
+    return '<tr class="co-table-row'+(active?' active':'')+'" data-co-id="'+co.id+'" style="border-bottom:1px solid var(--divider);background:'+(active?'rgba(99,102,241,0.06)':rowBg)+';cursor:pointer;" onclick="coOpenCompanyPanel(\''+co.id+'\')" onmouseover="if(!'+active+')this.style.background=\'rgba(99,102,241,0.04)\'" onmouseout="this.style.background=\''+(active?'rgba(99,102,241,0.06)':rowBg)+'\'">'
+      +'<td style="padding:11px 14px;" onclick="event.stopPropagation()"><input type="checkbox" class="co-cb" data-id="'+co.id+'"'+(CO.selectedIds.indexOf(co.id)>=0?' checked':'')+' onchange="coToggleSelect(\''+co.id+'\',this.checked)" style="accent-color:#6366f1;width:14px;height:14px;"></td>'
+      +'<td style="padding:11px 14px;"><div style="display:flex;align-items:center;gap:10px;min-width:0;"><div class="co-co-avatar" style="background:'+coColor(co.name)+';width:30px;height:30px;font-size:13px;border-radius:7px;">'+co.name.charAt(0).toUpperCase()+'</div><span style="font-size:13.5px;font-weight:700;color:#6366f1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+coEsc(co.name)+'</span></div></td>'
+      +'<td style="padding:11px 14px;font-size:13px;color:var(--text-secondary);white-space:nowrap;">'+coEsc(owner)+'</td>'
+      +'<td style="padding:11px 14px;font-size:12.5px;color:var(--text-muted);white-space:nowrap;">'+created+'</td>'
+      +'<td style="padding:11px 14px;font-size:12.5px;color:var(--text-muted);">'+coEsc(phone)+'</td>'
+      +'<td style="padding:11px 14px;font-size:12.5px;color:var(--text-muted);white-space:nowrap;">'+coEsc(lastAct)+'</td>'
+      +'<td style="padding:11px 14px;font-size:12.5px;color:var(--text-secondary);">'+(stats.state ? coEsc(stats.state) : '—')+'</td>'
+      +'<td style="padding:11px 14px;"><span style="background:'+stage.color+'18;color:'+stage.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap;">'+stage.label+'</span></td>'
+      +'<td style="padding:11px 14px;font-size:13px;color:var(--text-secondary);text-align:center;">'+stats.totalContacts+'</td>'
+      +'</tr>';
+  }).join('');
+  return '<div class="co-table-wrap"><table style="width:100%;border-collapse:collapse;font-size:13.5px;">'
+    +'<thead><tr style="background:var(--body-bg);">'+th('', '40px')+th('Company name')+th('Company owner')+th('Create date')+th('Phone number')+th('Last activity')+th('State')+th('Lifecycle')+th('Contacts', '72px')+'</tr></thead>'
+    +'<tbody>'+rows+'</tbody></table></div>';
+}
+
+window.coSetView = function(view) {
+  CO.currentView = view === 'board' ? 'board' : 'table';
+  coRender();
+};
 
 function coRefreshBulkBar() {
   var el = document.getElementById('co-bulk-bar');
@@ -18315,8 +18624,8 @@ function coKanbanView(companies, statsMap) {
   CO_STAGES.forEach(function(s){ byStage[s.id] = []; });
   companies.forEach(function(co) {
     var stats = statsMap[co.id] || coGetCompanyStats(co.name, co, co.id);
-    var stage = stats.lifecycle || 'Unknown';
-    if (!byStage[stage]) byStage[stage] = [];
+    var stage = coNormalizeLifecycleStage(stats.lifecycle) || 'prospecting';
+    if (!byStage[stage]) stage = 'prospecting';
     byStage[stage].push({ co: co, stats: stats });
   });
 
@@ -18383,13 +18692,13 @@ function coPageHeader(companies, visible, statsMap) {
   var totalContacts = 0;
   var customers = 0;
   shown.forEach(function(co) {
-    var st = (map[co.id] || {}).lifecycle || 'Unknown';
+    var st = coNormalizeLifecycleStage((map[co.id] || {}).lifecycle) || 'prospecting';
     stageCounts[st] = (stageCounts[st] || 0) + 1;
     var s = map[co.id] || {};
     totalMRR += (s.activeMRR || s.pipelineMRR || 0);
     totalActiveMRR += (s.activeMRR || 0);
     totalContacts += (s.totalContacts || 0);
-    if (st === 'Customer') customers++;
+    if (st === 'won') customers++;
   });
 
   var metrics = '<div class="co-metrics">'
@@ -18400,6 +18709,11 @@ function coPageHeader(companies, visible, statsMap) {
     +'</div>';
 
   var filterRow = '<div class="co-filter-row">'
+    +'<div class="co-view-toggle" style="margin-right:8px;">'
+    +'<button type="button" class="co-view-btn'+(CO.currentView!=='board'?' active':'')+'" onclick="coSetView(\'table\')">☰ Table</button>'
+    +'<button type="button" class="co-view-btn'+(CO.currentView==='board'?' active':'')+'" onclick="coSetView(\'board\')">▦ Board</button>'
+    +'</div>'
+    +'<span style="width:1px;height:20px;background:var(--divider,#e4e4e7);"></span>'
     +'<span style="font-size:11px;font-weight:700;color:var(--text-muted,#71717a);text-transform:uppercase;letter-spacing:0.08em;margin-right:4px;">Stage</span>'
     +coStageChip('', 'All', shown.length, '')
     +CO_STAGES.map(function(st) { return coStageChip(st.id, st.label, stageCounts[st.id] || 0, st.color); }).join('')
@@ -18440,17 +18754,7 @@ window.coSetStageFilter = function(stage) {
 
 window.coSetSort = function(sort) {
   CO.sortBy = sort;
-  var board = document.querySelector('.co-kanban-wrap');
-  if (board && _coData.length) {
-    var cache = coBuildStatsCache(_coData);
-    var visible = coGetVisibleCompanies(_coData, cache.statsMap);
-    board.outerHTML = coKanbanView(visible, cache.statsMap);
-    if (_coSelected) {
-      var card = document.querySelector('.co-kanban-card[data-co-id="'+_coSelected+'"]');
-      if (card) card.classList.add('active');
-    }
-    setTimeout(initCoDragDrop, 60);
-  } else coRender();
+  coRender();
 };
 
 window.coForceCloudRefresh = function() {
@@ -18458,8 +18762,10 @@ window.coForceCloudRefresh = function() {
   localStorage.removeItem(CO_KEY);
   _coData = [];
   coLoad(function() {
-    coRender();
-    if (typeof showToast === 'function') showToast('Companies refreshed from cloud');
+    coEnsureSyncedFromLeads(function() {
+      coRender();
+      if (typeof showToast === 'function') showToast('Companies refreshed from cloud');
+    });
   });
 };
 
@@ -18539,14 +18845,15 @@ window.anSetCompanyFilter = function(companyName) {
 };
 
 window.coSyncFromLeads = function(){
-  if(typeof anSyncCompaniesFromLeads !== 'function'){
-    if(typeof showToast === 'function') showToast('Load Lead Pipeline first');
+  if (typeof AN === 'undefined' || !Array.isArray(AN.leads)) {
+    if (typeof showToast === 'function') showToast('Load Lead Pipeline first');
     return;
   }
-  anSyncCompaniesFromLeads();
-  coInvalidateStatsCache();
-  coRender();
-  if(typeof showToast === 'function') showToast('Synced company pages from lead agency names');
+  coEnsureSyncedFromLeads(function() {
+    coInvalidateStatsCache();
+    coRender();
+    if (typeof showToast === 'function') showToast('Synced company pages from lead agency names');
+  });
 };
 
 function coBuildCompanyPanelHTML(co, stats) {
@@ -18604,60 +18911,58 @@ function coBuildCompanyPanelHTML(co, stats) {
       +'<div style="font-size:11px;color:var(--text-muted,#71717a);margin-top:3px;">$'+(coLeadMRR(o)||79)+'/mo · '+st.label+'</div></div>';
   }).join('') : '<div style="text-align:center;padding:28px;color:var(--text-muted,#71717a);font-size:13px;">No deals in pipeline.</div>';
 
+  var stageObj = CO_STAGES.find(function(s) { return s.id === (coNormalizeLifecycleStage(stats.lifecycle) || 'prospecting'); }) || CO_STAGES[0];
+  var stageLabel = stageObj.label;
+  var firstLead = leads[0];
+  var firstPhone = firstLead && firstLead.phone ? (typeof anFormatPhone === 'function' ? anFormatPhone(firstLead.phone) : firstLead.phone) : '—';
+
   return ''
-    +'<div class="co-panel-hero">'
-    +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">'
-    +'<div style="display:flex;align-items:center;gap:14px;min-width:0;">'
-    +'<div class="co-co-avatar" style="background:'+coColor(co.name)+';width:52px;height:52px;font-size:22px;">'+co.name.charAt(0).toUpperCase()+'</div>'
-    +'<div style="min-width:0;"><div style="font-size:19px;font-weight:800;letter-spacing:-0.3px;">'+coEsc(co.name)+'</div>'
-    +'<div style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:4px;">'+stats.totalContacts+' contacts · <span style="color:'+stageCol+';font-weight:700;">'+coEsc(stats.lifecycle)+'</span></div></div>'
-    +'</div>'
-    +'<button onclick="coCloseCompanyPanel()" style="background:rgba(255,255,255,0.12);border:none;color:rgba(255,255,255,0.7);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;flex-shrink:0;">✕</button>'
-    +'</div>'
-    +'<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">'
-    +'<button onclick="typeof anNewLeadForCompany===\'function\'?anNewLeadForCompany(\''+safeName+'\'):coAddContact(\''+co.id+'\')" style="padding:7px 13px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">+ Contact</button>'
-    +'<button onclick="typeof logCallForCompany===\'function\'?logCallForCompany(\''+safeName+'\'):void 0" style="padding:7px 13px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">📞 Log call</button>'
-    +'<button onclick="coViewInPipeline(\''+safeName+'\')" style="padding:7px 13px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Pipeline →</button>'
+    +'<div class="co-record-layout">'
+    +'<aside class="co-record-left">'
+    +'<button type="button" class="co-record-back" onclick="coCloseCompanyPanel()">← Companies</button>'
+    +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">'
+    +'<div class="co-co-avatar" style="background:'+coColor(co.name)+';width:48px;height:48px;font-size:20px;border-radius:10px;">'+co.name.charAt(0).toUpperCase()+'</div>'
+    +'<div style="min-width:0;"><div style="font-size:20px;font-weight:800;color:var(--text-primary);letter-spacing:-0.3px;line-height:1.2;">'+coEsc(co.name)+'</div>'
+    +(co.website ? '<a href="'+(co.website.indexOf('http')===0?co.website:'https://'+co.website)+'" target="_blank" rel="noopener" style="font-size:12px;color:#6366f1;text-decoration:none;">'+coEsc(co.website)+' ↗</a>' : '<div style="font-size:12px;color:var(--text-muted);">No website</div>')
     +'</div></div>'
-
-    +'<div class="co-revenue-card" style="margin:16px 20px 0;">'
-    +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.45);">Revenue</div>'
-    +'<div style="font-size:28px;font-weight:900;margin-top:6px;">$'+mrr+'<span style="font-size:14px;font-weight:600;opacity:0.5;">/mo</span></div>'
-    +'<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;">'+(stats.activeUsers?stats.activeUsers+' signed up · ':'')+coEsc(stats.primaryPlan)+'</div>'
+    +'<div class="co-quick-actions">'
+    +'<button type="button" class="co-quick-btn" title="Add note" onclick="coPanelTab(\'activity\')">📝</button>'
+    +'<button type="button" class="co-quick-btn" title="Log email" onclick="'+(firstLead?'anQuickLogEmail(\''+firstLead.id+'\')':'void(0)')+'">✉️</button>'
+    +'<button type="button" class="co-quick-btn" title="Log call" onclick="typeof logCallForCompany===\'function\'?logCallForCompany(\''+safeName+'\'):void(0)">📞</button>'
+    +'<button type="button" class="co-quick-btn" title="Add contact" onclick="typeof anNewLeadForCompany===\'function\'?anNewLeadForCompany(\''+safeName+'\'):void(0)">👤</button>'
+    +'<button type="button" class="co-quick-btn" title="View in pipeline" onclick="coViewInPipeline(\''+safeName+'\')">📋</button>'
     +'</div>'
-
-    +'<div class="co-panel-tabs" style="margin-top:16px;">'
-    +'<button type="button" id="co-panel-tab-overview" class="co-panel-tab active" onclick="coPanelTab(\'overview\')">Overview</button>'
-    +'<button type="button" id="co-panel-tab-contacts" class="co-panel-tab" onclick="coPanelTab(\'contacts\')">Contacts ('+leads.length+')</button>'
-    +'<button type="button" id="co-panel-tab-activity" class="co-panel-tab" onclick="coPanelTab(\'activity\')">Activity</button>'
-    +'<button type="button" id="co-panel-tab-deals" class="co-panel-tab" onclick="coPanelTab(\'deals\')">Deals ('+opps.length+')</button>'
-    +'</div>'
-
-    +'<div class="co-panel-body">'
-    +'<div id="co-panel-pane-overview">'
-    +'<div class="co-panel-row"><span>Owner</span>'
-    +'<button type="button" onclick="anOpenOwnerPicker({companyName:\''+safeName+'\'})" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">'+coEsc(ownerName)+' ▾</button></div>'
-    +panelRow('Signed up', stats.activeUsers || '0')
+    +'<div class="co-key-info">'
+    +'<div class="co-key-info-head">Key information</div>'
+    +'<div class="co-panel-row"><span>Company owner</span><button type="button" onclick="anOpenOwnerPicker({companyName:\''+safeName+'\'})" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">'+coEsc(ownerName)+' ▾</button></div>'
+    +panelRow('Lifecycle stage', '<span style="color:'+stageObj.color+';">'+coEsc(stageLabel)+'</span>')
+    +panelRow('State / region', stats.state ? coEsc(stats.state) : '—')
+    +panelRow('Phone', coEsc(firstPhone))
+    +panelRow('Contacts', String(stats.totalContacts || 0))
     +panelRow('Active MRR', stats.activeMRR ? '$'+stats.activeMRR+'/mo' : '—')
     +panelRow('Pipeline MRR', stats.pipelineMRR ? '$'+stats.pipelineMRR+'/mo' : '—')
-    +panelRow('State', stats.state ? coEsc(stats.state) : '—')
-    +panelRow('Last activity', stats.lastActivity ? (typeof anTimeAgo === 'function' ? anTimeAgo(stats.lastActivity) : coEsc(stats.lastActivity)) : '—')
-    +panelRow('Next follow-up', stats.nextFollowUp ? (typeof anDate === 'function' ? anDate(stats.nextFollowUp) : coEsc(stats.nextFollowUp)) : '—')
-    +'<div class="co-panel-row"><span>Website</span><input type="text" value="'+coEsc(co.website||'')+'" placeholder="website.com" onblur="coSaveField(\''+co.id+'\',\'website\',this.value)" style="border:none;border-bottom:1px solid var(--divider,#e4e4e7);background:transparent;outline:none;min-width:140px;text-align:right;font-family:inherit;"></div>'
-    +'<div class="co-panel-row"><span>Industry</span><input type="text" value="'+coEsc(co.industry||'Insurance Agency')+'" placeholder="Industry" onblur="coSaveField(\''+co.id+'\',\'industry\',this.value)" style="border:none;border-bottom:1px solid var(--divider,#e4e4e7);background:transparent;outline:none;min-width:140px;text-align:right;font-family:inherit;"></div>'
-    +'<div class="co-panel-row"><span>Lifecycle</span><select onchange="coSaveField(\''+co.id+'\',\'lifecycleStage\',this.value);coRender();if(_coSelected===\''+co.id+'\')coOpenCompanyPanel(\''+co.id+'\');" style="border:1.5px solid var(--divider,#e4e4e7);border-radius:6px;padding:4px 8px;font-size:12px;font-weight:600;font-family:inherit;background:var(--card-bg,#fff);color:var(--text-primary,#09090b);">'
+    +'<div class="co-panel-row"><span>Website</span><input type="text" value="'+coEsc(co.website||'')+'" placeholder="website.com" onblur="coSaveField(\''+co.id+'\',\'website\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;outline:none;min-width:120px;text-align:right;font-family:inherit;font-size:12px;"></div>'
+    +'<div class="co-panel-row"><span>Industry</span><input type="text" value="'+coEsc(co.industry||'Insurance Agency')+'" onblur="coSaveField(\''+co.id+'\',\'industry\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;outline:none;min-width:120px;text-align:right;font-family:inherit;font-size:12px;"></div>'
+    +'<div class="co-panel-row"><span>Lifecycle</span><select onchange="coSaveField(\''+co.id+'\',\'lifecycleStage\',this.value);coRender();coOpenCompanyPanel(\''+co.id+'\');" style="border:1.5px solid var(--divider);border-radius:6px;padding:4px 8px;font-size:11px;font-family:inherit;background:var(--card-bg);">'
     +CO_STAGES.map(function(s) {
       var sel = (co.lifecycleStage || stats.lifecycle) === s.id ? ' selected' : '';
       return '<option value="'+s.id+'"'+sel+'>'+s.label+'</option>';
     }).join('')
     +'</select></div>'
-    +'<div style="margin-top:16px;"><div style="font-size:10px;font-weight:700;color:var(--text-muted,#a1a1aa);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Notes</div>'
-    +'<textarea rows="4" placeholder="Strategy, pricing notes..." onblur="coSaveField(\''+co.id+'\',\'notes\',this.value)" style="width:100%;border:1.5px solid var(--divider,#e4e4e7);border-radius:8px;padding:10px;font-size:12px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;">'+coEsc(co.notes||'')+'</textarea></div>'
-    +'<button onclick="coDeleteCompany(\''+co.id+'\')" style="margin-top:16px;width:100%;padding:10px;border-radius:8px;border:1px solid #fecaca;background:#fef2f2;color:#ef4444;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Remove company</button>'
     +'</div>'
-    +'<div id="co-panel-pane-contacts" style="display:none;">'+contactsHTML+'</div>'
-    +'<div id="co-panel-pane-activity" style="display:none;">'+activityHTML+'</div>'
-    +'<div id="co-panel-pane-deals" style="display:none;">'+dealsHTML+'</div>'
+    +'<div style="margin-top:16px;"><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Company notes</div>'
+    +'<textarea rows="5" placeholder="Strategy, objections, pricing..." onblur="coSaveField(\''+co.id+'\',\'notes\',this.value)" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:10px;font-size:12px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;">'+coEsc(co.notes||'')+'</textarea></div>'
+    +'<button onclick="coDeleteCompany(\''+co.id+'\')" style="margin-top:14px;width:100%;padding:9px;border-radius:8px;border:1px solid #fecaca;background:#fef2f2;color:#ef4444;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Remove company</button>'
+    +'</aside>'
+    +'<main class="co-record-center">'
+    +'<div class="co-activity-head"><div style="font-size:14px;font-weight:800;color:var(--text-primary);">Activities</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Calls, emails, and notes across all contacts</div></div>'
+    +'<div class="co-activity-feed" id="co-panel-pane-activity">'+activityHTML+'</div>'
+    +'</main>'
+    +'<aside class="co-record-right">'
+    +'<div class="co-assoc-card"><div class="co-assoc-head"><span>Contacts ('+leads.length+')</span><button type="button" onclick="typeof anNewLeadForCompany===\'function\'?anNewLeadForCompany(\''+safeName+'\'):void(0)" style="background:none;border:none;color:#6366f1;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">+ Add</button></div><div class="co-assoc-body">'+contactsHTML+'</div></div>'
+    +'<div class="co-assoc-card"><div class="co-assoc-head"><span>Deals ('+opps.length+')</span><button type="button" onclick="coViewInPipeline(\''+safeName+'\')" style="background:none;border:none;color:#6366f1;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Pipeline →</button></div><div class="co-assoc-body">'+dealsHTML+'</div></div>'
+    +'<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);border-radius:10px;padding:14px;color:#fff;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;opacity:0.55;">Revenue</div><div style="font-size:24px;font-weight:900;margin-top:4px;">$'+mrr+'<span style="font-size:13px;opacity:0.5;">/mo</span></div><div style="font-size:11px;opacity:0.55;margin-top:4px;">'+coEsc(stats.primaryPlan)+'</div></div>'
+    +'</aside>'
     +'</div>';
 }
 
@@ -18843,7 +19148,7 @@ window.coNewCompany = function() {
   var companies = _coData.slice();
   var co = {
     id:'co-'+Date.now(), name:name.trim(), industry:'Insurance Agency', website:'',
-    lifecycleStage:'Lead', notes:'', ownerEmail:(typeof AN !== 'undefined' ? AN.currentRepEmail : '') || '',
+    lifecycleStage:'prospecting', notes:'', ownerEmail:(typeof AN !== 'undefined' ? AN.currentRepEmail : '') || '',
     created:new Date().toISOString(), updated:new Date().toISOString(),
     updatedBy:(typeof AN !== 'undefined' ? AN.currentRepEmail : '') || ''
   };
@@ -18944,7 +19249,10 @@ window.showSection = function(id, btn) {
   if (typeof _origShowSection_co === 'function') _origShowSection_co(id, btn);
   if (id === 'companies') {
     setTimeout(function() {
-      var renderCo = function() { coInvalidateStatsCache(); coRender(); };
+      var renderCo = function() {
+        coInvalidateStatsCache();
+        coEnsureSyncedFromLeads(function() { coRender(); });
+      };
       if (typeof AN !== 'undefined' && typeof AN.load === 'function') AN.load(renderCo);
       else renderCo();
     }, 60);
@@ -20299,6 +20607,7 @@ window._anEnhanceCallPanel = function(leadId) {
     if (skipBtn) skipBtn.textContent = '⏭ Skip to Next (no log)';
   }
   if (typeof mcmRenderDayGoalsWidget === 'function') mcmRenderDayGoalsWidget();
+  if (typeof anRefreshCallSessionCompanyPanel === 'function') anRefreshCallSessionCompanyPanel(leadId);
 
   // Show existing notes for context
   var noteArea = document.getElementById('mcm-note');
@@ -20452,10 +20761,11 @@ console.log('[CALL SESSION] Queue workflow loaded.');
       + '@keyframes shoutPop{0%{transform:translateY(-20px);opacity:0;}15%{transform:translateY(0);opacity:1;}85%{opacity:1;}100%{transform:translateY(-10px);opacity:0;}}'
       + '#mcm-panel-wrap{position:fixed;top:0;right:0;bottom:0;width:360px;max-width:100vw;z-index:20000;pointer-events:auto;box-shadow:-8px 0 28px rgba(0,0,0,0.22);animation:mcmSlideIn 0.22s ease;}'
       + '#an-cs-lead-panel{animation:mcmSlideIn 0.26s ease;z-index:19999;}'
+      + '#an-cs-company-panel{animation:mcmSlideIn 0.26s ease;z-index:19998;}'
       + 'body.call-panel-open .main{margin-right:0!important;}'
       + 'body.call-panel-open #call-panel-backdrop{display:none!important;}'
       + 'body.call-lead-collapsed #an-cs-lead-panel{display:none!important;}'
-      + 'body.call-panel-minimized #mcm-panel-wrap,body.call-panel-minimized #an-cs-lead-panel{transform:translateX(110%);pointer-events:none;opacity:0;}'
+      + 'body.call-panel-minimized #mcm-panel-wrap,body.call-panel-minimized #an-cs-lead-panel,body.call-panel-minimized #an-cs-company-panel{transform:translateX(110%);pointer-events:none;opacity:0;}'
       + '@media(max-width:1200px){body.call-session-dual #an-cs-lead-panel{width:340px;right:360px;}}'
       + '@media(max-width:900px){#mcm-panel-wrap{width:100vw;}#an-cs-lead-panel{right:0;width:100vw;max-width:100vw;}}'
       + 'body.sb-collapsed #an-cs-banner{left:68px;max-width:calc(100vw - 500px);}';
@@ -21136,17 +21446,7 @@ body.an-section-crm .coach-fab{bottom:78px;right:32px;}
 // Companies have their own stage, separate from lead statuses
 // ============================================================
 
-// ── Company data store ────────────────────────────────────────
-var CO_STAGES = [
-  { id:'prospecting', label:'Prospecting',      color:'#6366f1' },
-  { id:'demo',        label:'Demo Scheduled',   color:'#8b5cf6' },
-  { id:'proposal',    label:'Proposal Out',     color:'#f59e0b' },
-  { id:'negotiating', label:'Negotiating',      color:'#06b6d4' },
-  { id:'won',         label:'Closed Won',       color:'#10b981' },
-  { id:'lost',        label:'Not Interested',   color:'#a1a1aa' }
-];
-
-function coStage(id){ return CO_STAGES.find(function(s){return s.id===id;})||CO_STAGES[0]; }
+// ── Company data store (CO_STAGES + coStage defined in Companies board section) ──
 
 function getCoData(name){
   try{ var a=JSON.parse(localStorage.getItem('an-co-data')||'{}'); return a[name]||{stage:'prospecting',industry:'',notes:'',website:'',createdAt:new Date().toISOString()}; }
