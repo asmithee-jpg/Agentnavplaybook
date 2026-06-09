@@ -1,7 +1,5 @@
 // netlify/functions/invite.js
-// Server-side rep invite using Supabase service role key
-
-const { createClient } = require('@supabase/supabase-js');
+// Server-side rep invite using Supabase service role key (no npm deps)
 
 exports.handler = async function(event) {
   const headers = {
@@ -36,7 +34,7 @@ exports.handler = async function(event) {
     return { statusCode: 403, headers, body: JSON.stringify({ error: 'Admin access required' }) };
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseUrl = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !serviceKey) {
@@ -49,28 +47,44 @@ exports.handler = async function(event) {
     };
   }
 
-  const adminClient = createClient(supabaseUrl, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false }
-  });
+  const redirectTo = process.env.SITE_URL || process.env.URL || 'https://agentnavplaybook.netlify.app';
+
+  async function supabaseAuthPost(path, payload) {
+    const res = await fetch(supabaseUrl + path, {
+      method: 'POST',
+      headers: {
+        apikey: serviceKey,
+        Authorization: 'Bearer ' + serviceKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    var data = {};
+    try { data = await res.json(); } catch (e) {}
+    return { ok: res.ok, status: res.status, data: data };
+  }
 
   try {
-    const redirectTo = process.env.SITE_URL || process.env.URL || 'https://agentnavplaybook.netlify.app';
-    const { data, error } = await adminClient.auth.admin.inviteUserByEmail(email, {
+    var inviteRes = await supabaseAuthPost('/auth/v1/invite', {
+      email: email,
       data: {
         full_name: fullName || email.split('@')[0],
         role: role || 'ae',
         invited_by: invitedBy
       },
-      redirectTo: redirectTo
+      redirect_to: redirectTo
     });
 
-    if (error) {
-      if (error.message && error.message.toLowerCase().includes('already been registered')) {
-        const { error: resetError } = await adminClient.auth.resetPasswordForEmail(email, {
-          redirectTo: redirectTo + '#reset-password'
+    if (!inviteRes.ok) {
+      var msg = (inviteRes.data && (inviteRes.data.msg || inviteRes.data.error_description || inviteRes.data.error)) || 'Invite failed';
+      if (String(msg).toLowerCase().indexOf('already') >= 0 || String(msg).toLowerCase().indexOf('registered') >= 0) {
+        var resetRes = await supabaseAuthPost('/auth/v1/recover', {
+          email: email,
+          redirect_to: redirectTo + '#reset-password'
         });
-        if (resetError) {
-          return { statusCode: 400, headers, body: JSON.stringify({ error: resetError.message }) };
+        if (!resetRes.ok) {
+          var resetMsg = (resetRes.data && (resetRes.data.msg || resetRes.data.error_description || resetRes.data.error)) || 'Password reset failed';
+          return { statusCode: 400, headers, body: JSON.stringify({ error: resetMsg }) };
         }
         return {
           statusCode: 200,
@@ -82,13 +96,17 @@ exports.handler = async function(event) {
           })
         };
       }
-      return { statusCode: 400, headers, body: JSON.stringify({ error: error.message }) };
+      return { statusCode: 400, headers, body: JSON.stringify({ error: msg }) };
     }
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ success: true, userId: data.user?.id, message: 'Invite sent successfully' })
+      body: JSON.stringify({
+        success: true,
+        userId: inviteRes.data && inviteRes.data.id,
+        message: 'Invite sent successfully'
+      })
     };
   } catch (err) {
     console.error('Invite error:', err);
