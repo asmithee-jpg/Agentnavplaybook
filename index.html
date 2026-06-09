@@ -4762,7 +4762,7 @@ function getActivityForPeriod(period) {
   else if (period === 'month') cutoff.setDate(cutoff.getDate() - 30);
   else cutoff = new Date(0);
   log.forEach(function(e) {
-    if (new Date(e.date+'T12:00:00') >= cutoff) {
+    if (new Date(e.date+'T12:00:00') >= cutoff && new Date(e.date+'T12:00:00') <= sdrTo2) {
       result.calls  += e.calls  || 0;
       result.demos  += e.demos  || 0;
       result.closes += e.closes || 0;
@@ -5943,10 +5943,14 @@ function buildSDRMetricsHTML() {
   var now    = new Date();
 
   // Rolling 30-day totals
-  var cutoff30 = new Date(now); cutoff30.setDate(cutoff30.getDate() - 30);
+  // Use shared date range if available, else rolling 30 days
+  var _sdrRange = (typeof getDateRangeDates==='function') ? getDateRangeDates() : null;
+  var cutoff30 = _sdrRange ? _sdrRange.from : new Date(now);
+  if (!_sdrRange) cutoff30.setDate(cutoff30.getDate() - 30);
+  var sdrTo = _sdrRange ? _sdrRange.to : new Date(now);
   var totalCalls  = 0, totalDemosSet = 0, totalCloses = 0;
   log.forEach(function(e) {
-    if (new Date(e.date + 'T12:00:00') >= cutoff30) {
+    if (new Date(e.date + 'T12:00:00') >= cutoff30 && new Date(e.date + 'T12:00:00') <= sdrTo) {
       totalCalls      += e.calls  || 0;
       totalDemosSet   += e.demos  || 0;
       totalCloses     += e.closes || 0;
@@ -6001,7 +6005,7 @@ function buildSDRMetricsHTML() {
   return '<div style="margin-top:20px;padding-top:20px;border-top:2px solid #f4f4f5;">'
     +'<div style="font-size:12px;font-weight:700;color:#09090b;margin-bottom:14px;display:flex;align-items:center;gap:8px;">'
     +'<span style="background:#0f0f17;color:#6366f1;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:0.1em;">SDR Metrics</span>'
-    +'<span style="font-size:11px;color:#a1a1aa;font-weight:400;">Rolling 30 days</span>'
+    +(typeof buildRangeDropdown==='function' ? buildRangeDropdown().replace('id="chart-range-select"','id="sdr-range-select" onchange="_sdrDateRange=this.value;applyDateRange(this.value);renderDash()"') : '<span style="font-size:11px;color:#a1a1aa;">Rolling 30 days</span>')
     +'</div>'
 
     // Conversion rates row
@@ -6069,7 +6073,10 @@ function renderFunnelChart() {
   var log   = _dash.activityLog || [];
   var demos = _dash.demos || [];
   var now   = new Date();
-  var cutoff = new Date(now); cutoff.setDate(cutoff.getDate() - 30);
+  var _sdrRange2 = (typeof getDateRangeDates==='function') ? getDateRangeDates() : null;
+  var cutoff = _sdrRange2 ? _sdrRange2.from : new Date(now);
+  if (!_sdrRange2) cutoff.setDate(cutoff.getDate() - 30);
+  var sdrTo2 = _sdrRange2 ? _sdrRange2.to : new Date(now);
 
   var calls = 0, demosSt = 0, closes = 0;
   log.forEach(function(e) {
@@ -10138,7 +10145,7 @@ function renderLeadsTable(){
       })()+'</td>'
       +'<td style="padding:10px 12px;" onclick="event.stopPropagation()">'
       +'<div style="display:flex;gap:4px;">'
-      +'<button onclick="anLogCall(\''+lead.id+'\')" style="background:#ecfdf5;color:#10b981;border:1px solid #a7f3d0;border-radius:6px;padding:4px 8px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:var(--sans);" title="Log Call">📞</button>'
+      +'<button onclick="anLogCall(\''+lead.id+'\')" style="background:#ecfdf5;color:#10b981;border:1px solid #a7f3d0;border-radius:6px;padding:4px 8px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:var(--sans);" title="Log Activity">📞</button>'
       +(anCanReassignOwner(lead)?'<button onclick="event.stopPropagation();anOpenOwnerPicker({leadId:\''+lead.id+'\'})" style="background:#fffbeb;color:#f59e0b;border:1px solid #fde68a;border-radius:6px;padding:4px 8px;font-size:11.5px;cursor:pointer;font-family:var(--sans);" title="Change owner">👤</button>':'')
       +'<button onclick="anDeleteLead(\''+lead.id+'\')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;padding:4px 6px;" title="Delete">✕</button>'
       +'</div></td>'
@@ -10148,7 +10155,7 @@ function renderLeadsTable(){
   el.innerHTML = '<div style="display:flex;flex-direction:column;min-height:100%;">'
     +'<div style="flex:1;overflow:auto;"><table style="width:100%;border-collapse:collapse;font-size:13.5px;min-width:800px;">'
     +'<thead><tr>'
-    +'<th style="width:52px;padding:9px 8px;border-bottom:2px solid var(--divider);vertical-align:bottom;"><input type="checkbox" id="crm-select-all" onclick="anToggleSelectAll(this.checked)" title="Select leads on this page only ('+(AN.pageSize||100)+' max)" style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;"><div style="font-size:8px;color:var(--text-muted);margin-top:3px;line-height:1.35;"><span style="display:block;">this page</span><a href="#" onclick="event.preventDefault();anSelectAllFilteredLeads()" style="color:#6366f1;text-decoration:none;font-weight:700;">all '+list.length.toLocaleString()+'</a><a href="#" onclick="event.preventDefault();anPromptTransferCount()" style="color:#6366f1;text-decoration:none;font-weight:700;display:block;margin-top:2px;">pick #</a></div></th>'
+    +'<th style="width:52px;padding:9px 8px;border-bottom:2px solid var(--divider);vertical-align:bottom;"><input type="checkbox" id="crm-select-all" onclick="anToggleSelectAll(this.checked)" title="Select leads on this page only ('+(AN.pageSize||100)+' max)" style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;"><div style="font-size:8px;color:var(--text-muted);margin-top:3px;line-height:1.35;"><div style="display:flex;flex-direction:column;gap:3px;margin-top:4px;"><a href="#" onclick="event.preventDefault();anSelectAllFilteredLeads()" title="Select all +list.length.toLocaleString()+leads" style="font-size:9.5px;font-weight:700;color:#6366f1;text-decoration:none;white-space:nowrap;">All '+list.length.toLocaleString()+'</a><a href="#" onclick="event.preventDefault();anPromptTransferCount()" title="Pick a specific number" style="font-size:9.5px;font-weight:600;color:var(--text-muted);text-decoration:none;white-space:nowrap;">Pick...</a></div></th>'
     +th('Name','lastName')+th('Company','company')+th('State','state')+th('Size','size')+th('Phone','phone')+th('Status','status')
     +(anShowOwnerColumn()?'<th style="padding:9px 12px;border-bottom:2px solid var(--divider);font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#f59e0b;">Owner</th>':'')
     +th('Follow Up','nextFollowUp')+th('Last Activity','lastContactDate')
@@ -10373,98 +10380,246 @@ window.anSaveNotes = function(id){
 };
 
 // ── Call logging ──────────────────────────────────────────────
-window.anLogCall = function(leadId){
-  var old=document.getElementById('an-call-modal'); if(old) old.remove();
-  var now=new Date();
-  var today=now.toISOString().split('T')[0];
-  var curTime=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
-  var outcomes=[{id:'pickup',icon:'☎️',label:'Picked Up',col:'#10b981'},{id:'demo',icon:'🎯',label:'Demo Set',col:'#f59e0b'},{id:'voicemail',icon:'📬',label:'Voicemail',col:'#6366f1'},{id:'noanswer',icon:'📵',label:'No Answer',col:'#a1a1aa'}];
+window.anLogCall = window.anLogActivity = function(leadId) {
+  var old = document.getElementById('an-activity-modal');
+  if (old) old.remove();
+  var now = new Date();
+  var today = now.toISOString().split('T')[0];
+  var curTime = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
 
-  var m=document.createElement('div');
-  m.id='an-call-modal';
-  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;';
-  m.innerHTML='<div style="background:var(--card-bg);border-radius:14px;padding:24px;width:440px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><div style="font-size:16px;font-weight:800;color:var(--text-primary);">Log a Call</div>'
-    +'<button onclick="document.getElementById(\'an-call-modal\').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);">✕</button></div>'
-    +'<div style="font-size:10px;font-weight:700;font-family:var(--mono);letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">Outcome</div>'
-    +'<input type="hidden" id="an-lc-outcome" value="pickup">'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px;">'
-    +outcomes.map(function(o,i){
-      return '<button onclick="document.getElementById(\'an-lc-outcome\').value=\''+o.id+'\';document.querySelectorAll(\'.an-oc-btn\').forEach(function(b){b.style.background=\'transparent\';b.style.borderColor=\'var(--divider)\';b.style.color=\'var(--text-secondary)\'});this.style.background=\''+o.col+'18\';this.style.borderColor=\''+o.col+'\';this.style.color=\''+o.col+'\';" '
-        +'class="an-oc-btn" style="padding:10px 8px;border:1.5px solid '+(i===0?o.col:'var(--divider)')+';background:'+(i===0?o.col+'18':'transparent')+';border-radius:9px;font-size:12px;font-weight:700;color:'+(i===0?o.col:'var(--text-secondary)')+';cursor:pointer;font-family:var(--sans);text-align:center;transition:all 0.12s;">'
-        +'<div style="font-size:18px;margin-bottom:3px;">'+o.icon+'</div>'+o.label+'</button>';
-    }).join('')
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
-    +anField('Date','an-lc-date',today,'date')
-    +anField('Time','an-lc-time',curTime,'time')
-    +'</div>'
-    +anField('Duration (minutes)','an-lc-dur','','number')
-    +'<div style="margin:10px 0;"><label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">Notes</label>'
-    +'<textarea id="an-lc-notes" rows="3" placeholder="What was said, objections, next steps..." style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13px;font-family:var(--sans);outline:none;resize:none;color:var(--text-primary);background:var(--card-bg);box-sizing:border-box;line-height:1.6;"></textarea></div>'
-    +'<button onclick="anSaveCall(\''+leadId+'\')" style="width:100%;background:#6366f1;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--sans);box-shadow:0 2px 8px rgba(99,102,241,0.3);">Save Call Log</button>'
-    +'</div>';
+  // Activity types
+  var types = [
+    { id:'call',    icon:'📞', label:'Call',   color:'#6366f1' },
+    { id:'text',    icon:'💬', label:'Text',   color:'#10b981' },
+    { id:'email',   icon:'📧', label:'Email',  color:'#f59e0b' },
+    { id:'note',    icon:'📝', label:'Note',   color:'#8b5cf6' },
+    { id:'meeting', icon:'🤝', label:'Meeting',color:'#06b6d4' }
+  ];
+
+  // Call outcomes (shown only when Call is selected)
+  var callOutcomes = [
+    { id:'pickup',   icon:'☎️',  label:'Picked Up',  col:'#10b981' },
+    { id:'demo',     icon:'🎯',  label:'Demo Set',   col:'#f59e0b' },
+    { id:'voicemail',icon:'📬',  label:'Voicemail',  col:'#6366f1' },
+    { id:'noanswer', icon:'📵',  label:'No Answer',  col:'#a1a1aa' }
+  ];
+
+  var m = document.createElement('div');
+  m.id = 'an-activity-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);';
+
+  m.innerHTML = '<div style="background:var(--card-bg);border-radius:16px;width:480px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,0.35);overflow:hidden;">'
+
+    // Header
+    + '<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);padding:18px 22px;display:flex;justify-content:space-between;align-items:center;">'
+    + '<div style="font-size:17px;font-weight:800;color:#fff;">Log Activity</div>'
+    + '<button onclick="document.getElementById(\'an-activity-modal\').remove()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;">✕</button>'
+    + '</div>'
+
+    // Activity type selector
+    + '<div style="padding:16px 20px 0;">'
+    + '<div style="font-size:9.5px;font-weight:700;font-family:var(--mono);letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">Activity Type</div>'
+    + '<div style="display:flex;gap:6px;margin-bottom:16px;">'
+    + types.map(function(t, i) {
+        return '<button onclick="setActivityType(\'' + t.id + '\',\'' + t.color + '\')" '
+          + 'id="atype-' + t.id + '" '
+          + 'style="flex:1;padding:9px 4px;border:1.5px solid ' + (i===0 ? t.color : 'var(--divider)') + ';background:' + (i===0 ? t.color+'18' : 'transparent') + ';border-radius:9px;font-size:11.5px;font-weight:700;color:' + (i===0 ? t.color : 'var(--text-secondary)') + ';cursor:pointer;font-family:var(--sans);text-align:center;transition:all 0.12s;">'
+          + '<div style="font-size:18px;margin-bottom:3px;">' + t.icon + '</div>' + t.label + '</button>';
+      }).join('')
+    + '</div>'
+    + '<input type="hidden" id="an-act-type" value="call">'
+    + '</div>'
+
+    // Call outcomes (visible by default, hidden for other types)
+    + '<div id="an-call-outcomes" style="padding:0 20px 14px;">'
+    + '<div style="font-size:9.5px;font-weight:700;font-family:var(--mono);letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">Call Outcome</div>'
+    + '<input type="hidden" id="an-lc-outcome" value="pickup">'
+    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">'
+    + callOutcomes.map(function(o, i) {
+        return '<button onclick="document.getElementById(\'an-lc-outcome\').value=\'' + o.id + '\';document.querySelectorAll(\'.an-oc-btn\').forEach(function(b){b.style.background=\'transparent\';b.style.borderColor=\'var(--divider)\';b.style.color=\'var(--text-secondary)\'});this.style.background=\'' + o.col + '18\';this.style.borderColor=\'' + o.col + '\';this.style.color=\'' + o.col + '\';" '
+          + 'class="an-oc-btn" style="padding:8px 4px;border:1.5px solid ' + (i===0 ? o.col : 'var(--divider)') + ';background:' + (i===0 ? o.col+'18' : 'transparent') + ';border-radius:8px;font-size:11px;font-weight:700;color:' + (i===0 ? o.col : 'var(--text-secondary)') + ';cursor:pointer;font-family:var(--sans);text-align:center;transition:all 0.12s;">'
+          + '<div style="font-size:15px;margin-bottom:2px;">' + o.icon + '</div>' + o.label + '</button>';
+      }).join('')
+    + '</div></div>'
+
+    // Email subject (hidden by default)
+    + '<div id="an-email-subject-wrap" style="display:none;padding:0 20px 10px;">'
+    + '<label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">Subject</label>'
+    + '<input id="an-act-subject" type="text" placeholder="e.g. Following up on AgentNav demo..." style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13px;font-family:var(--sans);outline:none;color:var(--text-primary);background:var(--card-bg);box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'">'
+    + '</div>'
+
+    // Date + Time
+    + '<div style="padding:0 20px 10px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+    + '<div><label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">Date</label>'
+    + '<input id="an-lc-date" type="date" value="' + today + '" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:8px 10px;font-size:13px;font-family:var(--sans);outline:none;color:var(--text-primary);background:var(--card-bg);box-sizing:border-box;"></div>'
+    + '<div id="an-time-wrap"><label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">Time</label>'
+    + '<input id="an-lc-time" type="time" value="' + curTime + '" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:8px 10px;font-size:13px;font-family:var(--sans);outline:none;color:var(--text-primary);background:var(--card-bg);box-sizing:border-box;"></div>'
+    + '</div>'
+
+    // Duration (call/meeting only)
+    + '<div id="an-dur-wrap" style="padding:0 20px 10px;">'
+    + '<label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">Duration (minutes)</label>'
+    + '<input id="an-lc-dur" type="number" min="0" placeholder="e.g. 4" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:8px 10px;font-size:13px;font-family:var(--sans);outline:none;color:var(--text-primary);background:var(--card-bg);box-sizing:border-box;">'
+    + '</div>'
+
+    // Notes
+    + '<div style="padding:0 20px 16px;">'
+    + '<label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;" id="an-notes-label">Notes</label>'
+    + '<textarea id="an-lc-notes" rows="3" placeholder="What was said, next steps, objections..." style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13px;font-family:var(--sans);outline:none;resize:none;color:var(--text-primary);background:var(--card-bg);box-sizing:border-box;line-height:1.6;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'"></textarea>'
+    + '</div>'
+
+    // Save button
+    + '<div style="padding:0 20px 20px;">'
+    + '<button id="an-act-save-btn" onclick="anSaveActivity(\'' + leadId + '\')" style="width:100%;background:#6366f1;border:none;border-radius:9px;padding:12px;font-size:14px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--sans);box-shadow:0 2px 8px rgba(99,102,241,0.3);">Save Activity</button>'
+    + '</div>'
+    + '</div>';
+
   document.body.appendChild(m);
-  m.onclick=function(e){ if(e.target===m) m.remove(); };
+  m.onclick = function(e) { if (e.target===m) m.remove(); };
 };
 
-window.anSaveCall = function(leadId){
-  var lead = AN.leads.find(function(l){ return l.id===leadId; });
-  if(!lead) return;
-  if(!lead.callLog) lead.callLog=[];
-  var g=function(id){ var el=document.getElementById(id); return el?el.value:''; };
-  var outcome=g('an-lc-outcome'), date=g('an-lc-date'), time=g('an-lc-time'), dur=g('an-lc-dur'), notes=g('an-lc-notes');
-  lead.callLog.push({id:'cl-'+Date.now(),outcome:outcome,date:date,time:time,duration:dur,notes:notes});
-  lead.lastContactDate=date;
-  if(outcome==='demo') lead.status='demo';
-  if(outcome==='won')  lead.status='won';
-  lead.updated=new Date().toISOString();
-  AN.save();
-  document.getElementById('an-call-modal').remove();
-  if (typeof anRenderCallSessionLeadPanel === 'function' && window._anCsLeadPanelId === leadId) {
-    anRenderCallSessionLeadPanel(leadId);
+// Switch activity type UI
+window.setActivityType = function(type, color) {
+  document.getElementById('an-act-type').value = type;
+
+  // Reset all type buttons
+  var allTypes = ['call','text','email','note','meeting'];
+  var allColors = {'call':'#6366f1','text':'#10b981','email':'#f59e0b','note':'#8b5cf6','meeting':'#06b6d4'};
+  allTypes.forEach(function(t) {
+    var btn = document.getElementById('atype-'+t);
+    if (!btn) return;
+    var c = allColors[t];
+    btn.style.background = t===type ? c+'18' : 'transparent';
+    btn.style.borderColor = t===type ? c : 'var(--divider)';
+    btn.style.color = t===type ? c : 'var(--text-secondary)';
+  });
+
+  // Show/hide context-specific fields
+  var showOutcomes = type==='call';
+  var showDuration = type==='call' || type==='meeting';
+  var showSubject  = type==='email';
+  var showTime     = type!=='note';
+
+  var outcomesEl = document.getElementById('an-call-outcomes');
+  var durEl      = document.getElementById('an-dur-wrap');
+  var subjectEl  = document.getElementById('an-email-subject-wrap');
+  var timeEl     = document.getElementById('an-time-wrap');
+  var notesLabel = document.getElementById('an-notes-label');
+  var saveBtn    = document.getElementById('an-act-save-btn');
+
+  if (outcomesEl) outcomesEl.style.display = showOutcomes ? '' : 'none';
+  if (durEl)      durEl.style.display      = showDuration ? '' : 'none';
+  if (subjectEl)  subjectEl.style.display  = showSubject  ? '' : 'none';
+  if (timeEl)     timeEl.style.display     = showTime     ? '' : 'none';
+
+  // Update placeholder text
+  var placeholders = {
+    call:    'What was said, objections, next steps...',
+    text:    'Message sent or received...',
+    email:   'Email summary or key points...',
+    note:    'Internal note about this contact...',
+    meeting: 'What was discussed, decisions made...'
+  };
+  var notesEl = document.getElementById('an-lc-notes');
+  if (notesEl) notesEl.placeholder = placeholders[type] || 'Notes...';
+  if (notesLabel) {
+    var noteLabels = {call:'Notes',text:'Message',email:'Email Body / Summary',note:'Note',meeting:'Meeting Notes'};
+    notesLabel.textContent = noteLabels[type] || 'Notes';
   }
-  // Update call log in open modal if visible
-  var cll=document.getElementById('an-call-log-list');
-  if(cll){
-    // re-render call log
-    var callLog=lead.callLog.slice().sort(function(a,b){return b.date.localeCompare(a.date);});
-    var icons={pickup:'☎️',demo:'🎯',voicemail:'📬',noanswer:'📵'}; var colors={pickup:'#10b981',demo:'#f59e0b',voicemail:'#6366f1',noanswer:'#a1a1aa'};
-    cll.innerHTML=callLog.map(function(c){
-      var col=colors[c.outcome]||'#a1a1aa';
-      return '<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--divider);">'
-        +'<div style="width:32px;height:32px;border-radius:50%;background:'+col+'18;border:1.5px solid '+col+'44;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">'+(icons[c.outcome]||'📞')+'</div>'
-        +'<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:'+col+';margin-bottom:2px;">'+(c.outcome||'Call')+'</div>'
-        +'<div style="font-size:11.5px;color:var(--text-muted);">'+anDate(c.date)+(c.time?' · '+c.time:'')+(c.duration?' · '+c.duration+' min':'')+'</div>'
-        +(c.notes?'<div style="font-size:13px;color:var(--text-secondary);margin-top:4px;line-height:1.6;">'+anEsc(c.notes)+'</div>':'')
-        +'</div></div>';
-    }).join('');
-  }
-  renderLeadsTable();
-  if(typeof showToast==='function') showToast('Call logged!');
-  // ── Quick action after logging call ─────────────────────────
-  // Show a non-blocking choice: log another call on same lead, or add a new lead
-  var _lastLeadId = leadId;
-  var qa = document.createElement('div');
-  qa.id = 'an-quick-action-bar';
-  qa.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:10001;background:#1e1e2e;border:1px solid rgba(99,102,241,0.4);border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,0.4);animation:qaSlideUp 0.3s ease;';
-  qa.innerHTML = '<span style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.7);">What\'s next?</span>'
-    +'<button onclick="(function(){var b=document.getElementById(\'an-quick-action-bar\');if(b)b.remove();anLogCall(\''+leadId+'\');})()" style="background:#ecfdf5;color:#10b981;border:1px solid #a7f3d0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📞 Call Again</button>'
-    +'<button onclick="(function(){var b=document.getElementById(\'an-quick-action-bar\');if(b)b.remove();anNewLead();})()" style="background:#eef2ff;color:#6366f1;border:1px solid #c7d2fe;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ New Lead</button>'
-    +'<button onclick="document.getElementById(\'an-quick-action-bar\').remove()" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:18px;cursor:pointer;padding:0 4px;line-height:1;">×</button>';
-  // Remove any existing quick action bar
-  var existing = document.getElementById('an-quick-action-bar');
-  if(existing) existing.remove();
-  document.body.appendChild(qa);
-  // Auto-dismiss after 8 seconds
-  setTimeout(function(){ var el=document.getElementById('an-quick-action-bar'); if(el) el.remove(); }, 8000);
-  // Add the slide-up animation if not already present
-  if(!document.getElementById('qa-anim-style')){
-    var st=document.createElement('style'); st.id='qa-anim-style';
-    st.textContent='@keyframes qaSlideUp{from{opacity:0;transform:translateX(-50%) translateY(16px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}';
-    document.head.appendChild(st);
+  if (saveBtn) {
+    var btnLabels = {call:'Save Call Log',text:'Save Text Log',email:'Save Email Log',note:'Save Note',meeting:'Save Meeting Log'};
+    saveBtn.textContent = btnLabels[type] || 'Save Activity';
   }
 };
+
+
+
+window.anSaveCall = window.anSaveActivity = function(leadId) {
+  var lead = AN.leads.find(function(l){ return l.id===leadId; });
+  if (!lead) return;
+  if (!lead.callLog) lead.callLog = [];
+
+  var g = function(id){ var el=document.getElementById(id); return el?el.value:''; };
+  var type    = g('an-act-type') || 'call';
+  var outcome = type==='call' ? g('an-lc-outcome') : type;
+  var date    = g('an-lc-date');
+  var time    = g('an-lc-time');
+  var dur     = g('an-lc-dur');
+  var notes   = g('an-lc-notes');
+  var subject = g('an-act-subject');
+
+  var entry = {
+    id:       'act-' + Date.now(),
+    type:     type,
+    outcome:  outcome,
+    date:     date,
+    time:     time,
+    duration: dur,
+    notes:    notes,
+    subject:  subject || undefined,
+    loggedAt: new Date().toISOString()
+  };
+
+  lead.callLog.push(entry);
+  lead.lastContactDate = date;
+
+  // Auto-advance status for calls
+  if (type==='call') {
+    if (outcome==='demo' && lead.status==='new') lead.status = 'demo';
+    if (outcome==='won')  lead.status = 'won';
+    if (outcome==='pickup' && lead.status==='new') lead.status = 'contacted';
+  }
+
+  lead.updated = new Date().toISOString();
+  AN.save();
+
+  // Sync to dashboard
+  if (typeof syncActivityFromCRM === 'function') {
+    syncActivityFromCRM('calls', 1);
+    if (outcome==='demo') syncActivityFromCRM('demos', 1);
+    if (outcome==='won')  syncActivityFromCRM('closes', 1);
+  }
+
+  // Close modal
+  var modal = document.getElementById('an-activity-modal');
+  if (modal) modal.remove();
+
+  // Update call log list in open side panel
+  var cll = document.getElementById('an-call-log-list');
+  if (cll) {
+    var calls = lead.callLog.slice().sort(function(a,b){ return (b.date+(b.time||'')).localeCompare(a.date+(a.time||'')); });
+    cll.innerHTML = calls.length ? calls.map(function(c){ return buildActivityItem(c); }).join('') : '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">No activity yet</div>';
+  }
+
+  if (typeof renderLeadsTable === 'function') renderLeadsTable();
+  if (typeof showToast === 'function') {
+    var labels = {call:'Call logged',text:'Text logged',email:'Email logged',note:'Note saved',meeting:'Meeting logged'};
+    showToast((labels[type]||'Activity logged') + ' ✓');
+  }
+};
+
+// Build a single activity timeline item
+window.buildActivityItem = function(c) {
+  var typeColors = {call:'#6366f1',pickup:'#10b981',demo:'#f59e0b',voicemail:'#8b5cf6',noanswer:'#a1a1aa',text:'#10b981',email:'#f59e0b',note:'#8b5cf6',meeting:'#06b6d4'};
+  var typeIcons  = {call:'📞',pickup:'☎️',demo:'🎯',voicemail:'📬',noanswer:'📵',text:'💬',email:'📧',note:'📝',meeting:'🤝'};
+  var key = c.outcome || c.type || 'call';
+  var col = typeColors[key] || '#6366f1';
+  var icon = typeIcons[key] || '📋';
+  var label = key.charAt(0).toUpperCase() + key.slice(1);
+  var ds = (c.date ? new Date(c.date+'T12:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '') + (c.time?' · '+c.time:'');
+  return '<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--divider);">'
+    + '<div style="width:30px;height:30px;border-radius:50%;background:'+col+'15;border:1.5px solid '+col+'44;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;">'+icon+'</div>'
+    + '<div style="flex:1;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">'
+    + '<span style="font-size:12.5px;font-weight:700;color:'+col+';">'+label+'</span>'
+    + '<span style="font-size:11px;color:var(--text-muted);">'+ds+(c.duration?' · '+c.duration+'m':'')+'</span>'
+    + '</div>'
+    + (c.subject?'<div style="font-size:12px;font-weight:600;color:var(--text-primary);margin-bottom:3px;">'+anEsc(c.subject)+'</div>':'')
+    + (c.notes?'<div style="font-size:12.5px;color:var(--text-secondary);line-height:1.6;">'+anEsc(c.notes)+'</div>':'')
+    + '</div></div>';
+};
+
+
 
 // ── New lead ──────────────────────────────────────────────────
 window.anNewLead = function(){
@@ -12946,7 +13101,11 @@ window.anOpenLeadPanel = function(leadId) {
   if (!panel) {
     panel = document.createElement('div');
     panel.id = 'an-side-panel';
-    panel.style.cssText = 'position:fixed;top:0;right:0;width:440px;height:100vh;background:var(--card-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.15);z-index:8888;display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);';
+    // If call session is open, position lead panel to its left
+    var callSessionOpen = document.body.classList.contains('call-panel-open') || !!document.getElementById('mcm-panel-wrap');
+    var rightOffset = callSessionOpen ? '420px' : '0';
+    var panelWidth  = callSessionOpen ? '440px' : '440px';
+    panel.style.cssText = 'position:fixed;top:0;right:' + rightOffset + ';width:' + panelWidth + ';height:100vh;background:var(--card-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.15);z-index:' + (callSessionOpen ? '19999' : '8888') + ';display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);';
     document.body.appendChild(panel);
     setTimeout(function(){ panel.style.transform = 'translateX(0)'; }, 10);
   } else if (!sameLead) {
@@ -12991,7 +13150,7 @@ window.anOpenLeadPanel = function(leadId) {
 
       // Action buttons
       +'<div style="padding:12px 16px;border-bottom:1px solid var(--divider);display:flex;gap:7px;flex-shrink:0;">'
-      +'<button onclick="anLogCall(\''+lead.id+'\')" style="flex:1;background:#ecfdf5;color:#10b981;border:1px solid #a7f3d0;border-radius:8px;padding:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans);">📞 Log Call</button>'
+      +'<button onclick="anLogCall(\''+lead.id+'\')" style="flex:1;background:#ecfdf5;color:#10b981;border:1px solid #a7f3d0;border-radius:8px;padding:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans);">⚡ Activity</button>'
       +'<button onclick="anOpenLeadModal(\''+lead.id+'\')" style="flex:1;background:#eef2ff;color:#6366f1;border:1px solid #c7d2fe;border-radius:8px;padding:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans);">✏️ Edit</button>'
       +'<button onclick="anConvertToOpportunity(\''+lead.id+'\')" style="flex:1;background:#fffbeb;color:#f59e0b;border:1px solid #fde68a;border-radius:8px;padding:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans);">💎 Opportunity</button>'
       +'</div>'
@@ -13021,11 +13180,15 @@ window.anOpenLeadPanel = function(leadId) {
         ['⏱ Last Contact', anTimeAgo(lead.lastContactDate||lead.created), null],
         ['📆 Created', anDate(lead.created), null]
       ].filter(function(r){return r[1] && r[1] !== '—';}).map(function(row){
+        var isCopy = row[2] && (row[2].indexOf('mailto:')===0 || row[2].indexOf('tel:')===0);
+        var rv = row[1]||'';
         var val = row[2]
-          ? '<a href="'+row[2]+'" style="font-size:12.5px;font-weight:600;color:#6366f1;text-decoration:none;">'+anEsc(row[1])+'</a>'
-          : '<span style="font-size:12.5px;font-weight:600;color:var(--text-primary);text-align:right;max-width:60%;word-break:break-word;">'+anEsc(row[1])+'</span>';
-        return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--divider);">'
-          +'<span style="font-size:12px;color:var(--text-muted);">'+row[0]+'</span>'+val
+          ? '<a href="'+row[2]+'" style="font-size:12.5px;font-weight:600;color:#6366f1;text-decoration:none;">'+anEsc(rv)+'</a>'
+          : '<span style="font-size:12.5px;font-weight:600;color:var(--text-primary);text-align:right;max-width:55%;word-break:break-word;">'+anEsc(rv)+'</span>';
+        var cb = isCopy ? '<button onclick="anCopyToClipboard(this.dataset.v)" data-v="'+anEsc(rv)+'" title="Copy" style="margin-left:4px;background:none;border:1px solid var(--divider);border-radius:4px;padding:1px 5px;font-size:10px;color:var(--text-muted);cursor:pointer;" onmouseover="this.style.borderColor=\'#6366f1\';this.style.color=\'#6366f1\'" onmouseout="this.style.borderColor=\'var(--divider)\';this.style.color=\'var(--text-muted)\'">📋</button>' : '';
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--divider);">'
+          +'<span style="font-size:12px;color:var(--text-muted);flex-shrink:0;">'+row[0]+'</span>'
+          +'<span style="display:flex;align-items:center;">'+val+cb+'</span>'
           +'</div>';
       }).join('')
       +'<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--divider);">'
@@ -13131,7 +13294,7 @@ window.anRenderCallSessionLeadPanel = function(leadId) {
     +'</div></div>'
 
     +'<div style="padding:10px 14px;border-bottom:1px solid var(--divider);display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;">'
-    +'<button onclick="anLogCall(\''+lead.id+'\')" style="flex:1;min-width:90px;background:#ecfdf5;color:#10b981;border:1px solid #a7f3d0;border-radius:8px;padding:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">📞 Log Call</button>'
+    +'<button onclick="anLogCall(\''+lead.id+'\')" style="flex:1;min-width:90px;background:#ecfdf5;color:#10b981;border:1px solid #a7f3d0;border-radius:8px;padding:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">⚡ Activity</button>'
     +'<button onclick="anQuickLogEmail(\''+lead.id+'\')" style="flex:1;min-width:90px;background:#f5f3ff;color:#8b5cf6;border:1px solid #ddd6fe;border-radius:8px;padding:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">✉️ Log Email</button>'
     +'<button onclick="anOpenLeadModal(\''+lead.id+'\')" style="flex:1;min-width:70px;background:#eef2ff;color:#6366f1;border:1px solid #c7d2fe;border-radius:8px;padding:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">✏️ Edit</button>'
     +'</div>'
@@ -13146,23 +13309,6 @@ window.anRenderCallSessionLeadPanel = function(leadId) {
     +'<div style="display:flex;gap:6px;">'
     +'<input id="cs-company-input" type="text" value="'+anEsc(lead.company||'')+'" placeholder="Agency name" style="flex:1;border:1.5px solid var(--divider);border-radius:8px;padding:7px 10px;font-size:12px;background:var(--card-bg);color:var(--text-primary);outline:none;font-family:var(--sans);">'
     +'<button type="button" onclick="anUpdateLeadCompany(\''+lead.id+'\', document.getElementById(\'cs-company-input\').value)" style="background:#eef2ff;color:#6366f1;border:1px solid #c7d2fe;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">Save</button>'
-    +'</div></div>'
-    +[
-      ['💼 Title / Role', lead.title, null],
-      ['📧 Email', lead.email, lead.email ? 'mailto:'+lead.email : null],
-      ['📞 Phone', anPhoneDisplay(lead.phone), lead.phone ? 'tel:'+anTelPhone(lead.phone) : null],
-      ['📍 State', lead.state, null],
-      ['🏢 Size', sz ? sz.label : null, null],
-      ['🔗 Source', lead.source, null],
-      ['📅 Next Follow-Up', lead.nextFollowUp ? anDate(lead.nextFollowUp) : null, null],
-      ['⏱ Last Contact', anTimeAgo(lead.lastContactDate || lead.created), null]
-    ].filter(function(r){ return r[1]; }).map(function(row){
-      var val = row[2]
-        ? '<a href="'+row[2]+'" style="font-size:12.5px;font-weight:600;color:#6366f1;text-decoration:none;">'+anEsc(row[1])+'</a>'
-        : '<span style="font-size:12.5px;font-weight:600;color:var(--text-primary);">'+anEsc(row[1])+'</span>';
-      return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--divider);">'
-        +'<span style="font-size:12px;color:var(--text-muted);">'+row[0]+'</span>'+val+'</div>';
-    }).join('')
     +'</div>'
 
     +(lead.notes
@@ -13801,7 +13947,7 @@ window.anOpenOppDetail = function(leadId) {
     +'</div>'
     +'<div style="display:flex;gap:8px;align-items:center;">'
     +'<span style="background:'+st.color+'28;color:'+st.color+';border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;">'+st.label+'</span>'
-    +'<button onclick="anLogCall(\''+lead.id+'\')" style="background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);border-radius:7px;padding:6px 12px;font-size:12px;font-weight:700;color:#6ee7b7;cursor:pointer;font-family:var(--sans);">📞 Log Call</button>'
+    +'<button onclick="anLogCall(\''+lead.id+'\')" style="background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);border-radius:7px;padding:6px 12px;font-size:12px;font-weight:700;color:#6ee7b7;cursor:pointer;font-family:var(--sans);">⚡ Activity</button>'
     +'<button onclick="document.getElementById(\'an-opp-detail-modal\').remove()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px;">✕</button>'
     +'</div></div>'
 
@@ -15187,13 +15333,13 @@ window.openMobileCallMode = function(leadId) {
     // Phone + Call button
     +'<div style="padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.06);">'
     +(phone
-      ? '<a href="tel:'+mcmEsc(telPhone)+'" style="display:flex;align-items:center;justify-content:space-between;background:rgba(16,185,129,0.12);border:1.5px solid rgba(16,185,129,0.3);border-radius:14px;padding:16px 20px;text-decoration:none;">'
+      ? '<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(16,185,129,0.08);border:1.5px solid rgba(16,185,129,0.2);border-radius:14px;padding:16px 20px;">'
         +'<div>'
-        +'<div style="font-size:11px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:3px;">Tap to Call</div>'
+        +'<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:4px;">Phone Number</div>'
         +'<div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:0.05em;">'+mcmEsc(phone)+'</div>'
         +'</div>'
-        +'<div style="width:50px;height:50px;border-radius:50%;background:#10b981;display:flex;align-items:center;justify-content:center;font-size:24px;">📞</div>'
-        +'</a>'
+        +'<div style="font-size:12px;color:rgba(255,255,255,0.35);font-style:italic;">Dial manually</div>'
+        +'</div>'
       : '<div style="background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.1);border-radius:14px;padding:16px 20px;text-align:center;">'
         +'<div style="font-size:13px;color:rgba(255,255,255,0.4);">No phone number on file</div>'
         +'<button onclick="mcmEditPhone(\''+leadId+'\')" style="margin-top:8px;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ Add Phone Number</button>'
@@ -16219,7 +16365,7 @@ function hdRender() {
       var name = ((l.firstName||'') + ' ' + (l.lastName||'')).trim() || l.company || 'Unknown';
       var col = statusColors[l.status] || '#a1a1aa';
       var label = statusLabels[l.status] || l.status;
-      return '<div class="hd-list-item" onclick="showSection(\'crm\',null)">'
+      return '<div class="hd-list-item" onclick="showSection(\'crm\',null);setTimeout(function(){anOpenLeadPanel(\''+l.id+'\')},300)" style="cursor:pointer;">'
         +'<div class="hd-avatar" style="background:'+col+';">'+hdEsc(name.charAt(0).toUpperCase())+'</div>'
         +'<div class="hd-item-main">'
         +'<div class="hd-item-name">'+hdEsc(name)+'</div>'
@@ -17956,7 +18102,14 @@ function anBuildCallQueueIds(opts){
       return isCallable(l);
     });
   } else {
-    pool = AN.filtered().filter(isCallable);
+    pool = AN.filtered().filter(function(l) {
+      if (!isCallable(l)) return false;
+      // Non-admin reps only see their own leads
+      if (!AN.isAdmin) {
+        if (l._repEmail && l._repEmail.toLowerCase() !== (AN.currentRepEmail||'').toLowerCase()) return false;
+      }
+      return true;
+    });
   }
 
   if (opts.prioritizeUncalled !== false) {
@@ -19058,7 +19211,7 @@ console.log('[CALL SESSION] Queue workflow loaded.');
       + '#mcm-panel-wrap{position:fixed;top:0;right:0;bottom:0;width:420px;max-width:100vw;z-index:20000;pointer-events:auto;box-shadow:-8px 0 32px rgba(0,0,0,0.12);animation:mcmSlideIn 0.22s ease;}'
       + '#an-cs-lead-panel{animation:mcmSlideIn 0.26s ease;}'
       + 'body.call-panel-open .main{margin-right:420px;transition:margin-right 0.22s ease,margin-left 0.22s cubic-bezier(0.4,0,0.2,1);}'
-      + 'body.call-session-dual.call-panel-open .main{margin-right:860px;}'
+      + 'body.call-session-dual.call-panel-open .main{margin-right:880px;}'
       + 'body.sb-collapsed.call-panel-open .main{margin-left:52px!important;}'
       + '@media(max-width:1200px){body.call-session-dual #an-cs-lead-panel{display:none;}body.call-session-dual.call-panel-open .main{margin-right:420px;}}'
       + '@media(max-width:900px){body.call-panel-open .main{margin-right:0;}body.call-session-dual.call-panel-open .main{margin-right:0;}#mcm-panel-wrap{width:100vw;}}'
@@ -20027,7 +20180,7 @@ window.openCompanyDetail = function(name){
 
     // ── Action bar ────────────────────────────────────────────
     +'<div style="background:var(--card-bg);border-bottom:1px solid var(--divider);padding:10px 20px;display:flex;gap:7px;flex-shrink:0;">'
-    +'<button onclick="logCallForCompany(\''+anEsc(name)+'\')" style="display:flex;align-items:center;gap:5px;padding:6px 13px;border:1.5px solid var(--divider);border-radius:7px;background:var(--card-bg);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:var(--sans);">📞 Log Call</button>'
+    +'<button onclick="logCallForCompany(\''+anEsc(name)+'\')" style="display:flex;align-items:center;gap:5px;padding:6px 13px;border:1.5px solid var(--divider);border-radius:7px;background:var(--card-bg);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:var(--sans);">⚡ Activity</button>'
     +'<button onclick="saveCoData(\''+anEsc(name)+'\',{});coTab(\'notes\')" style="display:flex;align-items:center;gap:5px;padding:6px 13px;border:1.5px solid var(--divider);border-radius:7px;background:var(--card-bg);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:var(--sans);">📝 Note</button>'
     +'<button onclick="createDealForCompany(\''+anEsc(name)+'\')" style="display:flex;align-items:center;gap:5px;padding:6px 13px;border:1px solid rgba(99,102,241,0.3);border-radius:7px;background:rgba(99,102,241,0.08);font-size:12px;font-weight:700;color:#6366f1;cursor:pointer;font-family:var(--sans);">💎 Deal</button>'
     +'</div>'
@@ -20099,7 +20252,7 @@ window.openCompanyDetail = function(name){
         +'</div>'
         +(isDM?'<span style="font-size:9.5px;font-weight:700;background:#ecfdf5;color:#10b981;border-radius:4px;padding:2px 6px;flex-shrink:0;">DM</span>':'')
         +'<div style="display:flex;gap:4px;flex-shrink:0;">'
-        +'<button onclick="event.stopPropagation();anLogCall(\''+l.id+'\')" style="width:24px;height:24px;border-radius:5px;background:var(--body-bg);border:1px solid var(--divider);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Log Call">📞</button>'
+        +'<button onclick="event.stopPropagation();anLogCall(\''+l.id+'\')" style="width:24px;height:24px;border-radius:5px;background:var(--body-bg);border:1px solid var(--divider);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Log Activity">📞</button>'
         +'<button onclick="event.stopPropagation();anOpenLeadPanel(\''+l.id+'\')" style="width:24px;height:24px;border-radius:5px;background:var(--body-bg);border:1px solid var(--divider);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="View">✏️</button>'
         +'</div></div>';
     }).join('')
@@ -20178,7 +20331,7 @@ window.logCallForCompany = function(name){
   var old=document.getElementById('co-call-picker');if(old)old.remove();
   var m=document.createElement('div');m.id='co-call-picker';m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10002;display:flex;align-items:center;justify-content:center;';
   m.innerHTML='<div style="background:var(--card-bg);border-radius:14px;padding:22px;width:360px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><div style="font-size:15px;font-weight:800;color:var(--text-primary);">Log a Call</div>'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><div style="font-size:15px;font-weight:800;color:var(--text-primary);">Log Activity</div>'
     +'<button onclick="document.getElementById(\'co-call-picker\').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);">✕</button></div>'
     +'<div style="font-size:11.5px;color:var(--text-muted);margin-bottom:10px;">Select contact at '+anEsc(name)+'</div>'
     +leads.map(function(l){return '<button onclick="document.getElementById(\'co-call-picker\').remove();anLogCall(\''+l.id+'\')" style="width:100%;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--divider);background:var(--card-bg);margin-bottom:6px;cursor:pointer;font-family:var(--sans);" onmouseover="this.style.borderColor=\'#6366f1\'" onmouseout="this.style.borderColor=\'var(--divider)\'"><div style="width:28px;height:28px;border-radius:50%;background:#6366f118;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#6366f1;">'+((l.firstName||'?')[0].toUpperCase())+'</div><div style="flex:1;text-align:left;"><div style="font-size:13px;font-weight:600;color:var(--text-primary);">'+anEsc((l.firstName||'')+' '+(l.lastName||''))+'</div>'+(l.phone?'<div style="font-size:11px;color:var(--text-muted);">'+anEsc(l.phone)+'</div>':'')+'</div></button>';}).join('')
@@ -20867,6 +21020,891 @@ var _origAuthSubmit = window.authSubmit;
 
 console.log('[INVITE AUTH] Password set flow, onAuthStateChange patch loaded.');
 
+</script>
+<script>
+// ============================================================
+// TASKS + CALL AGAIN SYSTEM
+// Per-lead tasks with due-time notifications, task session,
+// and quick call-again counter
+// ============================================================
+
+// ── Task data ─────────────────────────────────────────────────
+var AN_TASK_TYPES = [
+  { id:'call',    icon:'📞', label:'Call Back',  color:'#6366f1' },
+  { id:'email',   icon:'📧', label:'Send Email', color:'#f59e0b' },
+  { id:'text',    icon:'💬', label:'Send Text',  color:'#10b981' },
+  { id:'followup',icon:'🔔', label:'Follow Up',  color:'#8b5cf6' },
+  { id:'demo',    icon:'🎯', label:'Demo Prep',  color:'#06b6d4' },
+  { id:'other',   icon:'📋', label:'Other',      color:'#a1a1aa' }
+];
+
+function getTaskType(id){ return AN_TASK_TYPES.find(function(t){return t.id===id;})||AN_TASK_TYPES[0]; }
+
+function saveTasks(){ localStorage.setItem('an-tasks', JSON.stringify(AN._tasks||[])); }
+function loadTasks(){
+  try{ AN._tasks = JSON.parse(localStorage.getItem('an-tasks')||'[]'); }
+  catch(e){ AN._tasks = []; }
+  return AN._tasks;
+}
+if(typeof AN !== 'undefined'){ AN._tasks = loadTasks(); }
+
+// Get tasks for a lead
+function getLeadTasks(leadId){
+  return (AN._tasks||[]).filter(function(t){ return t.leadId===leadId; });
+}
+// Get all my pending tasks
+function getMyTasks(){
+  var now = new Date();
+  return (AN._tasks||[]).filter(function(t){
+    if(t.done) return false;
+    if(!AN.isAdmin && t.repEmail && t.repEmail !== AN.currentRepEmail) return false;
+    return true;
+  }).sort(function(a,b){ return (a.dueDate+a.dueTime).localeCompare(b.dueDate+b.dueTime); });
+}
+function getOverdueTasks(){
+  var now = new Date();
+  var today = now.toISOString().split('T')[0];
+  var curTime = now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  return getMyTasks().filter(function(t){
+    if(!t.dueDate) return false;
+    if(t.dueDate < today) return true;
+    if(t.dueDate === today && t.dueTime && t.dueTime <= curTime) return true;
+    return false;
+  });
+}
+function getTodayTasks(){
+  var today = new Date().toISOString().split('T')[0];
+  return getMyTasks().filter(function(t){ return t.dueDate === today; });
+}
+
+// ── CREATE TASK MODAL ─────────────────────────────────────────
+window.anCreateTask = function(leadId) {
+  var lead = AN.leads.find(function(l){ return l.id===leadId; });
+  if(!lead) return;
+  var old = document.getElementById('an-task-modal'); if(old) old.remove();
+
+  var now = new Date();
+  var today = now.toISOString().split('T')[0];
+  // Default: 2 hours from now
+  var defHour = (now.getHours()+2) % 24;
+  var defTime = defHour.toString().padStart(2,'0')+':00';
+
+  var m = document.createElement('div');
+  m.id = 'an-task-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);';
+  m.innerHTML =
+    '<div style="background:var(--card-bg);border-radius:16px;width:460px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,0.35);overflow:hidden;">'
+    // Header
+    +'<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);padding:18px 22px;display:flex;justify-content:space-between;align-items:center;">'
+    +'<div><div style="font-size:17px;font-weight:800;color:#fff;">Create Task</div>'
+    +'<div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:2px;">'+anEsc((lead.firstName||'')+' '+(lead.lastName||''))+(lead.company?' · '+anEsc(lead.company):'')+'</div>'
+    +'</div>'
+    +'<button onclick="document.getElementById(\'an-task-modal\').remove()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;">✕</button>'
+    +'</div>'
+    // Task type
+    +'<div style="padding:16px 20px 0;">'
+    +'<div style="font-size:9.5px;font-weight:700;font-family:var(--mono);letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">Task Type</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:16px;">'
+    +AN_TASK_TYPES.map(function(t,i){
+      return '<button onclick="selectTaskType(\''+t.id+'\',\''+t.color+'\')" id="ttype-'+t.id+'" '
+        +'style="padding:8px 4px;border:1.5px solid '+(i===0?t.color:'var(--divider)')+';background:'+(i===0?t.color+'18':'transparent')+';border-radius:9px;font-size:11.5px;font-weight:700;color:'+(i===0?t.color:'var(--text-secondary)')+';cursor:pointer;font-family:var(--sans);text-align:center;transition:all 0.12s;">'
+        +'<div style="font-size:17px;margin-bottom:2px;">'+t.icon+'</div>'+t.label+'</button>';
+    }).join('')
+    +'</div>'
+    +'<input type="hidden" id="an-task-type" value="call">'
+    // Due date + time
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">'
+    +'<div><label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">Due Date</label>'
+    +'<input id="an-task-date" type="date" value="'+today+'" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13px;font-family:var(--sans);outline:none;color:var(--text-primary);background:var(--card-bg);box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'"></div>'
+    +'<div><label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">Due Time</label>'
+    +'<input id="an-task-time" type="time" value="'+defTime+'" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13px;font-family:var(--sans);outline:none;color:var(--text-primary);background:var(--card-bg);box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'"></div>'
+    +'</div>'
+    // Quick time buttons
+    +'<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">'
+    +[['In 1 hour',1],['In 2 hours',2],['Tomorrow',24],['In 3 days',72]].map(function(opt){
+      return '<button onclick="setTaskQuickTime('+opt[1]+')" '
+        +'style="padding:4px 10px;border-radius:20px;border:1.5px solid var(--divider);background:transparent;font-size:11.5px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:var(--sans);transition:all 0.12s;" '
+        +'onmouseover="this.style.borderColor=\'#6366f1\';this.style.color=\'#6366f1\'" onmouseout="this.style.borderColor=\'var(--divider)\';this.style.color=\'var(--text-secondary)\'">'+opt[0]+'</button>';
+    }).join('')
+    +'</div>'
+    // Notes
+    +'<div style="margin-bottom:16px;"><label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">Notes (optional)</label>'
+    +'<textarea id="an-task-notes" rows="2" placeholder="e.g. Ask about renewal timeline..." style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13px;font-family:var(--sans);outline:none;resize:none;color:var(--text-primary);background:var(--card-bg);box-sizing:border-box;line-height:1.6;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'"></textarea></div>'
+    // Notify toggle
+    +'<label style="display:flex;align-items:center;gap:8px;margin-bottom:16px;cursor:pointer;">'
+    +'<input type="checkbox" id="an-task-notify" checked style="width:15px;height:15px;accent-color:#6366f1;cursor:pointer;">'
+    +'<span style="font-size:13px;color:var(--text-secondary);">🔔 Notify me when this task is due</span>'
+    +'</label>'
+    // Save
+    +'<button onclick="anSaveTask(\''+leadId+'\')" style="width:100%;background:#6366f1;border:none;border-radius:9px;padding:12px;font-size:14px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--sans);box-shadow:0 2px 8px rgba(99,102,241,0.3);">Create Task</button>'
+    +'</div></div>';
+
+  document.body.appendChild(m);
+  m.onclick = function(e){ if(e.target===m) m.remove(); };
+};
+
+window.selectTaskType = function(type, color) {
+  document.getElementById('an-task-type').value = type;
+  AN_TASK_TYPES.forEach(function(t){
+    var btn = document.getElementById('ttype-'+t.id); if(!btn) return;
+    btn.style.background = t.id===type ? t.color+'18' : 'transparent';
+    btn.style.borderColor = t.id===type ? t.color : 'var(--divider)';
+    btn.style.color = t.id===type ? t.color : 'var(--text-secondary)';
+  });
+};
+
+window.setTaskQuickTime = function(hoursFromNow) {
+  var d = new Date(Date.now() + hoursFromNow*3600*1000);
+  var dateStr = d.toISOString().split('T')[0];
+  var timeStr = d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+  var di = document.getElementById('an-task-date'); if(di) di.value = dateStr;
+  var ti = document.getElementById('an-task-time'); if(ti) ti.value = timeStr;
+};
+
+window.anSaveTask = function(leadId) {
+  var lead = AN.leads.find(function(l){ return l.id===leadId; });
+  if(!lead) return;
+  var g = function(id){ var el=document.getElementById(id); return el?el.value:''; };
+  var task = {
+    id:        'task-'+Date.now(),
+    leadId:    leadId,
+    leadName:  ((lead.firstName||'')+' '+(lead.lastName||'')).trim()||lead.company||'Unknown',
+    leadPhone: lead.phone||'',
+    repEmail:  AN.currentRepEmail||'',
+    type:      g('an-task-type'),
+    dueDate:   g('an-task-date'),
+    dueTime:   g('an-task-time'),
+    notes:     g('an-task-notes'),
+    notify:    document.getElementById('an-task-notify')?.checked !== false,
+    done:      false,
+    createdAt: new Date().toISOString()
+  };
+  if(!AN._tasks) AN._tasks = [];
+  AN._tasks.push(task);
+  saveTasks();
+  document.getElementById('an-task-modal').remove();
+
+  // Refresh task list in panel if open
+  var taskList = document.getElementById('sp-task-list');
+  if(taskList) renderLeadTaskList(leadId, taskList);
+
+  if(typeof showToast==='function') showToast('Task created: '+getTaskType(task.type).label+' on '+task.dueDate+(task.dueTime?' at '+task.dueTime:''));
+  startTaskNotifier();
+};
+
+window.anCompleteTask = function(taskId) {
+  var t = (AN._tasks||[]).find(function(x){ return x.id===taskId; });
+  if(t){ t.done = true; t.completedAt = new Date().toISOString(); saveTasks(); }
+  // Refresh any visible task list
+  if(window._anPanelLeadId){
+    var taskList = document.getElementById('sp-task-list');
+    if(taskList) renderLeadTaskList(window._anPanelLeadId, taskList);
+  }
+  var taskSession = document.getElementById('an-task-session-list');
+  if(taskSession) renderTaskSessionList();
+  if(typeof showToast==='function') showToast('Task completed ✓');
+};
+
+window.anDeleteTask = function(taskId) {
+  AN._tasks = (AN._tasks||[]).filter(function(t){ return t.id!==taskId; });
+  saveTasks();
+  if(window._anPanelLeadId){
+    var taskList = document.getElementById('sp-task-list');
+    if(taskList) renderLeadTaskList(window._anPanelLeadId, taskList);
+  }
+};
+
+// Render tasks for a specific lead
+function renderLeadTaskList(leadId, container) {
+  var tasks = getLeadTasks(leadId).sort(function(a,b){ return (a.dueDate+a.dueTime).localeCompare(b.dueDate+b.dueTime); });
+  if(!tasks.length){
+    container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">No tasks yet<br><button onclick="anCreateTask(\''+leadId+'\')" style="margin-top:10px;background:#6366f1;border:none;border-radius:7px;padding:7px 16px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--sans);">+ Create Task</button></div>';
+    return;
+  }
+  container.innerHTML = tasks.map(function(t){
+    var tt = getTaskType(t.type);
+    var isOverdue = !t.done && t.dueDate && t.dueDate < new Date().toISOString().split('T')[0];
+    var isToday   = !t.done && t.dueDate === new Date().toISOString().split('T')[0];
+    var dateLabel = t.dueDate ? new Date(t.dueDate+'T12:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})+(t.dueTime?' at '+t.dueTime:'') : '';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--divider);">'
+      +'<div style="width:28px;height:28px;border-radius:50%;background:'+tt.color+(t.done?'18':'20')+';border:1.5px solid '+tt.color+'44;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;opacity:'+(t.done?'0.5':'1')+';">'+tt.icon+'</div>'
+      +'<div style="flex:1;min-width:0;opacity:'+(t.done?'0.5':'1')+';text-decoration:'+(t.done?'line-through':'none')+'">'
+      +'<div style="font-size:12.5px;font-weight:700;color:'+(isOverdue?'#ef4444':isToday?'#f59e0b':'var(--text-primary)')+';">'+tt.label+'</div>'
+      +(dateLabel?'<div style="font-size:11px;color:'+(isOverdue?'#ef4444':isToday?'#f59e0b':'var(--text-muted)')+';">'+(isOverdue?'⚠️ Overdue · ':isToday?'📅 Today · ':'')+dateLabel+'</div>':'')
+      +(t.notes?'<div style="font-size:11.5px;color:var(--text-secondary);margin-top:2px;">'+anEsc(t.notes)+'</div>':'')
+      +'</div>'
+      +'<div style="display:flex;gap:4px;flex-shrink:0;">'
+      +(!t.done?'<button onclick="anCompleteTask(\''+t.id+'\')" style="width:24px;height:24px;border-radius:5px;background:#ecfdf5;border:1px solid #a7f3d0;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#10b981;" title="Mark done">✓</button>':'')
+      +'<button onclick="anDeleteTask(\''+t.id+'\')" style="width:24px;height:24px;border-radius:5px;background:var(--body-bg);border:1px solid var(--divider);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted);" title="Delete">✕</button>'
+      +'</div></div>';
+  }).join('');
+}
+
+// ── PATCH SIDE PANEL to add Tasks tab ─────────────────────────
+var _origOpenLeadPanel_tasks = window.anOpenLeadPanel;
+window.anOpenLeadPanel = function(leadId) {
+  if(typeof _origOpenLeadPanel_tasks === 'function') _origOpenLeadPanel_tasks(leadId);
+  setTimeout(function(){
+    var panel = document.getElementById('an-side-panel');
+    if(!panel || panel.dataset.taskPatched) return;
+    panel.dataset.taskPatched = '1';
+
+    // Find the tabs row
+    var tabsRow = panel.querySelector('[id^="alt-"]')?.parentElement;
+    if(!tabsRow) return;
+
+    // Add Tasks tab
+    var taskTab = document.createElement('button');
+    taskTab.id = 'alt-tasks';
+    taskTab.onclick = function(){ anLeadTab('tasks'); };
+    taskTab.style.cssText = 'padding:11px 20px;border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;color:var(--text-muted);background:transparent;cursor:pointer;font-family:var(--sans);';
+    var taskCount = getLeadTasks(leadId).filter(function(t){return !t.done;}).length;
+    taskTab.textContent = 'Tasks'+(taskCount?' ('+taskCount+')':'');
+    tabsRow.appendChild(taskTab);
+
+    // Add tasks pane
+    var lastPane = panel.querySelector('[id^="alp-"]');
+    if(!lastPane) return;
+    var taskPane = document.createElement('div');
+    taskPane.id = 'alp-tasks';
+    taskPane.style.display = 'none';
+    taskPane.style.padding = '16px 22px';
+    taskPane.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
+      +'<div style="font-size:13.5px;font-weight:700;color:var(--text-primary);">Tasks</div>'
+      +'<button onclick="anCreateTask(\''+leadId+'\')" style="background:#6366f1;border:none;border-radius:7px;padding:6px 13px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--sans);">+ Add Task</button>'
+      +'</div>'
+      +'<div id="sp-task-list"></div>';
+    lastPane.parentElement.appendChild(taskPane);
+
+    // Render the task list
+    var taskList = taskPane.querySelector('#sp-task-list');
+    if(taskList) renderLeadTaskList(leadId, taskList);
+
+    // Also add Task button to action row
+    var actionRow = panel.querySelector('[style*="gap:7px"]');
+    if(actionRow && !actionRow.querySelector('[data-task-btn]')){
+      var taskBtn = document.createElement('button');
+      taskBtn.setAttribute('data-task-btn','1');
+      taskBtn.onclick = function(){ anCreateTask(leadId); };
+      taskBtn.style.cssText = 'flex:1;background:#fffbeb;color:#f59e0b;border:1px solid #fde68a;border-radius:8px;padding:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans);';
+      taskBtn.textContent = '📋 Task';
+      actionRow.appendChild(taskBtn);
+    }
+  }, 120);
+};
+
+// ── QUICK CALL AGAIN ──────────────────────────────────────────
+window.anCallAgain = function(leadId) {
+  var lead = AN.leads.find(function(l){ return l.id===leadId; });
+  if(!lead) return;
+  if(!lead.callLog) lead.callLog = [];
+
+  var today = new Date().toISOString().split('T')[0];
+  var curTime = new Date().getHours().toString().padStart(2,'0')+':'+new Date().getMinutes().toString().padStart(2,'0');
+
+  // Count today's calls
+  var todayCalls = lead.callLog.filter(function(c){ return c.date === today; }).length;
+
+  // Add quick attempt log
+  lead.callLog.push({
+    id:      'ca-'+Date.now(),
+    type:    'call',
+    outcome: 'noanswer',
+    date:    today,
+    time:    curTime,
+    notes:   'Call attempt #'+(todayCalls+1)+' today',
+    quick:   true
+  });
+  lead.lastContactDate = today;
+  lead.updated = new Date().toISOString();
+  AN.save();
+
+  // Sync to dashboard
+  if(typeof syncActivityFromCRM==='function') syncActivityFromCRM('calls',1);
+
+  // Update attempt counter in side panel
+  var counter = document.getElementById('sp-call-counter-'+leadId);
+  if(counter) counter.textContent = (todayCalls+1)+' attempts today';
+
+  if(typeof showToast==='function') showToast('Call attempt #'+(todayCalls+1)+' logged');
+  if(typeof renderLeadsTable==='function') renderLeadsTable();
+};
+
+// ── CALL AGAIN BUTTON in side panel ──────────────────────────
+// Patch to add call counter + call again button
+var _origOpenLeadPanel_callAgain = window.anOpenLeadPanel;
+window.anOpenLeadPanel = function(leadId) {
+  if(typeof _origOpenLeadPanel_callAgain === 'function') _origOpenLeadPanel_callAgain(leadId);
+  setTimeout(function(){
+    var panel = document.getElementById('an-side-panel');
+    if(!panel || panel.dataset.callAgainPatched) return;
+    panel.dataset.callAgainPatched = '1';
+
+    var lead = AN.leads.find(function(l){ return l.id===leadId; });
+    if(!lead) return;
+
+    var today = new Date().toISOString().split('T')[0];
+    var todayCalls = (lead.callLog||[]).filter(function(c){ return c.date===today; }).length;
+
+    // Find stats row and add after it
+    var statsRow = panel.querySelector('[style*="grid-template-columns:repeat(3"]');
+    if(statsRow && !panel.querySelector('[data-call-again]')){
+      var callAgainBar = document.createElement('div');
+      callAgainBar.setAttribute('data-call-again','1');
+      callAgainBar.style.cssText = 'padding:10px 18px;border-bottom:1px solid var(--divider);background:rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;';
+      callAgainBar.innerHTML =
+        '<span id="sp-call-counter-'+leadId+'" style="font-size:12px;color:rgba(255,255,255,0.55);">'
+        +(todayCalls>0?todayCalls+' attempt'+(todayCalls!==1?'s':'')+' today':'No calls today')
+        +'</span>'
+        +'<button onclick="anCallAgain(\''+leadId+'\')" '
+        +'style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;color:#6ee7b7;cursor:pointer;font-family:var(--sans);">📞 Call Again</button>';
+      statsRow.insertAdjacentElement('afterend', callAgainBar);
+    }
+  }, 150);
+};
+
+// ── TASK SESSION ──────────────────────────────────────────────
+window.openTaskSession = function() {
+  loadTasks();
+  var tasks = getMyTasks();
+  var today = getTodayTasks();
+  var overdue = getOverdueTasks();
+
+  var old = document.getElementById('an-task-session-modal'); if(old) old.remove();
+  var m = document.createElement('div');
+  m.id = 'an-task-session-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:10001;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;backdrop-filter:blur(4px);';
+
+  m.innerHTML =
+    '<div style="background:var(--card-bg);border-radius:16px;width:680px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,0.35);overflow:hidden;">'
+    +'<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);padding:20px 24px;display:flex;justify-content:space-between;align-items:center;">'
+    +'<div>'
+    +'<div style="font-size:18px;font-weight:800;color:#fff;">📋 Task Session</div>'
+    +'<div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:2px;">'
+    +(overdue.length?'<span style="color:#fca5a5;">'+overdue.length+' overdue</span> · ':'')
+    +today.length+' due today · '+tasks.length+' total open</div>'
+    +'</div>'
+    +'<button onclick="document.getElementById(\'an-task-session-modal\').remove()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px;">✕</button>'
+    +'</div>'
+    // Filter tabs
+    +'<div style="display:flex;border-bottom:1px solid var(--divider);background:var(--body-bg);padding:0 20px;">'
+    +'<button id="ts-tab-today" onclick="tsFilter(\'today\')" style="padding:10px 16px;border:none;border-bottom:2px solid #6366f1;font-size:13px;font-weight:700;color:#6366f1;background:transparent;cursor:pointer;font-family:var(--sans);">Today ('+today.length+')</button>'
+    +'<button id="ts-tab-overdue" onclick="tsFilter(\'overdue\')" style="padding:10px 16px;border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;color:'+(overdue.length?'#ef4444':'var(--text-muted)')+';background:transparent;cursor:pointer;font-family:var(--sans);">Overdue ('+overdue.length+')</button>'
+    +'<button id="ts-tab-all" onclick="tsFilter(\'all\')" style="padding:10px 16px;border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:600;color:var(--text-muted);background:transparent;cursor:pointer;font-family:var(--sans);">All ('+tasks.length+')</button>'
+    +'</div>'
+    +'<div id="an-task-session-list" style="max-height:500px;overflow-y:auto;"></div>'
+    +'</div>';
+
+  document.body.appendChild(m);
+  m.onclick = function(e){ if(e.target===m) m.remove(); };
+  window._tsFilter = 'today';
+  renderTaskSessionList();
+};
+
+window.tsFilter = function(f) {
+  window._tsFilter = f;
+  ['today','overdue','all'].forEach(function(t){
+    var b = document.getElementById('ts-tab-'+t); if(!b) return;
+    b.style.borderBottomColor = t===f ? '#6366f1' : 'transparent';
+    b.style.color = t===f ? '#6366f1' : (t==='overdue'&&getOverdueTasks().length?'#ef4444':'var(--text-muted)');
+    b.style.fontWeight = t===f ? '700' : '600';
+  });
+  renderTaskSessionList();
+};
+
+window.renderTaskSessionList = function() {
+  var container = document.getElementById('an-task-session-list');
+  if(!container) return;
+  var f = window._tsFilter||'today';
+  var tasks = f==='today'?getTodayTasks():f==='overdue'?getOverdueTasks():getMyTasks();
+
+  if(!tasks.length){
+    container.innerHTML = '<div style="padding:48px;text-align:center;color:var(--text-muted);">'
+      +'<div style="font-size:36px;margin-bottom:12px;">✅</div>'
+      +'<div style="font-size:15px;font-weight:700;margin-bottom:6px;">'+(f==='today'?'No tasks due today':'No tasks here')+'</div>'
+      +'<div style="font-size:13px;">You\'re all caught up!</div></div>';
+    return;
+  }
+
+  container.innerHTML = tasks.map(function(t){
+    var tt = getTaskType(t.type);
+    var lead = AN.leads.find(function(l){ return l.id===t.leadId; });
+    var isOverdue = t.dueDate < new Date().toISOString().split('T')[0];
+    var dateLabel = t.dueDate ? new Date(t.dueDate+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+(t.dueTime?' at '+t.dueTime:'') : '';
+
+    return '<div style="display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--divider);transition:background 0.1s;" onmouseover="this.style.background=\'var(--body-bg)\'" onmouseout="this.style.background=\'transparent\'">'
+      +'<div style="width:38px;height:38px;border-radius:50%;background:'+tt.color+'18;border:2px solid '+tt.color+'44;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">'+tt.icon+'</div>'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:13.5px;font-weight:700;color:var(--text-primary);">'+tt.label+' · <span style="color:var(--text-secondary);font-weight:600;">'+anEsc(t.leadName)+'</span></div>'
+      +(dateLabel?'<div style="font-size:11.5px;color:'+(isOverdue?'#ef4444':'var(--text-muted)')+';">'+(isOverdue?'⚠️ Overdue · ':'')+dateLabel+'</div>':'')
+      +(t.notes?'<div style="font-size:12.5px;color:var(--text-secondary);margin-top:2px;">'+anEsc(t.notes)+'</div>':'')
+      +'</div>'
+      +'<div style="display:flex;gap:6px;flex-shrink:0;">'
+      +(lead?'<button onclick="document.getElementById(\'an-task-session-modal\').remove();showSection(\'crm\');setTimeout(function(){anOpenLeadPanel(\''+t.leadId+'\')},300);" '
+        +'style="padding:6px 12px;border-radius:7px;background:#6366f1;border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);">Open Lead</button>':'')
+      +(t.type==='call'&&lead?'<button onclick="anLogCall(\''+t.leadId+'\')" '
+        +'style="padding:6px 12px;border-radius:7px;background:#ecfdf5;border:1px solid #a7f3d0;color:#10b981;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);">📞 Call</button>':'')
+      +'<button onclick="anCompleteTask(\''+t.id+'\')" '
+        +'style="padding:6px 12px;border-radius:7px;background:var(--body-bg);border:1px solid var(--divider);color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);">✓ Done</button>'
+      +'</div></div>';
+  }).join('');
+};
+
+// ── TASK NOTIFICATIONS ────────────────────────────────────────
+var _taskNotifierTimer = null;
+var _notifiedTaskIds = {};
+
+function startTaskNotifier() {
+  if(_taskNotifierTimer) return; // already running
+  _taskNotifierTimer = setInterval(checkDueTasks, 60000); // every minute
+  checkDueTasks(); // check immediately
+}
+
+function checkDueTasks() {
+  loadTasks();
+  var overdue = getOverdueTasks();
+  overdue.forEach(function(t) {
+    if(_notifiedTaskIds[t.id]) return;
+    _notifiedTaskIds[t.id] = true;
+
+    var tt = getTaskType(t.type);
+    var msg = tt.label+' task due: '+t.leadName+(t.dueTime?' at '+t.dueTime:'');
+
+    // In-app toast notification
+    showTaskNotification(t, msg);
+
+    // Browser notification (if permission granted)
+    if(window.Notification && Notification.permission === 'granted') {
+      new Notification('AgentNav Task Due 🔔', { body: msg, icon: '/favicon.ico' });
+    }
+  });
+}
+
+function showTaskNotification(task, msg) {
+  var old = document.getElementById('task-notif-'+task.id); if(old) return;
+  var n = document.createElement('div');
+  n.id = 'task-notif-'+task.id;
+  n.style.cssText = 'position:fixed;bottom:80px;right:24px;background:var(--card-bg);border:1.5px solid #6366f1;border-radius:12px;padding:14px 16px;box-shadow:0 8px 32px rgba(99,102,241,0.25);z-index:9990;max-width:320px;animation:sectionIn 0.25s ease;';
+  var tt = getTaskType(task.type);
+  n.innerHTML =
+    '<div style="display:flex;align-items:flex-start;gap:10px;">'
+    +'<div style="font-size:20px;">'+tt.icon+'</div>'
+    +'<div style="flex:1;">'
+    +'<div style="font-size:13px;font-weight:800;color:var(--text-primary);margin-bottom:2px;">Task Due 🔔</div>'
+    +'<div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:8px;">'+anEsc(msg)+'</div>'
+    +'<div style="display:flex;gap:6px;">'
+    +'<button onclick="anOpenLeadPanel(\''+task.leadId+'\');document.getElementById(\'task-notif-'+task.id+'\').remove();" '
+      +'style="padding:5px 11px;border-radius:6px;background:#6366f1;border:none;color:#fff;font-size:11.5px;font-weight:700;cursor:pointer;font-family:var(--sans);">Open Lead</button>'
+    +'<button onclick="anCompleteTask(\''+task.id+'\');document.getElementById(\'task-notif-'+task.id+'\').remove();" '
+      +'style="padding:5px 11px;border-radius:6px;background:var(--body-bg);border:1px solid var(--divider);color:var(--text-secondary);font-size:11.5px;font-weight:600;cursor:pointer;font-family:var(--sans);">Done ✓</button>'
+    +'<button onclick="document.getElementById(\'task-notif-'+task.id+'\').remove();" '
+      +'style="padding:5px 8px;border-radius:6px;background:var(--body-bg);border:1px solid var(--divider);color:var(--text-muted);font-size:11.5px;cursor:pointer;">✕</button>'
+    +'</div></div></div>';
+  document.body.appendChild(n);
+  // Auto-dismiss after 30s
+  setTimeout(function(){ if(n.parentElement) n.remove(); }, 30000);
+}
+
+// Request browser notification permission on first task create
+function requestNotifPermission() {
+  if(window.Notification && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+// ── Add Task Session button to CRM header ─────────────────────
+var _origRenderCRM_tasks = window.renderCRM;
+window.renderCRM = function() {
+  if(typeof _origRenderCRM_tasks === 'function') _origRenderCRM_tasks();
+  setTimeout(function(){
+    // Find the header button row and add Tasks button
+    var header = document.querySelector('#section-crm > div:first-child');
+    if(!header || header.querySelector('[data-task-session-btn]')) return;
+    var btn = document.createElement('button');
+    btn.setAttribute('data-task-session-btn','1');
+    btn.onclick = openTaskSession;
+    var count = getTodayTasks().length + getOverdueTasks().length;
+    btn.innerHTML = '📋 Tasks'+(count?' <span style="background:#ef4444;color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px;">'+count+'</span>':'');
+    btn.style.cssText = 'display:flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px solid var(--divider);border-radius:8px;font-size:13px;font-weight:600;color:var(--text-secondary);background:var(--card-bg);cursor:pointer;font-family:var(--sans);';
+    var btnRow = header.querySelector('div:last-child');
+    if(btnRow) btnRow.insertBefore(btn, btnRow.firstChild);
+    // Start notifier
+    startTaskNotifier();
+    // Request permission
+    requestNotifPermission();
+  }, 300);
+};
+
+// Start notifier on page load too
+setTimeout(function(){
+  loadTasks();
+  startTaskNotifier();
+}, 2000);
+
+console.log('[TASKS] Task system, Call Again, Task Session loaded.');
+
+</script>
+<script>
+// ============================================================
+// 1. LEAD OWNERSHIP BADGE — shows in side panel + call session
+// 2. DEMO AUTOMATION — no API needed, mailto + task creation
+// ============================================================
+
+// ── 1. OWNERSHIP BADGE in anOpenLeadPanel ─────────────────────
+var _origOpenPanel_ownership = window.anOpenLeadPanel;
+window.anOpenLeadPanel = function(leadId) {
+  if (typeof _origOpenPanel_ownership === 'function') _origOpenPanel_ownership(leadId);
+  setTimeout(function() {
+    var panel = document.getElementById('an-side-panel');
+    if (!panel || panel.dataset.ownerPatched) return;
+    panel.dataset.ownerPatched = '1';
+
+    var lead = AN.leads.find(function(l){ return l.id === leadId; });
+    if (!lead) return;
+
+    // Find the gradient header
+    var header = panel.querySelector('div[style*="linear-gradient(135deg,#0a0a14"]');
+    if (!header) return;
+
+    var repEmail = lead._repEmail || AN.currentRepEmail || '';
+    var repName  = repEmail ? repEmail.split('@')[0] : '—';
+    var repCol   = typeof anColor === 'function' ? anColor(repEmail) : '#6366f1';
+
+    // Add ownership row at bottom of header
+    var ownerBar = document.createElement('div');
+    ownerBar.style.cssText = 'padding:8px 18px 10px;border-top:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;';
+    ownerBar.innerHTML =
+      '<div style="display:flex;align-items:center;gap:7px;">'
+      + '<div style="width:20px;height:20px;border-radius:50%;background:' + repCol + '33;border:1.5px solid ' + repCol + '55;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:' + repCol + ';">'
+      + repName[0].toUpperCase()
+      + '</div>'
+      + '<span style="font-size:11.5px;color:rgba(255,255,255,0.45);">Owner: <strong style="color:rgba(255,255,255,0.75);">' + repName + '</strong></span>'
+      + '</div>'
+      + (AN.isAdmin && repEmail !== AN.currentRepEmail
+          ? '<button onclick="anReassign(\'' + leadId + '\')" style="font-size:10px;color:rgba(165,180,252,0.7);background:none;border:none;cursor:pointer;font-family:var(--sans);text-decoration:underline;">Reassign</button>'
+          : '')
+      + '</div>';
+    header.appendChild(ownerBar);
+  }, 130);
+};
+
+// ── Ownership in MCM call panel header ────────────────────────
+var _origMcmOpen = window.openMobileCallMode;
+window.openMobileCallMode = function(leadId) {
+  if (typeof _origMcmOpen === 'function') _origMcmOpen(leadId);
+  setTimeout(function() {
+    var wrap = document.getElementById('mcm-panel-wrap');
+    if (!wrap || wrap.dataset.ownerPatched) return;
+    wrap.dataset.ownerPatched = '1';
+
+    var lead = AN.leads.find(function(l){ return l.id === leadId; });
+    if (!lead) return;
+
+    var repEmail = lead._repEmail || AN.currentRepEmail || '';
+    var repName  = repEmail ? repEmail.split('@')[0] : '—';
+    var repCol   = typeof anColor === 'function' ? anColor(repEmail) : '#6366f1';
+
+    // Find the header div inside wrap
+    var header = wrap.querySelector('div[style*="space-between"][style*="border-bottom"]');
+    if (!header) return;
+
+    var ownerBadge = document.createElement('div');
+    ownerBadge.style.cssText = 'position:absolute;top:10px;left:50%;transform:translateX(-50%);';
+    ownerBadge.innerHTML = '<span style="background:' + repCol + '22;color:' + repCol + ';border:1px solid ' + repCol + '44;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700;white-space:nowrap;">👤 ' + repName + '</span>';
+    header.style.position = 'relative';
+    header.appendChild(ownerBadge);
+  }, 200);
+};
+
+// ── 2. DEMO AUTOMATION — no API keys needed ───────────────────
+// Fires when status is set to booked_demo or demo
+var _origMcmSetStatus = window.mcmSetStatus;
+window.mcmSetStatus = function(status, leadId) {
+  if (typeof _origMcmSetStatus === 'function') _origMcmSetStatus(status, leadId);
+
+  if (status === 'booked_demo' || status === 'demo') {
+    setTimeout(function() {
+      var lead = AN.leads.find(function(l){ return l.id === leadId; });
+      if (!lead) return;
+      showDemoAutomationPanel(lead);
+    }, 400);
+  }
+};
+
+// Also fire from the lead side panel status changes
+var _origAnSaveLead_demo = window.anSaveLead;
+window.anSaveLead = function(id) {
+  var statusEl = document.getElementById('alf-sta');
+  var newStatus = statusEl ? statusEl.value : '';
+  if (typeof _origAnSaveLead_demo === 'function') _origAnSaveLead_demo(id);
+  if (newStatus === 'booked_demo' || newStatus === 'demo') {
+    var lead = AN.leads.find(function(l){ return l.id === id; });
+    if (lead) setTimeout(function(){ showDemoAutomationPanel(lead); }, 500);
+  }
+};
+
+window.showDemoAutomationPanel = function(lead) {
+  var old = document.getElementById('demo-auto-modal'); if (old) old.remove();
+
+  var name = ((lead.firstName||'')+' '+(lead.lastName||'')).trim() || 'there';
+  var company = lead.company || '';
+  var email   = lead.email || '';
+  var phone   = lead.phone || '';
+
+  // Get the booked demo time if set via scheduler
+  var demoTime = '';
+  var demoDate = '';
+  if (typeof AN !== 'undefined' && AN._bookedDemos) {
+    var booked = AN._bookedDemos.find(function(d){ return d.leadId === lead.id; });
+    if (booked) { demoDate = booked.date; demoTime = booked.time; }
+  }
+
+  // Auto-detect from quick note
+  var noteEl = document.getElementById('mcm-note');
+  var noteText = noteEl ? noteEl.value : '';
+  var timeMatch = noteText.match(/(\d{1,2}:\d{2}\s*[AP]M)/i);
+  if (timeMatch) demoTime = timeMatch[1];
+
+  var defaultDateTime = demoDate
+    ? new Date(demoDate+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}) + (demoTime?' at '+demoTime:'')
+    : '';
+
+  var confirmEmail = 'Hi ' + name + ',\n\nGreat speaking with you! I\'m looking forward to showing you AgentNav'
+    + (demoTime ? ' on ' + defaultDateTime : '') + '.\n\n'
+    + 'In our demo I\'ll show you:\n'
+    + '• ACA & STM quoting built for health brokers\n'
+    + '• Full CRM with SMS and renewal autopilot\n'
+    + '• HubSpot integration and pipeline tracking\n\n'
+    + 'The demo takes about 15-20 minutes. If anything comes up, feel free to reach out.\n\n'
+    + 'Looking forward to it!\n'
+    + (AN.currentRep || 'Your AgentNav Rep');
+
+  var m = document.createElement('div');
+  m.id = 'demo-auto-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:10002;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+
+  m.innerHTML =
+    '<div style="background:var(--card-bg);border-radius:16px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.35);">'
+
+    // Header
+    + '<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);padding:20px 24px;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1;">'
+    + '<div><div style="font-size:17px;font-weight:800;color:#fff;">🎯 Demo Booked!</div>'
+    + '<div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:2px;">Let\'s automate the follow-through for ' + anEsc(name) + '</div>'
+    + '</div>'
+    + '<button onclick="document.getElementById(\'demo-auto-modal\').remove()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;">✕</button>'
+    + '</div>'
+
+    + '<div style="padding:20px 22px;">'
+
+    // Demo time input
+    + '<div style="margin-bottom:16px;">'
+    + '<div style="font-size:10px;font-weight:700;font-family:var(--mono);letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Demo Date & Time</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+    + '<input id="demo-date" type="date" value="' + (demoDate||new Date().toISOString().split('T')[0]) + '" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13px;font-family:var(--sans);outline:none;color:var(--text-primary);background:var(--card-bg);box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'">'
+    + '<input id="demo-time" type="time" value="' + (demoTime?demoTime.replace(/\s*(AM|PM)/i,''):'13:00') + '" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13px;font-family:var(--sans);outline:none;color:var(--text-primary);background:var(--card-bg);box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'">'
+    + '</div></div>'
+
+    // Actions
+    + '<div style="font-size:10px;font-weight:700;font-family:var(--mono);letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;">What to do next</div>'
+
+    // Action 1: Create reminder task
+    + '<div style="background:var(--body-bg);border-radius:10px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;">'
+    + '<div style="font-size:24px;">🔔</div>'
+    + '<div style="flex:1;">'
+    + '<div style="font-size:13.5px;font-weight:700;color:var(--text-primary);">Create Demo Reminder Task</div>'
+    + '<div style="font-size:12px;color:var(--text-muted);">Reminds you 15 minutes before the demo to prep</div>'
+    + '</div>'
+    + '<button onclick="createDemoReminder(\'' + lead.id + '\')" style="padding:7px 14px;border:none;border-radius:7px;background:#6366f1;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans);">Create Task</button>'
+    + '</div>'
+
+    // Action 2: Send confirmation email via mailto
+    + '<div style="background:var(--body-bg);border-radius:10px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;">'
+    + '<div style="font-size:24px;">📧</div>'
+    + '<div style="flex:1;">'
+    + '<div style="font-size:13.5px;font-weight:700;color:var(--text-primary);">Send Confirmation Email</div>'
+    + '<div style="font-size:12px;color:var(--text-muted);">'
+    + (email ? 'Opens your email app pre-filled to ' + anEsc(email) : 'No email on file — add it first')
+    + '</div>'
+    + '</div>'
+    + (email
+        ? '<button onclick="openDemoConfirmEmail(\'' + lead.id + '\')" style="padding:7px 14px;border:none;border-radius:7px;background:#f59e0b;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans);">Open Email</button>'
+        : '<button disabled style="padding:7px 14px;border:none;border-radius:7px;background:var(--divider);color:var(--text-muted);font-size:12.5px;font-weight:600;cursor:not-allowed;font-family:var(--sans);">No Email</button>')
+    + '</div>'
+
+    // Action 3: Copy confirmation email
+    + '<div style="background:var(--body-bg);border-radius:10px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;">'
+    + '<div style="font-size:24px;">📋</div>'
+    + '<div style="flex:1;">'
+    + '<div style="font-size:13.5px;font-weight:700;color:var(--text-primary);">Copy Email Template</div>'
+    + '<div style="font-size:12px;color:var(--text-muted);">Paste into any email, HubSpot, or text</div>'
+    + '</div>'
+    + '<button id="demo-copy-btn" onclick="copyDemoEmail(\'' + lead.id + '\')" style="padding:7px 14px;border:none;border-radius:7px;background:rgba(99,102,241,0.12);color:#6366f1;border:1px solid rgba(99,102,241,0.3);font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans);">Copy</button>'
+    + '</div>'
+
+    // Email preview
+    + '<div style="margin-bottom:16px;">'
+    + '<div style="font-size:10px;font-weight:700;font-family:var(--mono);letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">Email Preview <span style="font-weight:500;text-transform:none;letter-spacing:0;">(edit before sending)</span></div>'
+    + '<textarea id="demo-email-body" rows="10" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:11px;font-size:13px;line-height:1.7;color:var(--text-primary);background:var(--card-bg);outline:none;resize:vertical;font-family:var(--sans);box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'">' + anEsc(confirmEmail) + '</textarea>'
+    + '</div>'
+
+    + '<button onclick="document.getElementById(\'demo-auto-modal\').remove()" style="width:100%;padding:11px;border-radius:8px;border:1.5px solid var(--divider);background:transparent;font-size:13.5px;font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--text-secondary);">Done</button>'
+    + '</div></div>';
+
+  document.body.appendChild(m);
+  m.onclick = function(e){ if (e.target===m) m.remove(); };
+
+  // Store lead context for the action buttons
+  window._demoAutoLeadId = lead.id;
+};
+
+window.createDemoReminder = function(leadId) {
+  var lead = AN.leads.find(function(l){ return l.id===leadId; });
+  if (!lead) return;
+  var dateEl = document.getElementById('demo-date');
+  var timeEl = document.getElementById('demo-time');
+  var demoDate = dateEl ? dateEl.value : new Date().toISOString().split('T')[0];
+  var demoTime = timeEl ? timeEl.value : '13:00';
+
+  // Create reminder 15 min before
+  var demoMs = new Date(demoDate+'T'+demoTime).getTime();
+  var remindMs = demoMs - 15*60*1000;
+  var remindDate = new Date(remindMs);
+  var remindDateStr = remindDate.toISOString().split('T')[0];
+  var remindTimeStr = remindDate.getHours().toString().padStart(2,'0')+':'+remindDate.getMinutes().toString().padStart(2,'0');
+
+  if (!AN._tasks) AN._tasks = [];
+  AN._tasks.push({
+    id:        'task-demo-'+Date.now(),
+    leadId:    leadId,
+    leadName:  ((lead.firstName||'')+' '+(lead.lastName||'')).trim()||lead.company||'Unknown',
+    leadPhone: lead.phone||'',
+    repEmail:  AN.currentRepEmail||'',
+    type:      'demo',
+    dueDate:   remindDateStr,
+    dueTime:   remindTimeStr,
+    notes:     'Demo at ' + demoTime + ' — prep and join 5 min early',
+    notify:    true,
+    done:      false,
+    createdAt: new Date().toISOString()
+  });
+
+  // Also create a follow-up task for 2 hours after the demo
+  var followMs = demoMs + 2*60*60*1000;
+  var followDate = new Date(followMs);
+  var followDateStr = followDate.toISOString().split('T')[0];
+  var followTimeStr = followDate.getHours().toString().padStart(2,'0')+':'+followDate.getMinutes().toString().padStart(2,'0');
+
+  AN._tasks.push({
+    id:        'task-followup-'+Date.now(),
+    leadId:    leadId,
+    leadName:  ((lead.firstName||'')+' '+(lead.lastName||'')).trim()||lead.company||'Unknown',
+    leadPhone: lead.phone||'',
+    repEmail:  AN.currentRepEmail||'',
+    type:      'followup',
+    dueDate:   followDateStr,
+    dueTime:   followTimeStr,
+    notes:     'Follow up after demo — send recap, answer questions',
+    notify:    true,
+    done:      false,
+    createdAt: new Date().toISOString()
+  });
+
+  if (typeof saveTasks === 'function') saveTasks();
+  if (typeof startTaskNotifier === 'function') startTaskNotifier();
+
+  var btn = document.querySelector('#demo-auto-modal button[onclick*="createDemoReminder"]');
+  if (btn) { btn.textContent = '✓ Created!'; btn.style.background='#10b981'; btn.disabled=true; }
+  if (typeof showToast==='function') showToast('Demo reminder + follow-up tasks created ✓');
+};
+
+window.openDemoConfirmEmail = function(leadId) {
+  var lead = AN.leads.find(function(l){ return l.id===leadId; });
+  if (!lead || !lead.email) return;
+
+  var dateEl = document.getElementById('demo-date');
+  var timeEl = document.getElementById('demo-time');
+  var demoDate = dateEl ? dateEl.value : '';
+  var demoTime = timeEl ? timeEl.value : '';
+
+  var dateLabel = demoDate
+    ? new Date(demoDate+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})
+    : '';
+
+  var bodyEl = document.getElementById('demo-email-body');
+  var body = bodyEl ? bodyEl.value : '';
+
+  var subject = 'Your AgentNav Demo' + (dateLabel ? ' — ' + dateLabel : '');
+
+  // Open mailto: with pre-filled subject and body
+  var mailto = 'mailto:' + encodeURIComponent(lead.email)
+    + '?subject=' + encodeURIComponent(subject)
+    + '&body=' + encodeURIComponent(body);
+
+  window.open(mailto, '_blank');
+
+  // Log as email activity
+  if (!lead.callLog) lead.callLog = [];
+  lead.callLog.push({
+    id:      'email-'+Date.now(),
+    type:    'email',
+    outcome: 'emailed',
+    date:    new Date().toISOString().split('T')[0],
+    time:    new Date().getHours().toString().padStart(2,'0')+':'+new Date().getMinutes().toString().padStart(2,'0'),
+    notes:   'Demo confirmation email sent' + (dateLabel?' for '+dateLabel:''),
+    subject: subject
+  });
+  lead.updated = new Date().toISOString();
+  AN.save();
+
+  if (typeof showToast==='function') showToast('Email opened in your mail app ✓');
+};
+
+window.copyDemoEmail = function(leadId) {
+  var bodyEl = document.getElementById('demo-email-body');
+  if (!bodyEl) return;
+  var text = bodyEl.value;
+
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(function() {
+      var btn = document.getElementById('demo-copy-btn');
+      if (btn) { btn.textContent = '✓ Copied!'; btn.style.background='#10b981'; btn.style.color='#fff'; btn.style.borderColor='#10b981'; }
+      if (typeof showToast==='function') showToast('Email template copied to clipboard ✓');
+    });
+  } else {
+    // Fallback
+    bodyEl.select();
+    document.execCommand('copy');
+    if (typeof showToast==='function') showToast('Email template copied ✓');
+  }
+};
+
+console.log('[OWNERSHIP + DEMO AUTO] Loaded.');
+
+</script>
+<script>
+window.anCopyToClipboard = function(text) {
+  if (!text) return;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      if (typeof showToast === 'function') showToast('Copied: ' + text);
+    }).catch(function() {
+      // fallback
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      if (typeof showToast === 'function') showToast('Copied: ' + text);
+    });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    if (typeof showToast === 'function') showToast('Copied: ' + text);
+  }
+};
+
+console.log("[COPY] anCopyToClipboard loaded.");
 </script>
 </body>
 </html>
