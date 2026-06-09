@@ -9111,7 +9111,8 @@ function anSaveLeadsToIDB(leads, cb){
 
 AN.load = function(cb){
   function runLeadLoad(){
-  var sb = typeof getSupabase==='function'?getSupabase():null;
+  var sb = null;
+  try { sb = typeof getSupabase==='function' ? getSupabase() : null; } catch(e) { console.warn('[CRM] Supabase client unavailable:', e); }
   var localLeads = anLoadLeadsFromLocal();
   function anLeadsLoadDone(){
     AN.leadsLoading = false;
@@ -9414,7 +9415,10 @@ function anMatchesAdvancedFilters(lead, adv){
   if(adv.owner === '__none__' && lead._repEmail) return false;
   if(adv.owner && adv.owner !== '__none__' && lead._repEmail !== adv.owner) return false;
   if(adv.status && (lead.status || 'new') !== adv.status) return false;
-  if(adv.state && (lead.state || '').toUpperCase() !== adv.state.toUpperCase()) return false;
+  if(adv.state) {
+    var leadSt = typeof anResolveLeadState === 'function' ? anResolveLeadState(lead) : (lead.state || '');
+    if (typeof anStatesMatch === 'function' ? !anStatesMatch(adv.state, leadSt) : (leadSt || '').toUpperCase() !== adv.state.toUpperCase()) return false;
+  }
   if(adv.company){
     var co = (lead.company || '').toLowerCase();
     if(co.indexOf(adv.company.toLowerCase()) < 0) return false;
@@ -9567,7 +9571,7 @@ window.anRefreshFilterChips = function(){
   else if(AN.repFilter === '__mine__') ownerLabel = 'My contacts';
   else if(AN.repFilter) ownerLabel = typeof anGetRepName === 'function' ? anGetRepName(AN.repFilter) : AN.repFilter.split('@')[0];
   var statusLabel = adv.status ? (AN_LEAD_STATUSES.find(function(s){ return s.id===adv.status; })||{}).label || adv.status : (AN.currentFilter === 'all' ? 'Lead status' : (AN.currentFilter === 'hot' ? 'Hot leads' : AN.currentFilter));
-  var stateLabel = adv.state || 'State';
+  var stateLabel = adv.state ? (typeof anNormalizeLeadStateValue === 'function' ? anNormalizeLeadStateValue(adv.state) : adv.state) : 'State';
   var companyLabel = adv.company ? adv.company : 'Company';
   var sizeLabel = adv.size ? (adv.size === '__none__' ? 'No size' : (anSize(adv.size).label || adv.size)) : 'Size';
   var actLabels = { never:'Never called', today:'Active today', '7d':'Last 7 days', '30d':'Last 30 days', stale30:'Inactive 30+ days', stale90:'Inactive 90+ days' };
@@ -9705,12 +9709,12 @@ window.anOpenStatusFilter = function(){
 
 window.anOpenStateFilter = function(){
   anCloseFilterPopover();
-  var states = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
-  var html = '<button type="button" onclick="AN.advancedFilters.state=\'\';anOnFilterChanged();anCloseFilterPopover()" style="width:100%;text-align:left;padding:9px 12px;border:none;background:transparent;border-radius:6px;font-size:13px;cursor:pointer;font-family:var(--sans);">All states</button>'
-    +'<div style="display:flex;flex-wrap:wrap;gap:4px;padding:4px 0;max-height:200px;overflow-y:auto;">'
-    +states.map(function(s){
-      return '<button type="button" onclick="AN.advancedFilters.state=\''+s+'\';anOnFilterChanged();anCloseFilterPopover()" style="padding:4px 8px;border-radius:6px;border:1.5px solid '+(AN.advancedFilters.state===s?'#6366f1':'var(--divider)')+';background:'+(AN.advancedFilters.state===s?'rgba(99,102,241,0.1)':'var(--card-bg)')+';font-size:11px;font-weight:700;cursor:pointer;font-family:var(--mono);">'+s+'</button>';
-    }).join('')+'</div>';
+  var selected = typeof anNormalizeLeadStateValue === 'function' ? anNormalizeLeadStateValue(AN.advancedFilters.state || '') : (AN.advancedFilters.state || '');
+  var stateOpts = typeof anBuildLeadStateOptions === 'function'
+    ? anBuildLeadStateOptions(selected).replace('— Select state —', 'All states')
+    : '<option value="">All states</option>';
+  var html = '<select id="af-state-quick" onchange="AN.advancedFilters.state=this.value;anOnFilterChanged();anCloseFilterPopover();" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 10px;font-size:13px;font-family:var(--sans);box-sizing:border-box;background:var(--card-bg);color:var(--text-primary);">'
+    + stateOpts + '</select>';
   anOpenFilterPopover('State', html);
 };
 
@@ -9818,7 +9822,7 @@ window.anOpenAdvancedFiltersModal = function(){
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
     +anAdvField('Owner', '<select id="af-owner" style="'+anAdvInputStyle()+'">'+ownerOpts+'</select>')
     +anAdvField('Lead status', '<select id="af-status" style="'+anAdvInputStyle()+'"><option value="">Any</option>'+statusOpts+'</select>')
-    +anAdvField('State', '<input id="af-state" type="text" maxlength="2" placeholder="e.g. UT" value="'+anEsc(adv.state)+'" style="'+anAdvInputStyle()+'">')
+    +anAdvField('State', '<select id="af-state" style="'+anAdvInputStyle()+'">'+(typeof anBuildLeadStateOptions === 'function' ? anBuildLeadStateOptions(adv.state).replace('— Select state —', 'Any state') : '<option value="">Any state</option>')+'</select>')
     +anAdvField('Company contains', '<input id="af-company" type="text" placeholder="e.g. FHM" value="'+anEsc(adv.company)+'" style="'+anAdvInputStyle()+'">')
     +anAdvField('Company size', '<select id="af-size" style="'+anAdvInputStyle()+'"><option value="">Any size</option><option value="__none__"'+(adv.size==='__none__'?' selected':'')+'>No size set</option>'+AN_SIZES.map(function(s){ return '<option value="'+s.id+'"'+(adv.size===s.id?' selected':'')+'>'+s.label+'</option>'; }).join('')+'</select>')
     +anAdvField('Last activity', '<select id="af-last-act" style="'+anAdvInputStyle()+'"><option value="">Any</option><option value="today"'+(adv.lastActivity==='today'?' selected':'')+'>Active today</option><option value="7d"'+(adv.lastActivity==='7d'?' selected':'')+'>Last 7 days</option><option value="30d"'+(adv.lastActivity==='30d'?' selected':'')+'>Last 30 days</option><option value="never"'+(adv.lastActivity==='never'?' selected':'')+'>Never called</option><option value="stale30"'+(adv.lastActivity==='stale30'?' selected':'')+'>Inactive 30+ days</option><option value="stale90"'+(adv.lastActivity==='stale90'?' selected':'')+'>Inactive 90+ days</option></select>')
@@ -9852,7 +9856,7 @@ window.anApplyAdvancedFiltersFromModal = function(){
   AN.advancedFilters = {
     owner: owner === '__mine__' ? '' : owner,
     status: (document.getElementById('af-status')||{}).value || '',
-    state: ((document.getElementById('af-state')||{}).value || '').toUpperCase(),
+    state: typeof anNormalizeLeadStateValue === 'function' ? anNormalizeLeadStateValue((document.getElementById('af-state')||{}).value || '') : ((document.getElementById('af-state')||{}).value || ''),
     company: (document.getElementById('af-company')||{}).value || '',
     size: (document.getElementById('af-size')||{}).value || '',
     lastActivity: (document.getElementById('af-last-act')||{}).value || '',
@@ -9992,7 +9996,19 @@ window.renderCRM = function(){
     +'<div style="text-align:center"><div class="loading-spinner" style="margin:0 auto 12px;"></div>'
     +'<div style="font-size:13px;color:var(--text-muted);">'+(AN.leadsLoading ? 'Loading '+((AN.leads&&AN.leads.length)||0).toLocaleString()+' leads...' : 'Loading CRM...')+'</div></div></div>';
 
+  if (AN._crmLoadWatchdog) clearTimeout(AN._crmLoadWatchdog);
+  AN._crmLoadWatchdog = setTimeout(function() {
+    AN._crmLoadWatchdog = null;
+    if (!document.getElementById('crm-content')) {
+      AN.leadsLoading = false;
+      AN.leadsReady = true;
+      AN.leads = AN.leads || [];
+      try { renderCRM(); } catch(e) {}
+    }
+  }, 12000);
+
   AN.load(function(){
+    if (AN._crmLoadWatchdog) { clearTimeout(AN._crmLoadWatchdog); AN._crmLoadWatchdog = null; }
     anEnforceRepLeadScope();
     try { var ps = localStorage.getItem('an-crm-page-size'); if(ps) AN.pageSize = Math.min(1000, Math.max(25, parseInt(ps, 10) || 100)); } catch(e){}
     try { AN.activeListId = localStorage.getItem('an-crm-active-list') || AN.activeListId || 'sys-all'; } catch(e){ AN.activeListId = AN.activeListId || 'sys-all'; }
@@ -10368,16 +10384,22 @@ window.anOpenLead = function(id){
   ov.id = 'an-lead-modal';
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px;overflow-y:auto;backdrop-filter:blur(4px);';
 
+  var isNewLead = !!lead._isDraftNew;
+  var headerTitle = isNewLead ? 'Add New Lead' : anEsc((lead.firstName||'')+' '+(lead.lastName||'')).trim() || 'Lead';
+  var headerSub = isNewLead
+    ? 'Enter contact and agency details — saves to your pipeline'
+    : anEsc([lead.company,lead.state,lead.size?anSize(lead.size).label:''].filter(Boolean).join(' · '));
+
   ov.innerHTML = '<div style="background:var(--card-bg);border-radius:16px;width:780px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,0.3);overflow:hidden;">'
 
     // Header
     +'<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);padding:20px 26px;display:flex;align-items:center;justify-content:space-between;">'
-    +'<div><div style="font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.5px;">'+anEsc((lead.firstName||'')+' '+(lead.lastName||''))+'</div>'
-    +'<div style="font-size:13px;color:rgba(255,255,255,0.45);margin-top:2px;">'+anEsc([lead.company,lead.state,lead.size?anSize(lead.size).label:''].filter(Boolean).join(' · '))+'</div>'
+    +'<div><div style="font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.5px;">'+headerTitle+'</div>'
+    +'<div style="font-size:13px;color:rgba(255,255,255,0.45);margin-top:2px;">'+headerSub+'</div>'
     +'</div>'
     +'<div style="display:flex;align-items:center;gap:10px;">'
-    +'<span style="background:'+st.color+'28;color:'+st.color+';border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;">'+st.label+'</span>'
-    +'<button onclick="document.getElementById(\'an-lead-modal\').remove()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px;">✕</button>'
+    +(isNewLead ? '' : '<span style="background:'+st.color+'28;color:'+st.color+';border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;">'+st.label+'</span>')
+    +'<button onclick="anCloseLeadModal(\''+lead.id+'\')" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px;">✕</button>'
     +'</div></div>'
 
     // Tabs
@@ -10393,7 +10415,13 @@ window.anOpenLead = function(id){
     +'<div id="alp-details" style="padding:22px 26px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
     +anField('First Name','alf-fn',lead.firstName||'','text')
     +anField('Last Name','alf-ln',lead.lastName||'','text')
-    +anField('Company','alf-co',lead.company||'','text').replace('type="text"','type="text" placeholder="Agency name — add anytime, even if blank on import"')
+    +(isNewLead
+      ? '<div style="grid-column:1/-1;background:#f5f3ff;border:1.5px solid #c7d2fe;border-radius:10px;padding:12px 14px;">'
+        +'<label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:#6366f1;display:block;margin-bottom:5px;">Company / Agency</label>'
+        +'<input id="alf-co" type="text" value="'+anEsc(lead.company||'')+'" placeholder="e.g. Compass Insurance Advisors, ABC Agency..." style="width:100%;border:1.5px solid #c7d2fe;border-radius:8px;padding:10px 12px;font-size:14px;font-weight:600;color:var(--text-primary);background:#fff;outline:none;font-family:var(--sans);box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'#c7d2fe\'">'
+        +'<div style="font-size:11px;color:#71717a;margin-top:6px;line-height:1.45;">Creates or links a company record automatically when you save.</div>'
+        +'</div>'
+      : anField('Company','alf-co',lead.company||'','text').replace('type="text"','type="text" placeholder="Agency name — add anytime, even if blank on import"'))
     +anField('Title / Role','alf-title',lead.title||'','text').replace('type="text"','type="text" placeholder="e.g. Owner, Agent, Agency Owner, Producer"')
     +anField('Email','alf-em',lead.email||'','email')
     +anField('Phone','alf-ph',lead.phone||'','tel')
@@ -10409,8 +10437,8 @@ window.anOpenLead = function(id){
     +anBuildSourceDatalist()
     +'<div id="alf-demo-wrap" style="grid-column:1/-1;display:none;"></div>'
     +'<div style="grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px;padding-top:8px;border-top:1px solid var(--divider);">'
-    +'<button onclick="document.getElementById(\'an-lead-modal\').remove()" style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--divider);background:transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--text-secondary);">Cancel</button>'
-    +'<button onclick="anSaveLead(\''+lead.id+'\')" style="padding:9px 18px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);box-shadow:0 2px 8px rgba(99,102,241,0.3);">Save Changes</button>'
+    +'<button onclick="anCloseLeadModal(\''+lead.id+'\')" style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--divider);background:transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--text-secondary);">Cancel</button>'
+    +'<button onclick="anSaveLead(\''+lead.id+'\')" style="padding:9px 18px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);box-shadow:0 2px 8px rgba(99,102,241,0.3);">'+(isNewLead?'Save Lead':'Save Changes')+'</button>'
     +'</div></div>'
 
     // Calls pane
@@ -10427,7 +10455,13 @@ window.anOpenLead = function(id){
     +'</div></div>';
 
   document.body.appendChild(ov);
-  ov.onclick = function(e){ if(e.target===ov) ov.remove(); };
+  ov.onclick = function(e){ if(e.target===ov) anCloseLeadModal(lead.id); };
+  if (isNewLead) {
+    setTimeout(function(){
+      var focusEl = document.getElementById('alf-fn') || document.getElementById('alf-co');
+      if (focusEl) focusEl.focus();
+    }, 80);
+  }
 };
 
 function anField(label,id,value,type){
@@ -10598,6 +10632,14 @@ window.anNormalizeLeadStateValue = function(raw) {
   return s;
 };
 
+window.anStatesMatch = function(filterState, leadState) {
+  if (!filterState) return true;
+  var f = anNormalizeLeadStateValue(filterState);
+  var l = anNormalizeLeadStateValue(leadState);
+  if (!f) return !l;
+  return f.toLowerCase() === l.toLowerCase();
+};
+
 window.anExtractStateFromNotes = function(notes) {
   if (!notes) return '';
   var m = notes.match(/(?:state\s*\/\s*region|state\s*code|ip\s*state|region)\s*[:=]\s*([A-Za-z .]+?)(?:\n|$|,|;)/i);
@@ -10724,8 +10766,15 @@ window.anSaveLead = function(id){
   var notesEl=document.getElementById('alf-notes'); if(notesEl) lead.notes=notesEl.value;
   anLinkLeadToCompanyRecord(lead, lead.company);
   lead.updated=new Date().toISOString();
-  AN.save(); renderLeadsTable();
-  document.getElementById('an-lead-modal').remove();
+  delete lead._isDraftNew;
+  AN.save();
+  if (document.getElementById('crm-content') && typeof renderLeadsTable === 'function') renderLeadsTable();
+  if (typeof hdRender === 'function') {
+    var homeSec = document.getElementById('section-home');
+    if (homeSec && homeSec.classList.contains('active')) hdRender();
+  }
+  var modal = document.getElementById('an-lead-modal');
+  if (modal) modal.remove();
   if(typeof showToast==='function') showToast('Lead saved');
 };
 
@@ -10981,12 +11030,29 @@ window.buildActivityItem = function(c) {
 
 
 // ── New lead ──────────────────────────────────────────────────
+window.anCloseLeadModal = function(leadId) {
+  var lead = AN.leads.find(function(l){ return l.id === leadId; });
+  var modal = document.getElementById('an-lead-modal');
+  if (lead && lead._isDraftNew) {
+    var fn = ((document.getElementById('alf-fn') || {}).value || '').trim();
+    var ln = ((document.getElementById('alf-ln') || {}).value || '').trim();
+    var co = ((document.getElementById('alf-co') || {}).value || '').trim();
+    var ph = ((document.getElementById('alf-ph') || {}).value || '').trim();
+    if (!fn && !ln && !co && !ph) {
+      AN.leads = AN.leads.filter(function(l){ return l.id !== leadId; });
+      if (typeof AN.save === 'function') AN.save();
+    }
+    delete lead._isDraftNew;
+  }
+  if (modal) modal.remove();
+};
+
 window.anNewLead = function(){
-  var blank={id:'l-'+Date.now(),firstName:'',lastName:'',company:'',title:'',email:'',phone:'',state:'',preferredLang:'en',size:'',source:'',status:'new',callLog:[],notes:'',nextFollowUp:'',_repEmail:AN.currentRepEmail,created:new Date().toISOString(),updated:new Date().toISOString()};
+  var blank={id:'l-'+Date.now(),firstName:'',lastName:'',company:'',title:'',email:'',phone:'',state:'',preferredLang:'en',size:'',source:'',status:'new',callLog:[],notes:'',nextFollowUp:'',_repEmail:AN.currentRepEmail,_isDraftNew:true,created:new Date().toISOString(),updated:new Date().toISOString()};
   AN.leads.unshift(blank);
   AN.save();
-  // Always open the full edit modal for new leads (not the side panel)
-  anOpenLeadModal(blank.id);
+  if (typeof anOpenLeadDetailsModal === 'function') anOpenLeadDetailsModal(blank.id);
+  else if (typeof anOpenLeadModal === 'function') anOpenLeadModal(blank.id);
 };
 
 window.anDeleteLead = function(id){
@@ -13596,7 +13662,7 @@ window.anOpenLeadPanel = function(leadId) {
     panel.id = 'an-side-panel';
     // If call session is open, position lead panel to its left
     var callSessionOpen = document.body.classList.contains('call-panel-open') || !!document.getElementById('mcm-panel-wrap');
-    var rightOffset = callSessionOpen ? '420px' : '0';
+    var rightOffset = callSessionOpen ? '360px' : '0';
     var panelWidth  = callSessionOpen ? '440px' : '440px';
     panel.style.cssText = 'position:fixed;top:0;right:' + rightOffset + ';width:' + panelWidth + ';max-width:100vw;height:100vh;background:var(--card-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.15);z-index:' + (callSessionOpen ? '19999' : '8888') + ';display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);box-sizing:border-box;';
     document.body.appendChild(panel);
@@ -13758,7 +13824,7 @@ window.anRenderCallSessionLeadPanel = function(leadId) {
   if (!panel) {
     panel = document.createElement('div');
     panel.id = 'an-cs-lead-panel';
-    panel.style.cssText = 'position:fixed;top:0;right:420px;bottom:0;width:440px;max-width:calc(100vw - 420px);background:var(--card-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.12);z-index:19999;display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);';
+    panel.style.cssText = 'position:fixed;top:0;right:360px;bottom:0;width:400px;max-width:calc(100vw - 360px);background:var(--card-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.12);z-index:19999;display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);';
     document.body.appendChild(panel);
     setTimeout(function(){ panel.style.transform = 'translateX(0)'; }, 10);
   } else {
@@ -14594,9 +14660,10 @@ window.renderCRM = function() {
 };
 
 // ── 9. CLICK ROW → OPEN SIDE PANEL (not modal) ───────────────
-// Already in unified CRM patch — just ensure openLead is not triggered
-// Override anOpenLead to route to panel
+// Keep full edit form for explicit new-lead + modal flows
+window.anOpenLeadDetailsModal = window.anOpenLead;
 window.anOpenLead = function(id) { anOpenLeadPanel(id); };
+window.anOpenLeadModal = window.anOpenLeadDetailsModal;
 
 console.log('[NAV+OPPS] Collapsible nav, draggable kanban, opp conversion, company view loaded.');
 
@@ -15828,8 +15895,97 @@ window.mcmCloseCallPanelOnly = function(){
   }
   var backdrop = document.getElementById('call-panel-backdrop');
   if (backdrop) backdrop.remove();
-  document.body.classList.remove('call-panel-open');
+  var dock = document.getElementById('mcm-dock-bar');
+  if (dock) dock.remove();
+  document.body.classList.remove('call-panel-open', 'call-panel-minimized', 'call-lead-collapsed', 'call-session-dual');
   if (typeof anRenderCallSessionBanner === 'function') anRenderCallSessionBanner();
+};
+
+window.mcmToggleLeadPanel = function() {
+  var collapsed = !document.body.classList.contains('call-lead-collapsed');
+  document.body.classList.toggle('call-lead-collapsed', collapsed);
+  var btn = document.getElementById('mcm-lead-toggle');
+  if (btn) {
+    btn.textContent = collapsed ? '👤 Show Lead' : '👤 Hide Lead';
+    btn.style.background = collapsed ? 'rgba(99,102,241,0.22)' : 'rgba(255,255,255,0.08)';
+  }
+  try { localStorage.setItem('mcm-lead-collapsed', collapsed ? '1' : '0'); } catch(e) {}
+};
+
+window.mcmToggleMinimize = function(forceMin) {
+  var minimized = typeof forceMin === 'boolean' ? forceMin : !document.body.classList.contains('call-panel-minimized');
+  document.body.classList.toggle('call-panel-minimized', minimized);
+  if (typeof mcmRenderDockBar === 'function') mcmRenderDockBar();
+  if (!minimized && typeof mcmRenderDayGoalsWidget === 'function') mcmRenderDayGoalsWidget();
+};
+
+window.mcmRenderDayGoalsWidget = function() {
+  var slot = document.getElementById('mcm-day-goals-slot');
+  if (!slot) return;
+  var items = [
+    { key: 'calls', label: 'Calls', color: '#6366f1' },
+    { key: 'demos', label: 'Demos', color: '#14b8a6' },
+    { key: 'closes', label: 'Closes', color: '#f59e0b' }
+  ];
+  var act = (typeof getActivityForPeriod === 'function') ? getActivityForPeriod('today') : { calls: 0, demos: 0, closes: 0 };
+  var rows = items.map(function(it) {
+    var actual = act[it.key] || 0;
+    var goal = (typeof getGoalForPeriod === 'function') ? getGoalForPeriod(it.key, 'today') : 0;
+    var pct = goal > 0 ? Math.min(100, Math.round((actual / goal) * 100)) : (actual > 0 ? 100 : 0);
+    return '<div style="min-width:0;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">'
+      + '<span style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.55);">'+it.label+'</span>'
+      + '<span style="font-size:11px;font-weight:800;color:'+it.color+';">'+actual+'<span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.35);">/'+(goal || '—')+'</span></span>'
+      + '</div>'
+      + '<div style="background:rgba(255,255,255,0.08);border-radius:6px;height:4px;overflow:hidden;">'
+      + '<div style="width:'+pct+'%;height:100%;background:'+it.color+';border-radius:6px;transition:width 0.3s;"></div>'
+      + '</div></div>';
+  }).join('');
+  var ov = document.getElementById('mcm-overlay');
+  var sessionLine = '';
+  if (ov && ov._leadId && typeof anGetCallQueueProgress === 'function') {
+    var prog = anGetCallQueueProgress(ov._leadId);
+    if (prog) {
+      sessionLine = '<div style="font-size:9px;color:rgba(255,255,255,0.32);margin-top:8px;text-align:center;">Session '+prog.pos+'/'+prog.total+' logged · '+prog.remaining+' left in queue</div>';
+    }
+  }
+  slot.innerHTML = '<div style="padding:10px 14px 12px;background:rgba(99,102,241,0.07);border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;">'
+    + '<div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.38);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Today\'s Activity Goals</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">'+rows+'</div>'
+    + sessionLine
+    + '</div>';
+};
+
+window.mcmRenderDockBar = function() {
+  var dock = document.getElementById('mcm-dock-bar');
+  if (!document.body.classList.contains('call-panel-minimized')) {
+    if (dock) dock.style.display = 'none';
+    return;
+  }
+  if (!dock) {
+    dock = document.createElement('div');
+    dock.id = 'mcm-dock-bar';
+    document.body.appendChild(dock);
+  }
+  dock.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:20002;background:#0f0f1f;border:1.5px solid rgba(99,102,241,0.35);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;font-family:var(--sans);box-shadow:0 8px 32px rgba(0,0,0,0.35);min-width:240px;max-width:320px;';
+  var act = (typeof getActivityForPeriod === 'function') ? getActivityForPeriod('today') : { calls: 0, demos: 0, closes: 0 };
+  var ov = document.getElementById('mcm-overlay');
+  var leadId = ov && ov._leadId;
+  var lead = leadId && typeof AN !== 'undefined' ? AN.leads.find(function(l){ return l.id === leadId; }) : null;
+  var leadName = lead ? (((lead.firstName||'')+' '+(lead.lastName||'')).trim() || lead.company || 'Lead') : 'Call session';
+  var sessionTxt = '';
+  if (leadId && typeof anGetCallQueueProgress === 'function') {
+    var prog = anGetCallQueueProgress(leadId);
+    if (prog) sessionTxt = ' · Queue '+prog.pos+'/'+prog.total;
+  }
+  dock.innerHTML = '<div style="font-size:11px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">📞 '+mcmEsc(leadName)+sessionTxt+'</div>'
+    + '<div style="display:flex;gap:10px;font-size:10px;font-weight:700;">'
+    + '<span style="color:#818cf8;">'+((act.calls||0))+' calls</span>'
+    + '<span style="color:#2dd4bf;">'+((act.demos||0))+' demos</span>'
+    + '<span style="color:#fbbf24;">'+((act.closes||0))+' closes</span>'
+    + '</div>'
+    + '<button type="button" onclick="mcmToggleMinimize(false)" style="width:100%;padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Expand call panel</button>';
+  dock.style.display = 'flex';
 };
 
 window.mcmClose = function(){
@@ -15906,8 +16062,13 @@ window.openMobileCallMode = function(leadId) {
     +(lead.company ? '<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px;">'+mcmEsc(lead.company)+'</div>' : '<div style="font-size:11px;color:#fcd34d;margin-top:2px;">No agency on file</div>')
     +sessionMeta
     +'</div></div>'
+    +'<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">'
+    +'<button type="button" id="mcm-lead-toggle" onclick="mcmToggleLeadPanel()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);padding:6px 10px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">👤 Hide Lead</button>'
+    +'<button type="button" onclick="mcmToggleMinimize(true)" title="Minimize — keep working in the app" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);width:32px;height:32px;border-radius:8px;font-size:18px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1;">−</button>'
     +'<button onclick="mcmClose()" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>'
-    +'</div>'
+    +'</div></div>'
+
+    +'<div id="mcm-day-goals-slot"></div>'
 
     // Title / Role — editable on the call
     +'<div style="padding:12px 18px;border-bottom:1px solid rgba(255,255,255,0.06);">'
@@ -16011,24 +16172,24 @@ window.openMobileCallMode = function(leadId) {
 
     // Save + next actions
     +'<div id="mcm-action-buttons" style="padding:16px 18px 24px;display:flex;flex-direction:column;gap:10px;flex-shrink:0;">'
-    +'<button id="mcm-btn-save-stay" onclick="mcmSaveAndStay(\''+leadId+'\')" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 20px rgba(16,185,129,0.35);">📞 Log Call &amp; Stay</button>'
-    +'<button id="mcm-btn-save-next" onclick="mcmSaveAndNext(\''+leadId+'\')" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid rgba(99,102,241,0.45);background:rgba(99,102,241,0.12);color:#c7d2fe;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">✓ Log &amp; Next →</button>'
+    +'<button id="mcm-btn-save-next" onclick="mcmSaveAndNext(\''+leadId+'\')" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 20px rgba(16,185,129,0.35);">✓ Log &amp; Next →</button>'
+    +'<button id="mcm-btn-save-stay" onclick="mcmSaveAndStay(\''+leadId+'\')" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid rgba(99,102,241,0.45);background:rgba(99,102,241,0.12);color:#c7d2fe;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">📞 Log Call &amp; Stay</button>'
     +'<button id="mcm-btn-skip" onclick="mcmNextLead(\''+leadId+'\')" style="width:100%;padding:11px;border-radius:12px;border:1.5px solid rgba(255,255,255,0.12);background:transparent;color:rgba(255,255,255,0.55);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">⏭ Skip to Next (no log)</button>'
-    +'<div style="font-size:10px;color:rgba(255,255,255,0.35);text-align:center;line-height:1.45;">Shortcuts: <strong style="color:rgba(255,255,255,0.5);">S</strong> stay · <strong style="color:rgba(255,255,255,0.5);">N</strong> next</div>'
+    +'<div style="font-size:10px;color:rgba(255,255,255,0.35);text-align:center;line-height:1.45;">Shortcuts: <strong style="color:rgba(255,255,255,0.5);">N</strong> next · <strong style="color:rgba(255,255,255,0.5);">S</strong> stay</div>'
     +'<button onclick="mcmClose()" style="width:100%;padding:10px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,0.3);font-size:13px;cursor:pointer;font-family:inherit;">Close panel</button>'
     +'</div>';
 
   wrap.appendChild(overlay);
   document.body.appendChild(wrap);
   document.body.classList.add('call-panel-open');
-  var backdrop = document.getElementById('call-panel-backdrop');
-  if (!backdrop) {
-    backdrop = document.createElement('div');
-    backdrop.id = 'call-panel-backdrop';
-    backdrop.onclick = function() { /* keep panel open — click outside does not close */ };
-    document.body.appendChild(backdrop);
-  }
+  document.body.classList.remove('call-panel-minimized');
+  var oldBackdrop = document.getElementById('call-panel-backdrop');
+  if (oldBackdrop) oldBackdrop.remove();
   if (typeof anRenderCallSessionBanner === 'function') anRenderCallSessionBanner();
+  if (typeof mcmRenderDayGoalsWidget === 'function') mcmRenderDayGoalsWidget();
+  try {
+    if (localStorage.getItem('mcm-lead-collapsed') === '1') mcmToggleLeadPanel();
+  } catch(e) {}
 
   // Track selected outcome + session mode
   overlay._outcome = null;
@@ -17211,7 +17372,7 @@ function hdRender() {
     +'<div class="hd-quick-actions">'
     +'<button class="hd-qa-btn hd-qa-green" onclick="anOpenCallSessionSetup()"><span>📞</span> Call Session</button>'
     +'<button class="hd-qa-btn hd-qa-ghost" onclick="anOpenSequenceSessionSetup()" style="border-color:#c4b5fd;color:#7c3aed;"><span>📨</span> Sequence Session</button>'
-    +'<button class="hd-qa-btn hd-qa-ghost" onclick="showSection(\'crm\',null)"><span>➕</span> New Lead</button>'
+    +'<button class="hd-qa-btn hd-qa-ghost" onclick="anNewLead()"><span>➕</span> New Lead</button>'
     +'<button class="hd-qa-btn hd-qa-ghost" onclick="showSection(\'schedule\',null)"><span>📅</span> Schedule Demo</button>'
     +'<button class="hd-qa-btn hd-qa-primary" onclick="openCoach()"><span>🧠</span> AI Coach</button>'
     +'</div>'
@@ -17390,10 +17551,9 @@ var _origShowSection_hd = window.showSection;
 window.showSection = function(id, btn) {
   if (typeof _origShowSection_hd === 'function') _origShowSection_hd(id, btn);
   if (id === 'home') {
+    setTimeout(hdRender, 30);
     if (typeof anEnsureLeadsLoaded === 'function') {
       anEnsureLeadsLoaded(function(){ setTimeout(hdRender, 60); });
-    } else {
-      setTimeout(hdRender, 60);
     }
   }
 };
@@ -17433,10 +17593,9 @@ document.addEventListener('DOMContentLoaded', function() {
     anAddNavTooltips();
     var homeSec = document.getElementById('section-home');
     if (homeSec && homeSec.classList.contains('active')) {
+      hdRender();
       if (typeof anEnsureLeadsLoaded === 'function') {
         anEnsureLeadsLoaded(function(){ hdRender(); });
-      } else {
-        hdRender();
       }
     }
   }, 400);
@@ -18932,6 +19091,17 @@ window.anMyLeads = function() {
   return AN.leads.filter(anLeadBelongsToRep);
 };
 
+window.anLeadMatchesStateFilter = function(lead, stateFilter) {
+  if (!stateFilter || stateFilter === 'all') return true;
+  if (!lead) return false;
+  if (stateFilter === '__none__') {
+    var empty = typeof anResolveLeadState === 'function' ? anResolveLeadState(lead) : (lead.state || '');
+    return !empty;
+  }
+  var st = typeof anResolveLeadState === 'function' ? anResolveLeadState(lead) : (lead.state || '');
+  return typeof anStatesMatch === 'function' ? anStatesMatch(stateFilter, st) : st === stateFilter;
+};
+
 window.anCountCallableLeads = function(opts) {
   opts = opts || {};
   var pool;
@@ -18941,6 +19111,9 @@ window.anCountCallableLeads = function(opts) {
     pool = anMyLeads();
   }
   pool = pool.filter(function(l){ return anIsProspect(l) && l.status !== 'won' && l.status !== 'lost' && l.status !== 'not_interested'; });
+  if (opts.stateFilter && opts.stateFilter !== 'all') {
+    pool = pool.filter(function(l){ return anLeadMatchesStateFilter(l, opts.stateFilter); });
+  }
   if (opts.phoneOnly) pool = pool.filter(function(l){ return l.phone; });
   return pool.length;
 };
@@ -18950,7 +19123,22 @@ window.anEnsureLeadsLoaded = function(cb) {
   if (AN.leadsReady) { if (cb) cb(); return; }
   AN._leadsLoadQueue = AN._leadsLoadQueue || [];
   if (cb) AN._leadsLoadQueue.push(cb);
-  if (AN._leadsLoadPending) return;
+  if (AN._leadsLoadPending) {
+    if (!AN._leadsLoadWatchdog) {
+      AN._leadsLoadWatchdog = setTimeout(function() {
+        AN._leadsLoadWatchdog = null;
+        if (!AN.leadsReady) {
+          AN.leadsLoading = false;
+          AN.leadsReady = true;
+          var q = AN._leadsLoadQueue || [];
+          AN._leadsLoadQueue = [];
+          AN._leadsLoadPending = false;
+          q.forEach(function(fn) { try { fn(); } catch(e) {} });
+        }
+      }, 10000);
+    }
+    return;
+  }
   AN._leadsLoadPending = true;
   try {
     if (!AN.leads || !AN.leads.length) {
@@ -19021,6 +19209,10 @@ function anBuildCallQueueIds(opts){
     });
   }
 
+  if (opts.stateFilter && opts.stateFilter !== 'all') {
+    pool = pool.filter(function(l){ return anLeadMatchesStateFilter(l, opts.stateFilter); });
+  }
+
   if (opts.prioritizeUncalled !== false) {
     pool.sort(function(a, b){
       var ac = (a.callLog || []).length, bc = (b.callLog || []).length;
@@ -19041,6 +19233,66 @@ function anBuildCallQueueIds(opts){
 
   return pool.slice(0, limit).map(function(l){ return l.id; });
 }
+
+window.anBuildCallSessionStateField = function() {
+  var counts = {};
+  var noState = 0;
+  anMyLeads().forEach(function(l) {
+    if (!anIsProspect(l) || l.status === 'won' || l.status === 'lost' || l.status === 'not_interested') return;
+    var st = typeof anResolveLeadState === 'function' ? anResolveLeadState(l) : (l.state || '');
+    if (!st) { noState++; return; }
+    counts[st] = (counts[st] || 0) + 1;
+  });
+  var states = Object.keys(counts).sort(function(a, b) {
+    if (counts[b] !== counts[a]) return counts[b] - counts[a];
+    return a.localeCompare(b);
+  });
+  var saved = 'all';
+  try { saved = localStorage.getItem('an-cs-state-filter') || 'all'; } catch(e) {}
+  var opts = '<option value="all">All states</option>';
+  states.forEach(function(st) {
+    opts += '<option value="'+anEsc(st)+'"'+(saved === st ? ' selected' : '')+'>'+anEsc(st)+' ('+counts[st]+')</option>';
+  });
+  if (noState) {
+    opts += '<option value="__none__"'+(saved === '__none__' ? ' selected' : '')+'>No state on file ('+noState+')</option>';
+  }
+  return '<div style="margin-bottom:14px;">'
+    +'<label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">State to call</label>'
+    +'<select id="an-cs-state-filter" onchange="anRefreshCallSessionStateHint()" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:10px 12px;font-size:14px;font-weight:600;color:var(--text-primary);background:var(--card-bg);outline:none;font-family:var(--sans);box-sizing:border-box;cursor:pointer;">'
+    + opts
+    +'</select>'
+    +'<div id="an-cs-state-hint" style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.45;">Pick a state for morning or afternoon timezone blocks.</div>'
+    +'</div>';
+};
+
+window.anRefreshCallSessionStateHint = function() {
+  var stateEl = document.getElementById('an-cs-state-filter');
+  var hint = document.getElementById('an-cs-state-hint');
+  if (!stateEl || !hint || typeof AN === 'undefined') return;
+  var stateFilter = stateEl.value || 'all';
+  var sourceEl = document.querySelector('input[name="an-cs-source"]:checked');
+  var source = sourceEl ? sourceEl.value : 'filter';
+  var count = 0;
+  if (source === 'selected') {
+    count = anBuildCallQueueIds({ limit: 5000, useSelected: true, stateFilter: stateFilter, prioritizeUncalled: false }).length;
+  } else if (source === 'all') {
+    var savedFilter = AN.currentFilter, savedSearch = AN.searchQ, savedRep = AN.repFilter;
+    AN.currentFilter = 'all'; AN.searchQ = ''; AN.repFilter = '';
+    count = anCountCallableLeads({ stateFilter: stateFilter });
+    AN.currentFilter = savedFilter; AN.searchQ = savedSearch; AN.repFilter = savedRep;
+  } else {
+    count = anCountCallableLeads({ useFilter: true, stateFilter: stateFilter });
+  }
+  var stateLabel = stateFilter === 'all' ? 'all states' : (stateFilter === '__none__' ? 'leads missing state' : stateFilter);
+  hint.textContent = count
+    ? (count + ' callable lead' + (count === 1 ? '' : 's') + ' in ' + stateLabel + ' match this setup')
+    : ('No callable leads in ' + stateLabel + ' — try another state or lead source');
+  var countEl = document.getElementById('an-cs-count');
+  if (countEl && count > 0) {
+    var cur = parseInt(countEl.value, 10);
+    if (isNaN(cur) || cur > count) countEl.value = Math.min(count, 500);
+  }
+};
 
 window.anOpenCallSessionSetup = function(){
   anEnsureLeadsLoaded(function(){
@@ -19080,6 +19332,7 @@ function anOpenCallSessionSetupModal(){
     +'<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--divider);border-radius:8px;cursor:pointer;font-size:13px;color:var(--text-secondary);"><input type="radio" name="an-cs-source" value="all"'+((!selected && !filteredCount && allCallable)?' checked':'')+' style="accent-color:#6366f1;"> All callable leads ('+allCallable+')</label>'
     +(withPhone < allCallable ? '<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">'+withPhone+' have phone numbers · leads without phones can still be queued</div>' : '')
     +'</div></div>'
+    + anBuildCallSessionStateField()
     + anBuildSessionScriptSelector('lead', 'an-cs-script-pick')
     +'<label style="display:flex;align-items:center;gap:8px;margin-bottom:18px;font-size:13px;color:var(--text-secondary);cursor:pointer;"><input id="an-cs-uncalled" type="checkbox" checked style="accent-color:#6366f1;width:15px;height:15px;"> Prioritize never-called leads first</label>'
     +(AN.callQueue && AN.callQueue.ids && AN.callQueue.ids.length
@@ -19089,6 +19342,10 @@ function anOpenCallSessionSetupModal(){
     +'</div>';
   document.body.appendChild(m);
   m.onclick = function(e){ if (e.target === m) m.remove(); };
+  m.querySelectorAll('input[name="an-cs-source"]').forEach(function(radio) {
+    radio.addEventListener('change', anRefreshCallSessionStateHint);
+  });
+  setTimeout(anRefreshCallSessionStateHint, 30);
 };
 
 window.anConfirmCallSessionSetup = function(){
@@ -19100,28 +19357,35 @@ window.anConfirmCallSessionSetup = function(){
   var source = sourceEl ? sourceEl.value : 'filter';
   var uncalledEl = document.getElementById('an-cs-uncalled');
   var prioritizeUncalled = uncalledEl ? uncalledEl.checked : true;
+  var stateEl = document.getElementById('an-cs-state-filter');
+  var stateFilter = stateEl ? (stateEl.value || 'all') : 'all';
+  try { localStorage.setItem('an-cs-state-filter', stateFilter); } catch(e) {}
 
+  var queueOpts = { limit: limit, prioritizeUncalled: prioritizeUncalled, stateFilter: stateFilter };
   var ids;
   if (source === 'selected') {
-    ids = anBuildCallQueueIds({ limit: limit, useSelected: true, prioritizeUncalled: prioritizeUncalled });
+    ids = anBuildCallQueueIds(Object.assign({ useSelected: true }, queueOpts));
   } else if (source === 'all') {
     var savedFilter = AN.currentFilter, savedSearch = AN.searchQ, savedRep = AN.repFilter;
     AN.currentFilter = 'all'; AN.searchQ = ''; AN.repFilter = '';
-    ids = anBuildCallQueueIds({ limit: limit, prioritizeUncalled: prioritizeUncalled });
+    ids = anBuildCallQueueIds(queueOpts);
     AN.currentFilter = savedFilter; AN.searchQ = savedSearch; AN.repFilter = savedRep;
   } else {
-    ids = anBuildCallQueueIds({ limit: limit, prioritizeUncalled: prioritizeUncalled });
+    ids = anBuildCallQueueIds(queueOpts);
   }
 
   if (!ids.length) {
-    if (typeof showToast === 'function') showToast('No callable leads found — adjust your filter or add leads');
+    var stateMsg = stateFilter && stateFilter !== 'all'
+      ? (stateFilter === '__none__' ? ' with no state' : ' in ' + stateFilter)
+      : '';
+    if (typeof showToast === 'function') showToast('No callable leads found' + stateMsg + ' — try another state or source');
     return;
   }
 
   document.getElementById('an-cs-setup-modal') && document.getElementById('an-cs-setup-modal').remove();
   var scriptPick = document.getElementById('an-cs-script-pick');
   var scriptId = scriptPick ? scriptPick.value : '';
-  anStartCallSession(ids, 'lead', scriptId || null);
+  anStartCallSession(ids, 'lead', scriptId || null, stateFilter);
 };
 
 window.anCountCallableOpps = function() {
@@ -19199,7 +19463,7 @@ window.anStartCallSessionFromSelected = function(){
   anStartCallSession(ids);
 };
 
-window.anStartCallSession = function(ids, mode, scriptId){
+window.anStartCallSession = function(ids, mode, scriptId, stateFilter){
   mode = mode || 'lead';
   var queue = {
     mode: mode,
@@ -19207,7 +19471,8 @@ window.anStartCallSession = function(ids, mode, scriptId){
     index: 0,
     completed: [],
     startedAt: new Date().toISOString(),
-    scriptId: scriptId || null
+    scriptId: scriptId || null,
+    stateFilter: stateFilter || null
   };
   if (mode === 'opportunity') {
     AN.callQueue = null;
@@ -19227,7 +19492,13 @@ window.anStartCallSession = function(ids, mode, scriptId){
     anSetActiveScriptId(st, scriptId);
   }
   anPersistCallQueue();
-  if (typeof showToast === 'function') showToast((mode === 'opportunity' ? 'Deal' : 'Lead') + ' session started — '+ids.length+' queued');
+  if (typeof showToast === 'function') {
+    var stateNote = '';
+    if (stateFilter && stateFilter !== 'all') {
+      stateNote = stateFilter === '__none__' ? ' · no state' : ' · ' + stateFilter;
+    }
+    showToast((mode === 'opportunity' ? 'Deal' : 'Lead') + ' session started — ' + ids.length + ' queued' + stateNote);
+  }
   openMobileCallMode(ids[0]);
 };
 
@@ -20027,6 +20298,7 @@ window._anEnhanceCallPanel = function(leadId) {
     if (nextBtn) nextBtn.textContent = '✓ Log & Next → ('+prog.pos+'/'+prog.total+')';
     if (skipBtn) skipBtn.textContent = '⏭ Skip to Next (no log)';
   }
+  if (typeof mcmRenderDayGoalsWidget === 'function') mcmRenderDayGoalsWidget();
 
   // Show existing notes for context
   var noteArea = document.getElementById('mcm-note');
@@ -20178,13 +20450,14 @@ console.log('[CALL SESSION] Queue workflow loaded.');
     st.id = 'mcm-side-styles';
     st.textContent = '@keyframes mcmSlideIn{from{transform:translateX(100%);opacity:0.8;}to{transform:translateX(0);opacity:1;}}'
       + '@keyframes shoutPop{0%{transform:translateY(-20px);opacity:0;}15%{transform:translateY(0);opacity:1;}85%{opacity:1;}100%{transform:translateY(-10px);opacity:0;}}'
-      + '#mcm-panel-wrap{position:fixed;top:0;right:0;bottom:0;width:420px;max-width:100vw;z-index:20000;pointer-events:auto;box-shadow:-12px 0 40px rgba(0,0,0,0.28);animation:mcmSlideIn 0.22s ease;}'
-      + '#an-cs-lead-panel{animation:mcmSlideIn 0.26s ease;z-index:20001;}'
+      + '#mcm-panel-wrap{position:fixed;top:0;right:0;bottom:0;width:360px;max-width:100vw;z-index:20000;pointer-events:auto;box-shadow:-8px 0 28px rgba(0,0,0,0.22);animation:mcmSlideIn 0.22s ease;}'
+      + '#an-cs-lead-panel{animation:mcmSlideIn 0.26s ease;z-index:19999;}'
       + 'body.call-panel-open .main{margin-right:0!important;}'
-      + 'body.call-panel-open #call-panel-backdrop{position:fixed;inset:0;left:var(--sb-width,228px);background:rgba(15,15,26,0.38);z-index:19998;pointer-events:auto;}'
-      + 'body.sb-collapsed.call-panel-open #call-panel-backdrop{left:52px;}'
-      + '@media(max-width:1200px){body.call-session-dual #an-cs-lead-panel{display:none;}}'
-      + '@media(max-width:900px){#mcm-panel-wrap{width:100vw;}body.call-panel-open #call-panel-backdrop{left:0;}}'
+      + 'body.call-panel-open #call-panel-backdrop{display:none!important;}'
+      + 'body.call-lead-collapsed #an-cs-lead-panel{display:none!important;}'
+      + 'body.call-panel-minimized #mcm-panel-wrap,body.call-panel-minimized #an-cs-lead-panel{transform:translateX(110%);pointer-events:none;opacity:0;}'
+      + '@media(max-width:1200px){body.call-session-dual #an-cs-lead-panel{width:340px;right:360px;}}'
+      + '@media(max-width:900px){#mcm-panel-wrap{width:100vw;}#an-cs-lead-panel{right:0;width:100vw;max-width:100vw;}}'
       + 'body.sb-collapsed #an-cs-banner{left:68px;max-width:calc(100vw - 500px);}';
     document.head.appendChild(st);
   }
@@ -20245,6 +20518,8 @@ window.anSyncCallToDashboard = function(lead, outcome, newStatus) {
   }
 
   if (typeof dashSave === 'function') dashSave();
+  if (typeof mcmRenderDayGoalsWidget === 'function') mcmRenderDayGoalsWidget();
+  if (typeof mcmRenderDockBar === 'function') mcmRenderDockBar();
   var dashSec = document.getElementById('section-dashboard');
   if (dashSec && dashSec.classList.contains('active') && typeof renderSalesDashboard === 'function') {
     renderSalesDashboard();
@@ -22527,17 +22802,18 @@ var _origRenderCRM_tasks = window.renderCRM;
 window.renderCRM = function() {
   if(typeof _origRenderCRM_tasks === 'function') _origRenderCRM_tasks();
   setTimeout(function(){
-    // Find the header button row and add Tasks button
-    var header = document.querySelector('#section-crm > div:first-child');
-    if(!header || header.querySelector('[data-task-session-btn]')) return;
+    if(!document.getElementById('crm-content')) return;
+    var titleEl = document.querySelector('#section-crm h1');
+    if(!titleEl || document.querySelector('[data-task-session-btn]')) return;
+    var btnRow = titleEl.parentElement && titleEl.parentElement.nextElementSibling;
+    if(!btnRow) return;
     var btn = document.createElement('button');
     btn.setAttribute('data-task-session-btn','1');
     btn.onclick = openTaskSession;
     var count = getTodayTasks().length + getOverdueTasks().length;
     btn.innerHTML = '📋 Tasks'+(count?' <span style="background:#ef4444;color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px;">'+count+'</span>':'');
     btn.style.cssText = 'display:flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px solid var(--divider);border-radius:8px;font-size:13px;font-weight:600;color:var(--text-secondary);background:var(--card-bg);cursor:pointer;font-family:var(--sans);';
-    var btnRow = header.querySelector('div:last-child');
-    if(btnRow) btnRow.insertBefore(btn, btnRow.firstChild);
+    btnRow.insertBefore(btn, btnRow.firstChild);
     // Start notifier
     startTaskNotifier();
     // Request permission
@@ -23529,6 +23805,16 @@ window.anReferToCompassFmo = function(leadId) {
   anSetFmoStatus(leadId, 'referred', { notes: notes });
 };
 
+window.anToggleFmoSection = function(leadId) {
+  var body = document.getElementById('mcm-fmo-body');
+  var chev = document.getElementById('mcm-fmo-chevron');
+  if (!body) return;
+  var open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  if (chev) chev.textContent = open ? '▾' : '▸';
+  try { localStorage.setItem('mcm-fmo-expanded', open ? '1' : '0'); } catch(e) {}
+};
+
 window.anInjectFmoReferralSection = function(leadId) {
   var overlay = document.getElementById('mcm-overlay');
   var lead = AN.leads.find(function(l) { return l.id === leadId; });
@@ -23546,18 +23832,36 @@ window.anInjectFmoReferralSection = function(leadId) {
   }
   var fmo = anGetFmoStatus(lead);
   var curStatus = fmo ? fmo.status : '';
-  slot.innerHTML = '<div style="padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.06);background:rgba(245,158,11,0.04);">'
-    + '<div style="font-size:10px;font-weight:700;color:#fcd34d;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:4px;">🧭 Compass FMO / Agency</div>'
-    + '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:12px;line-height:1.45;">Interested in contracting through Compass Insurance Advisors? Track and refer from this call.</div>'
-    + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">'
+  var statusMeta = curStatus ? anFmoStatusMeta(curStatus) : null;
+  var expanded = false;
+  try { expanded = localStorage.getItem('mcm-fmo-expanded') === '1'; } catch(e) {}
+  if (curStatus && curStatus !== 'declined') expanded = true;
+  var statusBadge = statusMeta
+    ? '<span style="font-size:10px;font-weight:700;color:' + statusMeta.color + ';background:' + statusMeta.color + '18;border:1px solid ' + statusMeta.color + '44;border-radius:12px;padding:2px 8px;margin-left:8px;">' + statusMeta.icon + ' ' + statusMeta.label + '</span>'
+    : '';
+  slot.innerHTML = '<div style="padding:10px 18px 12px;border-bottom:1px solid rgba(255,255,255,0.06);">'
+    + '<button type="button" onclick="anToggleFmoSection(\'' + leadId + '\')" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;background:none;border:none;padding:0;cursor:pointer;font-family:inherit;text-align:left;">'
+    + '<span style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;min-width:0;">'
+    + '<span style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.38);text-transform:uppercase;letter-spacing:0.1em;">🧭 Compass FMO</span>'
+    + '<span style="font-size:10px;font-weight:500;color:rgba(255,255,255,0.28);text-transform:none;letter-spacing:0;">optional</span>'
+    + statusBadge
+    + '</span>'
+    + '<span id="mcm-fmo-chevron" style="font-size:11px;color:rgba(255,255,255,0.35);flex-shrink:0;">' + (expanded ? '▾' : '▸') + '</span>'
+    + '</button>'
+    + '<div id="mcm-fmo-body" style="display:' + (expanded ? 'block' : 'none') + ';margin-top:10px;">'
+    + '<div style="font-size:11px;color:rgba(255,255,255,0.38);margin-bottom:8px;line-height:1.4;">Only if they ask about FMO / agency contracting — not your main pitch.</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;">'
     + AN_FMO_STATUSES.map(function(s) {
       var on = curStatus === s.id;
-      return '<button type="button" onclick="anSetFmoStatus(\'' + leadId + '\',\'' + s.id + '\')" style="padding:7px 12px;border-radius:20px;border:1.5px solid ' + (on ? s.color : 'rgba(255,255,255,0.12)') + ';background:' + (on ? s.color + '22' : 'transparent') + ';color:' + (on ? s.color : 'rgba(255,255,255,0.55)') + ';font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">' + s.icon + ' ' + s.label + '</button>';
+      return '<button type="button" onclick="anSetFmoStatus(\'' + leadId + '\',\'' + s.id + '\')" style="padding:5px 10px;border-radius:16px;border:1px solid ' + (on ? s.color : 'rgba(255,255,255,0.1)') + ';background:' + (on ? s.color + '18' : 'transparent') + ';color:' + (on ? s.color : 'rgba(255,255,255,0.5)') + ';font-size:10.5px;font-weight:600;cursor:pointer;font-family:inherit;">' + s.icon + ' ' + s.label + '</button>';
     }).join('')
     + '</div>'
-    + '<textarea id="mcm-fmo-notes" rows="2" placeholder="FMO notes — lines of business, current FMO, what they want..." style="width:100%;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;font-size:12px;color:#fff;font-family:inherit;resize:none;box-sizing:border-box;margin-bottom:10px;">' + anSeqEsc((fmo && fmo.notes) || '') + '</textarea>'
-    + '<button type="button" onclick="anReferToCompassFmo(\'' + leadId + '\')" style="width:100%;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">🤝 Refer to Compass FMO (email team)</button>'
-    + (fmo && fmo.referredAt ? '<div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:8px;text-align:center;">Referred ' + fmo.referredAt + (fmo.referredBy ? ' · ' + fmo.referredBy.split('@')[0] : '') + '</div>' : '')
+    + '<textarea id="mcm-fmo-notes" rows="2" placeholder="FMO notes (optional)…" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px 10px;font-size:11.5px;color:rgba(255,255,255,0.85);font-family:inherit;resize:none;box-sizing:border-box;">' + anSeqEsc((fmo && fmo.notes) || '') + '</textarea>'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;flex-wrap:wrap;">'
+    + (fmo && fmo.referredAt ? '<span style="font-size:10px;color:rgba(255,255,255,0.32);">Referred ' + fmo.referredAt + (fmo.referredBy ? ' · ' + fmo.referredBy.split('@')[0] : '') + '</span>' : '<span></span>')
+    + '<button type="button" onclick="anReferToCompassFmo(\'' + leadId + '\')" style="padding:6px 11px;border-radius:8px;border:1px solid rgba(245,158,11,0.35);background:transparent;color:rgba(252,211,77,0.85);font-size:10.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">✉️ Email Compass team</button>'
+    + '</div>'
+    + '</div>'
     + '</div>';
 };
 
