@@ -15812,6 +15812,13 @@ window.mcmCloseCallPanelOnly = function(){
 };
 
 window.mcmClose = function(){
+  var ov = document.getElementById('mcm-overlay');
+  var leadId = ov && (ov._leadId || window._anCsLeadPanelId);
+  if (leadId && ov && (ov._pendingDemo || ov._demoModalShown || ov._outcome === 'demo')) {
+    mcmDismissDemoFlow(leadId);
+  } else {
+    mcmCloseDemoAutomationModal();
+  }
   mcmCloseCallPanelOnly();
   if (typeof anCloseCallSessionLeadPanel === 'function') anCloseCallSessionLeadPanel();
 };
@@ -16005,6 +16012,10 @@ window.openMobileCallMode = function(leadId) {
   // Track selected outcome + session mode
   overlay._outcome = null;
   overlay._callMode = mode;
+  overlay._leadId = leadId;
+  overlay._pendingDemo = false;
+  overlay._demoModalShown = false;
+  overlay._demoSaved = !!(lead.status === 'booked_demo' && lead.demoDate && lead.demoTime);
 
   if (typeof anRenderCallScript === 'function') anRenderCallScript(leadId);
   if (typeof anRenderCallSessionLeadPanel === 'function') anRenderCallSessionLeadPanel(leadId);
@@ -16038,10 +16049,18 @@ window.mcmSaveAndStay = function(leadId) {
   if (noteEl) noteEl.focus();
 };
 
-window.mcmSetOutcome = function(outcome, leadId) {
-  var overlay = document.getElementById('mcm-overlay');
-  if (!overlay) return;
-  overlay._outcome = outcome;
+window.mcmCloseDemoAutomationModal = function() {
+  var m = document.getElementById('demo-auto-modal');
+  if (m) m.remove();
+  var ov = document.getElementById('mcm-overlay');
+  if (ov) ov._demoModalShown = false;
+};
+
+window.anCloseDemoAutoModal = function() {
+  mcmCloseDemoAutomationModal();
+};
+
+window.mcmHighlightOutcome = function(outcome) {
   var outcomeColors = {
     pickup:'#10b981', noanswer:'#a1a1aa', voicemail:'#6366f1', demo:'#f59e0b', callback:'#06b6d4', emailed:'#8b5cf6',
     connected:'#10b981', objection:'#f59e0b', next_step:'#06b6d4', won:'#10b981'
@@ -16051,36 +16070,136 @@ window.mcmSetOutcome = function(outcome, leadId) {
     btn.style.borderColor = 'rgba(255,255,255,0.1)';
     btn.style.color = 'rgba(255,255,255,0.7)';
   });
-  var sel = document.getElementById('mcm-outcome-'+outcome);
+  if (!outcome) return;
+  var sel = document.getElementById('mcm-outcome-' + outcome);
   if (sel) {
     var col = outcomeColors[outcome] || '#6366f1';
-    sel.style.background = col+'22';
+    sel.style.background = col + '22';
     sel.style.borderColor = col;
     sel.style.color = col;
   }
+};
+
+window.mcmUpdateStatusPills = function(status) {
+  var statusColors = {};
+  AN_LEAD_STATUSES.concat(AN_OPP_STATUSES).forEach(function(s){ statusColors[s.id] = s.color; });
+  document.querySelectorAll('[id^="mcm-status-"]').forEach(function(btn) {
+    btn.style.background = 'transparent';
+    btn.style.borderColor = 'rgba(255,255,255,0.1)';
+    btn.style.color = 'rgba(255,255,255,0.5)';
+  });
+  var sel = document.getElementById('mcm-status-' + status);
+  if (sel) {
+    var col = statusColors[status] || '#6366f1';
+    sel.style.background = col + '22';
+    sel.style.borderColor = col;
+    sel.style.color = col;
+  }
+  var overlay = document.getElementById('mcm-overlay');
+  if (overlay) overlay._status = status;
+};
+
+window.mcmDismissDemoFlow = function(leadId) {
+  mcmCloseDemoAutomationModal();
+  mcmHideDemoForm();
+  var overlay = document.getElementById('mcm-overlay');
+  var lead = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.find(function(l){ return l.id === leadId; }) : null;
+  if (!overlay) return;
+  var wasDemo = overlay._pendingDemo || overlay._demoModalShown || overlay._outcome === 'demo';
+  if (!wasDemo) return;
+  var revertStatus = overlay._prevStatus || (lead && lead.status !== 'booked_demo' ? lead.status : 'new') || 'new';
+  overlay._pendingDemo = false;
+  overlay._demoModalShown = false;
+  overlay._demoDate = '';
+  overlay._demoTime = '';
+  overlay._demoTz = '';
+  overlay._demoTzConfirmed = false;
+  if (overlay._outcome === 'demo') overlay._outcome = null;
+  mcmHighlightOutcome(null);
+  if (lead && !overlay._demoSaved) {
+    if (lead.status === 'booked_demo') lead.status = revertStatus;
+    delete lead.demoDate;
+    delete lead.demoTime;
+    delete lead.demoTz;
+  }
+  mcmUpdateStatusPills(revertStatus);
+};
+
+window.mcmEnterDemoScheduling = function(leadId) {
+  var overlay = document.getElementById('mcm-overlay');
+  var lead = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.find(function(l){ return l.id === leadId; }) : null;
+  if (!overlay || !lead) return;
+  if (!overlay._pendingDemo && overlay._outcome !== 'demo') {
+    overlay._prevStatus = lead.status || 'new';
+    overlay._demoSaved = false;
+  }
+  mcmCloseDemoAutomationModal();
+  overlay._pendingDemo = true;
+  overlay._demoModalShown = false;
+  overlay._outcome = 'demo';
+  mcmHighlightOutcome('demo');
+  mcmHideFollowupForm();
+  mcmRenderDemoForm(leadId);
+};
+
+window.mcmTryOpenDemoFollowThroughModal = function(leadId) {
+  var overlay = document.getElementById('mcm-overlay');
+  if (!overlay || !overlay._pendingDemo || overlay._demoModalShown) return;
+  if (!overlay._demoDate || !overlay._demoTime || !overlay._demoTz) return;
+  mcmOpenDemoFollowThroughModal(leadId);
+};
+
+window.mcmOpenDemoFollowThroughModal = function(leadId) {
+  var overlay = document.getElementById('mcm-overlay');
+  var lead = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.find(function(l){ return l.id === leadId; }) : null;
+  if (!overlay || !lead) return;
+  if (!overlay._demoDate || !overlay._demoTime || !overlay._demoTz) return;
+  lead.demoDate = overlay._demoDate;
+  lead.demoTime = overlay._demoTime;
+  lead.demoTz = overlay._demoTz;
+  overlay._outcome = 'demo';
+  overlay._status = 'booked_demo';
+  overlay._pendingDemo = false;
+  overlay._demoModalShown = true;
+  mcmHideDemoForm();
+  mcmUpdateStatusPills('booked_demo');
+  mcmHighlightOutcome('demo');
+  if (typeof showDemoAutomationPanel === 'function') showDemoAutomationPanel(lead);
+};
+
+window.mcmSetOutcome = function(outcome, leadId) {
+  var overlay = document.getElementById('mcm-overlay');
+  if (!overlay) return;
 
   var mode = overlay._callMode || 'lead';
   if (mode === 'lead') {
     if (outcome === 'demo') {
-      mcmSetStatus('booked_demo', leadId);
-      mcmRenderDemoForm(leadId);
-      mcmHideFollowupForm();
-    } else if (outcome === 'callback') {
+      mcmEnterDemoScheduling(leadId);
+      return;
+    }
+    if (overlay._pendingDemo || overlay._demoModalShown || overlay._outcome === 'demo') {
+      mcmDismissDemoFlow(leadId);
+    }
+    overlay._outcome = outcome;
+    mcmHighlightOutcome(outcome);
+    if (outcome === 'callback') {
       mcmSetStatus('followup', leadId);
       mcmRenderFollowupForm(leadId);
-      mcmHideDemoForm();
     } else {
-      mcmHideDemoForm();
       mcmHideFollowupForm();
+      if (outcome === 'pickup') mcmSetStatus('contacted', leadId);
+      else if (outcome === 'emailed') mcmSetStatus('emailed', leadId);
+      else mcmUpdateStatusPills(overlay._status || 'new');
     }
-    if (outcome === 'pickup') mcmSetStatus('contacted', leadId);
-    if (outcome === 'emailed') mcmSetStatus('emailed', leadId);
   } else {
+    overlay._outcome = outcome;
+    mcmHighlightOutcome(outcome);
     mcmHideDemoForm();
+    mcmDismissDemoFlow(leadId);
     if (outcome === 'connected') mcmSetStatus('showed', leadId);
-    if (outcome === 'next_step') mcmSetStatus('proposal', leadId);
-    if (outcome === 'objection') mcmSetStatus('negotiation', leadId);
-    if (outcome === 'won') mcmSetStatus('won', leadId);
+    else if (outcome === 'next_step') mcmSetStatus('proposal', leadId);
+    else if (outcome === 'objection') mcmSetStatus('negotiation', leadId);
+    else if (outcome === 'won') mcmSetStatus('won', leadId);
   }
 };
 
@@ -16370,7 +16489,7 @@ window.mcmRenderDemoForm = function(leadId) {
     + (overlay._demoDate ? '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);margin-bottom:6px;">Pick a time' + (overlay._demoDate ? ' · ' + overlay._demoDate : '') + '</div>' + slotBtns : '<div style="font-size:11px;color:rgba(255,255,255,0.35);margin-bottom:8px;">Tap a date on the calendar — orange dots are already booked</div>')
     +(preview ? '<div id="mcm-demo-preview" style="font-size:11px;color:rgba(255,255,255,0.55);padding:8px 10px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:10px;">'+mcmEsc(preview)+'</div>'
       : '<div id="mcm-demo-preview" style="font-size:11px;color:rgba(255,255,255,0.35);margin-bottom:8px;">Select date & time — booked slots are blocked</div>')
-    +'<div style="font-size:10px;color:rgba(255,255,255,0.38);line-height:1.45;margin-bottom:4px;">After you pick a slot, click <strong style="color:#6ee7b7;">Log Call &amp; Stay</strong> or <strong style="color:#c7d2fe;">Log &amp; Next</strong> — the confirmation email &amp; task popup appears then.</div>'
+    +'<div style="font-size:10px;color:rgba(255,255,255,0.38);line-height:1.45;margin-bottom:4px;">Pick timezone → date → time slot. The <strong style="color:#6ee7b7;">Demo Booked</strong> popup opens after you choose a time — then log the call when ready.</div>'
     + upcomingHtml
     +'</div>';
 };
@@ -16385,6 +16504,7 @@ window.mcmPickDemoTz = function(tzId, leadId) {
   var overlay = document.getElementById('mcm-overlay');
   if (overlay) { overlay._demoTz = tzId; overlay._demoTzConfirmed = true; }
   mcmRenderDemoForm(leadId);
+  mcmTryOpenDemoFollowThroughModal(leadId);
 };
 
 window.mcmPickDemoDate = function(val, leadId) {
@@ -16397,6 +16517,7 @@ window.mcmPickDemoTime = function(val, leadId) {
   var overlay = document.getElementById('mcm-overlay');
   if (overlay) overlay._demoTime = val;
   mcmRenderDemoForm(leadId);
+  mcmTryOpenDemoFollowThroughModal(leadId);
 };
 
 window.mcmApplyDemoToLead = function(lead, overlay) {
@@ -16417,34 +16538,22 @@ window.mcmApplyDemoToLead = function(lead, overlay) {
 };
 
 window.mcmSetStatus = function(status, leadId) {
-  var statusColors = {};
-  AN_LEAD_STATUSES.concat(AN_OPP_STATUSES).forEach(function(s){ statusColors[s.id] = s.color; });
-  document.querySelectorAll('[id^="mcm-status-"]').forEach(function(btn) {
-    btn.style.background = 'transparent';
-    btn.style.borderColor = 'rgba(255,255,255,0.1)';
-    btn.style.color = 'rgba(255,255,255,0.5)';
-  });
-  var sel = document.getElementById('mcm-status-'+status);
-  if (sel) {
-    var col = statusColors[status] || '#6366f1';
-    sel.style.background = col+'22';
-    sel.style.borderColor = col;
-    sel.style.color = col;
-  }
   var overlay = document.getElementById('mcm-overlay');
-  if (overlay) overlay._status = status;
   var mode = overlay ? (overlay._callMode || 'lead') : 'lead';
   if (mode === 'lead' && status === 'booked_demo') {
-    if (overlay) overlay._outcome = 'demo';
-    mcmRenderDemoForm(leadId);
-    mcmHideFollowupForm();
-  } else if (mode === 'lead' && status === 'followup') {
+    mcmEnterDemoScheduling(leadId);
+    return;
+  }
+  if (mode === 'lead' && (overlay._pendingDemo || overlay._demoModalShown || overlay._outcome === 'demo')) {
+    mcmDismissDemoFlow(leadId);
+  }
+  mcmUpdateStatusPills(status);
+  if (mode === 'lead' && status === 'followup') {
     if (overlay) overlay._outcome = 'callback';
+    mcmHighlightOutcome('callback');
     mcmRenderFollowupForm(leadId);
-    mcmHideDemoForm();
-  } else if (mode === 'lead' && status !== 'booked_demo') {
-    mcmHideDemoForm();
-    if (status !== 'followup') mcmHideFollowupForm();
+  } else if (mode === 'lead') {
+    mcmHideFollowupForm();
   }
 };
 
@@ -16506,6 +16615,7 @@ window.mcmSave = function(leadId, opts) {
     lead.status = 'booked_demo';
     newStatus = 'booked_demo';
     demoJustBooked = true;
+    if (overlay) overlay._demoSaved = true;
   } else if ((outcome === 'callback' || newStatus === 'followup') && mode === 'lead') {
     if (!mcmApplyFollowupToLead(lead, overlay)) {
       mcmRenderFollowupForm(leadId);
@@ -16578,8 +16688,11 @@ window.mcmSave = function(leadId, opts) {
     showToast(labels[outcome] || 'Activity logged');
   }
 
-  if (demoJustBooked && typeof anMaybeShowDemoAutomationPanel === 'function') {
+  if (demoJustBooked && overlay && !overlay._demoModalShown && typeof anMaybeShowDemoAutomationPanel === 'function') {
     anMaybeShowDemoAutomationPanel(lead);
+  }
+  if (overlay && demoJustBooked) {
+    overlay._pendingDemo = false;
   }
 
   return true;
@@ -22476,6 +22589,7 @@ window.anDemoIsFullyScheduled = function(lead) {
 window.anMaybeShowDemoAutomationPanel = function(lead, opts) {
   opts = opts || {};
   if (!lead || !anDemoIsFullyScheduled(lead)) return;
+  if (document.getElementById('demo-auto-modal')) return;
   if (opts.onlyIfStatus && ['booked_demo', 'demo'].indexOf(lead.status || '') < 0) return;
   setTimeout(function() {
     if (typeof mcmHideDemoForm === 'function') mcmHideDemoForm();
@@ -22496,6 +22610,7 @@ window.anSaveLead = function(id) {
 };
 
 window.showDemoAutomationPanel = function(lead) {
+  if (typeof mcmHideDemoForm === 'function') mcmHideDemoForm();
   var old = document.getElementById('demo-auto-modal'); if (old) old.remove();
 
   var name = ((lead.firstName||'')+' '+(lead.lastName||'')).trim() || 'there';
@@ -22539,7 +22654,7 @@ window.showDemoAutomationPanel = function(lead) {
 
   var m = document.createElement('div');
   m.id = 'demo-auto-modal';
-  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:25001;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(8px);';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:50000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(10px);';
 
   m.innerHTML =
     '<div style="background:var(--card-bg);border-radius:16px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.35);">'
@@ -22549,7 +22664,7 @@ window.showDemoAutomationPanel = function(lead) {
     + '<div><div style="font-size:17px;font-weight:800;color:#fff;">🎯 Demo Booked!</div>'
     + '<div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:2px;">Let\'s automate the follow-through for ' + anEsc(name) + '</div>'
     + '</div>'
-    + '<button onclick="document.getElementById(\'demo-auto-modal\').remove()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;">✕</button>'
+    + '<button onclick="anCloseDemoAutoModal()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;">✕</button>'
     + '</div>'
 
     + '<div style="padding:20px 22px;">'
@@ -22605,11 +22720,15 @@ window.showDemoAutomationPanel = function(lead) {
     + '<textarea id="demo-email-body" rows="10" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:11px;font-size:13px;line-height:1.7;color:var(--text-primary);background:var(--card-bg);outline:none;resize:vertical;font-family:var(--sans);box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'">' + anEsc(confirmEmail) + '</textarea>'
     + '</div>'
 
-    + '<button onclick="document.getElementById(\'demo-auto-modal\').remove()" style="width:100%;padding:11px;border-radius:8px;border:1.5px solid var(--divider);background:transparent;font-size:13.5px;font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--text-secondary);">Done</button>'
+    + '<button onclick="anCloseDemoAutoModal()" style="width:100%;padding:11px;border-radius:8px;border:1.5px solid var(--divider);background:transparent;font-size:13.5px;font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--text-secondary);">Done</button>'
     + '</div></div>';
 
   document.body.appendChild(m);
-  m.onclick = function(e){ if (e.target===m) m.remove(); };
+  m.onclick = function(e){
+    if (e.target === m) anCloseDemoAutoModal();
+  };
+  var inner = m.firstElementChild;
+  if (inner) inner.onclick = function(e){ e.stopPropagation(); };
 
   // Store lead context for the action buttons
   window._demoAutoLeadId = lead.id;
