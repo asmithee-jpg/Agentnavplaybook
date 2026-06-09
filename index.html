@@ -10438,7 +10438,7 @@ window.anOpenLead = function(id){
     +'<div id="alf-demo-wrap" style="grid-column:1/-1;display:none;"></div>'
     +'<div style="grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px;padding-top:8px;border-top:1px solid var(--divider);">'
     +'<button onclick="anCloseLeadModal(\''+lead.id+'\')" style="padding:9px 16px;border-radius:8px;border:1.5px solid var(--divider);background:transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--text-secondary);">Cancel</button>'
-    +'<button onclick="anSaveLead(\''+lead.id+'\')" style="padding:9px 18px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);box-shadow:0 2px 8px rgba(99,102,241,0.3);">'+(isNewLead?'Save Lead':'Save Changes')+'</button>'
+    +'<button type="button" id="an-save-lead-btn" data-lead-id="'+lead.id+'" style="padding:9px 18px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);box-shadow:0 2px 8px rgba(99,102,241,0.3);touch-action:manipulation;">'+(isNewLead?'Save Lead':'Save Changes')+'</button>'
     +'</div></div>'
 
     // Calls pane
@@ -10456,12 +10456,15 @@ window.anOpenLead = function(id){
 
   document.body.appendChild(ov);
   ov.onclick = function(e){ if(e.target===ov) anCloseLeadModal(lead.id); };
+  if (typeof anWireLeadModalSave === 'function') anWireLeadModalSave(lead.id);
   if (isNewLead) {
     setTimeout(function(){
       var focusEl = document.getElementById('alf-fn') || document.getElementById('alf-co');
       if (focusEl) focusEl.focus();
     }, 80);
   }
+  var statusSel = document.getElementById('alf-sta');
+  if (statusSel && typeof injectDemoScheduler === 'function') injectDemoScheduler(lead, statusSel);
 };
 
 function anField(label,id,value,type){
@@ -10754,20 +10757,42 @@ window.anUpdateLeadPreferredLang = function(leadId, lang) {
   return true;
 };
 
-window.anSaveLead = function(id){
-  var lead = AN.leads.find(function(l){ return l.id===id; });
-  if(!lead) return;
+window.anSaveLeadCore = function(id){
+  var lead = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.find(function(l){ return l.id===id; }) : null;
+  if(!lead) {
+    if(typeof showToast==='function') showToast('Could not save — reopen Add Lead and try again');
+    return false;
+  }
   var g = function(eid){ var el=document.getElementById(eid); return el?el.value:''; };
-  lead.firstName=g('alf-fn'); lead.lastName=g('alf-ln'); lead.company=g('alf-co');
-  lead.title=g('alf-title'); lead.email=g('alf-em'); lead.phone=anNormalizePhone(g('alf-ph')); lead.state=typeof anNormalizeLeadStateValue==='function'?anNormalizeLeadStateValue(g('alf-st')):g('alf-st');
-  lead.size=g('alf-sz'); lead.status=g('alf-sta'); lead.source=g('alf-src');
+  lead.firstName=(g('alf-fn')||'').trim();
+  lead.lastName=(g('alf-ln')||'').trim();
+  lead.company=(g('alf-co')||'').trim();
+  lead.title=(g('alf-title')||'').trim();
+  lead.email=(g('alf-em')||'').trim();
+  lead.phone=anNormalizePhone(g('alf-ph'));
+  lead.state=typeof anNormalizeLeadStateValue==='function'?anNormalizeLeadStateValue(g('alf-st')):g('alf-st');
+  lead.size=g('alf-sz');
+  lead.status=g('alf-sta') || lead.status || 'new';
+  lead.source=(g('alf-src')||'').trim();
   lead.preferredLang=g('alf-lang') || 'en';
   lead.nextFollowUp=g('alf-fu');
-  var notesEl=document.getElementById('alf-notes'); if(notesEl) lead.notes=notesEl.value;
-  anLinkLeadToCompanyRecord(lead, lead.company);
+  var notesEl=document.getElementById('alf-notes');
+  if(notesEl) lead.notes=notesEl.value;
+  var demoDateEl=document.getElementById('alf-demo-date');
+  var demoTimeEl=document.getElementById('alf-demo-time');
+  var tzEl=document.getElementById('alf-prospect-tz');
+  if(demoDateEl) lead.demoDate=demoDateEl.value;
+  if(demoTimeEl) lead.demoTime=demoTimeEl.value;
+  if(tzEl && tzEl.value) lead.demoTz=tzEl.value;
+  if(!lead.firstName && !lead.lastName && !lead.company && !lead.phone && !lead.email) {
+    if(typeof showToast==='function') showToast('Add a name, company, phone, or email before saving');
+    return false;
+  }
+  if(typeof anLinkLeadToCompanyRecord==='function') anLinkLeadToCompanyRecord(lead, lead.company);
+  if(typeof anSyncCompaniesFromLeads==='function') anSyncCompaniesFromLeads();
   lead.updated=new Date().toISOString();
   delete lead._isDraftNew;
-  AN.save();
+  if(typeof AN.save==='function') AN.save();
   if (document.getElementById('crm-content') && typeof renderLeadsTable === 'function') renderLeadsTable();
   if (typeof hdRender === 'function') {
     var homeSec = document.getElementById('section-home');
@@ -10775,8 +10800,9 @@ window.anSaveLead = function(id){
   }
   var modal = document.getElementById('an-lead-modal');
   if (modal) modal.remove();
-  if(typeof showToast==='function') showToast('Lead saved');
+  return true;
 };
+window.anSaveLead = window.anSaveLeadCore;
 
 window.anSaveNotes = function(id){
   var lead = AN.leads.find(function(l){ return l.id===id; });
@@ -13858,6 +13884,107 @@ window.anBuildClickableCompanyHtml = function(companyName, style) {
   return '<span role="button" tabindex="0" onclick="event.stopPropagation();anOpenCallSessionCompanyPanel(\'' + escJs + '\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();anOpenCallSessionCompanyPanel(\'' + escJs + '\');}" style="' + (style || '') + 'cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;" title="View agency profile">' + anEsc(companyName) + '</span>';
 };
 
+window.coDismissNativeMenus = function() {
+  if (typeof coCloseAllLifeMenus === 'function') coCloseAllLifeMenus();
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+};
+
+window.coCloseAllLifeMenus = function() {
+  document.querySelectorAll('.co-life-menu').forEach(function(m) { m.style.display = 'none'; });
+};
+
+window.coToggleLifeMenu = function(e, coId) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  var menu = document.getElementById('co-life-menu-' + coId);
+  if (!menu) return;
+  var open = menu.style.display === 'block';
+  coCloseAllLifeMenus();
+  menu.style.display = open ? 'none' : 'block';
+};
+
+window.coPickLifecycle = function(coId, stageId) {
+  coCloseAllLifeMenus();
+  if (typeof coSaveField === 'function') coSaveField(coId, 'lifecycleStage', stageId);
+  if (typeof coOpenCompanyPanel === 'function') coOpenCompanyPanel(coId);
+};
+
+function coBuildLifecyclePicker(coId, currentVal) {
+  var stage = typeof coNormalizeLifecycleStage === 'function' ? coNormalizeLifecycleStage(currentVal) : (currentVal || 'prospecting');
+  var stageObj = CO_STAGES.find(function(s) { return s.id === stage; }) || CO_STAGES[0];
+  return '<div class="co-life-picker" style="position:relative;display:inline-block;">'
+    + '<button type="button" onclick="coToggleLifeMenu(event,\'' + coId + '\')" style="border:1.5px solid var(--divider);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;font-family:inherit;background:var(--card-bg);color:' + stageObj.color + ';cursor:pointer;white-space:nowrap;">' + (typeof coEsc === 'function' ? coEsc(stageObj.label) : stageObj.label) + ' ▾</button>'
+    + '<div class="co-life-menu" id="co-life-menu-' + coId + '" style="display:none;position:absolute;right:0;top:calc(100% + 4px);min-width:168px;background:var(--card-bg);border:1px solid var(--divider);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.14);overflow:hidden;">'
+    + CO_STAGES.map(function(s) {
+      var active = s.id === stageObj.id;
+      return '<button type="button" onclick="event.stopPropagation();coPickLifecycle(\'' + coId + '\',\'' + s.id + '\')" style="display:block;width:100%;text-align:left;padding:8px 12px;border:none;background:' + (active ? 'rgba(99,102,241,0.08)' : 'transparent') + ';color:' + s.color + ';font-size:12px;font-weight:' + (active ? '700' : '600') + ';cursor:pointer;font-family:inherit;">' + (active ? '✓ ' : '') + (typeof coEsc === 'function' ? coEsc(s.label) : s.label) + '</button>';
+    }).join('')
+    + '</div></div>';
+}
+
+if (!window._coLifeMenuBound) {
+  window._coLifeMenuBound = true;
+  document.addEventListener('click', function() { coCloseAllLifeMenus(); });
+}
+
+window.anOpenFullCompanyRecord = function(companyName) {
+  companyName = (companyName || '').trim();
+  if (!companyName) {
+    if (typeof showToast === 'function') showToast('No company on file');
+    return;
+  }
+  var inCall = !!(document.getElementById('mcm-panel-wrap') || document.body.classList.contains('call-panel-open'));
+  var finishOpen = function(c) {
+    if (typeof anCloseCallSessionCompanyPanel === 'function') anCloseCallSessionCompanyPanel();
+    var oldDet = document.getElementById('co-detail-panel');
+    if (oldDet) oldDet.remove();
+    if (typeof coDismissNativeMenus === 'function') coDismissNativeMenus();
+    if (inCall) {
+      document.body.classList.add('co-full-record-over-call', 'call-lead-collapsed');
+      document.body.classList.remove('call-lead-front', 'call-company-front');
+    }
+    if (c && typeof coOpenCompanyPanel === 'function') {
+      if (!inCall && typeof showSection === 'function') showSection('companies');
+      setTimeout(function() { coOpenCompanyPanel(c.id); }, inCall ? 40 : 120);
+      return;
+    }
+    if (typeof showToast === 'function') showToast('Could not open company record');
+  };
+  var openRecord = function() {
+    var key = typeof coNormName === 'function' ? coNormName(companyName) : companyName.toLowerCase();
+    var c = (_coData || []).find(function(x) {
+      return typeof coNormName === 'function' && coNormName(x.name) === key;
+    });
+    if (!c && typeof AN !== 'undefined' && Array.isArray(AN.leads)) {
+      var ownerEmail = (AN.currentRepEmail || '').toLowerCase();
+      AN.leads.forEach(function(l) {
+        if (c || coNormName(l.company) !== key) return;
+        c = {
+          id: 'co-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+          name: companyName,
+          industry: 'Insurance Agency',
+          notes: '', website: '', lifecycleStage: 'prospecting',
+          ownerEmail: (l._repEmail || ownerEmail).toLowerCase(),
+          created: new Date().toISOString(),
+          updated: new Date().toISOString(),
+          updatedBy: ownerEmail
+        };
+      });
+      if (c) {
+        var list = (_coData || []).slice();
+        list.push(c);
+        if (typeof coSave === 'function') {
+          coSave(list, function() { finishOpen(c); });
+          return;
+        }
+        _coData = list;
+      }
+    }
+    finishOpen(c);
+  };
+  if (typeof coEnsureSyncedFromLeads === 'function') coEnsureSyncedFromLeads(openRecord);
+  else openRecord();
+};
+
 window.anOpenCallSessionCompanyPanel = function(name) {
   name = (name || '').trim();
   if (!name) {
@@ -13961,7 +14088,7 @@ window.anOpenCallSessionCompanyPanel = function(name) {
     + '<textarea id="cs-co-notes" rows="4" placeholder="Pain points, objections, agency size..." onblur="typeof saveCoData===\'function\'&&saveCoData(\'' + escName + '\',{notes:this.value})" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:10px;font-size:12px;color:var(--text-primary);background:var(--body-bg);outline:none;resize:vertical;font-family:var(--sans);line-height:1.6;box-sizing:border-box;">' + anEsc(cd.notes || '') + '</textarea>'
     + '</div></div>'
     + '<div style="padding:10px 14px;border-top:1px solid var(--divider);flex-shrink:0;display:flex;gap:6px;">'
-    + '<button onclick="(function(){var c=(_coData||[]).find(function(x){return typeof coNormName===\'function\'&&coNormName(x.name)===coNormName(\'' + escName + '\');});if(c&&typeof coOpenCompanyPanel===\'function\'){anCloseCallSessionCompanyPanel();if(typeof showSection===\'function\')showSection(\'companies\');setTimeout(function(){coOpenCompanyPanel(c.id);},120);}else if(typeof openCompanyDetail===\'function\')openCompanyDetail(\'' + escName + '\');})()" style="flex:1;padding:8px;border:1.5px solid var(--divider);border-radius:8px;background:var(--card-bg);font-size:11px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:var(--sans);">Open full record</button>'
+    + '<button type="button" onclick="anOpenFullCompanyRecord(\'' + escName + '\')" style="flex:1;padding:8px;border:1.5px solid var(--divider);border-radius:8px;background:var(--card-bg);font-size:11px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:var(--sans);touch-action:manipulation;">Open full record</button>'
     + '<button onclick="typeof anNewLeadForCompany===\'function\'&&anNewLeadForCompany(\'' + escName + '\')" style="flex:1;padding:8px;border:none;border-radius:8px;background:#6366f1;font-size:11px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--sans);">+ Contact</button>'
     + '</div>';
 
@@ -15428,7 +15555,7 @@ function injectDemoScheduler(lead, statusSel) {
   var wrap = document.getElementById('alf-demo-wrap');
   if (!wrap) return;
 
-  if (!statusSel || statusSel.value !== 'demo') {
+  if (!statusSel || ['demo','booked_demo'].indexOf(statusSel.value) < 0) {
     wrap.style.display = 'none';
     wrap.innerHTML = '';
     return;
@@ -16108,6 +16235,9 @@ window.mcmCloseCallPanelOnly = function(){
 
 window.mcmToggleLeadPanel = function() {
   var collapsed = !document.body.classList.contains('call-lead-collapsed');
+  if (!collapsed && document.body.classList.contains('co-full-record-over-call') && typeof coCloseCompanyPanel === 'function') {
+    coCloseCompanyPanel();
+  }
   document.body.classList.toggle('call-lead-collapsed', collapsed);
   if (window.innerWidth <= 900) {
     document.body.classList.toggle('call-lead-front', !collapsed);
@@ -17923,6 +18053,12 @@ body.sb-collapsed #co-company-panel { left: 68px; }
 #co-company-panel.open { transform: translateX(0); }
 #co-panel-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 8999; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
 #co-panel-backdrop.open { opacity: 1; pointer-events: auto; }
+body.co-full-record-over-call #co-company-panel { z-index: 20010 !important; }
+body.co-full-record-over-call #co-panel-backdrop { z-index: 20009 !important; }
+body.co-full-record-over-call #co-detail-panel { z-index: 20010 !important; }
+body.co-full-record-over-call #an-cs-lead-panel { display: none !important; }
+body.co-full-record-over-call #an-cs-company-panel { display: none !important; }
+.co-life-menu { z-index: 20020 !important; }
 .co-record-layout { display: grid; grid-template-columns: minmax(260px, 300px) minmax(0, 1fr) minmax(260px, 320px); height: 100%; min-height: 0; overflow: hidden; }
 .co-record-left { border-right: 1px solid var(--divider, #e9e9ef); overflow-y: auto; padding: 18px 20px 24px; background: var(--card-bg, #fff); }
 .co-record-center { overflow-y: auto; background: var(--body-bg, #f7f7f9); min-width: 0; }
@@ -18944,10 +19080,12 @@ function coBuildCompanyPanelHTML(co, stats) {
   var firstLead = leads[0];
   var firstPhone = firstLead && firstLead.phone ? (typeof anFormatPhone === 'function' ? anFormatPhone(firstLead.phone) : firstLead.phone) : '—';
 
+  var backLabel = document.body.classList.contains('co-full-record-over-call') ? '← Back to call' : '← Companies';
+
   return ''
     +'<div class="co-record-layout">'
     +'<aside class="co-record-left">'
-    +'<button type="button" class="co-record-back" onclick="coCloseCompanyPanel()">← Companies</button>'
+    +'<button type="button" class="co-record-back" onclick="coCloseCompanyPanel()">'+backLabel+'</button>'
     +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">'
     +'<div class="co-co-avatar" style="background:'+coColor(co.name)+';width:48px;height:48px;font-size:20px;border-radius:10px;">'+co.name.charAt(0).toUpperCase()+'</div>'
     +'<div style="min-width:0;"><div style="font-size:20px;font-weight:800;color:var(--text-primary);letter-spacing:-0.3px;line-height:1.2;">'+coEsc(co.name)+'</div>'
@@ -18971,12 +19109,7 @@ function coBuildCompanyPanelHTML(co, stats) {
     +panelRow('Pipeline MRR', stats.pipelineMRR ? '$'+stats.pipelineMRR+'/mo' : '—')
     +'<div class="co-panel-row"><span>Website</span><input type="text" value="'+coEsc(co.website||'')+'" placeholder="website.com" onblur="coSaveField(\''+co.id+'\',\'website\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;outline:none;min-width:120px;text-align:right;font-family:inherit;font-size:12px;"></div>'
     +'<div class="co-panel-row"><span>Industry</span><input type="text" value="'+coEsc(co.industry||'Insurance Agency')+'" onblur="coSaveField(\''+co.id+'\',\'industry\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;outline:none;min-width:120px;text-align:right;font-family:inherit;font-size:12px;"></div>'
-    +'<div class="co-panel-row"><span>Lifecycle</span><select onchange="coSaveField(\''+co.id+'\',\'lifecycleStage\',this.value);coRender();coOpenCompanyPanel(\''+co.id+'\');" style="border:1.5px solid var(--divider);border-radius:6px;padding:4px 8px;font-size:11px;font-family:inherit;background:var(--card-bg);">'
-    +CO_STAGES.map(function(s) {
-      var sel = (co.lifecycleStage || stats.lifecycle) === s.id ? ' selected' : '';
-      return '<option value="'+s.id+'"'+sel+'>'+s.label+'</option>';
-    }).join('')
-    +'</select></div>'
+    +'<div class="co-panel-row"><span>Lifecycle</span>'+coBuildLifecyclePicker(co.id, co.lifecycleStage || stats.lifecycle)+'</div>'
     +'</div>'
     +'<div style="margin-top:16px;"><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Company notes</div>'
     +'<textarea rows="5" placeholder="Strategy, objections, pricing..." onblur="coSaveField(\''+co.id+'\',\'notes\',this.value)" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:10px;font-size:12px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;">'+coEsc(co.notes||'')+'</textarea></div>'
@@ -19043,6 +19176,8 @@ window.coCloseCompanyPanel = function() {
   var panel = document.getElementById('co-company-panel');
   var backdrop = document.getElementById('co-panel-backdrop');
   _coSelected = null;
+  if (typeof coDismissNativeMenus === 'function') coDismissNativeMenus();
+  document.body.classList.remove('co-full-record-over-call');
   document.querySelectorAll('.co-kanban-card.active').forEach(function(el) { el.classList.remove('active'); });
   if (panel) panel.classList.remove('open');
   if (backdrop) backdrop.classList.remove('open');
@@ -21702,8 +21837,22 @@ window.openCoStageDropdown = function(name, btn){
   setTimeout(function(){ document.addEventListener('click',function h(e){if(!dd.contains(e.target)){dd.remove();document.removeEventListener('click',h);}},true); },50);
 };
 
-// ── COMPANY DETAIL (right-side panel) ─────────────────────────
-window.openCompanyDetail = function(name){
+// ── COMPANY DETAIL — routes to HubSpot-style full record ─────
+window.openCompanyDetail = function(name) {
+  name = (name || '').trim();
+  if (!name) return;
+  _coActiveCompany = name;
+  var old = document.getElementById('co-detail-panel');
+  if (old) old.remove();
+  if (typeof coDismissNativeMenus === 'function') coDismissNativeMenus();
+  if (typeof anOpenFullCompanyRecord === 'function') {
+    anOpenFullCompanyRecord(name);
+    return;
+  }
+  if (typeof showToast === 'function') showToast('Company view unavailable');
+};
+
+window._openCompanyDetailLegacy = function(name){
   _coActiveCompany = name;
   var leads = AN.leads.filter(function(l){ return (l.company||'').trim()===name; });
   if(!AN.isAdmin) leads=leads.filter(function(l){ return typeof anRepOwnsLead === 'function' ? anRepOwnsLead(l) : (l._repEmail === AN.currentRepEmail); });
@@ -21719,16 +21868,12 @@ window.openCompanyDetail = function(name){
   var callColors={pickup:'#10b981',demo:'#f59e0b',voicemail:'#6366f1',noanswer:'#a1a1aa'};
   var callIcons={pickup:'☎️',demo:'🎯',voicemail:'📬',noanswer:'📵'};
 
-  // Open as a sliding right panel
   var old=document.getElementById('co-detail-panel'); if(old){ old.style.transform='translateX(100%)'; setTimeout(function(){old.remove();},200); }
   var panel=document.createElement('div');
   panel.id='co-detail-panel';
   panel.style.cssText='position:fixed;top:0;right:0;width:860px;max-width:92vw;height:100vh;background:var(--body-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.18);z-index:8000;display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);';
 
-  var STATUS_OPTS = CO_STAGES.map(function(s){return '<option value="'+s.id+'"'+(cd.stage===s.id?' selected':'')+'>'+s.label+'</option>';}).join('');
-
   panel.innerHTML =
-    // ── Header bar ───────────────────────────────────────────
     '<div style="background:var(--card-bg);border-bottom:1px solid var(--divider);padding:14px 22px;display:flex;align-items:center;gap:14px;flex-shrink:0;">'
     +'<div style="width:42px;height:42px;border-radius:10px;background:'+col+'18;border:2px solid '+col+'33;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:900;color:'+col+';flex-shrink:0;">'+name[0].toUpperCase()+'</div>'
     +'<div style="flex:1;min-width:0;">'
@@ -21736,7 +21881,6 @@ window.openCompanyDetail = function(name){
     +'<input id="co-det-industry" value="'+anEsc(cd.industry||'')+'" placeholder="Industry / Type..." onblur="saveCoData(\''+anEsc(name)+'\',{industry:this.value})" style="border:none;background:transparent;font-size:12.5px;color:var(--text-muted);outline:none;font-family:var(--sans);padding:0;width:220px;">'
     +'</div>'
     +'<div style="display:flex;align-items:center;gap:8px;">'
-    +'<select onchange="saveCoData(\''+anEsc(name)+'\',{stage:this.value});renderCoView();" style="border:1.5px solid '+st.color+'44;background:'+st.color+'14;color:'+st.color+';border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;outline:none;font-family:var(--sans);cursor:pointer;">'+STATUS_OPTS+'</select>'
     +'<button onclick="anNewLeadForCompany(\''+anEsc(name)+'\')" style="padding:7px 14px;border:1.5px solid var(--divider);border-radius:8px;background:var(--card-bg);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:var(--sans);">+ Contact</button>'
     +'<button onclick="createDealForCompany(\''+anEsc(name)+'\')" style="padding:7px 14px;border:none;border-radius:8px;background:#6366f1;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--sans);">+ Deal</button>'
     +'<button onclick="document.getElementById(\'co-detail-panel\').style.transform=\'translateX(100%)\';setTimeout(function(){document.getElementById(\'co-detail-panel\').remove();},260);" style="background:rgba(0,0,0,0.06);border:none;width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;color:var(--text-muted);">✕</button>'
@@ -21860,8 +22004,16 @@ window.openCompanyDetail = function(name){
   document.body.appendChild(panel);
   setTimeout(function(){ panel.style.transform='translateX(0)'; },10);
 
-  // Close on backdrop click
-  panel.addEventListener('click',function(e){ if(e.target===panel){ panel.style.transform='translateX(100%)'; setTimeout(function(){panel.remove();},260); } });
+  var closeDetail = function() {
+    document.body.classList.remove('co-full-record-over-call');
+    panel.style.transform = 'translateX(100%)';
+    setTimeout(function(){ if (panel.parentNode) panel.remove(); }, 260);
+  };
+  var closeBtn = panel.querySelector('button[onclick*="co-detail-panel"]');
+  if (closeBtn) closeBtn.onclick = closeDetail;
+  panel.addEventListener('click', function(e) {
+    if (e.target === panel) closeDetail();
+  });
 };
 
 window.coTab = function(tab){
@@ -23219,14 +23371,55 @@ window.anMaybeShowDemoAutomationPanel = function(lead, opts) {
   }, opts.delay || 280);
 };
 
-// Also fire from the lead edit modal when demo fields are complete
-var _origAnSaveLead_demo = window.anSaveLead;
+window.anShowLeadPostSaveModal = function(id) {
+  var prevBar = document.getElementById('an-save-action-bar');
+  if (prevBar) prevBar.remove();
+  var old = document.getElementById('an-postsave-modal');
+  if (old) old.remove();
+  var overlay = document.createElement('div');
+  overlay.id = 'an-postsave-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10002;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);';
+  var box = document.createElement('div');
+  box.style.cssText = 'background:#fff;border-radius:18px;padding:32px 36px;width:400px;max-width:92vw;box-shadow:0 24px 80px rgba(0,0,0,0.25);text-align:center;';
+  box.innerHTML = '<div style="width:52px;height:52px;border-radius:50%;background:#ecfdf5;border:2px solid #a7f3d0;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 14px;">✓</div>'
+    +'<div style="font-size:18px;font-weight:800;color:#09090b;margin-bottom:5px;">Lead Saved!</div>'
+    +'<div style="font-size:13px;color:#71717a;margin-bottom:22px;">What would you like to do next?</div>'
+    +'<div style="display:flex;flex-direction:column;gap:10px;">'
+    +'<button type="button" onclick="(function(){document.getElementById(\'an-postsave-modal\').remove();if(typeof anOpenLeadPanel===\'function\')anOpenLeadPanel(\''+id+'\');})()" style="width:100%;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">👁 View This Lead</button>'
+    +'<button type="button" onclick="(function(){document.getElementById(\'an-postsave-modal\').remove();if(typeof anLogCall===\'function\')anLogCall(\''+id+'\');})()" style="width:100%;padding:13px;border-radius:10px;border:none;background:#ecfdf5;color:#10b981;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid #a7f3d0;">📞 Log a Call on This Lead</button>'
+    +'<button type="button" onclick="(function(){document.getElementById(\'an-postsave-modal\').remove();if(typeof anNewLead===\'function\')anNewLead();})()" style="width:100%;padding:13px;border-radius:10px;border:none;background:#eef2ff;color:#6366f1;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid #c7d2fe;">+ Add Another Lead</button>'
+    +'<button type="button" onclick="document.getElementById(\'an-postsave-modal\').remove()" style="width:100%;padding:11px;border-radius:10px;border:1.5px solid #e4e4e7;background:transparent;color:#71717a;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Done</button>'
+    +'</div>';
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  overlay.onclick = function(e){ if(e.target===overlay) overlay.remove(); };
+};
+
+window.anWireLeadModalSave = function(leadId) {
+  var btn = document.getElementById('an-save-lead-btn');
+  if (!btn) return;
+  btn.onclick = function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof anSaveLead === 'function') anSaveLead(leadId);
+  };
+};
+
+// Single reliable save path (replaces stacked patches)
 window.anSaveLead = function(id) {
   var statusEl = document.getElementById('alf-sta');
   var newStatus = statusEl ? statusEl.value : '';
-  if (typeof _origAnSaveLead_demo === 'function') _origAnSaveLead_demo(id);
-  var lead = AN.leads.find(function(l){ return l.id === id; });
-  if (lead && (newStatus === 'booked_demo' || newStatus === 'demo') && anDemoIsFullyScheduled(lead)) {
+  try {
+    if (typeof anSaveLeadCore !== 'function' || !anSaveLeadCore(id)) return;
+  } catch(err) {
+    console.error('[CRM] anSaveLead failed:', err);
+    if (typeof showToast === 'function') showToast('Could not save lead — try again');
+    return;
+  }
+  if (typeof showToast === 'function') showToast('Lead saved');
+  if (typeof anShowLeadPostSaveModal === 'function') anShowLeadPostSaveModal(id);
+  var lead = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.find(function(l){ return l.id === id; }) : null;
+  if (lead && (newStatus === 'booked_demo' || newStatus === 'demo') && typeof anDemoIsFullyScheduled === 'function' && anDemoIsFullyScheduled(lead) && typeof anMaybeShowDemoAutomationPanel === 'function') {
     anMaybeShowDemoAutomationPanel(lead, { delay: 400 });
   }
 };
