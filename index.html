@@ -4943,6 +4943,78 @@ function getActivityDates() {
   return dates;
 }
 
+function dashRangeLabel() {
+  if (_dashTimeRange === 'day') return 'Today';
+  if (_dashTimeRange === 'week') return 'This Week';
+  return 'This Month';
+}
+
+function dashDateInRange(dateStr) {
+  if (!dateStr) return false;
+  var d = String(dateStr).slice(0, 10);
+  var dates = getActivityDates();
+  for (var i = 0; i < dates.length; i++) {
+    if (dates[i] === d) return true;
+  }
+  return false;
+}
+
+function dashDemoDate(d, field) {
+  if (!d) return '';
+  field = field || 'bookedDate';
+  if (d[field]) return String(d[field]).slice(0, 10);
+  if (field === 'bookedDate' && d.scheduledDate) return String(d.scheduledDate).slice(0, 10);
+  return '';
+}
+
+function dashGetScopedDemos(dateField) {
+  var demos = (_dash.demos || []).filter(function(d) { return d.source !== 'backfill'; });
+  return demos.filter(function(d) {
+    return dashDateInRange(dashDemoDate(d, dateField || 'bookedDate'));
+  });
+}
+
+function dashDemoInRange(d) {
+  if (d.source === 'backfill') return false;
+  return dashDateInRange(dashDemoDate(d, 'bookedDate')) || dashDateInRange(dashDemoDate(d, 'scheduledDate'));
+}
+
+function dashGetScopedDemosAnyDate() {
+  return (_dash.demos || []).filter(function(d) { return d.source !== 'backfill' && dashDemoInRange(d); });
+}
+
+function dashGetScopedPipeline() {
+  var deals = _dash.pipeline || [];
+  return deals.filter(function(d) {
+    var raw = d.added || d.updated || d.closedDate || d.closeDate || '';
+    if (!raw) return false;
+    var dt = String(raw).slice(0, 10);
+    if (dashDateInRange(dt)) return true;
+    try {
+      return dashDateInRange(typeof anLocalDateStr === 'function' ? anLocalDateStr(new Date(raw)) : dt);
+    } catch (e) { return false; }
+  });
+}
+
+function dashGetDemosBookedCount() {
+  return dashGetScopedDemos('bookedDate').length;
+}
+
+function dashBuildTopStatTilesHTML() {
+  var deals = dashGetScopedPipeline();
+  return ''
+    + buildStatTile('Total Deals', deals.length, '#6366f1', 'deals')
+    + buildStatTile('Pipeline MRR', getPipelineValue(deals), '#10b981', 'mrr')
+    + buildStatTile('Win Rate', getWinRate(deals), '#f59e0b', 'deals')
+    + buildStatTile('Demos Booked', dashGetDemosBookedCount(), '#8b5cf6', 'demos')
+    + buildStatTile('Show Rate', getShowRate(dashGetScopedDemos('scheduledDate')), '#06b6d4', 'showrate');
+}
+
+function dashRefreshTopStatTiles() {
+  var el = document.getElementById('dash-stat-tiles');
+  if (el) el.innerHTML = dashBuildTopStatTilesHTML();
+}
+
 function getActivityForPeriod(period) {
   var now = new Date();
   var result = { calls:0, demos:0, closes:0 };
@@ -5005,22 +5077,22 @@ function getGoalForPeriod(key, period) {
 // ── Pipeline value helpers ────────────────────────────────────
 var SIZE_MO = { solo:79, small:247, large:597 };
 
-function getPipelineValue() {
+function getPipelineValue(pipeline) {
   var t = 0;
-  (_dash.pipeline||[]).filter(function(d){ return d.stage!=='Closed Lost'; })
+  (pipeline || _dash.pipeline || []).filter(function(d){ return d.stage!=='Closed Lost'; })
     .forEach(function(d){ t += SIZE_MO[d.size]||79; });
   return t > 0 ? '$'+t+'/mo' : '$0';
 }
 
-function getWinRate() {
-  var p = _dash.pipeline||[];
+function getWinRate(pipeline) {
+  var p = pipeline || _dash.pipeline || [];
   var closed = p.filter(function(d){ return d.stage==='Closed Won'||d.stage==='Closed Lost'; });
   if (!closed.length) return '—';
   return Math.round((p.filter(function(d){ return d.stage==='Closed Won'; }).length/closed.length)*100)+'%';
 }
 
-function getShowRate() {
-  var demos = _dash.demos||[];
+function getShowRate(demos) {
+  demos = demos || dashGetScopedDemos('scheduledDate');
   var dec = demos.filter(function(d){ return d.status==='showed'||d.status==='noshow'; });
   if (!dec.length) return '—';
   return Math.round((demos.filter(function(d){ return d.status==='showed'; }).length/dec.length)*100)+'%';
@@ -5038,44 +5110,58 @@ function buildStatTile(label, value, color, drillType) {
 
 window.dashOpenDrilldown = function(type, focusId) {
   var title = '', body = '';
+  var rangeLbl = typeof dashRangeLabel === 'function' ? dashRangeLabel() : '';
   if (type === 'deals' || type === 'pipeline') {
-    title = 'Pipeline Deals ('+((_dash.pipeline||[]).length)+')';
-    var deals = _dash.pipeline || [];
-    if (!deals.length) body = '<div style="padding:24px;text-align:center;color:#71717a;">No deals in pipeline yet.</div>';
-    else body = deals.map(function(d, i) {
+    var deals = typeof dashGetScopedPipeline === 'function' ? dashGetScopedPipeline() : (_dash.pipeline || []);
+    title = 'Pipeline Deals — ' + rangeLbl + ' (' + deals.length + ')';
+    if (!deals.length) body = '<div style="padding:24px;text-align:center;color:#71717a;">No deals in this period.</div>';
+    else body = deals.map(function(d) {
+      var idx = (_dash.pipeline || []).indexOf(d);
       var sz = (typeof SIZES !== 'undefined' ? SIZES : []).find(function(s){ return s.id === d.size; }) || { label: d.size || '—', price: '' };
-      return '<div onclick="dashOpenDeal('+i+')" style="padding:12px 14px;border:1px solid #e4e4e7;border-radius:10px;margin-bottom:8px;cursor:pointer;" onmouseover="this.style.borderColor=\'#6366f1\'" onmouseout="this.style.borderColor=\'#e4e4e7\'">'
+      var added = d.added ? String(d.added).slice(0, 10) : '';
+      return '<div onclick="dashOpenDeal('+idx+')" style="padding:12px 14px;border:1px solid #e4e4e7;border-radius:10px;margin-bottom:8px;cursor:pointer;" onmouseover="this.style.borderColor=\'#6366f1\'" onmouseout="this.style.borderColor=\'#e4e4e7\'">'
         +'<div style="font-size:14px;font-weight:800;color:#09090b;">'+anEsc(d.name || 'Deal')+'</div>'
-        +'<div style="font-size:11px;color:#71717a;margin-top:4px;">'+(d.stage||'—')+' · '+(d.state||'—')+' · '+sz.label+(sz.price?(' · '+sz.price):'')+'</div>'
+        +'<div style="font-size:11px;color:#71717a;margin-top:4px;">'+(d.stage||'—')+' · '+(d.state||'—')+' · '+sz.label+(sz.price?(' · '+sz.price):'')+(added?' · '+added:'')+'</div>'
         +(d.leadId ? '<div style="font-size:10px;color:#6366f1;margin-top:4px;">Linked to CRM lead</div>' : '')
         +'</div>';
     }).join('');
   } else if (type === 'demos') {
-    title = 'Demos Booked ('+((_dash.demos||[]).length)+')';
-    var demos = _dash.demos || [];
-    if (!demos.length) body = '<div style="padding:24px;text-align:center;color:#71717a;">No demos logged yet.</div>';
+    var demos = typeof dashGetScopedDemos === 'function' ? dashGetScopedDemos('bookedDate') : (_dash.demos || []);
+    title = 'Demos Booked — ' + rangeLbl + ' (' + demos.length + ')';
+    if (!demos.length) body = '<div style="padding:24px;text-align:center;color:#71717a;">No demos booked in this period.</div>';
     else body = demos.map(function(d) {
       var active = focusId && d.id === focusId ? 'border-color:#6366f1;background:rgba(99,102,241,0.04);' : '';
+      var booked = dashDemoDate(d, 'bookedDate');
       return '<div style="padding:12px 14px;border:1px solid #e4e4e7;border-radius:10px;margin-bottom:8px;'+active+'">'
         +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">'
         +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="anOpenDemoFromTracker(\''+d.id+'\')">'
         +'<div style="font-size:14px;font-weight:800;color:#09090b;">'+anEsc(d.name || 'Demo')+'</div>'
-        +'<div style="font-size:11px;color:#71717a;margin-top:4px;">'+anEsc(d.status || 'booked')+' · '+(d.state||'—')+(d.scheduledDate?' · '+d.scheduledDate:'')+'</div>'
+        +'<div style="font-size:11px;color:#71717a;margin-top:4px;">'+anEsc(d.status || 'booked')+' · '+(d.state||'—')+(booked?' · booked '+booked:'')+(d.scheduledDate?' · sched '+d.scheduledDate:'')+'</div>'
         +'</div>'
         +'<button onclick="anOpenDemoFromTracker(\''+d.id+'\')" style="padding:6px 10px;border-radius:6px;border:none;background:#6366f1;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Open</button>'
         +'</div></div>';
     }).join('');
   } else if (type === 'mrr') {
-    title = 'Pipeline MRR Breakdown';
-    body = (_dash.pipeline||[]).filter(function(d){ return d.stage !== 'Closed Lost'; }).map(function(d, i) {
+    title = 'Pipeline MRR — ' + rangeLbl;
+    var activeDeals = (typeof dashGetScopedPipeline === 'function' ? dashGetScopedPipeline() : (_dash.pipeline || [])).filter(function(d){ return d.stage !== 'Closed Lost'; });
+    body = activeDeals.map(function(d) {
       var mp = { solo:79, small:247, large:597 };
       var mrr = mp[d.size] || 79;
-      return '<div onclick="dashOpenDeal('+(_dash.pipeline.indexOf(d))+')" style="padding:10px 12px;border:1px solid #e4e4e7;border-radius:8px;margin-bottom:6px;cursor:pointer;"><span style="font-weight:700;">'+anEsc(d.name)+'</span> <span style="color:#71717a;">— $'+mrr+'/mo</span></div>';
-    }).join('') || '<div style="padding:20px;color:#71717a;">No active pipeline.</div>';
+      var idx = (_dash.pipeline || []).indexOf(d);
+      return '<div onclick="dashOpenDeal('+idx+')" style="padding:10px 12px;border:1px solid #e4e4e7;border-radius:8px;margin-bottom:6px;cursor:pointer;"><span style="font-weight:700;">'+anEsc(d.name)+'</span> <span style="color:#71717a;">— $'+mrr+'/mo</span></div>';
+    }).join('') || '<div style="padding:20px;color:#71717a;">No active pipeline in this period.</div>';
   } else if (type === 'showrate') {
-    title = 'Show Rate Details';
-    dashOpenDrilldown('demos');
-    return;
+    title = 'Show Rate — ' + rangeLbl;
+    var showDemos = typeof dashGetScopedDemos === 'function' ? dashGetScopedDemos('scheduledDate') : (_dash.demos || []);
+    if (!showDemos.length) {
+      body = '<div style="padding:24px;text-align:center;color:#71717a;">No demos scheduled in this period.</div>';
+    } else {
+      body = showDemos.map(function(d) {
+        return '<div style="padding:10px 12px;border:1px solid #e4e4e7;border-radius:8px;margin-bottom:6px;">'
+          +'<span style="font-weight:700;">'+anEsc(d.name)+'</span> '
+          +'<span style="color:#71717a;">— '+anEsc(d.status||'booked')+(d.scheduledDate?' · '+d.scheduledDate:'')+'</span></div>';
+      }).join('');
+    }
   }
   var old = document.getElementById('dash-drilldown-modal');
   if (old) old.remove();
@@ -5248,12 +5334,8 @@ function buildAndShowCharts() {
     + '</div></div>'
 
     // Stat tiles
-    + '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;">'
-    + buildStatTile('Total Deals',  (_dash.pipeline||[]).length, '#6366f1', 'deals')
-    + buildStatTile('Pipeline MRR', getPipelineValue(),           '#10b981', 'mrr')
-    + buildStatTile('Win Rate',     getWinRate(),                 '#f59e0b', 'deals')
-    + buildStatTile('Demos Booked', (_dash.demos||[]).length,     '#8b5cf6', 'demos')
-    + buildStatTile('Show Rate',    getShowRate(),                '#06b6d4', 'showrate')
+    + '<div id="dash-stat-tiles" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;">'
+    + dashBuildTopStatTilesHTML()
     + '</div>'
 
     // ── ACTIVITY pane: Calls/Demos/Closes + Demo Sets by State + Hotzones ──
@@ -5377,7 +5459,7 @@ function renderDemosByStateChart() {
   var canvas = document.getElementById('chart-demos-by-state');
   if (!canvas || !window.Chart) return;
   var byState = {};
-  (_dash.demos||[]).forEach(function(d){ var s=d.state||'Unknown'; byState[s]=(byState[s]||0)+1; });
+  dashGetScopedDemos('bookedDate').forEach(function(d){ var s=d.state||'Unknown'; byState[s]=(byState[s]||0)+1; });
   var entries = Object.keys(byState).map(function(k){return{s:k,n:byState[k]};}).sort(function(a,b){return b.n-a.n;}).slice(0,10);
   if (!entries.length) {
     var ctx=canvas.getContext('2d');
@@ -5425,6 +5507,7 @@ window.switchChartPane = function(key) {
     var w=document.getElementById('demo-list-wrap');
     if(w) w.innerHTML=buildDemoListHTML();
   }
+  if (typeof dashRefreshTopStatTiles === 'function') dashRefreshTopStatTiles();
 };
 window.switchReportTab=window.switchChartPane;
 
@@ -5435,16 +5518,26 @@ window.setChartRange = function(r) {
     var b=document.getElementById('dr-'+x);
     if(b){b.style.background=x===r?'#6366f1':'transparent';b.style.color=x===r?'#fff':'#71717a';}
   });
+  if (typeof dashRefreshTopStatTiles === 'function') dashRefreshTopStatTiles();
   // Find which pane is currently active
   var activePanes = ['activity','deals','demos','showrate'].filter(function(k){
     var p=document.getElementById('cp-'+k); return p&&p.style.display!=='none';
   });
   loadChartJS(function(){
     activePanes.forEach(function(key){
-      if(key==='activity'){ renderActivityChart(); }
-      if(key==='deals'){ renderClosesChart(); renderPipelineChart(); }
+      if(key==='activity'){ renderActivityChart(); renderDemosByStateChart(); renderHotzoneChart(); }
+      if(key==='deals'){ renderClosesChart(); renderPipelineChart(); renderStateChart(); renderSizeChart(); }
+      if(key==='showrate'){ setTimeout(renderShowRateChart, 50); }
     });
   });
+  if (activePanes.indexOf('demos') >= 0) {
+    var w = document.getElementById('demo-list-wrap');
+    if (w) w.innerHTML = buildDemoListHTML();
+  }
+  if (activePanes.indexOf('showrate') >= 0) {
+    var sr = document.getElementById('cp-showrate');
+    if (sr) sr.innerHTML = buildShowRateHTML();
+  }
 };
 window.setDashRange=window.setChartRange;
 
@@ -5623,7 +5716,7 @@ function renderShowRateChart() {
   destroyChart('showrate');
   var canvas = document.getElementById('chart-showrate');
   if (!canvas || !window.Chart) return;
-  var demos = _dash.demos||[];
+  var demos = dashGetScopedDemos('scheduledDate');
   _charts['showrate'] = new Chart(canvas, {
     type:'doughnut',
     data:{labels:['Showed','No Show','Pending','Rescheduled'],
@@ -5863,8 +5956,8 @@ function buildHotzoneHTML() {
 
 // ── Demo tracker HTML builders ────────────────────────────────
 function buildDemoListHTML() {
-  var demos=_dash.demos||[];
-  if(!demos.length) return '<div style="text-align:center;padding:48px;border:2px dashed #e4e4e7;border-radius:12px;color:#a1a1aa;"><div style="font-size:32px;margin-bottom:10px;">📅</div><div style="font-size:14px;font-weight:600;color:#71717a;margin-bottom:6px;">No demos logged yet</div><button onclick="openAddDemo()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">+ Log First Demo</button></div>';
+  var demos = typeof dashGetScopedDemosAnyDate === 'function' ? dashGetScopedDemosAnyDate() : (_dash.demos||[]);
+  if(!demos.length) return '<div style="text-align:center;padding:48px;border:2px dashed #e4e4e7;border-radius:12px;color:#a1a1aa;"><div style="font-size:32px;margin-bottom:10px;">📅</div><div style="font-size:14px;font-weight:600;color:#71717a;margin-bottom:6px;">No demos in '+dashRangeLabel().toLowerCase()+'</div><button onclick="openAddDemo()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">+ Log Demo</button></div>';
   var SC={'booked':'#6366f1','showed':'#10b981','noshow':'#ef4444','rescheduled':'#f59e0b'};
   var SL={'booked':'Booked','showed':'Showed','noshow':'No Show','rescheduled':'Rescheduled'};
   var sorted=demos.slice().sort(function(a,b){var o={booked:0,rescheduled:1,showed:2,noshow:3};return (o[a.status]||0)-(o[b.status]||0);});
@@ -5958,7 +6051,8 @@ function dashRenderDemoDayTable(buckets, title, subtitle){
 }
 
 function buildShowRateHTML() {
-  var demos=_dash.demos||[], showed=demos.filter(function(d){return d.status==='showed';}).length;
+  var demos = dashGetScopedDemos('scheduledDate');
+  var showed=demos.filter(function(d){return d.status==='showed';}).length;
   var noshow=demos.filter(function(d){return d.status==='noshow';}).length;
   var decided=showed+noshow, rate=decided>0?Math.round(showed/decided*100):0;
   var schedBuckets = dashBuildDemoDayBuckets(demos, 'scheduledDate');
@@ -9361,6 +9455,60 @@ window.anCallCountsAsDemo = function(call) {
   return call.outcome === 'demo' || call.outcome === 'booked_demo' || call.bookedDemo === true;
 };
 
+window.anActivityEntryOnDate = function(entry, dateStr) {
+  if (!entry || !dateStr) return false;
+  if (entry.date === dateStr) return true;
+  if (typeof anCallOnLocalDate === 'function' && anCallOnLocalDate(entry, dateStr)) return true;
+  return false;
+};
+
+window.anHydrateCallLogEntries = function(leads) {
+  (leads || []).forEach(function(lead) {
+    if (!lead || !lead.callLog) return;
+    var owner = (lead._repEmail || '').toLowerCase();
+    lead.callLog.forEach(function(c) {
+      if (!c) return;
+      if (!c.rep && owner) c.rep = owner;
+      if (c.time && c.date) {
+        try {
+          var parts = String(c.time).split(':');
+          var local = anLocalDateStr(new Date(c.date + 'T' + String(parts[0] || '12').padStart(2, '0') + ':' + String(parts[1] || '00').padStart(2, '0') + ':00'));
+          if (local) c.date = local;
+        } catch (e) {}
+      }
+    });
+  });
+};
+
+window.anRepDashActivityForDate = function(repEmail, dateStr) {
+  repEmail = (repEmail || '').toLowerCase();
+  dateStr = dateStr || anLocalDateStr();
+  var out = { calls: 0, demos: 0, closes: 0, showed: 0 };
+  if (AN && AN._teamDashByRep && AN._teamDashByRep[repEmail]) {
+    var entry = (AN._teamDashByRep[repEmail].activityLog || []).find(function(e) {
+      return typeof anActivityEntryOnDate === 'function' ? anActivityEntryOnDate(e, dateStr) : e.date === dateStr;
+    });
+    if (entry) {
+      out.calls = entry.calls || 0;
+      out.demos = entry.demos || 0;
+      out.closes = entry.closes || 0;
+      out.showed = entry.demos_showed || 0;
+    }
+  }
+  if (typeof _dash !== 'undefined' && _dash.activityLog && repEmail === anActiveRepEmail()) {
+    var local = (_dash.activityLog || []).find(function(e) {
+      return typeof anActivityEntryOnDate === 'function' ? anActivityEntryOnDate(e, dateStr) : e.date === dateStr;
+    });
+    if (local) {
+      out.calls = Math.max(out.calls, local.calls || 0);
+      out.demos = Math.max(out.demos, local.demos || 0);
+      out.closes = Math.max(out.closes, local.closes || 0);
+      out.showed = Math.max(out.showed, local.demos_showed || 0);
+    }
+  }
+  return out;
+};
+
 window.anTeamActStorageKey = function(email, date) {
   return 'team_act_' + (email || '').toLowerCase().replace('@', '_at_') + '_' + (date || anLocalDateStr());
 };
@@ -9440,18 +9588,39 @@ window.anPushTeamActivityCloud = function(delta) {
 window.anBackfillTeamActivityFromLeads = function(leads) {
   if (!leads || !leads.length) return;
   if (!AN._teamActivityByRep) AN._teamActivityByRep = {};
+  if (typeof anHydrateCallLogEntries === 'function') anHydrateCallLogEntries(leads);
+  var scratch = {};
   leads.forEach(function(lead) {
     (lead.callLog || []).forEach(function(c) {
       if (!c || !c.date) return;
       var rep = typeof anCallLogRep === 'function' ? anCallLogRep(c, lead) : (lead._repEmail || '').toLowerCase();
       if (!rep) return;
-      var dayKey = (typeof anCallOnLocalDate === 'function' && c.time) ? anLocalDateStr(new Date(c.date + 'T' + String(c.time).slice(0, 5) + ':00')) : c.date;
-      if (!AN._teamActivityByRep[rep]) AN._teamActivityByRep[rep] = {};
-      if (!AN._teamActivityByRep[rep][dayKey]) AN._teamActivityByRep[rep][dayKey] = { calls: 0, demos: 0, closes: 0, showed: 0 };
-      var day = AN._teamActivityByRep[rep][dayKey];
-      day.calls = (day.calls || 0) + 1;
-      if (typeof anCallCountsAsDemo === 'function' ? anCallCountsAsDemo(c) : c.outcome === 'demo') day.demos = (day.demos || 0) + 1;
-      if (c.outcome === 'won') day.closes = (day.closes || 0) + 1;
+      var dayKey = c.date;
+      if (typeof anCallOnLocalDate === 'function' && c.time) {
+        try {
+          dayKey = anLocalDateStr(new Date(c.date + 'T' + String(c.time).slice(0, 5) + ':00'));
+        } catch (e) {}
+      }
+      if (!scratch[rep]) scratch[rep] = {};
+      if (!scratch[rep][dayKey]) scratch[rep][dayKey] = { calls: 0, demos: 0, closes: 0, showed: 0 };
+      var day = scratch[rep][dayKey];
+      day.calls += 1;
+      if (typeof anCallCountsAsDemo === 'function' ? anCallCountsAsDemo(c) : c.outcome === 'demo') day.demos += 1;
+      if (c.outcome === 'won') day.closes += 1;
+    });
+  });
+  Object.keys(scratch).forEach(function(rep) {
+    if (!AN._teamActivityByRep[rep]) AN._teamActivityByRep[rep] = {};
+    Object.keys(scratch[rep]).forEach(function(dayKey) {
+      var src = scratch[rep][dayKey];
+      var cur = AN._teamActivityByRep[rep][dayKey] || { calls: 0, demos: 0, closes: 0, showed: 0 };
+      AN._teamActivityByRep[rep][dayKey] = {
+        calls: Math.max(cur.calls || 0, src.calls || 0),
+        demos: Math.max(cur.demos || 0, src.demos || 0),
+        closes: Math.max(cur.closes || 0, src.closes || 0),
+        showed: Math.max(cur.showed || 0, src.showed || 0),
+        calls_by_hour: cur.calls_by_hour || {}
+      };
     });
   });
 };
@@ -9527,7 +9696,21 @@ window.anFetchTeamActivityCloud = function(cb) {
         byRep[em][parsed.date] = Object.assign({ calls: 0, demos: 0, closes: 0, showed: 0 }, JSON.parse(row.value || '{}'));
       } catch(e) {}
     });
-    AN._teamActivityByRep = byRep;
+    if (!AN._teamActivityByRep) AN._teamActivityByRep = {};
+    Object.keys(byRep).forEach(function(em) {
+      if (!AN._teamActivityByRep[em]) AN._teamActivityByRep[em] = {};
+      Object.keys(byRep[em] || {}).forEach(function(d) {
+        var day = byRep[em][d] || {};
+        var cur = AN._teamActivityByRep[em][d] || { calls: 0, demos: 0, closes: 0, showed: 0 };
+        AN._teamActivityByRep[em][d] = {
+          calls: Math.max(cur.calls || 0, day.calls || 0),
+          demos: Math.max(cur.demos || 0, day.demos || 0),
+          closes: Math.max(cur.closes || 0, day.closes || 0),
+          showed: Math.max(cur.showed || 0, day.showed || 0),
+          calls_by_hour: Object.assign({}, cur.calls_by_hour || {}, day.calls_by_hour || {})
+        };
+      });
+    });
     try {
       var local = JSON.parse(localStorage.getItem('an-team-activity-v1') || '{}');
       Object.keys(local).forEach(function(em) {
@@ -9545,6 +9728,9 @@ window.anFetchTeamActivityCloud = function(cb) {
         });
       });
     } catch (e) {}
+    if (typeof AN !== 'undefined' && AN.leads && AN.leads.length && typeof anBackfillTeamActivityFromLeads === 'function') {
+      anBackfillTeamActivityFromLeads(AN.leads);
+    }
     cb(AN._teamActivityByRep);
   }).catch(function(err) {
     console.warn('[Team activity] Cloud fetch failed:', err);
@@ -9602,6 +9788,8 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
       leadPool.push(l);
     });
   }
+  if (typeof anHydrateCallLogEntries === 'function') anHydrateCallLogEntries(leadPool);
+  if (typeof anBackfillTeamActivityFromLeads === 'function') anBackfillTeamActivityFromLeads(leadPool);
   leadPool.forEach(function(lead) {
     var owner = (lead._repEmail || '').toLowerCase();
     (lead.callLog || []).forEach(function(c) {
@@ -9623,16 +9811,14 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
     if (!em) return;
     ensure(em);
     var entry = (row.activityLog || []).find(function(e) {
-      return e.date === today || (typeof anCallOnLocalDate === 'function' && anCallOnLocalDate(e, today));
+      return typeof anActivityEntryOnDate === 'function' ? anActivityEntryOnDate(e, today) : e.date === today;
     });
-    if (!entry && row.activity && typeof row.activity === 'object') {
-      entry = { calls: row.activity.calls, demos: row.activity.demos, closes: row.activity.closes };
+    if (entry) {
+      maxField(em, 'calls', entry.calls || 0);
+      maxField(em, 'demos', entry.demos || 0);
+      maxField(em, 'showed', entry.demos_showed || 0);
+      maxField(em, 'closes', entry.closes || 0);
     }
-    entry = entry || row;
-    maxField(em, 'calls', entry.calls || row.calls || 0);
-    maxField(em, 'demos', entry.demos || row.demos || 0);
-    maxField(em, 'showed', entry.demos_showed || row.demos_showed || row.showed || 0);
-    maxField(em, 'closes', entry.closes || row.closes || 0);
   });
   if (AN && AN._teamActivityByRep) {
     Object.keys(AN._teamActivityByRep).forEach(function(em) {
@@ -9647,7 +9833,9 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
   if (AN && AN._teamDashByRep) {
     Object.keys(AN._teamDashByRep).forEach(function(em) {
       var dash = AN._teamDashByRep[em] || {};
-      var entry = (dash.activityLog || []).find(function(e) { return e.date === today; });
+      var entry = (dash.activityLog || []).find(function(e) {
+        return typeof anActivityEntryOnDate === 'function' ? anActivityEntryOnDate(e, today) : e.date === today;
+      });
       if (!entry) return;
       maxField(em, 'calls', entry.calls || 0);
       maxField(em, 'demos', entry.demos || 0);
@@ -9656,12 +9844,12 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
     });
   }
   var myEmail = anActiveRepEmail();
-  if (myEmail && typeof getActivityForPeriod === 'function') {
-    var act = getActivityForPeriod('today');
-    maxField(myEmail, 'calls', act.calls || 0);
-    maxField(myEmail, 'demos', act.demos || 0);
-    maxField(myEmail, 'showed', act.demos_showed || 0);
-    maxField(myEmail, 'closes', act.closes || 0);
+  if (myEmail && typeof anRepDashActivityForDate === 'function') {
+    var mine = anRepDashActivityForDate(myEmail, today);
+    maxField(myEmail, 'calls', mine.calls || 0);
+    maxField(myEmail, 'demos', mine.demos || 0);
+    maxField(myEmail, 'showed', mine.showed || 0);
+    maxField(myEmail, 'closes', mine.closes || 0);
   }
   var rows = Object.keys(byEmail).map(function(em) {
     var s = byEmail[em];
@@ -9672,6 +9860,7 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
 };
 
 window.anLoadTeamDailyLeaderboard = function(cb) {
+  function runLoad() {
   var local = anBuildDailyLeaderboard();
   var sb = typeof getSupabase === 'function' ? getSupabase() : null;
   if (!sb || typeof _currentUser === 'undefined' || !_currentUser) { if (cb) cb(local); return; }
@@ -9685,20 +9874,29 @@ window.anLoadTeamDailyLeaderboard = function(cb) {
       var extraLeads = [];
       if (results[1] && results[1].data && !results[1].error) {
         extraLeads = anParseLeadsFromSupabaseRows(results[1].data);
-        if (typeof anBackfillTeamActivityFromLeads === 'function') anBackfillTeamActivityFromLeads(extraLeads);
+      }
+      if (typeof AN !== 'undefined' && AN.leads && AN.leads.length && typeof anBackfillTeamActivityFromLeads === 'function') {
+        anBackfillTeamActivityFromLeads(AN.leads);
+      }
+      if (extraLeads.length && typeof anBackfillTeamActivityFromLeads === 'function') {
+        anBackfillTeamActivityFromLeads(extraLeads);
       }
       var merged = anBuildDailyLeaderboard(dashRows, { extraLeads: extraLeads });
       if (cb) cb(merged);
     }).catch(function() { if (cb) cb(anBuildDailyLeaderboard()); });
   });
+  }
+  if (typeof anEnsureLeadsLoaded === 'function') anEnsureLeadsLoaded(runLoad);
+  else runLoad();
 };
 
 window.anRenderDailyLeaderboardHTML = function(rows) {
-  rows = rows || [];
+  rows = (rows || []).filter(function(r) { return (r.points || 0) > 0 || (r.calls || 0) > 0; });
   if (!rows.length) {
-    return '<div class="hd-empty"><div class="hd-empty-icon">🏁</div>No SDR activity logged today yet — book a demo or log a call to climb the board.</div>';
+    return '<div class="hd-empty"><div class="hd-empty-icon">🏁</div>No SDR activity logged today yet. New calls count right away; earlier today\'s calls appear once reps sync leads to cloud.</div>';
   }
   var medals = ['🥇', '🥈', '🥉'];
+  var note = '<div style="font-size:10px;color:#a1a1aa;margin-top:10px;line-height:1.45;">Counts from today\'s call logs + cloud sync. Older calls appear if the lead was saved to cloud — have reps open the app once to sync.</div>';
   return '<div style="display:flex;flex-direction:column;gap:8px;">' + rows.slice(0, 8).map(function(row, i) {
     var name = (typeof anGetRepName === 'function') ? anGetRepName(row.email) : (row.email ? row.email.split('@')[0] : 'Rep');
     var medal = medals[i] || (i + 1) + '.';
@@ -9709,7 +9907,7 @@ window.anRenderDailyLeaderboardHTML = function(rows) {
       + '<div style="font-size:10px;color:#71717a;margin-top:2px;">'+row.calls+' calls · '+row.demos+' demos · '+(row.showed||0)+' showed · '+row.closes+' closes</div></div>'
       + '<div style="font-size:15px;font-weight:900;color:#6366f1;flex-shrink:0;">'+row.points+'<span style="font-size:9px;font-weight:600;color:#a1a1aa;"> pts</span></div>'
       + '</div>';
-  }).join('') + '</div>';
+  }).join('') + note + '</div>';
 };
 
 window.anRecordDemoLifecycleEvent = function(lead, type, opts) {
@@ -10205,6 +10403,7 @@ function anNormalizeLeads(arr){
   if(!Array.isArray(arr)) return [];
   if(arr.length && Array.isArray(arr[0]) && !arr[0].id) return arr.reduce(function(flat, item){ return flat.concat(item); }, []);
   if (typeof anRepairMisclassifiedLeads === 'function') anRepairMisclassifiedLeads(arr);
+  if (typeof anHydrateCallLogEntries === 'function') anHydrateCallLogEntries(arr);
   if (typeof anRepairPhantomBookedDemos === 'function' && anRepairPhantomBookedDemos(arr)) {
     if (typeof console !== 'undefined') console.info('[CRM] Reset imported leads that were wrongly marked Booked Demo');
     clearTimeout(window._anPhantomDemoSaveTimer);
@@ -20834,7 +21033,13 @@ window.anCollectFieldInsights = function(opts) {
   function pushItem(obj) {
     var text = (obj.text || '').trim();
     if (!text || text.length < 12) return;
+    // Skip system/import artifacts
     if (/^record id|^create date|^marketing contact/i.test(text)) return;
+    // Skip things that look like timestamps or IDs (e.g. "2026-05-07 09:23", "Primary Associated Company ID: 123")
+    if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(text)) return;
+    if (/^primary associated (company|contact) id:/i.test(text)) return;
+    // For notes-sourced items, only include if the lead has actual call log entries (i.e. not a pure import)
+    if (obj.source === 'notes' && obj._noCallLog) return;
     var key = obj.leadId + '|' + text.slice(0, 80);
     if (seen[key]) return;
     seen[key] = true;
@@ -20867,6 +21072,7 @@ window.anCollectFieldInsights = function(opts) {
     });
 
     if (lead.notes) {
+      var hasCallLog = (lead.callLog || []).length > 0;
       lead.notes.split(/\n+/).forEach(function(line, i) {
         line = line.replace(/^\[[^\]]+\]\s*/, '').trim();
         if (!line || line.length < 12) return;
@@ -20884,7 +21090,8 @@ window.anCollectFieldInsights = function(opts) {
           date: noteDate,
           time: '',
           text: line,
-          source: 'notes'
+          source: 'notes',
+          _noCallLog: !hasCallLog
         });
       });
     }
