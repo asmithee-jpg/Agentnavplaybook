@@ -2574,6 +2574,12 @@ console.log('[PATCH 5] Multi-language scripts loaded.');
         if (typeof loadMyScript === 'function') loadMyScript(id);
       }, 50);
     }
+    if (id === 'opportunities') {
+      setTimeout(function() {
+        if (typeof anMountOpportunitiesSection === 'function') anMountOpportunitiesSection();
+        else if (typeof renderOpportunities === 'function') renderOpportunities();
+      }, 50);
+    }
   };
 })();
 </script>
@@ -5127,10 +5133,15 @@ function buildAndShowCharts() {
     '<div style="display:flex;gap:0;margin-bottom:20px;background:#f4f4f5;border-radius:10px;padding:3px;width:fit-content;">'+subTabHtml+'</div>'
 
     // Time range + title row
-    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">'
     + '<div id="chart-title" style="font-size:13px;font-weight:700;color:#09090b;">Activity</div>'
+    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+    + (typeof AN !== 'undefined' && AN.isAdmin && typeof anBuildTeamScopeSelectHTML === 'function'
+      ? '<span style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:0.08em;">Rep</span>'
+        + anBuildTeamScopeSelectHTML('dash-team-scope', 'anSetTeamViewScope')
+      : '')
     + '<div style="display:flex;background:#f4f4f5;border-radius:8px;padding:3px;gap:2px;">'+rangeHtml+'</div>'
-    + '</div>'
+    + '</div></div>'
 
     // Stat tiles
     + '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;">'
@@ -5334,12 +5345,71 @@ window.renderAllCharts = function() {
   renderActivityChart(); renderPipelineChart(); renderStateChart(); renderSizeChart(); renderClosesChart();
 };
 
+window.anGetScopedActivityLog = function() {
+  var dates = typeof getActivityDates === 'function' ? getActivityDates() : [];
+  if (!dates.length) return _dash.activityLog || [];
+  var useTeam = typeof AN !== 'undefined' && AN.isAdmin && (!anGetTeamViewScope() || anGetTeamViewScope() === '');
+  var scope = typeof anGetTeamViewScope === 'function' ? anGetTeamViewScope() : '__mine__';
+  if (!useTeam && scope) {
+    var byDate = {};
+    dates.forEach(function(d) { byDate[d] = { date: d, calls: 0, demos: 0, closes: 0, calls_by_hour: {}, pickups_by_hour: {}, demos_by_hour: {} }; });
+    var pool = (typeof AN !== 'undefined' && AN.leads) ? AN.leads : [];
+    pool.forEach(function(lead) {
+      var owner = (lead._repEmail || '').toLowerCase();
+      (lead.callLog || []).forEach(function(c) {
+        if (!byDate[c.date]) return;
+        var rep = typeof anCallLogRep === 'function' ? anCallLogRep(c, lead) : owner;
+        if (scope === '__mine__' && rep !== (AN.currentRepEmail || '').toLowerCase()) return;
+        if (scope && scope !== '__mine__' && rep !== scope.toLowerCase()) return;
+        byDate[c.date].calls++;
+        if (c.outcome === 'demo') byDate[c.date].demos++;
+        if (c.outcome === 'won') byDate[c.date].closes++;
+        if (c.time) {
+          var hr = parseInt(String(c.time).split(':')[0], 10);
+          if (!isNaN(hr)) {
+            byDate[c.date].calls_by_hour[hr] = (byDate[c.date].calls_by_hour[hr] || 0) + 1;
+            if (c.outcome === 'pickup' || c.outcome === 'demo') {
+              byDate[c.date].pickups_by_hour[hr] = (byDate[c.date].pickups_by_hour[hr] || 0) + 1;
+            }
+            if (c.outcome === 'demo') {
+              byDate[c.date].demos_by_hour[hr] = (byDate[c.date].demos_by_hour[hr] || 0) + 1;
+            }
+          }
+        }
+      });
+    });
+    return dates.map(function(d) { return byDate[d]; });
+  }
+  if (useTeam && typeof AN !== 'undefined' && AN.leads && AN.leads.length) {
+    var teamByDate = {};
+    dates.forEach(function(d) { teamByDate[d] = { date: d, calls: 0, demos: 0, closes: 0, calls_by_hour: {}, pickups_by_hour: {}, demos_by_hour: {} }; });
+    AN.leads.forEach(function(lead) {
+      (lead.callLog || []).forEach(function(c) {
+        if (!teamByDate[c.date]) return;
+        teamByDate[c.date].calls++;
+        if (c.outcome === 'demo') teamByDate[c.date].demos++;
+        if (c.outcome === 'won') teamByDate[c.date].closes++;
+        if (c.time) {
+          var hr2 = parseInt(String(c.time).split(':')[0], 10);
+          if (!isNaN(hr2)) {
+            teamByDate[c.date].calls_by_hour[hr2] = (teamByDate[c.date].calls_by_hour[hr2] || 0) + 1;
+          }
+        }
+      });
+    });
+    var teamLog = dates.map(function(d) { return teamByDate[d]; });
+    var hasTeamData = teamLog.some(function(e) { return (e.calls || 0) + (e.demos || 0) + (e.closes || 0) > 0; });
+    if (hasTeamData) return teamLog;
+  }
+  return _dash.activityLog || [];
+};
+
 function renderActivityChart() {
   destroyChart('activity');
   var canvas = document.getElementById('chart-activity');
   if (!canvas || !window.Chart) return;
   var dates = getActivityDates();
-  var log   = _dash.activityLog || [];
+  var log   = typeof anGetScopedActivityLog === 'function' ? anGetScopedActivityLog() : (_dash.activityLog || []);
   var mk = function(key) { return dates.map(function(d){ var e=log.filter(function(x){return x.date===d;})[0]; return e?(e[key]||0):0; }); };
   var labels = dates.map(function(d){
     var dt = new Date(d+'T12:00:00');
@@ -5405,7 +5475,7 @@ function renderClosesChart() {
   var canvas = document.getElementById('chart-closes');
   if (!canvas || !window.Chart) return;
   var dates = getActivityDates();
-  var log   = _dash.activityLog || [];
+  var log   = typeof anGetScopedActivityLog === 'function' ? anGetScopedActivityLog() : (_dash.activityLog || []);
   var labels = dates.map(function(d){
     var dt = new Date(d+'T12:00:00');
     if (_dashTimeRange==='day') return 'Today';
@@ -5452,7 +5522,7 @@ function renderHotzoneChart() {
 function buildHotzoneChartData() {
   var hourData = {};
   for (var h = 7; h <= 19; h++) hourData[h] = 0;
-  (_dash.activityLog||[]).forEach(function(entry){
+  (typeof anGetScopedActivityLog === 'function' ? anGetScopedActivityLog() : (_dash.activityLog||[])).forEach(function(entry){
     if (entry.calls_by_hour) {
       Object.keys(entry.calls_by_hour).forEach(function(h){
         var hr = parseInt(h);
@@ -8861,6 +8931,7 @@ AN.sortField     = 'created';
 AN.sortDir       = 'desc';
 AN.searchQ       = '';
 AN.repFilter     = '';
+AN.teamViewScope = '';
 AN.activeListId  = 'sys-all';
 AN.advancedFilters = {};
 AN.listPage      = 0;
@@ -9077,7 +9148,73 @@ window.anSyncAllOpportunitiesToPipeline = function(opts) {
   }
 };
 
-window.anBuildDailyLeaderboard = function(extraRows) {
+window.anGetTeamViewScope = function() {
+  if (typeof AN === 'undefined') return '__mine__';
+  if (!AN._teamViewScopeLoaded) {
+    AN._teamViewScopeLoaded = true;
+    try {
+      var saved = localStorage.getItem('an-team-view-scope');
+      if (saved !== null) AN.teamViewScope = saved;
+      else AN.teamViewScope = AN.isAdmin ? '' : '__mine__';
+    } catch(e) {
+      AN.teamViewScope = AN.isAdmin ? '' : '__mine__';
+    }
+  }
+  return AN.teamViewScope || '';
+};
+
+window.anSetTeamViewScope = function(val) {
+  if (typeof AN === 'undefined') return;
+  AN.teamViewScope = val || '';
+  AN._teamViewScopeLoaded = true;
+  try { localStorage.setItem('an-team-view-scope', AN.teamViewScope); } catch(e) {}
+  var homeSec = document.getElementById('section-home');
+  if (homeSec && homeSec.classList.contains('active')) {
+    var inCall = !!(document.getElementById('mcm-panel-wrap') || document.body.classList.contains('call-panel-open'));
+    if (inCall && typeof hdRefreshTeamWidgets === 'function') hdRefreshTeamWidgets();
+    else if (typeof hdRender === 'function') hdRender();
+  }
+  if (typeof dashRefreshVisiblePanes === 'function') dashRefreshVisiblePanes();
+};
+
+window.anBuildTeamScopeSelectHTML = function(selectId, onchangeFn) {
+  if (typeof AN === 'undefined' || !AN.isAdmin) return '';
+  var scope = anGetTeamViewScope();
+  var reps = typeof anGetKnownRepEmails === 'function' ? anGetKnownRepEmails() : [];
+  var html = '<select id="'+selectId+'" onchange="'+onchangeFn+'(this.value)" style="padding:5px 10px;border-radius:8px;border:1.5px solid #e4e4e7;background:#fff;font-size:12px;font-weight:600;color:#52525b;cursor:pointer;font-family:inherit;">'
+    + '<option value=""'+((!scope || scope==='')?' selected':'')+'>All team</option>'
+    + '<option value="__mine__"'+(scope==='__mine__'?' selected':'')+'>My stats</option>';
+  reps.forEach(function(em) {
+    var name = typeof anGetRepName === 'function' ? anGetRepName(em) : em.split('@')[0];
+    html += '<option value="'+anEsc(em)+'"'+(scope===em.toLowerCase()?' selected':'')+'>'+anEsc(name)+'</option>';
+  });
+  html += '</select>';
+  return html;
+};
+
+window.anCallLogRep = function(call, lead) {
+  return ((call && call.rep) || (lead && lead._repEmail) || (typeof AN !== 'undefined' && AN.currentRepEmail) || '').toLowerCase();
+};
+
+window.anFilterLeaderboardByScope = function(rows) {
+  rows = rows || [];
+  if (typeof AN === 'undefined') return rows;
+  if (!AN.isAdmin) {
+    var mine = (AN.currentRepEmail || '').toLowerCase();
+    return mine ? rows.filter(function(r) { return r.email === mine; }) : rows;
+  }
+  var scope = anGetTeamViewScope();
+  if (!scope || scope === '') return rows;
+  if (scope === '__mine__') {
+    var me = (AN.currentRepEmail || '').toLowerCase();
+    return me ? rows.filter(function(r) { return r.email === me; }) : rows;
+  }
+  var em = scope.toLowerCase();
+  return rows.filter(function(r) { return r.email === em; });
+};
+
+window.anBuildDailyLeaderboard = function(extraRows, opts) {
+  opts = opts || {};
   var today = new Date().toISOString().split('T')[0];
   var byEmail = {};
   function ensure(email) {
@@ -9096,24 +9233,39 @@ window.anBuildDailyLeaderboard = function(extraRows) {
     if (!row) return;
     row[field] = Math.max(row[field] || 0, val || 0);
   }
-  (typeof AN !== 'undefined' && AN.leads ? AN.leads : []).forEach(function(lead) {
-    var rep = (lead._repEmail || '').toLowerCase();
+  if (typeof anGetKnownRepEmails === 'function') {
+    anGetKnownRepEmails().forEach(function(em) { ensure(em); });
+  }
+  var leadPool = (typeof AN !== 'undefined' && AN.leads ? AN.leads.slice() : []);
+  if (opts.extraLeads && opts.extraLeads.length) {
+    var seen = {};
+    leadPool.forEach(function(l) { if (l && l.id) seen[l.id] = true; });
+    opts.extraLeads.forEach(function(l) {
+      if (!l || !l.id || seen[l.id]) return;
+      seen[l.id] = true;
+      leadPool.push(l);
+    });
+  }
+  leadPool.forEach(function(lead) {
+    var owner = (lead._repEmail || '').toLowerCase();
     (lead.callLog || []).forEach(function(c) {
       if (c.date !== today) return;
-      bump(rep, 'calls', 1);
-      if (c.outcome === 'demo') bump(rep, 'demos', 1);
-      if (c.outcome === 'won') bump(rep, 'closes', 1);
+      var callRep = anCallLogRep(c, lead);
+      bump(callRep, 'calls', 1);
+      if (c.outcome === 'demo') bump(callRep, 'demos', 1);
+      if (c.outcome === 'won') bump(callRep, 'closes', 1);
     });
     (lead.demoLifecycle || []).forEach(function(ev) {
       var d = ev.date || String(ev.at || '').slice(0, 10);
       if (d !== today) return;
-      if (ev.type === 'booked') bump(rep, 'demos', 1);
-      if (ev.type === 'completed') bump(rep, 'showed', 1);
+      if (ev.type === 'booked') bump(owner, 'demos', 1);
+      if (ev.type === 'completed') bump(owner, 'showed', 1);
     });
   });
   (extraRows || []).forEach(function(row) {
     var em = (row.rep_email || row.email || '').toLowerCase();
     if (!em) return;
+    ensure(em);
     var entry = (row.activityLog || []).find(function(e) { return e.date === today; }) || row;
     maxField(em, 'calls', entry.calls || row.calls || 0);
     maxField(em, 'demos', entry.demos || row.demos || 0);
@@ -9128,19 +9280,29 @@ window.anBuildDailyLeaderboard = function(extraRows) {
     maxField(myEmail, 'showed', act.demos_showed || 0);
     maxField(myEmail, 'closes', act.closes || 0);
   }
-  return Object.keys(byEmail).map(function(em) {
+  var rows = Object.keys(byEmail).map(function(em) {
     var s = byEmail[em];
     s.points = (s.calls || 0) + (s.demos || 0) * 5 + (s.showed || 0) * 3 + (s.closes || 0) * 20;
     return s;
   }).sort(function(a, b) { return b.points - a.points || b.demos - a.demos || b.calls - a.calls; });
+  return anFilterLeaderboardByScope(rows);
 };
 
 window.anLoadTeamDailyLeaderboard = function(cb) {
   var local = anBuildDailyLeaderboard();
   var sb = typeof getSupabase === 'function' ? getSupabase() : null;
   if (!sb || typeof _currentUser === 'undefined' || !_currentUser) { if (cb) cb(local); return; }
-  sb.from('sales_dashboard').select('rep_email, activity, activityLog').then(function(result) {
-    var merged = anBuildDailyLeaderboard((result.data && !result.error) ? result.data : []);
+  var queries = [sb.from('sales_dashboard').select('rep_email, activity, activityLog')];
+  if (typeof AN !== 'undefined' && AN.isAdmin) {
+    queries.push(sb.from('an_leads').select('rep_email, data, updated_at'));
+  }
+  Promise.all(queries).then(function(results) {
+    var dashRows = (results[0].data && !results[0].error) ? results[0].data : [];
+    var extraLeads = [];
+    if (results[1] && results[1].data && !results[1].error) {
+      extraLeads = anParseLeadsFromSupabaseRows(results[1].data);
+    }
+    var merged = anBuildDailyLeaderboard(dashRows, { extraLeads: extraLeads });
     if (cb) cb(merged);
   }).catch(function() { if (cb) cb(local); });
 };
@@ -9480,7 +9642,10 @@ function anOppDedupeKey(lead) {
 }
 
 function anIsOpportunityRecord(lead) {
-  return !!(lead && (lead.isOpportunity || ['demo', 'showed', 'proposal', 'negotiation', 'won', 'lost'].indexOf(lead.status || '') >= 0));
+  if (!lead) return false;
+  if (lead.isOpportunity) return true;
+  var oppStatuses = ['demo', 'showed', 'proposal', 'negotiation', 'won', 'lost', 'booked_demo', 'demo_complete'];
+  return oppStatuses.indexOf(lead.status || '') >= 0;
 }
 
 function anDedupeOpportunitiesForDisplay(opps) {
@@ -9876,6 +10041,8 @@ function anFinishCloudLeadLoad(sb, cb){
   AN.isAdmin = _currentUser.email === AN_CRM_ADMIN_EMAIL;
   AN.currentRepEmail = _currentUser.email;
   AN.currentRep = (_currentUser.user_metadata&&_currentUser.user_metadata.full_name)||_currentUser.email.split('@')[0];
+  AN._teamViewScopeLoaded = false;
+  if (typeof anGetTeamViewScope === 'function') anGetTeamViewScope();
 
   function mergeCloudLeads(cloudLeads){
     if(cloudLeads && cloudLeads.length){
@@ -11742,6 +11909,7 @@ window.anSaveCall = window.anSaveActivity = function(leadId) {
     duration: dur,
     notes:    notes,
     subject:  subject || undefined,
+    rep:      (typeof AN !== 'undefined' && AN.currentRepEmail) || '',
     loggedAt: new Date().toISOString()
   };
 
@@ -14374,6 +14542,10 @@ window.anAfterLeadDataChange = function(leadId, opts) {
   }
   if (!lead) return;
   anRefreshAfterInlineEdit(lead, opts.field || 'status', opts.td || null);
+  var homeSec = document.getElementById('section-home');
+  if (homeSec && homeSec.classList.contains('active') && typeof hdRefreshTeamWidgets === 'function') {
+    hdRefreshTeamWidgets();
+  }
 };
 
 function anRefreshAfterInlineEdit(lead, field, td) {
@@ -14552,13 +14724,13 @@ var AN_STATE_COORDS = {
   Maine:[44.693947,-69.381927],Maryland:[39.063946,-76.802101],Massachusetts:[42.230171,-71.530106],
   Michigan:[43.326618,-84.536095],Minnesota:[45.694454,-93.900192],Mississippi:[32.741646,-89.678696],
   Missouri:[38.456085,-92.288368],Montana:[46.921925,-110.454353],Nebraska:[41.125370,-98.268082],
-  Nevada:[38.313515,-117.055374],New Hampshire:[43.452492,-71.563896],New Jersey:[40.298904,-74.521011],
-  New Mexico:[34.840515,-106.248482],New York:[42.165726,-74.948051],North Carolina:[35.630066,-79.806419],
-  North Dakota:[47.528912,-99.784012],Ohio:[40.388783,-82.764915],Oklahoma:[35.565342,-96.928917],
-  Oregon:[44.572021,-122.070938],Pennsylvania:[40.590752,-77.209755],Rhode Island:[41.680893,-71.511780],
-  South Carolina:[33.856892,-80.945007],South Dakota:[44.299782,-99.438828],Tennessee:[35.747845,-86.692345],
+  Nevada:[38.313515,-117.055374],'New Hampshire':[43.452492,-71.563896],'New Jersey':[40.298904,-74.521011],
+  'New Mexico':[34.840515,-106.248482],'New York':[42.165726,-74.948051],'North Carolina':[35.630066,-79.806419],
+  'North Dakota':[47.528912,-99.784012],Ohio:[40.388783,-82.764915],Oklahoma:[35.565342,-96.928917],
+  Oregon:[44.572021,-122.070938],Pennsylvania:[40.590752,-77.209755],'Rhode Island':[41.680893,-71.511780],
+  'South Carolina':[33.856892,-80.945007],'South Dakota':[44.299782,-99.438828],Tennessee:[35.747845,-86.692345],
   Texas:[31.054487,-97.563461],Utah:[40.150032,-111.862434],Vermont:[44.045876,-72.710686],
-  Virginia:[37.769337,-78.169968],Washington:[47.400902,-121.490494],West Virginia:[38.491226,-80.954453],
+  Virginia:[37.769337,-78.169968],Washington:[47.400902,-121.490494],'West Virginia':[38.491226,-80.954453],
   Wisconsin:[44.268543,-89.616508],Wyoming:[42.755966,-107.302490]
 };
 var AN_NPA_GEO = {
@@ -14958,19 +15130,32 @@ window.anRunLeadResearch = function(leadId) {
     .finally(function() { if (btn) { btn.disabled = false; btn.textContent = 'Research'; } });
 };
 
+window.anLeadMatchesTeamScope = function(lead) {
+  if (!lead || typeof AN === 'undefined') return true;
+  if (!AN.isAdmin) {
+    return typeof anRepOwnsLead === 'function' ? anRepOwnsLead(lead) : true;
+  }
+  var scope = anGetTeamViewScope();
+  if (!scope || scope === '') return true;
+  var owner = (lead._repEmail || '').toLowerCase();
+  if (scope === '__mine__') return owner === (AN.currentRepEmail || '').toLowerCase();
+  return owner === scope.toLowerCase();
+};
+
 window.anGetTeamMapLeads = function() {
   if (typeof AN === 'undefined' || !AN.leads) return { prospects: [], wins: [] };
   var pool = AN.isAdmin ? AN.leads : (typeof anMyLeads === 'function' ? anMyLeads() : AN.leads);
   var wins = [];
   var prospects = [];
   pool.forEach(function(l) {
+    if (!anLeadMatchesTeamScope(l)) return;
     if (!anGeoFromLead(l)) return;
     if (l.status === 'won') wins.push(l);
-    else if (typeof anIsProspect === 'function' ? anIsProspect(l) : true) {
-      if (['booked_demo', 'contacted', 'followup', 'demo_complete', 'new'].indexOf(l.status || '') >= 0) prospects.push(l);
+    else if (l.status !== 'lost' && (typeof anIsOpportunityRecord === 'function' ? !anIsOpportunityRecord(l) : true)) {
+      prospects.push(l);
     }
   });
-  return { prospects: prospects.slice(0, 150), wins: wins };
+  return { prospects: prospects.slice(0, 200), wins: wins };
 };
 
 window.anRenderTeamMap = function() {
@@ -16553,6 +16738,12 @@ window.anOppSaveField = function(leadId, field, value) {
 window.renderOpportunities = function() {
   var sec = document.getElementById('section-opportunities');
   if (!sec) return;
+  try {
+  if (typeof AN === 'undefined') {
+    sec.innerHTML = '<div class="content" style="padding:48px 20px;text-align:center;color:var(--text-muted);">Loading CRM...</div>';
+    return;
+  }
+  if (!Array.isArray(AN.leads)) AN.leads = [];
 
   var beforeCount = AN.leads.length;
   AN.leads = anDedupeOpportunityLeads(AN.leads);
@@ -16659,6 +16850,14 @@ window.renderOpportunities = function() {
     +'</div><div class="content">'+statsHTML+viewToggle+mainView+'</div>';
 
   if (oppView === 'board') setTimeout(initOppDragDrop, 80);
+  } catch (err) {
+    console.error('[CRM] renderOpportunities failed:', err);
+    sec.innerHTML = '<div class="content" style="padding:48px 20px;text-align:center;">'
+      + '<div style="font-size:16px;font-weight:700;color:#ef4444;margin-bottom:8px;">Could not load Opportunities</div>'
+      + '<div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">' + (err && err.message ? err.message : 'Unknown error') + '</div>'
+      + '<button type="button" onclick="anMountOpportunitiesSection()" style="padding:10px 18px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-weight:700;cursor:pointer;font-family:var(--sans);">Retry</button>'
+      + '</div>';
+  }
 };
 
 // ── 5. DRAG AND DROP ──────────────────────────────────────────
@@ -17993,6 +18192,12 @@ window.mcmCloseCallPanelOnly = function(){
 
 window.mcmToggleLeadPanel = function() {
   var collapsed = !document.body.classList.contains('call-lead-collapsed');
+  if (!collapsed) {
+    var ov = document.getElementById('mcm-overlay');
+    if (!document.getElementById('an-cs-lead-panel') && ov && ov._leadId && typeof anRenderCallSessionLeadPanel === 'function') {
+      anRenderCallSessionLeadPanel(ov._leadId);
+    }
+  }
   if (!collapsed && document.body.classList.contains('co-full-record-over-call') && typeof coCloseCompanyPanel === 'function') {
     coCloseCompanyPanel();
   }
@@ -18181,10 +18386,10 @@ window.openMobileCallMode = function(leadId) {
     +'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">'
     +sessionBadge
     +'<div class="mcm-header-toolbar" style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
-    +'<button type="button" id="mcm-company-toggle" title="Agency profile" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);width:34px;height:34px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit;line-height:1;touch-action:manipulation;">🏢</button>'
-    +'<button type="button" id="mcm-lead-toggle" title="Hide lead profile" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);width:34px;height:34px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit;line-height:1;touch-action:manipulation;">👤</button>'
-    +'<button type="button" title="Minimize" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);width:34px;height:34px;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1;touch-action:manipulation;">−</button>'
-    +'<button type="button" id="mcm-header-close" title="Close session" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);width:34px;height:34px;border-radius:8px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;touch-action:manipulation;">×</button>'
+    +'<button type="button" id="mcm-company-toggle" onclick="event.stopPropagation();mcmToggleCompanyPanel();" title="Agency profile" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);width:34px;height:34px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit;line-height:1;touch-action:manipulation;">🏢</button>'
+    +'<button type="button" id="mcm-lead-toggle" onclick="event.stopPropagation();mcmToggleLeadPanel();" title="Hide lead profile" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);width:34px;height:34px;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit;line-height:1;touch-action:manipulation;">👤</button>'
+    +'<button type="button" title="Minimize" onclick="event.stopPropagation();mcmToggleMinimize();" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);width:34px;height:34px;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1;touch-action:manipulation;">−</button>'
+    +'<button type="button" id="mcm-header-close" onclick="event.stopPropagation();mcmClose();" title="Close session" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.5);width:34px;height:34px;border-radius:8px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;touch-action:manipulation;">×</button>'
     +'</div></div>'
     +'<div id="mcm-header-name" style="font-size:17px;font-weight:800;color:#fff;letter-spacing:-0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;">'+mcmEsc(name)+'</div>'
     +sessionMeta
@@ -19310,7 +19515,36 @@ body.sb-collapsed #nav-collapse-btn { right: -10px !important; transform: scaleX
 // HOME DASHBOARD ENGINE
 // ============================================================
 
+window.hdRefreshTeamWidgets = function() {
+  if (typeof anLoadTeamDailyLeaderboard === 'function') {
+    anLoadTeamDailyLeaderboard(function(rows) {
+      var body = document.getElementById('hd-leaderboard-body');
+      if (body && typeof anRenderDailyLeaderboardHTML === 'function') {
+        body.innerHTML = anRenderDailyLeaderboardHTML(rows);
+      }
+    });
+  }
+  var statsEl = document.querySelector('.hd-shout-stats');
+  if (statsEl && typeof hdGetTodayDashStats === 'function') {
+    var stats = hdGetTodayDashStats();
+    statsEl.textContent = 'Today: ' + stats.dashCalls + ' calls · ' + stats.dashDemos + ' demos · ' + stats.dashCloses + ' closes';
+  }
+  if (typeof anRenderTeamMap === 'function') {
+    setTimeout(anRenderTeamMap, 80);
+  }
+};
+
 function hdGetTodayDashStats() {
+  if (typeof anBuildDailyLeaderboard === 'function') {
+    var rows = anBuildDailyLeaderboard();
+    var calls = 0, demos = 0, closes = 0;
+    rows.forEach(function(r) {
+      calls += r.calls || 0;
+      demos += r.demos || 0;
+      closes += r.closes || 0;
+    });
+    return { dashCalls: calls, dashDemos: demos, dashCloses: closes };
+  }
   var todayStr = new Date().toISOString().split('T')[0];
   var dashCalls = 0, dashDemos = 0, dashCloses = 0;
   if (typeof _dash !== 'undefined' && _dash.activityLog) {
@@ -19402,7 +19636,7 @@ function hdBuildShoutCardSection() {
     +'</div></div>';
 }
 
-function hdRender() {
+function hdRenderCore() {
   var root = document.getElementById('home-dashboard-root');
   if (!root) return;
 
@@ -19422,7 +19656,15 @@ function hdRender() {
   var leads = (typeof AN !== 'undefined' && AN.leads) ? AN.leads : [];
   var myEmail = (typeof AN !== 'undefined' && AN.currentRepEmail) || '';
   var isAdmin = (typeof AN !== 'undefined' && AN.isAdmin) || false;
-  var myLeads = (typeof anMyLeads === 'function') ? anMyLeads() : (isAdmin ? leads : leads.filter(function(l){ return (l._repEmail || '').toLowerCase() === myEmail; }));
+  var myLeads;
+  if (isAdmin && typeof anGetTeamViewScope === 'function') {
+    var scope = anGetTeamViewScope();
+    if (!scope || scope === '') myLeads = leads;
+    else if (scope === '__mine__') myLeads = leads.filter(function(l){ return (l._repEmail || '').toLowerCase() === myEmail; });
+    else myLeads = leads.filter(function(l){ return (l._repEmail || '').toLowerCase() === scope.toLowerCase(); });
+  } else {
+    myLeads = (typeof anMyLeads === 'function') ? anMyLeads() : leads.filter(function(l){ return (l._repEmail || '').toLowerCase() === myEmail; });
+  }
 
   // Follow-ups due today or overdue
   var followups = myLeads.filter(function(l){
@@ -19521,6 +19763,10 @@ function hdRender() {
     +'<button class="hd-qa-btn hd-qa-ghost" onclick="anNewLead()"><span>➕</span> New Lead</button>'
     +'<button class="hd-qa-btn hd-qa-ghost" onclick="showSection(\'schedule\',null)"><span>📅</span> Schedule Demo</button>'
     +'<button class="hd-qa-btn hd-qa-primary" onclick="openCoach()"><span>🧠</span> AI Coach</button>'
+    +(isAdmin && typeof anBuildTeamScopeSelectHTML === 'function'
+      ? '<div style="display:flex;align-items:center;gap:6px;margin-left:4px;"><span style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:0.08em;">View</span>'
+        + anBuildTeamScopeSelectHTML('hd-team-scope', 'anSetTeamViewScope') + '</div>'
+      : '')
     +'</div>'
     +'</div>'
 
@@ -19533,24 +19779,12 @@ function hdRender() {
     // ── Daily SDR Leaderboard ──
     +'<div class="hd-card" id="hd-leaderboard-card" style="grid-column:1/-1;">'
     +'<div class="hd-card-header"><span class="hd-card-title">🏆 SDR Leaderboard — Today</span>'
-    +'<span style="font-size:10px;color:#9999aa;">Calls +5 demos · +3 showed · +20 closes</span></div>'
+    +'<div style="display:flex;align-items:center;gap:10px;">'
+    +(isAdmin && typeof anBuildTeamScopeSelectHTML === 'function' ? anBuildTeamScopeSelectHTML('hd-lb-scope', 'anSetTeamViewScope') : '')
+    +'<span style="font-size:10px;color:#9999aa;">Calls +5 demos · +3 showed · +20 closes</span></div></div>'
     +'<div class="hd-card-body" id="hd-leaderboard-body">'
     + anRenderDailyLeaderboardHTML(anBuildDailyLeaderboard())
     +'</div></div>'
-
-    // ── Team Territory Map ──
-    +'<div class="hd-card" id="hd-team-map-card" style="grid-column:1/-1;">'
-    +'<div class="hd-card-header"><span class="hd-card-title">🗺 Team Territory Map</span>'
-    +'<span style="font-size:10px;color:#9999aa;"><span style="color:#6366f1;">●</span> Leads &nbsp; <span style="color:#10b981;">●</span> Closed Won</span></div>'
-    +'<div class="hd-card-body" style="padding:0;">'
-    +'<div id="hd-team-map" style="height:340px;width:100%;background:#f4f4f5;"></div>'
-    +'</div></div>'
-
-    // ── Field Insights teaser ──
-    +'<div class="hd-card" id="hd-insights-card" style="grid-column:1/-1;">'
-    +'<div class="hd-card-header"><span class="hd-card-title">📣 Field Insights — What We\'re Hearing</span>'
-    +'<button class="hd-card-action" onclick="showSection(\'fieldinsights\',null)">Open Board →</button></div>'
-    +'<div class="hd-card-body" id="hd-insights-teaser">' + (typeof anRenderFieldInsightsTeaser === 'function' ? anRenderFieldInsightsTeaser(myLeads) : '') + '</div></div>'
 
     // ── Call Session hero card ──
     +'<div class="hd-card hd-cs-card" style="grid-column:1/-1;">'
@@ -19721,6 +19955,22 @@ function hdRender() {
     }).join('') : '<div class="hd-empty"><div class="hd-empty-icon">📭</div>No activity logged yet<br><small style="font-size:11px;">Log calls from Lead Pipeline to see activity here</small></div>')
     +'</div></div>'
 
+    // ── Team Territory Map (bottom) ──
+    +'<div class="hd-card" id="hd-team-map-card" style="grid-column:1/-1;">'
+    +'<div class="hd-card-header"><span class="hd-card-title">🗺 Team Territory Map</span>'
+    +'<span style="font-size:10px;color:#9999aa;"><span style="color:#6366f1;">●</span> Leads &nbsp; <span style="color:#10b981;">●</span> Closed Won</span></div>'
+    +'<div class="hd-card-body" style="padding:0;">'
+    +'<div id="hd-team-map" style="height:340px;width:100%;background:#f4f4f5;"></div>'
+    +'</div></div>'
+
+    // ── Compass FMO Referrals injected here by anInjectHomeSeqFmoCards ──
+
+    // ── Field Insights teaser (bottom) ──
+    +'<div class="hd-card" id="hd-insights-card" style="grid-column:1/-1;">'
+    +'<div class="hd-card-header"><span class="hd-card-title">📣 Field Insights — What We\'re Hearing</span>'
+    +'<button class="hd-card-action" onclick="showSection(\'fieldinsights\',null)">Open Board →</button></div>'
+    +'<div class="hd-card-body" id="hd-insights-teaser">' + (typeof anRenderFieldInsightsTeaser === 'function' ? anRenderFieldInsightsTeaser(myLeads) : '') + '</div></div>'
+
     +'</div>'; // end hd-body
 
   if (typeof anLoadTeamDailyLeaderboard === 'function') {
@@ -19732,7 +19982,22 @@ function hdRender() {
     });
   }
   if (typeof anRenderTeamMap === 'function') {
-    setTimeout(anRenderTeamMap, 120);
+    setTimeout(anRenderTeamMap, 200);
+    if (typeof anEnsureLeadsLoaded === 'function') {
+      anEnsureLeadsLoaded(function() { setTimeout(anRenderTeamMap, 100); });
+    }
+  }
+}
+
+function hdRender() {
+  try {
+    hdRenderCore();
+  } catch (err) {
+    console.error('[Home] hdRender failed:', err);
+    var root = document.getElementById('home-dashboard-root');
+    if (root && !root.querySelector('.hd-body')) {
+      root.innerHTML = '<div style="padding:40px;text-align:center;color:#71717a;font-size:14px;">Home dashboard failed to load. <button onclick="hdRender()" style="margin-top:12px;background:#6366f1;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;font-family:inherit;">Retry</button></div>';
+    }
   }
 }
 
@@ -22971,9 +23236,10 @@ window._anEnhanceCallPanel = function(leadId) {
 
   var prog = anGetCallQueueProgress(leadId);
   if (prog) {
-    var header = overlay.querySelector('div');
-    if (header) {
+    var header = document.getElementById('mcm-call-header');
+    if (header && !document.getElementById('mcm-queue-prog-bar')) {
       var progBar = document.createElement('div');
+      progBar.id = 'mcm-queue-prog-bar';
       progBar.style.cssText = 'padding:8px 20px;background:rgba(16,185,129,0.15);border-bottom:1px solid rgba(16,185,129,0.25);display:flex;align-items:center;justify-content:space-between;';
       progBar.innerHTML = '<span style="font-size:11px;font-weight:700;color:'+(prog.mode==='opportunity'?'#f59e0b':'#10b981')+';letter-spacing:0.08em;text-transform:uppercase;">'+(prog.mode==='opportunity'?'Deal':'Lead')+' '+prog.pos+' of '+prog.total+' · '+prog.remaining+' left</span>'
         +'<span style="font-size:11px;color:rgba(255,255,255,0.45);">'+prog.done+' done today</span>';
@@ -23140,8 +23406,9 @@ console.log('[CALL SESSION] Queue workflow loaded.');
     st.textContent = '@keyframes mcmSlideIn{from{transform:translateX(100%);opacity:0.8;}to{transform:translateX(0);opacity:1;}}'
       + '@keyframes shoutPop{0%{transform:translateY(-20px);opacity:0;}15%{transform:translateY(0);opacity:1;}85%{opacity:1;}100%{transform:translateY(-10px);opacity:0;}}'
       + '#mcm-panel-wrap{position:fixed;top:0;right:0;bottom:0;width:360px;max-width:100vw;z-index:20000;pointer-events:auto;box-shadow:-8px 0 28px rgba(0,0,0,0.22);animation:mcmSlideIn 0.22s ease;}'
-      + '#an-cs-lead-panel{animation:mcmSlideIn 0.26s ease;z-index:19999;}'
-      + '#an-cs-company-panel{animation:mcmSlideIn 0.26s ease;z-index:19998;}'
+      + '#an-cs-lead-panel{animation:mcmSlideIn 0.26s ease;z-index:19999;pointer-events:auto;}'
+      + '#an-cs-company-panel{animation:mcmSlideIn 0.26s ease;z-index:19998;pointer-events:auto;}'
+      + '#mcm-call-header,#mcm-call-header button{pointer-events:auto;}'
       + 'body.call-panel-open .main{margin-right:0!important;}'
       + 'body.call-panel-open #call-panel-backdrop{display:none!important;}'
       + 'body.call-lead-collapsed #an-cs-lead-panel{display:none!important;}'
@@ -23209,9 +23476,11 @@ window.anSyncCallToDashboard = function(lead, outcome, newStatus) {
   if (dashSec && dashSec.classList.contains('active') && typeof renderSalesDashboard === 'function') {
     renderSalesDashboard();
   }
-  if (typeof hdRender === 'function') {
-    var homeSec = document.getElementById('section-home');
-    if (homeSec && homeSec.classList.contains('active')) hdRender();
+  var homeSec = document.getElementById('section-home');
+  if (homeSec && homeSec.classList.contains('active')) {
+    var inCall = !!(document.getElementById('mcm-panel-wrap') || document.body.classList.contains('call-panel-open'));
+    if (inCall && typeof hdRefreshTeamWidgets === 'function') hdRefreshTeamWidgets();
+    else if (typeof hdRender === 'function') hdRender();
   }
 };
 
@@ -25425,6 +25694,7 @@ window.anCallAgain = function(leadId) {
     date:    today,
     time:    curTime,
     notes:   'Call attempt #'+(todayCalls+1)+' today',
+    rep:     (typeof AN !== 'undefined' && AN.currentRepEmail) || '',
     quick:   true
   });
   lead.lastContactDate = today;
@@ -26749,7 +27019,7 @@ function anInjectHomeSeqFmoCards() {
   }
 
   var fmoLeads = anGetMyFmoReferrals();
-  var fmoCard = '<div class="hd-card" id="hd-fmo-card"><div class="hd-card-header"><span class="hd-card-title">🧭 Compass FMO Referrals'
+  var fmoCard = '<div class="hd-card" id="hd-fmo-card" style="grid-column:1/-1;"><div class="hd-card-header"><span class="hd-card-title">🧭 Compass FMO Referrals'
     + (fmoLeads.length ? ' <span style="background:#fef3c7;color:#b45309;border-radius:20px;padding:1px 7px;font-size:10px;">' + fmoLeads.length + '</span>' : '')
     + '</span><button class="hd-card-action" onclick="showSection(\'crm\',null)">CRM →</button></div><div class="hd-card-body">'
     + (fmoLeads.length ? fmoLeads.slice(0, 5).map(function(l) {
@@ -26763,10 +27033,10 @@ function anInjectHomeSeqFmoCards() {
     }).join('') : '<div class="hd-empty"><div class="hd-empty-icon">🧭</div>Mark FMO interest during lead sessions — referrals show here</div>')
     + '</div></div>';
 
-  var followCard = root.querySelector('.hd-card .hd-card-title');
-  var cards = root.querySelectorAll('.hd-body > .hd-card');
-  var insertAfter = cards.length > 2 ? cards[2] : null;
-  if (insertAfter) insertAfter.insertAdjacentHTML('afterend', fmoCard);
+  var insightsCard = document.getElementById('hd-insights-card');
+  var mapCard = document.getElementById('hd-team-map-card');
+  if (insightsCard) insightsCard.insertAdjacentHTML('beforebegin', fmoCard);
+  else if (mapCard) mapCard.insertAdjacentHTML('afterend', fmoCard);
   else {
     var body2 = root.querySelector('.hd-body');
     if (body2) body2.insertAdjacentHTML('beforeend', fmoCard);
@@ -27177,6 +27447,43 @@ anLoadSeqQueue();
 })();
 
 console.log('[SEQ+FMO] Sequence sessions + Compass FMO referral tracking loaded.');
+</script>
+<script>
+// ── Opportunities section mount (final showSection hook) ───────
+(function() {
+  window.anMountOpportunitiesSection = function() {
+    function doRender() {
+      if (typeof renderOpportunities === 'function') renderOpportunities();
+    }
+    if (typeof anEnsureLeadsLoaded === 'function') anEnsureLeadsLoaded(doRender);
+    else doRender();
+  };
+
+  var _prevShowSectionOppMount = window.showSection;
+  window.showSection = function(id, btn) {
+    if (typeof _prevShowSectionOppMount === 'function') _prevShowSectionOppMount(id, btn);
+    if (id === 'opportunities') {
+      setTimeout(window.anMountOpportunitiesSection, 0);
+    }
+  };
+
+  function anMaybeMountOpportunitiesOnLoad() {
+    var sec = document.getElementById('section-opportunities');
+    if (sec && sec.classList.contains('active') && !sec.innerHTML.trim()) {
+      window.anMountOpportunitiesSection();
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(anMaybeMountOpportunitiesOnLoad, 1300);
+  });
+
+  var _prevLoginOppMount = window.onUserLoggedIn;
+  window.onUserLoggedIn = function(user) {
+    if (typeof _prevLoginOppMount === 'function') _prevLoginOppMount(user);
+    setTimeout(anMaybeMountOpportunitiesOnLoad, 600);
+  };
+})();
 </script>
 </body>
 </html>
