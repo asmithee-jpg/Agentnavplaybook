@@ -3985,8 +3985,10 @@ window.onUserLoggedIn = function(user) {
   if (typeof _origOnUserLoggedIn_dash === 'function') _origOnUserLoggedIn_dash(user);
   // Load dashboard data from Supabase after login
   setTimeout(function() {
-    if (typeof anFetchTeamActivityCloud === 'function') anFetchTeamActivityCloud();
+    if (typeof anFetchAllTeamStats === 'function') anFetchAllTeamStats();
+    else if (typeof anFetchTeamActivityCloud === 'function') anFetchTeamActivityCloud();
     dashLoad(function() {
+      if (typeof anLinkDemosToLeads === 'function') anLinkDemosToLeads();
       var sec = document.getElementById('section-dashboard');
       if (sec && sec.classList.contains('active')) {
         if (typeof renderSalesDashboard === 'function') renderSalesDashboard();
@@ -4155,7 +4157,7 @@ window.buildPipelineHTML = function() {
     html += '<div style="padding:8px 0;border-bottom:1px solid #f4f4f5;">'
       + '<div style="display:flex;align-items:center;gap:8px;">'
       + '<div style="flex:1;min-width:0;">'
-      + '<div style="font-size:12px;font-weight:600;color:#09090b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + deal.name + '</div>'
+      + '<div onclick="dashOpenDeal(' + i + ')" style="font-size:12px;font-weight:600;color:#09090b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;" title="Open deal">' + deal.name + '</div>'
       + '<div style="font-size:10px;color:#71717a;margin-top:1px;">' + (deal.state || '—') + ' &middot; ' + sz.label + ' &middot; ' + sz.price + '</div>'
       + (deal.notes ? '<div style="font-size:10px;color:#a1a1aa;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + deal.notes + '</div>' : '')
       + '</div>'
@@ -5025,12 +5027,92 @@ function getShowRate() {
 }
 
 // ── Stat tile ─────────────────────────────────────────────────
-function buildStatTile(label, value, color) {
-  return '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:10px;padding:14px;text-align:center;">'
-    +'<div style="font-size:9px;font-weight:700;color:'+color+';text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">'+label+'</div>'
+function buildStatTile(label, value, color, drillType) {
+  var click = drillType ? ' onclick="dashOpenDrilldown(\''+drillType+'\')" onmouseover="this.style.borderColor=\''+color+'\';this.style.boxShadow=\'0 2px 12px rgba(0,0,0,0.06)\'" onmouseout="this.style.borderColor=\'#e4e4e7\';this.style.boxShadow=\'none\'"' : '';
+  var hint = drillType ? ' title="Click to see what makes up this number"' : '';
+  return '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:10px;padding:14px;text-align:center;transition:box-shadow 0.15s,border-color 0.15s;'+((drillType)?'cursor:pointer;':'')+'"'+click+hint+'>'
+    +'<div style="font-size:9px;font-weight:700;color:'+color+';text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">'+label+(drillType?' <span style="opacity:0.5;">↗</span>':'')+'</div>'
     +'<div style="font-size:22px;font-weight:800;color:#09090b;">'+value+'</div>'
     +'</div>';
 }
+
+window.dashOpenDrilldown = function(type, focusId) {
+  var title = '', body = '';
+  if (type === 'deals' || type === 'pipeline') {
+    title = 'Pipeline Deals ('+((_dash.pipeline||[]).length)+')';
+    var deals = _dash.pipeline || [];
+    if (!deals.length) body = '<div style="padding:24px;text-align:center;color:#71717a;">No deals in pipeline yet.</div>';
+    else body = deals.map(function(d, i) {
+      var sz = (typeof SIZES !== 'undefined' ? SIZES : []).find(function(s){ return s.id === d.size; }) || { label: d.size || '—', price: '' };
+      return '<div onclick="dashOpenDeal('+i+')" style="padding:12px 14px;border:1px solid #e4e4e7;border-radius:10px;margin-bottom:8px;cursor:pointer;" onmouseover="this.style.borderColor=\'#6366f1\'" onmouseout="this.style.borderColor=\'#e4e4e7\'">'
+        +'<div style="font-size:14px;font-weight:800;color:#09090b;">'+anEsc(d.name || 'Deal')+'</div>'
+        +'<div style="font-size:11px;color:#71717a;margin-top:4px;">'+(d.stage||'—')+' · '+(d.state||'—')+' · '+sz.label+(sz.price?(' · '+sz.price):'')+'</div>'
+        +(d.leadId ? '<div style="font-size:10px;color:#6366f1;margin-top:4px;">Linked to CRM lead</div>' : '')
+        +'</div>';
+    }).join('');
+  } else if (type === 'demos') {
+    title = 'Demos Booked ('+((_dash.demos||[]).length)+')';
+    var demos = _dash.demos || [];
+    if (!demos.length) body = '<div style="padding:24px;text-align:center;color:#71717a;">No demos logged yet.</div>';
+    else body = demos.map(function(d) {
+      var active = focusId && d.id === focusId ? 'border-color:#6366f1;background:rgba(99,102,241,0.04);' : '';
+      return '<div style="padding:12px 14px;border:1px solid #e4e4e7;border-radius:10px;margin-bottom:8px;'+active+'">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">'
+        +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="anOpenDemoFromTracker(\''+d.id+'\')">'
+        +'<div style="font-size:14px;font-weight:800;color:#09090b;">'+anEsc(d.name || 'Demo')+'</div>'
+        +'<div style="font-size:11px;color:#71717a;margin-top:4px;">'+anEsc(d.status || 'booked')+' · '+(d.state||'—')+(d.scheduledDate?' · '+d.scheduledDate:'')+'</div>'
+        +'</div>'
+        +'<button onclick="anOpenDemoFromTracker(\''+d.id+'\')" style="padding:6px 10px;border-radius:6px;border:none;background:#6366f1;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Open</button>'
+        +'</div></div>';
+    }).join('');
+  } else if (type === 'mrr') {
+    title = 'Pipeline MRR Breakdown';
+    body = (_dash.pipeline||[]).filter(function(d){ return d.stage !== 'Closed Lost'; }).map(function(d, i) {
+      var mp = { solo:79, small:247, large:597 };
+      var mrr = mp[d.size] || 79;
+      return '<div onclick="dashOpenDeal('+(_dash.pipeline.indexOf(d))+')" style="padding:10px 12px;border:1px solid #e4e4e7;border-radius:8px;margin-bottom:6px;cursor:pointer;"><span style="font-weight:700;">'+anEsc(d.name)+'</span> <span style="color:#71717a;">— $'+mrr+'/mo</span></div>';
+    }).join('') || '<div style="padding:20px;color:#71717a;">No active pipeline.</div>';
+  } else if (type === 'showrate') {
+    title = 'Show Rate Details';
+    dashOpenDrilldown('demos');
+    return;
+  }
+  var old = document.getElementById('dash-drilldown-modal');
+  if (old) old.remove();
+  var ov = document.createElement('div');
+  ov.id = 'dash-drilldown-modal';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10050;display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.onclick = function(e) { if (e.target === ov) ov.remove(); };
+  ov.innerHTML = '<div style="background:#fff;border-radius:14px;width:520px;max-width:95vw;max-height:80vh;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.25);">'
+    +'<div style="padding:18px 20px;border-bottom:1px solid #e4e4e7;display:flex;justify-content:space-between;align-items:center;">'
+    +'<div style="font-size:16px;font-weight:800;color:#09090b;">'+title+'</div>'
+    +'<button onclick="document.getElementById(\'dash-drilldown-modal\').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#a1a1aa;">✕</button>'
+    +'</div>'
+    +'<div style="padding:16px 20px;overflow-y:auto;max-height:calc(80vh - 70px);">'+body+'</div>'
+    +'</div>';
+  document.body.appendChild(ov);
+};
+
+window.dashOpenDeal = function(idx) {
+  var deal = (_dash.pipeline || [])[idx];
+  if (!deal) return;
+  var modal = document.getElementById('dash-drilldown-modal');
+  if (modal) modal.remove();
+  if (deal.leadId && typeof AN !== 'undefined' && AN.leads) {
+    var lead = AN.leads.find(function(l) { return l.id === deal.leadId; });
+    if (lead && typeof anIsOpportunity === 'function' && anIsOpportunity(lead)) {
+      if (typeof showSection === 'function') showSection('opportunities');
+      setTimeout(function() { if (typeof anOpenOppRecord === 'function') anOpenOppRecord(lead.id); }, 250);
+      return;
+    }
+    if (lead) {
+      if (typeof showSection === 'function') showSection('crm');
+      setTimeout(function() { if (typeof anOpenLeadPanel === 'function') anOpenLeadPanel(lead.id); }, 250);
+      return;
+    }
+  }
+  if (typeof dashAddDeal === 'function') dashAddDeal(idx);
+};
 
 // ── Tab state — survives re-renders so Charts & Reports opens on first click ──
 window._dashActiveTab = (typeof window._dashActiveTab === 'number') ? window._dashActiveTab : 0;
@@ -5167,11 +5249,11 @@ function buildAndShowCharts() {
 
     // Stat tiles
     + '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;">'
-    + buildStatTile('Total Deals',  (_dash.pipeline||[]).length, '#6366f1')
-    + buildStatTile('Pipeline MRR', getPipelineValue(),           '#10b981')
-    + buildStatTile('Win Rate',     getWinRate(),                 '#f59e0b')
-    + buildStatTile('Demos Booked', (_dash.demos||[]).length,     '#8b5cf6')
-    + buildStatTile('Show Rate',    getShowRate(),                '#06b6d4')
+    + buildStatTile('Total Deals',  (_dash.pipeline||[]).length, '#6366f1', 'deals')
+    + buildStatTile('Pipeline MRR', getPipelineValue(),           '#10b981', 'mrr')
+    + buildStatTile('Win Rate',     getWinRate(),                 '#f59e0b', 'deals')
+    + buildStatTile('Demos Booked', (_dash.demos||[]).length,     '#8b5cf6', 'demos')
+    + buildStatTile('Show Rate',    getShowRate(),                '#06b6d4', 'showrate')
     + '</div>'
 
     // ── ACTIVITY pane: Calls/Demos/Closes + Demo Sets by State + Hotzones ──
@@ -5234,11 +5316,18 @@ function buildAndShowCharts() {
     // ── SHOW RATE pane ──
     + '<div id="cp-showrate" style="display:none;">' + buildShowRateHTML() + '</div>';
 
-  // Render all visible charts
-  loadChartJS(function() {
+  // Render all visible charts (after team stats load for admin)
+  function renderChartsNow() {
     renderActivityChart();
     renderDemosByStateChart();
     renderHotzoneChart();
+  }
+  loadChartJS(function() {
+    if (typeof anFetchAllTeamStats === 'function') {
+      anFetchAllTeamStats(renderChartsNow);
+    } else {
+      renderChartsNow();
+    }
   });
 }
 
@@ -5404,7 +5493,10 @@ window.anGetScopedActivityLog = function() {
         }
       });
     });
-    anMergeTeamActivityIntoByDate(byDate, dates, scope === '__mine__' ? (AN.currentRepEmail || '').toLowerCase() : (scope || '__all__'));
+    anMergeTeamActivityIntoByDate(byDate, dates, scope === '__mine__' ? anActiveRepEmail() : (scope || '__all__'));
+    if (typeof anMergeTeamDashIntoByDate === 'function') {
+      anMergeTeamDashIntoByDate(byDate, dates, scope === '__mine__' ? anActiveRepEmail() : (scope || '__all__'));
+    }
     return dates.map(function(d) { return byDate[d]; });
   }
   if (useTeam) {
@@ -5431,6 +5523,9 @@ window.anGetScopedActivityLog = function() {
       });
     }
     anMergeTeamActivityIntoByDate(teamByDate, dates, '__all__');
+    if (typeof anMergeTeamDashIntoByDate === 'function') {
+      anMergeTeamDashIntoByDate(teamByDate, dates, '__all__');
+    }
     return dates.map(function(d) { return teamByDate[d]; });
   }
   return _dash.activityLog || [];
@@ -5780,7 +5875,7 @@ function buildDemoListHTML() {
     return '<div style="background:#fff;border:1.5px solid #e4e4e7;border-left:4px solid '+c+';border-radius:10px;padding:14px 16px;">'
       +'<div style="display:flex;align-items:center;gap:10px;">'
       +'<div style="flex:1;min-width:0;">'
-      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><div style="font-size:13px;font-weight:700;color:#09090b;">'+d.name+'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><div onclick="anOpenDemoFromTracker(\''+d.id+'\')" style="font-size:13px;font-weight:700;color:#09090b;cursor:pointer;text-decoration:underline;text-decoration-color:rgba(99,102,241,0.35);" title="Open in CRM / Opportunities">'+d.name+'</div>'
       +'<span style="font-size:10px;font-weight:700;color:'+c+';background:'+c+'18;padding:2px 8px;border-radius:10px;">'+SL[d.status]+'</span></div>'
       +'<div style="font-size:11px;color:#71717a;">'+(d.state?d.state+' \u00b7 ':'')+szl+(dt?' \u00b7 \uD83D\uDCC5 '+dt:'')+(d.outcome?' \u00b7 '+d.outcome:'')+'</div>'
       +(d.notes?'<div style="font-size:11px;color:#a1a1aa;margin-top:3px;font-style:italic;">'+d.notes+'</div>':'')
@@ -5791,6 +5886,7 @@ function buildDemoListHTML() {
         +'<button onclick="updDemoStatus(\''+d.id+'\',\'noshow\')" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">\u2715 No Show</button>'
         +'<button onclick="updDemoStatus(\''+d.id+'\',\'rescheduled\')" style="background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:5px 8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">\u21ba</button>'
         :'')
+      +'<button onclick="anOpenDemoFromTracker(\''+d.id+'\')" style="background:#6366f1;color:#fff;border:none;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Open</button>'
       +'<button onclick="editDemo(\''+d.id+'\')" style="background:#fff;border:1px solid #e4e4e7;color:#6366f1;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;">Edit</button>'
       +'<button onclick="delDemo(\''+d.id+'\')" style="background:none;border:none;color:#d4d4d8;cursor:pointer;font-size:13px;padding:5px;">&#x2715;</button>'
       +'</div></div></div>';
@@ -9233,8 +9329,13 @@ window.anBuildTeamScopeSelectHTML = function(selectId, onchangeFn) {
   return html;
 };
 
+window.anActiveRepEmail = function() {
+  var em = (typeof AN !== 'undefined' && AN.currentRepEmail) || (typeof _currentUser !== 'undefined' && _currentUser && _currentUser.email) || '';
+  return (em || '').toLowerCase();
+};
+
 window.anCallLogRep = function(call, lead) {
-  return ((call && call.rep) || (lead && lead._repEmail) || (typeof AN !== 'undefined' && AN.currentRepEmail) || '').toLowerCase();
+  return ((call && call.rep) || (lead && lead._repEmail) || anActiveRepEmail() || '').toLowerCase();
 };
 
 window.anLocalDateStr = function(d) {
@@ -9352,6 +9453,62 @@ window.anBackfillTeamActivityFromLeads = function(leads) {
       if (typeof anCallCountsAsDemo === 'function' ? anCallCountsAsDemo(c) : c.outcome === 'demo') day.demos = (day.demos || 0) + 1;
       if (c.outcome === 'won') day.closes = (day.closes || 0) + 1;
     });
+  });
+};
+
+window.anMergeTeamDashIntoByDate = function(byDate, dates, repFilter) {
+  if (!AN || !AN._teamDashByRep || !byDate) return;
+  repFilter = repFilter ? repFilter.toLowerCase() : '';
+  Object.keys(AN._teamDashByRep).forEach(function(em) {
+    if (repFilter && repFilter !== '__all__' && em !== repFilter) return;
+    (AN._teamDashByRep[em].activityLog || []).forEach(function(entry) {
+      if (!entry || !entry.date || !byDate[entry.date]) return;
+      var row = byDate[entry.date];
+      row.calls = Math.max(row.calls || 0, entry.calls || 0);
+      row.demos = Math.max(row.demos || 0, entry.demos || 0);
+      row.closes = Math.max(row.closes || 0, entry.closes || 0);
+      if (entry.calls_by_hour) {
+        if (!row.calls_by_hour) row.calls_by_hour = {};
+        Object.keys(entry.calls_by_hour).forEach(function(h) {
+          row.calls_by_hour[h] = Math.max(row.calls_by_hour[h] || 0, entry.calls_by_hour[h] || 0);
+        });
+      }
+    });
+  });
+};
+
+window.anFetchTeamDashActivity = function(cb) {
+  cb = cb || function() {};
+  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
+  if (!sb) { cb(AN._teamDashByRep || {}); return; }
+  sb.from('sales_dashboard').select('rep_email, activity, activityLog, demos, pipeline').then(function(r) {
+    var byRep = {};
+    (r.data || []).forEach(function(row) {
+      var em = (row.rep_email || '').toLowerCase();
+      if (!em) return;
+      byRep[em] = {
+        activity: row.activity || {},
+        activityLog: row.activityLog || [],
+        demos: row.demos || [],
+        pipeline: row.pipeline || []
+      };
+    });
+    AN._teamDashByRep = byRep;
+    cb(byRep);
+  }).catch(function(err) {
+    console.warn('[Team dash] Cloud fetch failed:', err);
+    cb(AN._teamDashByRep || {});
+  });
+};
+
+window.anFetchAllTeamStats = function(cb) {
+  cb = cb || function() {};
+  anFetchTeamDashActivity(function() {
+    if (typeof anFetchTeamActivityCloud === 'function') {
+      anFetchTeamActivityCloud(cb);
+    } else {
+      cb();
+    }
   });
 };
 
@@ -9487,7 +9644,18 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
       maxField(em, 'closes', day.closes || 0);
     });
   }
-  var myEmail = (typeof AN !== 'undefined' && AN.currentRepEmail) ? AN.currentRepEmail.toLowerCase() : '';
+  if (AN && AN._teamDashByRep) {
+    Object.keys(AN._teamDashByRep).forEach(function(em) {
+      var dash = AN._teamDashByRep[em] || {};
+      var entry = (dash.activityLog || []).find(function(e) { return e.date === today; });
+      if (!entry) return;
+      maxField(em, 'calls', entry.calls || 0);
+      maxField(em, 'demos', entry.demos || 0);
+      maxField(em, 'showed', entry.demos_showed || 0);
+      maxField(em, 'closes', entry.closes || 0);
+    });
+  }
+  var myEmail = anActiveRepEmail();
   if (myEmail && typeof getActivityForPeriod === 'function') {
     var act = getActivityForPeriod('today');
     maxField(myEmail, 'calls', act.calls || 0);
@@ -9507,7 +9675,7 @@ window.anLoadTeamDailyLeaderboard = function(cb) {
   var local = anBuildDailyLeaderboard();
   var sb = typeof getSupabase === 'function' ? getSupabase() : null;
   if (!sb || typeof _currentUser === 'undefined' || !_currentUser) { if (cb) cb(local); return; }
-  anFetchTeamActivityCloud(function() {
+  anFetchAllTeamStats(function() {
     var queries = [sb.from('sales_dashboard').select('rep_email, activity, activityLog')];
     if (typeof AN !== 'undefined' && AN.isAdmin) {
       queries.push(sb.from('an_leads').select('rep_email, data, updated_at'));
@@ -9586,6 +9754,69 @@ window.anFindDashDemoForLead = function(lead) {
   return _dash.demos.find(function(d) {
     return d.leadId === lead.id || d.id === ('demo-' + lead.id);
   }) || null;
+};
+
+window.anFindLeadForDemo = function(demo) {
+  if (!demo || typeof AN === 'undefined' || !AN.leads) return null;
+  if (demo.leadId) {
+    var byId = AN.leads.find(function(l) { return l.id === demo.leadId; });
+    if (byId) return byId;
+  }
+  var target = (demo.name || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  if (!target) return null;
+  return AN.leads.find(function(l) {
+    var full = ((l.firstName || '') + ' ' + (l.lastName || '')).trim().toLowerCase().replace(/\s+/g, ' ');
+    var co = (l.company || '').toLowerCase().trim();
+    return full === target || co === target || (full && (target.indexOf(full) >= 0 || full.indexOf(target) >= 0));
+  }) || null;
+};
+
+window.anLinkDemosToLeads = function() {
+  if (typeof _dash === 'undefined' || !_dash.demos || typeof AN === 'undefined' || !AN.leads) return;
+  var changed = false;
+  (_dash.demos || []).forEach(function(demo) {
+    if (demo.leadId) return;
+    var lead = anFindLeadForDemo(demo);
+    if (lead) { demo.leadId = lead.id; changed = true; }
+  });
+  if (changed && typeof dashSave === 'function') dashSave();
+};
+
+window.anOpenDemoFromTracker = function(demoId) {
+  var demo = (_dash && _dash.demos) ? _dash.demos.find(function(d) { return d.id === demoId; }) : null;
+  if (!demo) return;
+  var lead = anFindLeadForDemo(demo);
+  if (!demo.leadId && lead) {
+    demo.leadId = lead.id;
+    if (typeof dashSave === 'function') dashSave();
+  }
+  if (!lead) {
+    if (typeof showToast === 'function') showToast('No matching CRM lead for '+demo.name+' — check name or link manually');
+    if (typeof dashOpenDrilldown === 'function') dashOpenDrilldown('demos', demoId);
+    return;
+  }
+  if (typeof anIsOpportunity === 'function' && anIsOpportunity(lead)) {
+    if (typeof showSection === 'function') showSection('opportunities');
+    setTimeout(function() {
+      if (typeof anOpenOppRecord === 'function') anOpenOppRecord(lead.id);
+    }, 300);
+    return;
+  }
+  if (demo.status === 'showed' || lead.status === 'demo_complete' || lead.demoCompletedAt) {
+    if (typeof showSection === 'function') showSection('opportunities');
+    setTimeout(function() {
+      if (typeof anConvertToOpportunity === 'function') {
+        anConvertToOpportunity(lead.id, { fromDemoComplete: true });
+      } else if (typeof anOpenLeadPanel === 'function') {
+        anOpenLeadPanel(lead.id);
+      }
+    }, 300);
+    return;
+  }
+  if (typeof showSection === 'function') showSection('crm');
+  setTimeout(function() {
+    if (typeof anOpenLeadPanel === 'function') anOpenLeadPanel(lead.id);
+  }, 300);
 };
 
 window.anSyncLeadDemoToDashboard = function(lead, action, syncOpts) {
@@ -19650,7 +19881,7 @@ window.mcmSave = function(leadId, opts) {
     time: now.toTimeString().slice(0,5),
     outcome: outcome,
     notes: note,
-    rep: (typeof AN !== 'undefined' && AN.currentRepEmail) || ''
+    rep: anActiveRepEmail()
   };
   if (demoJustBooked) entry.bookedDemo = true;
   if (!lead.callLog) lead.callLog = [];
@@ -19682,6 +19913,10 @@ window.mcmSave = function(leadId, opts) {
   }
 
   if (typeof anSyncCallToDashboard === 'function') anSyncCallToDashboard(lead, outcome, newStatus);
+  if (typeof hdRefreshTeamWidgets === 'function') {
+    clearTimeout(window._anPostCallLbTimer);
+    window._anPostCallLbTimer = setTimeout(hdRefreshTeamWidgets, 400);
+  }
   if (typeof hdRender === 'function' && (outcome === 'callback' || newStatus === 'followup')) {
     var homeSec = document.getElementById('section-home');
     if (homeSec && homeSec.classList.contains('active')) hdRender();
@@ -20048,8 +20283,8 @@ window.hdRefreshTeamWidgets = function() {
       dashRefreshVisiblePanes();
     }
   }
-  if (typeof anFetchTeamActivityCloud === 'function') {
-    anFetchTeamActivityCloud(finishRefresh);
+  if (typeof anFetchAllTeamStats === 'function') {
+    anFetchAllTeamStats(finishRefresh);
     return;
   }
   finishRefresh();
@@ -22460,8 +22695,12 @@ window.dashRefreshVisiblePanes = function() {
   if (!sec || !sec.classList.contains('active')) return;
   var tab = window._dashActiveTab || 0;
   if (tab === 1) {
-    if (typeof refreshActiveCharts === 'function') refreshActiveCharts();
-    else if (typeof renderAllCharts === 'function') renderAllCharts();
+    var refresh = function() {
+      if (typeof refreshActiveCharts === 'function') refreshActiveCharts();
+      else if (typeof renderAllCharts === 'function') renderAllCharts();
+    };
+    if (typeof anFetchAllTeamStats === 'function') anFetchAllTeamStats(refresh);
+    else refresh();
   } else if (typeof renderSalesDashboard === 'function') {
     window._dashActiveTab = 0;
     renderSalesDashboard();
