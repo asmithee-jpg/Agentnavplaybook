@@ -10432,18 +10432,22 @@ function anDedupeOpportunityLeads(arr) {
   return arr.filter(function(l) { return !removeIds[l.id]; });
 }
 
-function anNormalizeLeads(arr){
+function anNormalizeLeads(arr, opts){
+  opts = opts || {};
   if(!Array.isArray(arr)) return [];
   if(arr.length && Array.isArray(arr[0]) && !arr[0].id) return arr.reduce(function(flat, item){ return flat.concat(item); }, []);
-  if (typeof anRepairMisclassifiedLeads === 'function') anRepairMisclassifiedLeads(arr);
-  if (typeof anHydrateCallLogEntries === 'function') anHydrateCallLogEntries(arr);
-  if (typeof anRepairPhantomBookedDemos === 'function' && anRepairPhantomBookedDemos(arr)) {
-    if (typeof console !== 'undefined') console.info('[CRM] Reset imported leads that were wrongly marked Booked Demo');
-    clearTimeout(window._anPhantomDemoSaveTimer);
-    window._anPhantomDemoSaveTimer = setTimeout(function() {
-      if (typeof AN !== 'undefined' && typeof AN.save === 'function') AN.save();
-      if (typeof renderLeadsTable === 'function') renderLeadsTable();
-    }, 700);
+  // skipRepairs: true when loading from trusted local cache — avoids iterating 6000+ leads for repairs
+  if (!opts.skipRepairs) {
+    if (typeof anRepairMisclassifiedLeads === 'function') anRepairMisclassifiedLeads(arr);
+    if (typeof anHydrateCallLogEntries === 'function') anHydrateCallLogEntries(arr);
+    if (typeof anRepairPhantomBookedDemos === 'function' && anRepairPhantomBookedDemos(arr)) {
+      if (typeof console !== 'undefined') console.info('[CRM] Reset imported leads that were wrongly marked Booked Demo');
+      clearTimeout(window._anPhantomDemoSaveTimer);
+      window._anPhantomDemoSaveTimer = setTimeout(function() {
+        if (typeof AN !== 'undefined' && typeof AN.save === 'function') AN.save();
+        if (typeof renderLeadsTable === 'function') renderLeadsTable();
+      }, 700);
+    }
   }
   var normalized = arr.map(function(l){
     if(l && l.phone) l.phone = anNormalizePhone(l.phone);
@@ -10744,35 +10748,51 @@ AN.load = function(cb){
   var sb = null;
   try { sb = typeof getSupabase==='function' ? getSupabase() : null; } catch(e) { console.warn('[CRM] Supabase client unavailable:', e); }
   var localLeads = anLoadLeadsFromLocal();
-  function anLeadsLoadDone(){
+
+  function anLeadsLoadDone(fromCloud){
     AN.leadsLoading = false;
     AN.leadsReady = true;
-    if (typeof dashLoad === 'function') {
-      dashLoad(function() {
+    // Defer heavy post-processing so UI renders first
+    setTimeout(function() {
+      if (typeof dashLoad === 'function') {
+        dashLoad(function() {
+          if (typeof anBackfillDashboardDemosFromLeads === 'function') anBackfillDashboardDemosFromLeads(AN.leads);
+          if (typeof anSyncAllOpportunitiesToPipeline === 'function') anSyncAllOpportunitiesToPipeline({ skipSave: true });
+        });
+      } else {
         if (typeof anBackfillDashboardDemosFromLeads === 'function') anBackfillDashboardDemosFromLeads(AN.leads);
-        if (typeof anSyncAllOpportunitiesToPipeline === 'function') anSyncAllOpportunitiesToPipeline();
-      });
-    } else {
-      if (typeof anBackfillDashboardDemosFromLeads === 'function') anBackfillDashboardDemosFromLeads(AN.leads);
-      if (typeof anSyncAllOpportunitiesToPipeline === 'function') anSyncAllOpportunitiesToPipeline();
-    }
+        if (typeof anSyncAllOpportunitiesToPipeline === 'function') anSyncAllOpportunitiesToPipeline({ skipSave: true });
+      }
+    }, fromCloud ? 200 : 800);
     if(typeof hdRefreshCallableSlot === 'function') hdRefreshCallableSlot();
     if(cb) cb();
   }
+
+  // ── Fast path: show local/IDB leads immediately, don't wait for cloud ──
   if(localLeads && localLeads.length){
     AN.leads = anApplyOwnerPatches(localLeads);
     if (typeof anEnforceRepLeadScope === 'function') anEnforceRepLeadScope();
     AN.leadsStorage = 'local';
-    if(!sb||!_currentUser){ anLeadsLoadDone(); return; }
+    if(!sb||!_currentUser){ anLeadsLoadDone(false); return; }
+    // Show cached leads right away, sync cloud in background
+    anLeadsLoadDone(false);
+    anFinishCloudLeadLoad(sb, function() {
+      if(typeof renderLeadsTable === 'function') renderLeadsTable();
+    });
+    return;
   } else if(localStorage.getItem('an-crm-leads-idb') === '1'){
     AN.leadsLoading = true;
     if(typeof hdRefreshCallableSlot === 'function') hdRefreshCallableSlot();
     anLoadLeadsFromIDB(function(err, leads){
-      leads = anApplyOwnerPatches(anNormalizeLeads(leads || []));
+      leads = anApplyOwnerPatches(anNormalizeLeads(leads || [], { skipRepairs: true }));
       anAssignLeadsChunked(leads, function(){
         AN.leadsStorage = err ? 'local' : 'idb';
-        if(!sb||!_currentUser){ anLeadsLoadDone(); return; }
-        anFinishCloudLeadLoad(sb, anLeadsLoadDone);
+        if(!sb||!_currentUser){ anLeadsLoadDone(false); return; }
+        // Show IDB leads right away, sync cloud in background
+        anLeadsLoadDone(false);
+        anFinishCloudLeadLoad(sb, function() {
+          if(typeof renderLeadsTable === 'function') renderLeadsTable();
+        });
       });
     });
     return;
@@ -10780,7 +10800,7 @@ AN.load = function(cb){
     AN.leads = anApplyOwnerPatches(localLeads || []);
     if (typeof anEnforceRepLeadScope === 'function') anEnforceRepLeadScope();
     AN.leadsStorage = 'local';
-    if(!sb||!_currentUser){ anLeadsLoadDone(); return; }
+    if(!sb||!_currentUser){ anLeadsLoadDone(false); return; }
   }
   anFinishCloudLeadLoad(sb, anLeadsLoadDone);
   }
@@ -10805,8 +10825,9 @@ function anFinishCloudLeadLoad(sb, cb){
       var local = AN.leads || [];
       AN.leads = anApplyOwnerPatches(anMergeLeadsPreferNewer(local, cloudLeads));
       AN.invalidateLeadCaches();
+      // Defer IDB write — don't block UI render
       if(AN.leads.length > 1500 || localStorage.getItem('an-crm-leads-idb') === '1'){
-        setTimeout(function(){ anSaveLeadsToIDB(AN.leads, function(){}); }, 100);
+        setTimeout(function(){ anSaveLeadsToIDB(AN.leads, function(){}); }, 2000);
       }
     } else {
       anApplyOwnerPatches(AN.leads);
@@ -10826,17 +10847,13 @@ function anFinishCloudLeadLoad(sb, cb){
     return;
   }
 
+  // Non-admin: only fetch their own row. Their leads already have correct _repEmail
+  // from our ownership fix, so we don't need to download the admin's entire row.
   var repEmail = (AN.currentRepEmail || '').toLowerCase();
-  var adminEmail = AN_CRM_ADMIN_EMAIL.toLowerCase();
-  Promise.all([
-    sb.from('an_leads').select('*').eq('rep_email', repEmail).order('updated_at',{ascending:false}),
-    sb.from('an_leads').select('*').eq('rep_email', adminEmail).order('updated_at',{ascending:false})
-  ]).then(function(results){
-    var ownLeads = anParseLeadsFromSupabaseRows((results[0].data) || []);
-    var adminLeads = anParseLeadsFromSupabaseRows((results[1].data) || []).filter(function(l){
-      return (l._repEmail || '').toLowerCase() === repEmail;
-    });
-    mergeCloudLeads(anMergeLeadsPreferNewer(ownLeads, adminLeads));
+  sb.from('an_leads').select('*').eq('rep_email', repEmail).order('updated_at',{ascending:false})
+  .then(function(result){
+    var ownLeads = anParseLeadsFromSupabaseRows((result.data) || []);
+    mergeCloudLeads(ownLeads);
   }).catch(function(err){
     console.warn('[CRM] Supabase load failed, using local cache:', err);
     anApplyOwnerPatches(AN.leads);
@@ -11610,7 +11627,8 @@ AN.filtered = function(){
     } else if(AN.currentFilter!=='all' && l.status!==AN.currentFilter) return false;
     if(!anMatchesAdvancedFilters(l, adv)) return false;
     if(q){
-      var hay = (l.firstName+l.lastName+l.company+l.email+l.phone+l.state+(l.title||'')+(l.source||'')+(l.notes||'')).toLowerCase();
+      var fullName = ((l.firstName||'') + ' ' + (l.lastName||'')).trim().toLowerCase().replace(/\s+/g,' ');
+      var hay = (fullName+' '+( l.company||'')+' '+(l.email||'')+' '+(l.phone||'')+' '+(l.state||'')+' '+(l.title||'')+' '+(l.source||'')+' '+(l.notes||'')).toLowerCase();
       var qDigits = q.replace(/\D/g,'');
       var phoneDigits = anDigitsPhone(l.phone);
       if(!hay.includes(q) && !(qDigits && phoneDigits && phoneDigits.includes(qDigits))) return false;
@@ -17486,7 +17504,7 @@ function anFilterOppsForSearch(opps) {
   var q = (AN && AN.oppSearchQ || '').toLowerCase().trim();
   if (!q) return opps;
   return opps.filter(function(o) {
-    var hay = ((o.firstName||'')+(o.lastName||'')+(o.company||'')+(o.email||'')+(o.phone||'')).toLowerCase();
+    var hay = (((o.firstName||'')+' '+(o.lastName||'')).trim()+' '+(o.company||'')+' '+(o.email||'')+' '+(o.phone||'')).toLowerCase().replace(/\s+/g,' ');
     return hay.indexOf(q) >= 0;
   });
 }
@@ -21488,9 +21506,9 @@ body.co-full-record-over-call #an-cs-lead-panel { display: none !important; }
 body.co-full-record-over-call #an-cs-company-panel { display: none !important; }
 .co-life-menu { z-index: 20020 !important; }
 .co-record-layout { display: grid; grid-template-columns: minmax(260px, 300px) minmax(0, 1fr) minmax(260px, 320px); height: 100%; min-height: 0; overflow: hidden; }
-.co-record-left { border-right: 1px solid var(--divider, #e9e9ef); overflow-y: auto; padding: 18px 20px 24px; background: var(--card-bg, #fff); }
-.co-record-center { overflow-y: auto; background: var(--body-bg, #f7f7f9); min-width: 0; }
-.co-record-right { border-left: 1px solid var(--divider, #e9e9ef); overflow-y: auto; padding: 16px; background: var(--card-bg, #fff); }
+.co-record-left { border-right: 1px solid var(--divider, #e9e9ef); overflow-y: auto; padding: 18px 20px 100px; background: var(--card-bg, #fff); }
+.co-record-center { overflow-y: auto; background: var(--body-bg, #f7f7f9); min-width: 0; padding-bottom: 80px; }
+.co-record-right { border-left: 1px solid var(--divider, #e9e9ef); overflow-y: auto; padding: 16px 16px 100px; background: var(--card-bg, #fff); }
 .co-record-back { background: none; border: none; color: #6366f1; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0; margin-bottom: 16px; font-family: inherit; }
 .co-record-back:hover { text-decoration: underline; }
 .co-quick-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 20px; }
@@ -21796,7 +21814,7 @@ function coDeriveLifecycleFromLeads(leads, co) {
   if (leads.some(function(l) { return l.status === 'proposal'; })) return 'proposal';
   if (leads.some(function(l) { return ['demo', 'showed', 'booked_demo'].indexOf(l.status || '') >= 0 || l.isOpportunity; })) return 'demo';
   if (leads.every(function(l) { return l.status === 'lost' || l.status === 'not_interested'; })) return 'lost';
-  if (leads.some(function(l) { return ['contacted', 'followup', 'nurture', 'emailed', 'callback'].indexOf(l.status || '') >= 0; })) return 'negotiating';
+  // Don't auto-derive "negotiating" from basic contact statuses — only from explicit lifecycle saves
   return 'prospecting';
 }
 
@@ -22563,7 +22581,7 @@ function coBuildCompanyPanelHTML(co, stats) {
     +panelRow('Pipeline MRR', stats.pipelineMRR ? '$'+stats.pipelineMRR+'/mo' : '—')
     +'<div class="co-panel-row"><span>Website</span><input type="text" value="'+coEsc(co.website||'')+'" placeholder="website.com" onblur="coSaveField(\''+co.id+'\',\'website\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;outline:none;min-width:120px;text-align:right;font-family:inherit;font-size:12px;"></div>'
     +'<div class="co-panel-row"><span>Industry</span><input type="text" value="'+coEsc(co.industry||'Insurance Agency')+'" onblur="coSaveField(\''+co.id+'\',\'industry\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;outline:none;min-width:120px;text-align:right;font-family:inherit;font-size:12px;"></div>'
-    +'<div class="co-panel-row"><span>Lifecycle</span>'+coBuildLifecyclePicker(co.id, co.lifecycleStage || stats.lifecycle)+'</div>'
+    +'<div class="co-panel-row"><span>Lifecycle</span>'+coBuildLifecyclePicker(co.id, co.lifecycleStage || '')+'</div>'
     +'</div>'
     +'<div style="margin-top:16px;"><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Company notes</div>'
     +'<textarea rows="5" placeholder="Strategy, objections, pricing..." onblur="coSaveField(\''+co.id+'\',\'notes\',this.value)" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:10px;font-size:12px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;">'+coEsc(co.notes||'')+'</textarea></div>'
