@@ -40,6 +40,7 @@
     <button class="nav-item" data-section="opportunities" onclick="showSection('opportunities',this)"><span class="nav-icon">💎</span><span class="nav-label">Opportunities</span></button>
     <button class="nav-item" data-section="companies" onclick="showSection('companies',this)"><span class="nav-icon">🏢</span><span class="nav-label">Companies</span></button>
     <button class="nav-item" data-section="dashboard" onclick="showSection('dashboard',this)"><span class="nav-icon">📊</span><span class="nav-label">Sales Dashboard</span></button>
+    <button class="nav-item" data-section="fieldinsights" onclick="showSection('fieldinsights',this)"><span class="nav-icon">📣</span><span class="nav-label">Field Insights</span></button>
   </div>
 </div>
 
@@ -62,7 +63,7 @@
 <div class="section home-section active" id="section-home">
 <div id="home-dashboard-root" style="min-height:100vh;background:#f7f7f9;"></div>
 </div>
-</div><div class="section" id="section-personas"><div class="page-header"><div class="page-label">Who You're Selling To</div><h1>Buyer Personas</h1><p>Four types of people buy AgentNav. Each one has a different reason for needing us, a different fear about switching, and a different version of success. Click any card to go deeper.</p></div><div class="nba-bar"><span class="nba-label">⚡ Next Best Action</span><div class="nba-actions"><button class="nba-btn primary" onclick="showSection('pitches', null)">Open Elevator Pitches</button><button class="nba-btn" onclick="showSection('coldcall', null)">Cold Call Guide</button><button class="nba-btn" onclick="openCoach()">🧠 Ask AI Coach</button></div></div><div class="content"><div class="persona-selector"><button class="persona-sel-btn active" onclick="showSnapshot('solo',this)">Solo Agent</button><button class="persona-sel-btn" onclick="showSnapshot('small',this)">Small Agency</button><button class="persona-sel-btn" onclick="showSnapshot('large',this)">Large Agency</button><button class="persona-sel-btn" onclick="showSnapshot('enterprise',this)">Enterprise</button></div><div class="persona-snapshot" id="personaSnapshot"><div class="snap-cell"><div class="snap-label">What They Care About</div><div class="snap-value" id="snapCares">Replacing 4-5 tools at under $100/mo</div></div><div class="snap-cell"><div class="snap-label">Main Pain Point</div><div class="snap-value" id="snapPain">OEP is manual chaos every November</div></div><div class="snap-cell"><div class="snap-label">Best Pitch Angle</div><div class="snap-value" id="snapPitch">One login. One client record. Renewal Autopilot.</div></div></div><div class="persona-grid-wrap" id="personaGridWrap"><div class="persona-single-card" id="personaSingleCard"><div class="persona-card blue" onclick="showSnapshot('solo',null)"><div class="persona-emoji">🦊</div><h3>The Solo Agent</h3><div class="persona-size">1 Agent · Going Independent</div><div class="persona-tags" style="margin-top:10px;"><span class="persona-tag">ACA focused</span><span class="persona-tag">Under $100/mo</span><span class="persona-tag">Replacing 4-5 tools</span><span class="persona-tag">One-call close</span></div></div><div class="persona-card green" onclick="showSnapshot('small',null)"><div class="persona-emoji">👥</div><h3>The Small Agency</h3><div class="persona-size">2–8 Agents</div><div class="persona-tags" style="margin-top:10px;"><span class="persona-tag">OEP chaos</span><span class="persona-tag">No team visibility</span><span class="persona-tag">Personal phones</span><span class="persona-tag">White label</span></div></div><div class="persona-card amber" onclick="showSnapshot('large',null)"><div class="persona-emoji">🏢</div><h3>The Large Agency</h3><div class="persona-size">9–20 Agents</div><div class="persona-tags" style="margin-top:10px;"><span class="persona-tag">3-4 disconnected tools</span><span class="persona-tag">Process driven</span><span class="persona-tag">Reporting needs</span><span class="persona-tag">White label</span></div></div><div class="persona-card purple" onclick="showSnapshot('enterprise',null)"><div class="persona-emoji">🏛️</div><h3>The Enterprise</h3><div class="persona-size">21+ Agents</div><div class="persona-tags" style="margin-top:10px;"><span class="persona-tag">Multi-location</span><span class="persona-tag">Compliance</span><span class="persona-tag">Not Salesforce</span><span class="persona-tag">Custom setup</span></div></div></div></div><div class="platform-section-wrap" id="platformSectionWrap"><div class="divider"></div><h2 class="content-heading">The Platform They're Buying</h2><p class="content-sub">AgentNav is the ultimate platform built for the professional health insurance broker.</p><div class="module-grid"><div class="module-card"><div class="module-tag">Quoting & Enrollment</div><h3>End-to-end multi-product quoting</h3><p>ACA, STM, Life, Ancillary, and Indemnity products — all quoted and enrolled in one engine. Side-by-side proposals, HealthSherpa and EDE sync.</p></div><div class="module-card"><div class="module-tag">CRM & Automation</div><h3>Seamless broker management hub</h3><p>Contacts, tasks, marketing, analytics, SMS, and client presentations — all in one place. Household-level records built around how health brokers work.</p></div><div class="module-card green"><div class="module-tag">AI Powered</div><h3>AI Autopilot for maximum efficiency</h3><p>AI-driven automation for Open Enrollment, renewals, and compliance. Auto-generated outreach, smart response tracking, and AI-powered SMS.</p></div><div class="module-card"><div class="module-tag">Reconciliation</div><h3>No-hassle book-of-business reconciliation</h3><p>One-click carrier verification and organized sales and policy logs. Status tracking from Active to Cancelled with commission visibility.</p></div><div class="module-card"><div class="module-tag">Compliance</div><h3>Required compliance forms & secure uploads</h3><p>CMS-required compliance forms including Open Enrollment documentation, plus secure client document uploads. Stay audit-ready automatically.</p></div><div class="module-card"><div class="module-tag">Integrations</div><h3>Marketplace & Medicare integration</h3><p>Native HealthSherpa and EDE platform integration for ACA marketplace enrollment. All client activity synced automatically. No manual imports.</p></div></div></div></div>
+</div><div class="section" id="section-fieldinsights"><div class="page-header"><div class="page-label">Voice of the Market</div><h1>Field Insights Board</h1><p>Real quotes from the field — what prospects say on calls, grouped for marketing, product, and messaging. Pulled from call notes and lead records.</p></div><div id="field-insights-root" style="padding:0 36px 48px;max-width:1180px;margin:0 auto;"></div></div><div class="section" id="section-personas"><div class="page-header"><div class="page-label">Who You're Selling To</div><h1>Buyer Personas</h1><p>Four types of people buy AgentNav. Each one has a different reason for needing us, a different fear about switching, and a different version of success. Click any card to go deeper.</p></div><div class="nba-bar"><span class="nba-label">⚡ Next Best Action</span><div class="nba-actions"><button class="nba-btn primary" onclick="showSection('pitches', null)">Open Elevator Pitches</button><button class="nba-btn" onclick="showSection('coldcall', null)">Cold Call Guide</button><button class="nba-btn" onclick="openCoach()">🧠 Ask AI Coach</button></div></div><div class="content"><div class="persona-selector"><button class="persona-sel-btn active" onclick="showSnapshot('solo',this)">Solo Agent</button><button class="persona-sel-btn" onclick="showSnapshot('small',this)">Small Agency</button><button class="persona-sel-btn" onclick="showSnapshot('large',this)">Large Agency</button><button class="persona-sel-btn" onclick="showSnapshot('enterprise',this)">Enterprise</button></div><div class="persona-snapshot" id="personaSnapshot"><div class="snap-cell"><div class="snap-label">What They Care About</div><div class="snap-value" id="snapCares">Replacing 4-5 tools at under $100/mo</div></div><div class="snap-cell"><div class="snap-label">Main Pain Point</div><div class="snap-value" id="snapPain">OEP is manual chaos every November</div></div><div class="snap-cell"><div class="snap-label">Best Pitch Angle</div><div class="snap-value" id="snapPitch">One login. One client record. Renewal Autopilot.</div></div></div><div class="persona-grid-wrap" id="personaGridWrap"><div class="persona-single-card" id="personaSingleCard"><div class="persona-card blue" onclick="showSnapshot('solo',null)"><div class="persona-emoji">🦊</div><h3>The Solo Agent</h3><div class="persona-size">1 Agent · Going Independent</div><div class="persona-tags" style="margin-top:10px;"><span class="persona-tag">ACA focused</span><span class="persona-tag">Under $100/mo</span><span class="persona-tag">Replacing 4-5 tools</span><span class="persona-tag">One-call close</span></div></div><div class="persona-card green" onclick="showSnapshot('small',null)"><div class="persona-emoji">👥</div><h3>The Small Agency</h3><div class="persona-size">2–8 Agents</div><div class="persona-tags" style="margin-top:10px;"><span class="persona-tag">OEP chaos</span><span class="persona-tag">No team visibility</span><span class="persona-tag">Personal phones</span><span class="persona-tag">White label</span></div></div><div class="persona-card amber" onclick="showSnapshot('large',null)"><div class="persona-emoji">🏢</div><h3>The Large Agency</h3><div class="persona-size">9–20 Agents</div><div class="persona-tags" style="margin-top:10px;"><span class="persona-tag">3-4 disconnected tools</span><span class="persona-tag">Process driven</span><span class="persona-tag">Reporting needs</span><span class="persona-tag">White label</span></div></div><div class="persona-card purple" onclick="showSnapshot('enterprise',null)"><div class="persona-emoji">🏛️</div><h3>The Enterprise</h3><div class="persona-size">21+ Agents</div><div class="persona-tags" style="margin-top:10px;"><span class="persona-tag">Multi-location</span><span class="persona-tag">Compliance</span><span class="persona-tag">Not Salesforce</span><span class="persona-tag">Custom setup</span></div></div></div></div><div class="platform-section-wrap" id="platformSectionWrap"><div class="divider"></div><h2 class="content-heading">The Platform They're Buying</h2><p class="content-sub">AgentNav is the ultimate platform built for the professional health insurance broker.</p><div class="module-grid"><div class="module-card"><div class="module-tag">Quoting & Enrollment</div><h3>End-to-end multi-product quoting</h3><p>ACA, STM, Life, Ancillary, and Indemnity products — all quoted and enrolled in one engine. Side-by-side proposals, HealthSherpa and EDE sync.</p></div><div class="module-card"><div class="module-tag">CRM & Automation</div><h3>Seamless broker management hub</h3><p>Contacts, tasks, marketing, analytics, SMS, and client presentations — all in one place. Household-level records built around how health brokers work.</p></div><div class="module-card green"><div class="module-tag">AI Powered</div><h3>AI Autopilot for maximum efficiency</h3><p>AI-driven automation for Open Enrollment, renewals, and compliance. Auto-generated outreach, smart response tracking, and AI-powered SMS.</p></div><div class="module-card"><div class="module-tag">Reconciliation</div><h3>No-hassle book-of-business reconciliation</h3><p>One-click carrier verification and organized sales and policy logs. Status tracking from Active to Cancelled with commission visibility.</p></div><div class="module-card"><div class="module-tag">Compliance</div><h3>Required compliance forms & secure uploads</h3><p>CMS-required compliance forms including Open Enrollment documentation, plus secure client document uploads. Stay audit-ready automatically.</p></div><div class="module-card"><div class="module-tag">Integrations</div><h3>Marketplace & Medicare integration</h3><p>Native HealthSherpa and EDE platform integration for ACA marketplace enrollment. All client activity synced automatically. No manual imports.</p></div></div></div></div>
 </div><div class="section" id="section-pitches"><div class="page-header"><div class="page-label">Before The Call</div><h1>Elevator Pitches</h1><p>These are not scripts. They're starting points. Use the one that fits the conversation, then make it yours.</p></div><div class="nba-bar"><span class="nba-label">⚡ Next Best Action</span><div class="nba-actions"><button class="nba-btn primary" onclick="qaCopy('AgentNav is everything a professional health insurance broker needs in one place — ACA, STM, Life, Ancillary, and Indemnity quoting, CRM, SMS, and Renewal Autopilot that runs your entire OEP. $79/month for solo agents.')">📋 Copy 20-Second Pitch</button><button class="nba-btn" onclick="openCoach()">🧠 Get Personalized Script</button><button class="nba-btn" id="btn-guide-pitches" onclick="openSplitGuide('pitches',this)" style="background:#0f0f17;color:#fff;border-color:#0f0f17;">📖 Prebuilt Pitches</button></div></div><div class="myscript-panel" id="msp-pitches" style="margin:0 auto 6px;"><div class="myscript-header"><div><div class="myscript-title" style="color:#6366f1;">✏️ My Elevator Pitches</div><div class="myscript-subtitle">Write your own pitches for different scenarios.</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;"><button onclick="addMSStep('pitches','')" class="qa-btn" style="border-color:#6366f1;color:#6366f1;white-space:nowrap;">+ Step</button><button onclick="loadDefaultMS('pitches')" class="qa-btn" style="white-space:nowrap;">↺ Default</button><button onclick="copyMyScript('pitches')" class="qa-btn" style="white-space:nowrap;">📋 Copy All</button></div></div><div class="myscript-steps" id="mss-pitches"><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">1</div><input class="myscript-step-title" type="text" value="20-Second Pitch" placeholder="Pitch name..." onchange="schedSave('pitches')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;">✕</button></div><textarea class="myscript-step-body" placeholder="Write your 20-second pitch here..." onchange="schedSave('pitches')" oninput="schedSave('pitches')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">2</div><input class="myscript-step-title" type="text" value="Solo Agent Pitch" placeholder="Pitch name..." onchange="schedSave('pitches')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;">✕</button></div><textarea class="myscript-step-body" placeholder="Pitch for solo agents who use multiple tools..." onchange="schedSave('pitches')" oninput="schedSave('pitches')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">3</div><input class="myscript-step-title" type="text" value="Agency Owner Pitch" placeholder="Pitch name..." onchange="schedSave('pitches')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;">✕</button></div><textarea class="myscript-step-body" placeholder="Pitch for small agency owners..." onchange="schedSave('pitches')" oninput="schedSave('pitches')"></textarea></div></div><div class="myscript-footer"><button onclick="saveMyScript('pitches')" class="myscript-save-btn" style="background:#10b981;">☁ Save</button><span id="mss-status-pitches" style="font-size:11px;color:#10b981;display:none;">✓ Saved</span><span style="flex:1;"></span><span style="font-size:10.5px;color:#a1a1aa;">Visible in My Scripts →</span></div></div><div id="pitches-guide" style="display:none;"><div class="content"><div class="pitch-card"><div class="pitch-situation">When Someone Asks What AgentNav Is</div><div class="pitch-quote"><p>AgentNav is everything a professional health insurance broker needs in one place. CRM, quoting for ACA, STM, Life, Ancillary, and Indemnity products, SMS, scheduling, policy management, marketing campaigns, and a tool called Renewal Autopilot that runs your entire Open Enrollment season without you doing it manually. It's $79 a month for a solo agent.</p></div><p class="pitch-tip">Use this when you have 20 seconds. Stop there and let them ask the next question.</p><div class="qa-bar"><button class="qa-btn" onclick="copyPitchScript(this)">📋 Copy Script</button><button class="qa-btn-hs" onclick="copyPitchScriptHS(this)">🔗 Copy + Log to HubSpot</button><button class="qa-btn" onclick="openCoach()">🧠 Customize</button></div></div><div class="pitch-card"><div class="pitch-situation">When Talking To A Solo Agent Who Uses Multiple Tools</div><div class="pitch-quote"><p>Most agents I talk to are running four or five different tools and none of them really talk to each other. Their quoting tool doesn't know about their CRM, their CRM doesn't connect to their SMS, and then OE comes and they're manually reaching out to 200 clients one by one. AgentNav connects all of that. One login, one client record, one place where everything lives from first quote to re-enrollment next year.</p></div><p class="pitch-tip">Pause after "one by one." That usually lands.</p></div><div class="pitch-card"><div class="pitch-situation">When Talking To A Small Agency Owner</div><div class="pitch-quote"><p>The thing I hear most from small agency owners is that OE season nearly breaks them every year. They're chasing clients, their agents are texting from personal phones, and there's no way to know which clients haven't responded yet. AgentNav's Renewal Autopilot takes that whole process and automates it. It sends the outreach, tracks who responds, generates updated quotes automatically, and gives you a board where every client has a clear next action. Your agents stop being the bottleneck.</p></div><p class="pitch-tip">Emphasize the board visual. It's something people can picture.</p></div><div class="pitch-card"><div class="pitch-situation">When Comparing To EZLynx</div><div class="pitch-quote"><p>EZLynx is great for P&C agents. If that's your world, they're worth looking at. But if you're selling ACA, STM, Life, Ancillary, and Indemnity products, EZLynx wasn't really built for you. It doesn't have ACA quoting, it doesn't have Renewal Autopilot, and you'll pay $150 or more per user for a platform that's missing half the tools health brokers actually need daily.</p></div><p class="pitch-tip">Don't trash them. Respect the tool, then explain the fit problem.</p></div><div class="pitch-card"><div class="pitch-situation">When Price Comes Up</div><div class="pitch-quote"><p>I get it — $79 a month sounds almost too good. Most agents are spending more than that on just their texting app alone. AgentNav replaces your CRM, quoting tool, SMS platform, enrollment tracker, and renewal workflow. If you're paying for any of those separately right now, you're probably spending more and still not getting what AgentNav gives you in one place.</p></div><p class="pitch-tip">Let the math do the work. Don't over-explain.</p></div></div>
 </div>
 </div><div class="section" id="section-competition"><div class="page-header"><div class="page-label">Before The Call</div><h1>Know Your Competition</h1><p>Seven competitors you'll come up against. Each one has a real strength worth acknowledging. The goal is not to trash the competition. It's to know where AgentNav fits better.</p></div><div class="content"><div class="comp-tabs"><button class="comp-tab active" onclick="showComp('ezlynx',this)">EZLynx</button><button class="comp-tab" onclick="showComp('hawksoft',this)">HawkSoft</button><button class="comp-tab" onclick="showComp('agencybloc',this)">AgencyBloc</button><button class="comp-tab" onclick="showComp('agentcrm',this)">Agent CRM</button><button class="comp-tab" onclick="showComp('lucie',this)">Lucie Health</button><button class="comp-tab" onclick="showComp('agencyzoom',this)">AgencyZoom</button><button class="comp-tab" onclick="showComp('nowcerts',this)">NowCerts</button></div><div class="comp-panel active" id="comp-ezlynx"><div class="comp-dark-banner"><h3>The honest truth about EZLynx</h3><p>EZLynx is the most recognized name in agency management software. 330 plus carriers, 20 years in the market, built for P&C agents. Respect what they've built. But it wasn't designed for health and ACA work, and you'll pay $150 or more per user for a platform that doesn't have half the tools ACA agents actually need.</p></div><div class="comp-two-col"><div class="comp-col"><h4>What they'll say about themselves</h4><div class="comp-quote"><p>"We're the industry's number one comparative rater with 330 plus carriers, a full AMS, built-in AI, and 20 years in the market. Everyone knows EZLynx."</p></div><div class="comp-strength-label">Their Genuine Strengths</div><div class="strength-tags"><span class="strength-tag">330+ P&C carriers</span><span class="strength-tag">Brand recognition</span><span class="strength-tag">Enterprise scale</span><span class="strength-tag">ACORD forms</span></div></div><div class="comp-col"><h4>Where AgentNav wins</h4><div class="win-section-label">You Win When</div><ul class="win-list"><li><span class="win-icon">→</span>Built for ACA agents from day one. ACA, STM, Life, Ancillary, Indemnity quoting, and HealthSherpa/EDE enrollment are native. EZLynx has none of these.</li><li><span class="win-icon">→</span>Renewal Autopilot is a full Open Enrollment management system. EZLynx has a retention report.</li><li><span class="win-icon">→</span>SMS is built in at no extra charge. EZLynx routes you to third-party integrations.</li><li><span class="win-icon">→</span>Scheduling syncs to Google Calendar directly from the client record.</li><li><span class="win-icon">→</span>The price: $79 a month for a solo agent versus $150 plus at EZLynx.</li></ul></div></div><div class="walkaway-card" style="margin-top:14px;"><h4>When to walk away</h4><p>If the agency is primarily P&C with commercial lines, EZLynx is genuinely the better tool. Don't fight that fight. Focus on health-first brokers where you win every time.</p></div></div><div class="comp-panel" id="comp-hawksoft"><div class="comp-dark-banner"><h3>The honest truth about HawkSoft</h3><p>HawkSoft is deeply loved by independent P&C agencies. 18-year average customer retention. It's a desktop-first platform that health brokers often inherit, not choose. If someone is on HawkSoft and sells primarily health and ACA, they're working around a tool, not with one.</p></div><div class="comp-two-col"><div class="comp-col"><h4>What they'll say about themselves</h4><div class="comp-quote"><p>"Our customers stay with us for almost two decades on average. We're built for the independent agent and we know this business."</p></div><div class="comp-strength-label">Their Genuine Strengths</div><div class="strength-tags"><span class="strength-tag">18yr avg retention</span><span class="strength-tag">Independent agent focus</span><span class="strength-tag">QuickBooks integration</span></div></div><div class="comp-col"><h4>Where AgentNav wins</h4><div class="win-section-label">You Win When</div><ul class="win-list"><li><span class="win-icon">→</span>Fully cloud-native — any device, anywhere. HawkSoft requires desktop installation.</li><li><span class="win-icon">→</span>ACA, STM, Life, Ancillary, and Indemnity quoting built in. HawkSoft is P&C at heart.</li><li><span class="win-icon">→</span>Renewal Autopilot — no equivalent exists in HawkSoft.</li><li><span class="win-icon">→</span>Built-in SMS messaging with dedicated agent number included.</li><li><span class="win-icon">→</span>HealthSherpa and EDE enrollment sync — no manual entry.</li></ul></div></div></div><div class="comp-panel" id="comp-agencybloc"><div class="comp-dark-banner"><h3>The honest truth about AgencyBloc</h3><p>AgencyBloc is a legitimate competitor. It was designed for health and life agencies — so the audience overlap is real. Their strength is compliance and group benefits. Their weakness is that Renewal Autopilot doesn't exist there, and the workflow for individual ACA is manual compared to ours.</p></div><div class="comp-two-col"><div class="comp-col"><h4>What they'll say about themselves</h4><div class="comp-quote"><p>"We're the number one agency management platform built specifically for health and life insurance agencies. SOC 2 certified with 6,500 plus agencies on the platform."</p></div><div class="comp-strength-label">Their Genuine Strengths</div><div class="strength-tags"><span class="strength-tag">SOC 2 Type II</span><span class="strength-tag">Group benefits</span><span class="strength-tag">Commission reconciliation</span><span class="strength-tag">6,500+ agencies</span></div></div><div class="comp-col"><h4>Where AgentNav wins</h4><div class="win-section-label">You Win When</div><ul class="win-list"><li><span class="win-icon">→</span>Renewal Autopilot is purpose-built for OEP — AgencyBloc has no equivalent.</li><li><span class="win-icon">→</span>Full product quoting: ACA, STM, Life, Ancillary, and Indemnity in one engine.</li><li><span class="win-icon">→</span>Native HealthSherpa and EDE sync cuts manual entry dramatically.</li><li><span class="win-icon">→</span>AI-powered SMS outreach built into the messaging module.</li><li><span class="win-icon">→</span>Simpler, faster onboarding — agents productive same day.</li></ul></div></div></div><div class="comp-panel" id="comp-agentcrm"><div class="comp-dark-banner"><h3>The honest truth about Agent CRM</h3><p>Agent CRM is a marketing and sales CRM for insurance agents. It's good at funnels, landing pages, and outbound campaigns. It is not a quoting tool, not an enrollment tool, and not a policy manager. Agents who use it still need three other platforms to run their health book.</p></div><div class="comp-two-col"><div class="comp-col"><h4>What they'll say about themselves</h4><div class="comp-quote"><p>"We're the all-in-one CRM built for insurance agents with power dialer, automated follow-up, and marketing funnels that actually convert."</p></div><div class="comp-strength-label">Their Genuine Strengths</div><div class="strength-tags"><span class="strength-tag">Power dialer</span><span class="strength-tag">Marketing automation</span><span class="strength-tag">Landing pages</span><span class="strength-tag">~$97/mo starting</span></div></div><div class="comp-col"><h4>Where AgentNav wins</h4><div class="win-section-label">You Win When</div><ul class="win-list"><li><span class="win-icon">→</span>Native quoting for ACA, STM, Life, Ancillary, and Indemnity — Agent CRM has no quoting engine at all.</li><li><span class="win-icon">→</span>Policy management and one-click carrier verification built in.</li><li><span class="win-icon">→</span>HealthSherpa and EDE enrollment sync — no manual entry.</li><li><span class="win-icon">→</span>Renewal Autopilot vs. basic renewal reminders.</li><li><span class="win-icon">→</span>Compliance forms and secure document uploads included.</li></ul></div></div></div><div class="comp-panel" id="comp-lucie"><div class="comp-dark-banner"><h3>The honest truth about Lucie Health</h3><p>Lucie Health is an enrollment tool, not a full platform. It helps agents get clients enrolled on the marketplace. That's its purpose and it does it reasonably well. But it's not a CRM, not a quoting engine, and not a retention or renewal tool. Agents who use Lucie still need everything else.</p></div><div class="comp-two-col"><div class="comp-col"><h4>What they'll say about themselves</h4><div class="comp-quote"><p>"We make ACA enrollment simple and fast. Agents can get clients enrolled in minutes with our streamlined marketplace connection."</p></div><div class="comp-strength-label">Their Genuine Strengths</div><div class="strength-tags"><span class="strength-tag">Simple enrollment UX</span><span class="strength-tag">Marketplace connection</span><span class="strength-tag">Fast onboarding</span></div></div><div class="comp-col"><h4>Where AgentNav wins</h4><div class="win-section-label">You Win When</div><ul class="win-list"><li><span class="win-icon">→</span>Full CRM, quoting for all product lines, policy tracking, and SMS — not just enrollment.</li><li><span class="win-icon">→</span>Renewal Autopilot manages the entire OEP cycle, not just enrollment.</li><li><span class="win-icon">→</span>Compliance forms, secure uploads, and book reconciliation included.</li><li><span class="win-icon">→</span>One platform instead of four — AgentNav replaces Lucie plus everything else they're still using.</li></ul></div></div></div><div class="comp-panel" id="comp-agencyzoom"><div class="comp-dark-banner"><h3>The honest truth about AgencyZoom</h3><p>AgencyZoom is a sales pipeline and CRM tool popular with captive and independent agents who sell multiple lines. It's a solid sales management tool but it was not built around the health and ACA workflow, and it lacks the quoting, enrollment, and OEP automation that health-first agents need.</p></div><div class="comp-two-col"><div class="comp-col"><h4>What they'll say about themselves</h4><div class="comp-quote"><p>"We're the modern sales management platform for insurance agencies. Pipeline, automation, and performance dashboards in one place."</p></div><div class="comp-strength-label">Their Genuine Strengths</div><div class="strength-tags"><span class="strength-tag">Sales pipeline</span><span class="strength-tag">Multi-line support</span><span class="strength-tag">Performance dashboards</span></div></div><div class="comp-col"><h4>Where AgentNav wins</h4><div class="win-section-label">You Win When</div><ul class="win-list"><li><span class="win-icon">→</span>ACA, STM, Life, Ancillary, and Indemnity quoting and enrollment built natively.</li><li><span class="win-icon">→</span>HealthSherpa and EDE integration — AgencyZoom has no enrollment sync.</li><li><span class="win-icon">→</span>Renewal Autopilot manages OEP end-to-end — no equivalent exists.</li><li><span class="win-icon">→</span>Compliance forms and secure document uploads included.</li></ul></div></div></div><div class="comp-panel" id="comp-nowcerts"><div class="comp-dark-banner"><h3>The honest truth about NowCerts</h3><p>NowCerts is a cloud-based AMS built for independent agencies. It handles policy management and client records well. It skews toward P&C and lacks the health-specific workflows, quoting engine, and OEP automation that health brokers need. Pricing is per-policy, which gets expensive as the book grows.</p></div><div class="comp-two-col"><div class="comp-col"><h4>What they'll say about themselves</h4><div class="comp-quote"><p>"NowCerts is the modern cloud AMS that grows with your agency. Policy management, certificates, and automation — all in one place."</p></div><div class="comp-strength-label">Their Genuine Strengths</div><div class="strength-tags"><span class="strength-tag">Cloud-native AMS</span><span class="strength-tag">Certificate generation</span><span class="strength-tag">Per-policy pricing</span></div></div><div class="comp-col"><h4>Where AgentNav wins</h4><div class="win-section-label">You Win When</div><ul class="win-list"><li><span class="win-icon">→</span>Health-native quoting for ACA, STM, Life, Ancillary, and Indemnity — NowCerts has no quoting engine.</li><li><span class="win-icon">→</span>HealthSherpa and EDE enrollment sync built in.</li><li><span class="win-icon">→</span>Renewal Autopilot manages full OEP cycle.</li><li><span class="win-icon">→</span>Flat monthly pricing vs. per-policy fees that grow with the book.</li></ul></div></div></div></div>
@@ -648,10 +649,21 @@ window.seMakeStep = function(st, idx) {
 
   var ti = document.createElement('input');
   ti.type = 'text';
-  ti.value = st.title || '';
+  ti.className = 'se-step-title-input';
+  var parsedTitle = (typeof anSplitTitleTime === 'function') ? anSplitTitleTime(st.title || '') : { title: st.title || '', time: '' };
+  ti.value = st.title && st.time ? (st.title || '') : parsedTitle.title;
   ti.placeholder = 'Step title...';
-  ti.style.cssText = 'flex:1;border:none;background:none;font-size:12px;font-weight:600;color:#09090b;font-family:inherit;outline:none;';
+  ti.style.cssText = 'flex:1;min-width:0;border:none;background:none;font-size:12px;font-weight:600;color:#09090b;font-family:inherit;outline:none;';
   ti.oninput = seMarkDirty;
+
+  var tm = document.createElement('input');
+  tm.type = 'text';
+  tm.className = 'se-step-time-input';
+  tm.value = st.time || parsedTitle.time || '';
+  tm.placeholder = '0:00-0:15';
+  tm.title = 'Time range for this step';
+  tm.style.cssText = 'width:82px;flex-shrink:0;border:1px solid #e4e4e7;border-radius:5px;padding:3px 6px;font-size:10px;font-weight:600;color:#71717a;font-family:var(--mono,monospace);background:#fff;outline:none;';
+  tm.oninput = seMarkDirty;
 
   var drag = document.createElement('span');
   drag.textContent = '⋮⋮';
@@ -663,7 +675,7 @@ window.seMakeStep = function(st, idx) {
   del.style.cssText = 'background:none;border:none;color:#d4d4d8;font-size:14px;cursor:pointer;padding:0 4px;line-height:1;';
   del.onclick = function() { div.remove(); seRenumber(); seMarkDirty(); };
 
-  head.append(num, ti, drag, del);
+  head.append(num, ti, tm, drag, del);
 
   var ta = document.createElement('textarea');
   ta.value = st.body || '';
@@ -1948,6 +1960,211 @@ function getLangLabel(code) {
   return l ? l.flag + ' ' + l.label : '🌐 ' + (code || 'English');
 }
 
+window.seCloneSteps = function(steps) {
+  return (steps || []).map(function(st) {
+    return { title: st.title || '', time: st.time || '', body: st.body || '' };
+  });
+};
+
+window.seEnsureScriptI18n = function(s) {
+  if (!s) return;
+  if (!s.i18n) s.i18n = {};
+  if (!s.sourceSteps && s.steps && s.steps.length) {
+    s.sourceSteps = seCloneSteps(s.steps);
+  }
+  if (s.sourceSteps && !s.i18n.en) s.i18n.en = seCloneSteps(s.sourceSteps);
+};
+
+window.seSnapshotStepsToLang = function(s, langCode, steps) {
+  if (!s) return;
+  seEnsureScriptI18n(s);
+  var cloned = seCloneSteps(steps);
+  if (!langCode || langCode === 'en') s.sourceSteps = cloned;
+  s.i18n[langCode || 'en'] = cloned;
+};
+
+window.seGetStepsForLang = function(s, langCode) {
+  if (!s) return [];
+  seEnsureScriptI18n(s);
+  langCode = langCode || 'en';
+  if (langCode === 'en') return seCloneSteps(s.sourceSteps || s.steps || []);
+  if (s.i18n && s.i18n[langCode] && s.i18n[langCode].length) return seCloneSteps(s.i18n[langCode]);
+  return seCloneSteps(s.sourceSteps || s.steps || []);
+};
+
+window.seGetScriptStepsForLead = function(script, leadLang) {
+  if (!script) return [];
+  leadLang = leadLang || 'en';
+  seEnsureScriptI18n(script);
+  if (leadLang === 'en') return seCloneSteps(script.sourceSteps || script.steps || []);
+  if (script.i18n && script.i18n[leadLang] && script.i18n[leadLang].length) {
+    return seCloneSteps(script.i18n[leadLang]);
+  }
+  return seCloneSteps(script.sourceSteps || script.steps || []);
+};
+
+window.seParseTranslatedSteps = function(text) {
+  if (!text) return [];
+  var raw = text.trim();
+  var jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonMatch) raw = jsonMatch[1].trim();
+  var start = raw.indexOf('[');
+  var end = raw.lastIndexOf(']');
+  if (start >= 0 && end > start) {
+    try {
+      var parsed = JSON.parse(raw.slice(start, end + 1));
+      if (Array.isArray(parsed) && parsed.length) {
+        return parsed.map(function(st, i) {
+          return {
+            title: (st.title || st.name || ('Step ' + (i + 1))).trim(),
+            time: (st.time || '').trim(),
+            body: (st.body || st.text || '').trim()
+          };
+        }).filter(function(st) { return st.title || st.body; });
+      }
+    } catch(e) {}
+  }
+  var stepPattern = /\d+\.\s+([^\n:]+)[:\n]([\s\S]*?)(?=\n\d+\.|$)/g;
+  var parsed = [];
+  var m;
+  while ((m = stepPattern.exec(text)) !== null) {
+    parsed.push({ title: m[1].trim(), time: '', body: m[2].trim() });
+  }
+  return parsed;
+};
+
+window.seShowTranslating = function(on, langLabel) {
+  var wrap = document.getElementById('se-editor-wrap');
+  if (!wrap) return;
+  var el = document.getElementById('se-translate-overlay');
+  if (!on) {
+    if (el) el.remove();
+    return;
+  }
+  if (el) return;
+  el = document.createElement('div');
+  el.id = 'se-translate-overlay';
+  el.style.cssText = 'position:absolute;inset:0;background:rgba(255,255,255,0.92);z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;';
+  el.innerHTML = '<div style="width:32px;height:32px;border:3px solid #e4e4e7;border-top-color:#6366f1;border-radius:50%;animation:seSpin 0.8s linear infinite;"></div>'
+    + '<div style="font-size:14px;font-weight:700;color:#09090b;">Translating to ' + (langLabel || 'target language') + '…</div>'
+    + '<div style="font-size:12px;color:#71717a;">This usually takes a few seconds</div>';
+  if (!document.getElementById('se-spin-style')) {
+    var st = document.createElement('style');
+    st.id = 'se-spin-style';
+    st.textContent = '@keyframes seSpin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(st);
+  }
+  wrap.style.position = 'relative';
+  wrap.appendChild(el);
+};
+
+window.seTranslateScriptToLang = function(sourceSteps, langCode, callback) {
+  var langLabel = getLangLabel(langCode);
+  if (langCode === 'other') {
+    callback('Pick a specific language (Español, Português, or Français) to auto-translate.');
+    return;
+  }
+  if (langCode === 'en') {
+    callback(null, seCloneSteps(sourceSteps));
+    return;
+  }
+  var system = 'You are an expert bilingual sales coach for AgentNav, a health insurance broker platform. '
+    + 'Translate sales scripts naturally for native speakers — not word-for-word. '
+    + 'Keep merge fields like {{first_name}}, {{rep_name}}, {{company}} exactly as-is. '
+    + 'Return ONLY a JSON array: [{"title":"...","time":"0:00-0:15","body":"..."}]. Keep time ranges unchanged. No markdown, no commentary.';
+  var prompt = 'Translate this sales script to ' + langLabel + '. Same number of steps, translated titles and bodies.\n\n'
+    + JSON.stringify(sourceSteps);
+
+  fetch('/.netlify/functions/coach', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2000,
+      system: system,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var text = '';
+    if (data.content) {
+      for (var i = 0; i < data.content.length; i++) {
+        if (data.content[i].type === 'text') text += data.content[i].text;
+      }
+    }
+    if (!text && data.error) throw new Error(data.error.message || data.error);
+    var parsed = seParseTranslatedSteps(text);
+    if (!parsed.length) throw new Error('Could not parse translation — try again');
+    callback(null, parsed);
+  })
+  .catch(function(e) { callback(e.message || 'Translation failed'); });
+};
+
+window.seOnLanguageChange = function(newLang) {
+  var s = (typeof seScripts !== 'undefined' && seCurrentId)
+    ? seScripts.find(function(x) { return x.id === seCurrentId; })
+    : null;
+  if (!s) {
+    if (typeof seMarkDirty === 'function') seMarkDirty();
+    return;
+  }
+
+  var langEl = document.getElementById('se-script-lang');
+  var prevLang = s._seViewLang || s.lang || 'en';
+  if (newLang === prevLang) return;
+
+  var currentSteps = (typeof seCollectSteps === 'function') ? seCollectSteps() : [];
+  seSnapshotStepsToLang(s, prevLang, currentSteps);
+
+  s._seViewLang = newLang;
+  s.lang = newLang;
+
+  if (newLang === 'en') {
+    if (langEl) langEl.value = 'en';
+    if (typeof seRenderSteps === 'function') seRenderSteps(seGetStepsForLang(s, 'en'));
+    if (typeof seMarkDirty === 'function') seMarkDirty();
+    return;
+  }
+
+  if (s.i18n && s.i18n[newLang] && s.i18n[newLang].length) {
+    if (langEl) langEl.value = newLang;
+    if (typeof seRenderSteps === 'function') seRenderSteps(seGetStepsForLang(s, newLang));
+    if (typeof seMarkDirty === 'function') seMarkDirty();
+    return;
+  }
+
+  var source = seGetStepsForLang(s, 'en');
+  var hasContent = source.some(function(st) { return st.body && st.body.trim().length > 5; });
+    if (!hasContent) {
+    if (langEl) langEl.value = newLang;
+    if (typeof seRenderSteps === 'function') seRenderSteps([{ title: 'Step 1', time: '', body: '' }]);
+    if (typeof seMarkDirty === 'function') seMarkDirty();
+    return;
+  }
+
+  seShowTranslating(true, getLangLabel(newLang));
+  if (langEl) langEl.disabled = true;
+
+  seTranslateScriptToLang(source, newLang, function(err, translated) {
+    seShowTranslating(false);
+    if (langEl) langEl.disabled = false;
+    if (err) {
+      if (langEl) langEl.value = prevLang;
+      s._seViewLang = prevLang;
+      s.lang = prevLang;
+      if (typeof showToast === 'function') showToast('Translation failed: ' + err);
+      return;
+    }
+    s.i18n[newLang] = seCloneSteps(translated);
+    if (langEl) langEl.value = newLang;
+    if (typeof seRenderSteps === 'function') seRenderSteps(translated);
+    if (typeof seMarkDirty === 'function') seMarkDirty();
+    if (typeof seSave === 'function') seSave();
+    if (typeof showToast === 'function') showToast('Translated to ' + getLangLabel(newLang));
+  });
+};
+
 // ── INJECT LANGUAGE SELECTOR INTO SCRIPT EDITOR TOOLBAR ─────
 document.addEventListener('DOMContentLoaded', function() {
   // Wait for the editor toolbar to exist
@@ -1959,14 +2176,14 @@ document.addEventListener('DOMContentLoaded', function() {
     var langSelect = document.createElement('select');
     langSelect.id = 'se-script-lang';
     langSelect.style.cssText = 'border:1.5px solid #e4e4e7;border-radius:6px;padding:5px 8px;font-size:12px;font-weight:600;color:#52525b;font-family:inherit;cursor:pointer;outline:none;background:#fff;';
-    langSelect.title = 'Script Language';
+    langSelect.title = 'Preferred language — auto-translates script when changed';
     SE_LANGUAGES.forEach(function(l) {
       var opt = document.createElement('option');
       opt.value = l.code;
       opt.textContent = l.flag + ' ' + l.label;
       langSelect.appendChild(opt);
     });
-    langSelect.onchange = seMarkDirty;
+    langSelect.onchange = function() { seOnLanguageChange(this.value); };
     // Insert after the type dropdown
     typeSelect.parentNode.insertBefore(langSelect, typeSelect.nextSibling);
   }, 200);
@@ -1976,8 +2193,13 @@ document.addEventListener('DOMContentLoaded', function() {
 var _origSeShowEditor = window.seShowEditor;
 window.seShowEditor = function(s) {
   _origSeShowEditor(s);
+  seEnsureScriptI18n(s);
+  var viewLang = s.lang || 'en';
+  s._seViewLang = viewLang;
   var langEl = document.getElementById('se-script-lang');
-  if (langEl) langEl.value = s.lang || 'en';
+  if (langEl) langEl.value = viewLang;
+  var steps = seGetStepsForLang(s, viewLang);
+  if (typeof seRenderSteps === 'function') seRenderSteps(steps);
 };
 
 // ── PATCH seSave to persist lang field (stay in editor on auto-save) ──
@@ -2001,10 +2223,14 @@ window.seSave = function(goToLibrary) {
     if (n) n.value = newName;
   }
 
+  var currentSteps = seCollectSteps();
+  seSnapshotStepsToLang(s, newLang, currentSteps);
+
   s.name = newName;
   s.type = newType;
   s.lang = newLang;
-  s.steps = seCollectSteps();
+  s._seViewLang = newLang;
+  s.steps = currentSteps;
   s.updatedAt = new Date().toISOString();
   sePersist();
   seDirty = false;
@@ -2033,7 +2259,7 @@ var _origSeNewScriptOfType = window.seNewScriptOfType;
 window.seNewScriptOfType = function(type) {
   var id = 's' + Date.now();
   var typeNames = { coldcall:'Cold Call Script', discovery:'Discovery Call Script', demo:'Demo Meeting Script', closing:'Closing Meeting Script', onboarding:'Onboarding Meeting Script', objections:'Objection Handling Script', battlecards:'Battle Card', talktracks:'Talk Track', custom:'New Script' };
-  var s = { id:id, name:typeNames[type]||'New Script', type:type, lang:'en', steps:[{title:'Step 1', body:''}] };
+  var s = { id:id, name:typeNames[type]||'New Script', type:type, lang:'en', steps:[{title:'Step 1', time:'', body:''}], sourceSteps:[{title:'Step 1', time:'', body:''}], i18n:{ en:[{title:'Step 1', time:'', body:''}] } };
   seScripts.push(s); sePersist(); seRenderLib();
   setTimeout(function(){ seOpenScript(id); var nEl = document.getElementById('se-script-name'); if(nEl){nEl.focus();nEl.select();} }, 50);
 };
@@ -3495,60 +3721,9 @@ window.seRenderLib = function() {
   el.appendChild(foot);
 };
 
-// ── FIX 2: Language change triggers AI translation offer ─────
-document.addEventListener('DOMContentLoaded', function() {
-  setTimeout(function() {
-    var langSelect = document.getElementById('se-script-lang');
-    if (!langSelect || langSelect._langPatchApplied) return;
-    langSelect._langPatchApplied = true;
+// ── Language dropdown auto-translates via seOnLanguageChange ──
 
-    var LANG_NAMES = { en: 'English', es: 'Spanish', pt: 'Portuguese', fr: 'French', other: 'another language' };
-
-    langSelect.addEventListener('change', function() {
-      var newLang = this.value;
-      if (newLang === 'en') return; // switching back to English, no prompt needed
-
-      var langLabel = LANG_NAMES[newLang] || newLang;
-
-      // Only offer if there's an existing script with content
-      var s = (typeof seScripts !== 'undefined') && seCurrentId
-        ? seScripts.filter(function(x) { return x.id === seCurrentId; })[0]
-        : null;
-
-      var steps = (typeof seCollectSteps === 'function') ? seCollectSteps() : [];
-      var hasContent = steps.some(function(st) { return st.body && st.body.trim().length > 10; });
-
-      var msgs = document.getElementById('se-ai-msgs');
-      if (!msgs) return;
-
-      // Clear the suggestion chips area and inject the translation offer
-      var suggList = document.getElementById('se-sugg-list');
-      if (suggList) suggList.innerHTML = '';
-
-      // Add translation offer card
-      var offerCard = document.createElement('div');
-      offerCard.style.cssText = 'background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:10px;padding:12px;';
-      offerCard.innerHTML = '<div style="font-size:10px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Language switched to ' + langLabel + '</div>'
-        + '<div style="font-size:12px;color:rgba(255,255,255,0.75);margin-bottom:10px;line-height:1.5;">'
-        + (hasContent
-            ? 'I can translate your current script to ' + langLabel + ', or help you write a fresh one.'
-            : 'I can help you write a ' + langLabel + ' script from scratch, or translate one you paste in.')
-        + '</div>'
-        + '<div style="display:flex;flex-direction:column;gap:6px;">'
-        + (hasContent
-            ? '<button onclick="seOfferTranslate(\'' + newLang + '\',\'' + langLabel + '\',true)" style="background:#10b981;color:#fff;border:none;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left;">Translate my current script to ' + langLabel + '</button>'
-            : '')
-        + '<button onclick="seOfferTranslate(\'' + newLang + '\',\'' + langLabel + '\',false)" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);border-radius:7px;padding:8px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-align:left;">Write a new ' + langLabel + ' script from scratch</button>'
-        + '<button onclick="seOfferTranslate(\'' + newLang + '\',\'' + langLabel + '\',\'paste\')" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);border-radius:7px;padding:8px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-align:left;">I\'ll paste text — translate it to ' + langLabel + '</button>'
-        + '</div>';
-
-      msgs.innerHTML = '';
-      msgs.appendChild(offerCard);
-    });
-  }, 600);
-});
-
-// ── Translation handler ──────────────────────────────────────
+// ── Translation handler (AI panel fallback) ─────────────────
 window.seOfferTranslate = function(langCode, langLabel, mode) {
   var msgs = document.getElementById('se-ai-msgs');
   var inp  = document.getElementById('se-ai-input');
@@ -3561,13 +3736,27 @@ window.seOfferTranslate = function(langCode, langLabel, mode) {
   var prompt = '';
 
   if (mode === true) {
-    // Translate current script
     var steps = (typeof seCollectSteps === 'function') ? seCollectSteps() : [];
-    var scriptText = steps.map(function(st, i) {
-      return (i + 1) + '. ' + st.title + ':\n' + (st.body || '');
-    }).join('\n\n');
-
-    prompt = 'Please translate this entire sales script to ' + langLabel + '. Keep the same structure and step titles (translate those too). Make it sound natural for a native ' + langLabel + ' speaker, not a literal translation. Here is the script:\n\n' + scriptText;
+    seTranslateScriptToLang(steps, langCode, function(err, translated) {
+      if (err) {
+        if (typeof showToast === 'function') showToast('Translation failed: ' + err);
+        return;
+      }
+      var s = seScripts.find(function(x) { return x.id === seCurrentId; });
+      if (s) {
+        seSnapshotStepsToLang(s, s._seViewLang || s.lang || 'en', steps);
+        s.i18n[langCode] = translated;
+        s.lang = langCode;
+        s._seViewLang = langCode;
+        var langEl = document.getElementById('se-script-lang');
+        if (langEl) langEl.value = langCode;
+      }
+      if (typeof seRenderSteps === 'function') seRenderSteps(translated);
+      if (typeof seMarkDirty === 'function') seMarkDirty();
+      if (typeof seSave === 'function') seSave();
+      if (typeof showToast === 'function') showToast('Translated to ' + langLabel);
+    });
+    return;
 
   } else if (mode === false) {
     // Write fresh
@@ -3649,44 +3838,40 @@ window.seOfferTranslate = function(langCode, langLabel, mode) {
 window.seApplyTranslation = function(bubbleId) {
   var bubble = document.getElementById(bubbleId);
   if (!bubble) return;
-  // Get text content (strip HTML)
   var raw = bubble.innerText || bubble.textContent || '';
-  // Remove the "Apply to script steps" button text
   raw = raw.replace('Apply to script steps', '').replace('or copy manually above', '').trim();
-
   if (!raw || !confirm('This will replace your current step content with the translation. Continue?')) return;
 
-  // Parse numbered steps from the translation
-  var stepPattern = /\d+\.\s+([^\n:]+)[:\n]([\s\S]*?)(?=\n\d+\.|$)/g;
-  var parsed = [];
-  var m;
-  while ((m = stepPattern.exec(raw)) !== null) {
-    parsed.push({ title: m[1].trim(), body: m[2].trim() });
+  var parsed = seParseTranslatedSteps(raw);
+  if (!parsed.length) parsed = [{ title: 'Step 1', time: '', body: raw }];
+
+  var s = seScripts.find(function(x) { return x.id === seCurrentId; });
+  var langCode = (document.getElementById('se-script-lang') || {}).value || (s && s.lang) || 'en';
+  if (s) {
+    seSnapshotStepsToLang(s, s._seViewLang || s.lang || 'en', typeof seCollectSteps === 'function' ? seCollectSteps() : []);
+    seSnapshotStepsToLang(s, langCode, parsed);
+    s.lang = langCode;
+    s._seViewLang = langCode;
   }
 
-  if (!parsed.length) {
-    // Fallback: just dump all text into step 1
-    parsed = [{ title: 'Step 1', body: raw }];
-  }
-
-  // Find the steps container and update
-  var stepsList = document.getElementById('se-steps-list');
-  if (!stepsList) return;
-
-  var stepDivs = stepsList.querySelectorAll('[draggable="true"]');
-  parsed.forEach(function(p, i) {
-    if (i < stepDivs.length) {
-      var ta = stepDivs[i].querySelector('textarea');
-      var ti = stepDivs[i].querySelector('input[type="text"]');
-      if (ta) ta.value = p.body;
-      if (ti) ti.value = p.title;
-    } else {
-      // Add new step
-      if (typeof seAddStep === 'function') seAddStep({ title: p.title, body: p.body });
+  if (typeof seRenderSteps === 'function') seRenderSteps(parsed);
+  else {
+    var stepsList = document.getElementById('se-steps-list');
+    if (stepsList) {
+      var stepDivs = stepsList.querySelectorAll('[draggable="true"]');
+      parsed.forEach(function(p, i) {
+        if (i < stepDivs.length) {
+          var ta = stepDivs[i].querySelector('textarea');
+          var ti = stepDivs[i].querySelector('input[type="text"]');
+          if (ta) ta.value = p.body;
+          if (ti) ti.value = p.title;
+        } else if (typeof seAddStep === 'function') seAddStep({ title: p.title, body: p.body });
+      });
     }
-  });
+  }
 
   if (typeof seMarkDirty === 'function') seMarkDirty();
+  if (typeof seSave === 'function') seSave();
   if (typeof showToast === 'function') showToast('Translation applied! Review and save.');
 };
 
@@ -8795,23 +8980,48 @@ window.anLeadInBookedDemoBucket = function(lead) {
   return false;
 };
 
-window.anCountBookedDemosToday = function(pool) {
+window.anLeadBookedDemoToday = function(lead) {
+  if (!lead) return false;
   var today = new Date().toISOString().split('T')[0];
+  if (lead.demoBookedAt && String(lead.demoBookedAt).slice(0, 10) === today) return true;
+  if ((lead.demoLifecycle || []).some(function(ev) {
+    return ev.type === 'booked' && (ev.date === today || String(ev.at || '').slice(0, 10) === today);
+  })) return true;
+  if (typeof _dash !== 'undefined' && _dash.demos) {
+    return _dash.demos.some(function(d) {
+      return (d.leadId === lead.id || d.id === 'demo-' + lead.id) && d.bookedDate === today;
+    });
+  }
+  return false;
+};
+
+window.anLeadMatchesBookedDemoFilter = function(lead) {
+  if (!lead) return false;
+  if (typeof anLeadInBookedDemoBucket === 'function' && anLeadInBookedDemoBucket(lead)) return true;
+  if (typeof anLeadBookedDemoToday === 'function' && anLeadBookedDemoToday(lead)) return true;
+  return false;
+};
+
+window.anRepScopedLeads = function() {
+  return (typeof AN !== 'undefined' && AN.leads ? AN.leads : []).filter(function(l) {
+    if (!AN.isAdmin && typeof anRepOwnsLead === 'function' && !anRepOwnsLead(l)) return false;
+    var leadOwner = (l._repEmail || '').toLowerCase();
+    if (AN.isAdmin && AN.repFilter === '__mine__') {
+      if (leadOwner !== (AN.currentRepEmail || '').toLowerCase()) return false;
+    } else if (AN.isAdmin && AN.repFilter && leadOwner !== AN.repFilter.toLowerCase()) return false;
+    return true;
+  });
+};
+
+window.anCountBookedDemosToday = function(pool) {
   var seen = {};
   var count = 0;
   (pool || []).forEach(function(lead) {
     if (!lead || !lead.id || seen[lead.id]) return;
-    var bookedToday = false;
-    if (lead.demoBookedAt && String(lead.demoBookedAt).slice(0, 10) === today) bookedToday = true;
-    (lead.demoLifecycle || []).forEach(function(ev) {
-      if (ev.type === 'booked' && (ev.date === today || String(ev.at || '').slice(0, 10) === today)) bookedToday = true;
-    });
-    if (typeof _dash !== 'undefined' && _dash.demos) {
-      _dash.demos.forEach(function(d) {
-        if ((d.leadId === lead.id || d.id === 'demo-' + lead.id) && d.bookedDate === today) bookedToday = true;
-      });
+    if (typeof anLeadBookedDemoToday === 'function' && anLeadBookedDemoToday(lead)) {
+      seen[lead.id] = true;
+      count++;
     }
-    if (bookedToday) { seen[lead.id] = true; count++; }
   });
   return count;
 };
@@ -10275,15 +10485,14 @@ window.anRefreshCRMStatsBar = function(){
   var statCounts = {};
   AN_LEAD_STATUSES.forEach(function(s){ statCounts[s.id] = 0; });
   pool.forEach(function(l){
-    if (typeof anLeadInBookedDemoBucket === 'function' && anLeadInBookedDemoBucket(l)) {
-      statCounts.booked_demo++;
-      return;
-    }
     var st = l.status || 'new';
+    if (st === 'booked_demo') return;
     if (statCounts[st] !== undefined) statCounts[st]++;
   });
-  var demosToday = typeof anCountBookedDemosToday === 'function' ? anCountBookedDemosToday(AN.leads) : 0;
-  if (demosToday > statCounts.booked_demo) statCounts.booked_demo = demosToday;
+  statCounts.booked_demo = (typeof anRepScopedLeads === 'function' ? anRepScopedLeads() : pool).filter(function(l) {
+    return typeof anLeadMatchesBookedDemoFilter === 'function' && anLeadMatchesBookedDemoFilter(l);
+  }).length;
+  var demosToday = typeof anCountBookedDemosToday === 'function' ? anCountBookedDemosToday(typeof anRepScopedLeads === 'function' ? anRepScopedLeads() : AN.leads) : 0;
   var activeStatus = (AN.advancedFilters && AN.advancedFilters.status) ? AN.advancedFilters.status : ((AN.currentFilter && AN.currentFilter !== 'all' && AN.currentFilter !== 'hot' && AN.currentFilter !== 'demo' && AN.currentFilter !== 'followup') ? AN.currentFilter : '');
   var html = AN_LEAD_STATUSES.map(function(s){
     var active = activeStatus === s.id || (s.id === 'booked_demo' && AN.currentFilter === 'demo');
@@ -10456,8 +10665,9 @@ AN.filtered = function(){
   if(AN._filteredCache && AN._filteredCache.key === cacheKey) return AN._filteredCache.list.slice();
   var q = (AN.searchQ || '').toLowerCase();
   var adv = AN.advancedFilters || {};
+  var demoFilterActive = AN.currentFilter === 'demo' || AN.currentFilter === 'booked_demo';
   var list = AN.leads.filter(function(l){
-    if(!anIsProspect(l)) return false;
+    if (!demoFilterActive && !anIsProspect(l)) return false;
     if(!AN.isAdmin && !anRepOwnsLead(l)) return false;
     var leadOwner = (l._repEmail || '').toLowerCase();
     if(AN.isAdmin && AN.repFilter === '__mine__'){
@@ -10468,9 +10678,9 @@ AN.filtered = function(){
       if((l.status||'new') !== adv.status) return false;
     } else if(AN.currentFilter==='hot') {
       if(['new','contacted','followup','emailed'].indexOf(l.status||'new') < 0) return false;
-    } else if(AN.currentFilter==='demo') {
-      if (typeof anLeadInBookedDemoBucket === 'function') {
-        if (!anLeadInBookedDemoBucket(l)) return false;
+    } else if(demoFilterActive) {
+      if (typeof anLeadMatchesBookedDemoFilter === 'function') {
+        if (!anLeadMatchesBookedDemoFilter(l)) return false;
       } else if (l.status !== 'booked_demo') return false;
     } else if(AN.currentFilter==='followup') {
       if(!l.nextFollowUp) return false;
@@ -10554,23 +10764,25 @@ function buildCRMShell(){
   var statPool = AN.isAdmin ? AN.leads : (typeof anFilterLeadsForCurrentRep === 'function' ? anFilterLeadsForCurrentRep(AN.leads) : AN.leads);
   statPool.forEach(function(l){
     if (!anIsProspect(l)) return;
-    if (typeof anLeadInBookedDemoBucket === 'function' && anLeadInBookedDemoBucket(l)) {
-      statCounts.booked_demo++;
-      return;
-    }
+    if ((l.status || '') === 'booked_demo') return;
     if (statCounts[l.status] !== undefined) statCounts[l.status]++;
   });
-  var shellDemosToday = typeof anCountBookedDemosToday === 'function' ? anCountBookedDemosToday(AN.leads) : 0;
-  if (shellDemosToday > statCounts.booked_demo) statCounts.booked_demo = shellDemosToday;
+  statCounts.booked_demo = (typeof anRepScopedLeads === 'function' ? anRepScopedLeads() : statPool).filter(function(l) {
+    return typeof anLeadMatchesBookedDemoFilter === 'function' && anLeadMatchesBookedDemoFilter(l);
+  }).length;
+  var shellDemosToday = typeof anCountBookedDemosToday === 'function' ? anCountBookedDemosToday(typeof anRepScopedLeads === 'function' ? anRepScopedLeads() : AN.leads) : 0;
 
   // Stats bar
   var statsHTML = AN_LEAD_STATUSES.map(function(s){
-    return '<div onclick="AN.currentFilter=\''+s.id+'\';anResetLeadsPage();renderLeadsTable();" style="padding:12px 16px;cursor:pointer;border-right:1px solid var(--divider);flex:1;min-width:0;transition:background 0.15s;" onmouseover="this.style.background=\'var(--body-bg)\'" onmouseout="this.style.background=\'transparent\'">'
+    var filterId = s.id === 'booked_demo' ? 'demo' : s.id;
+    var sub = (s.id === 'booked_demo' && shellDemosToday > 0) ? '<div style="font-size:9px;font-weight:600;color:var(--text-muted);margin-top:2px;">'+shellDemosToday+' booked today</div>' : '';
+    return '<div onclick="AN.currentFilter=\''+filterId+'\';if(AN.advancedFilters)AN.advancedFilters.status=\'\';anOnFilterChanged();" style="padding:12px 16px;cursor:pointer;border-right:1px solid var(--divider);flex:1;min-width:0;transition:background 0.15s;" onmouseover="this.style.background=\'var(--body-bg)\'" onmouseout="this.style.background=\'transparent\'">'
       +'<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">'
       +'<span style="width:7px;height:7px;border-radius:50%;background:'+s.dot+';flex-shrink:0;"></span>'
       +'<span style="font-size:10px;font-weight:700;color:'+s.color+';text-transform:uppercase;letter-spacing:0.1em;white-space:nowrap;">'+s.label+'</span>'
       +'</div>'
       +'<div style="font-size:22px;font-weight:900;color:var(--text-primary);letter-spacing:-1px;line-height:1;">'+statCounts[s.id]+'</div>'
+      +sub
       +'</div>';
   }).join('');
 
@@ -10789,20 +11001,26 @@ function renderLeadsTable(){
     var fuDue    = lead.nextFollowUp && lead.nextFollowUp <= today;
     var rowBg    = rowIndex%2===0?'transparent':'rgba(0,0,0,0.012)';
 
+    var isOppRow = typeof anIsOpportunityRecord === 'function' && anIsOpportunityRecord(lead);
+    var rowOpen = isOppRow
+      ? 'showSection(\'opportunities\',null);setTimeout(function(){anOpenOppRecord(\''+lead.id+'\')},200)'
+      : 'anOpenLead(\''+lead.id+'\')';
+    var demoBadge = (lead.demoDate ? '<div style="font-size:10px;color:#10b981;margin-top:2px;">🎯 '+anEsc(lead.demoDate)+(lead.demoTime ? ' '+lead.demoTime : '')+(isOppRow ? ' · Deal' : '')+'</div>' : (isOppRow ? '<div style="font-size:10px;color:#6366f1;margin-top:2px;">💎 Converted to deal</div>' : ''));
     return '<tr data-lead-id="'+lead.id+'" style="border-bottom:1px solid var(--divider);background:'+rowBg+';cursor:pointer;" '
-      +'onclick="anOpenLead(\''+lead.id+'\')" '
+      +'onclick="'+rowOpen+'" '
       +'onmouseover="this.style.background=\'rgba(99,102,241,0.04)\'" onmouseout="this.style.background=\''+rowBg+'\'">'
       +'<td style="padding:10px 12px;" onclick="event.stopPropagation()"><input type="checkbox" class="lead-cb" data-id="'+lead.id+'"'+(AN.selectedIds.indexOf(lead.id)>=0?' checked':'')+' onchange="anToggleSelect(\''+lead.id+'\',this.checked)" style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;"></td>'
       +'<td style="padding:10px 12px;min-width:140px;" title="Double-click to edit name">'
       +'<div style="font-size:13.5px;font-weight:700;color:var(--text-primary);">'+anEsc((lead.firstName||'')+' '+(lead.lastName||''))+'</div>'
       +(lead.title?'<div style="font-size:11px;color:var(--text-muted);">'+anEsc(lead.title)+'</div>':'')
       +(lead.email?'<div style="font-size:11.5px;color:var(--text-muted);">'+anEsc(lead.email)+'</div>':'')
+      +demoBadge
       +'</td>'
       +'<td data-field="company" style="padding:10px 12px;font-size:13px;color:var(--text-secondary);cursor:text;" title="Click to edit">'+anEsc(lead.company||'—')+'</td>'
       +'<td data-field="state" style="padding:10px 12px;font-size:13px;color:var(--text-secondary);cursor:text;" title="Click to edit">'+anEsc((typeof anResolveLeadState==='function'?anResolveLeadState(lead):lead.state)||'—')+'</td>'
       +'<td data-field="size" style="padding:10px 12px;cursor:text;" title="Click to edit">'+(lead.size?'<span style="background:var(--body-bg);border:1px solid var(--divider);border-radius:5px;padding:2px 8px;font-size:11.5px;font-weight:600;color:var(--text-secondary);">'+anEsc(sz.label)+'</span>':'<span style="color:var(--text-muted);font-size:12px;">—</span>')+'</td>'
       +'<td data-field="phone" style="padding:10px 12px;cursor:text;" title="Click to edit"><a href="tel:'+anEsc(anTelPhone(lead.phone)||'')+'" onclick="event.stopPropagation()" style="color:var(--text-secondary);text-decoration:none;font-size:13px;">'+anEsc(anPhoneDisplay(lead.phone))+'</a></td>'
-      +'<td data-field="status" style="padding:10px 12px;cursor:text;" title="Click to edit"><span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap;">'+st.label+'</span></td>'
+      +'<td data-field="status" onclick="event.stopPropagation()" style="padding:10px 12px;cursor:text;" title="Click to edit"><span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap;">'+st.label+'</span></td>'
       +(anShowOwnerColumn()?'<td style="padding:10px 12px;" onclick="event.stopPropagation()">'+(repEmail?'<span style="background:'+repCol+'18;color:'+repCol+';border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;" title="Change owner" onclick="anOpenOwnerPicker({leadId:\''+lead.id+'\'})">'+anEsc(repName)+' ▾</span>':'<span style="color:var(--text-muted);font-size:12px;cursor:pointer;" onclick="anOpenOwnerPicker({leadId:\''+lead.id+'\'})">+ Assign ▾</span>')+'</td>':'')
       +'<td data-field="nextFollowUp" style="padding:10px 12px;font-size:12.5px;color:'+(fuDue?'#ef4444':'var(--text-muted)')+';font-weight:'+(fuDue?'700':'400')+';cursor:text;" title="Click to edit">'+(lead.nextFollowUp?anDate(lead.nextFollowUp):'—')+'</td>'
       +'<td style="padding:10px 12px;">'+(function(){
@@ -11324,7 +11542,9 @@ window.anSaveLeadCore = function(id){
   lead.updated=new Date().toISOString();
   delete lead._isDraftNew;
   if(typeof AN.save==='function') AN.save();
-  if (document.getElementById('crm-content') && typeof renderLeadsTable === 'function') renderLeadsTable();
+  if (typeof anAfterLeadDataChange === 'function') anAfterLeadDataChange(id, { field: 'status' });
+  else if (document.getElementById('crm-content') && typeof renderLeadsTableNow === 'function') renderLeadsTableNow();
+  else if (document.getElementById('crm-content') && typeof renderLeadsTable === 'function') renderLeadsTable();
   if (typeof hdRender === 'function') {
     var homeSec = document.getElementById('section-home');
     if (homeSec && homeSec.classList.contains('active')) hdRender();
@@ -11556,7 +11776,9 @@ window.anSaveCall = window.anSaveActivity = function(leadId) {
     cll.innerHTML = calls.length ? calls.map(function(c){ return buildActivityItem(c); }).join('') : '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">No activity yet</div>';
   }
 
-  if (typeof renderLeadsTable === 'function') renderLeadsTable();
+  if (typeof anAfterLeadDataChange === 'function') anAfterLeadDataChange(lead.id, { field: 'status' });
+  else if (typeof renderLeadsTableNow === 'function') renderLeadsTableNow();
+  else if (typeof renderLeadsTable === 'function') renderLeadsTable();
   if (typeof showToast === 'function') {
     var labels = {call:'Call logged',text:'Text logged',email:'Email logged',note:'Note saved',meeting:'Meeting logged'};
     showToast((labels[type]||'Activity logged') + ' ✓');
@@ -14072,7 +14294,9 @@ function startInlineEdit(td) {
       sel.appendChild(opt);
     });
     sel.onchange = function() { saveInlineEdit(lead, field, sel.value, td, original); };
-    sel.onblur   = function() { saveInlineEdit(lead, field, sel.value, td, original); };
+    sel.onkeydown = function(e) {
+      if (e.key === 'Escape') { td.innerHTML = original; td.style.padding = ''; td.dataset.field = field; }
+    };
     td.innerHTML = ''; td.appendChild(sel); sel.focus();
     return;
   }
@@ -14087,7 +14311,9 @@ function startInlineEdit(td) {
       sel2.appendChild(o);
     });
     sel2.onchange = function() { saveInlineEdit(lead, field, sel2.value, td, original); };
-    sel2.onblur   = function() { saveInlineEdit(lead, field, sel2.value, td, original); };
+    sel2.onkeydown = function(e) {
+      if (e.key === 'Escape') { td.innerHTML = original; td.style.padding = ''; td.dataset.field = field; }
+    };
     td.innerHTML = ''; td.appendChild(sel2); sel2.focus();
     return;
   }
@@ -14106,10 +14332,97 @@ function startInlineEdit(td) {
   td.innerHTML = ''; td.appendChild(inp); inp.focus(); inp.select();
 }
 
+window.anPatchLeadTableRow = function(leadId, fields) {
+  if (!leadId) return false;
+  var lead = (typeof AN !== 'undefined' && typeof AN.leadById === 'function') ? AN.leadById(leadId) : null;
+  if (!lead && typeof AN !== 'undefined' && AN.leads) {
+    lead = AN.leads.find(function(l) { return l.id === leadId; });
+  }
+  if (!lead) return false;
+  var tr = document.querySelector('#crm-content tbody tr[data-lead-id="' + leadId + '"]');
+  if (!tr) return false;
+  var patchFields = fields && fields.length ? fields : ['status', 'size', 'company', 'state', 'phone', 'nextFollowUp'];
+  patchFields.forEach(function(f) {
+    var cell = tr.querySelector('td[data-field="' + f + '"]');
+    if (cell) renderCellContent(cell, f, lead);
+  });
+  return true;
+};
+
+window.anLeadStillInFilteredView = function(leadId) {
+  if (!leadId || typeof AN === 'undefined' || typeof AN.filtered !== 'function') return true;
+  return AN.filtered().some(function(l) { return l.id === leadId; });
+};
+
+window.anRefreshCrmCountLabel = function() {
+  var countEl = document.getElementById('crm-count');
+  if (!countEl || typeof AN === 'undefined' || typeof AN.filtered !== 'function' || typeof anIsProspect !== 'function') return;
+  var list = AN.filtered();
+  var totalProspects = AN.leads.filter(anIsProspect).length;
+  if (typeof anHasActiveCRMFilters === 'function' && anHasActiveCRMFilters()) {
+    countEl.textContent = list.length.toLocaleString() + ' filtered · ' + totalProspects.toLocaleString() + ' total';
+  } else {
+    countEl.textContent = list.length.toLocaleString() + ' of ' + totalProspects.toLocaleString();
+  }
+};
+
+window.anAfterLeadDataChange = function(leadId, opts) {
+  opts = opts || {};
+  var lead = (typeof AN !== 'undefined' && typeof AN.leadById === 'function') ? AN.leadById(leadId) : null;
+  if (!lead && typeof AN !== 'undefined' && AN.leads) {
+    lead = AN.leads.find(function(l) { return l.id === leadId; });
+  }
+  if (!lead) return;
+  anRefreshAfterInlineEdit(lead, opts.field || 'status', opts.td || null);
+};
+
+function anRefreshAfterInlineEdit(lead, field, td) {
+  if (!lead || !lead.id) return;
+  if (typeof AN.invalidateLeadCaches === 'function') AN.invalidateLeadCaches();
+
+  var leadId = lead.id;
+  var stillHere = typeof anLeadStillInFilteredView === 'function' ? anLeadStillInFilteredView(leadId) : true;
+
+  if (stillHere) {
+    if (td) {
+      td.style.padding = '';
+      renderCellContent(td, field, lead);
+      td.style.background = 'rgba(16,185,129,0.1)';
+      setTimeout(function() { td.style.background = ''; }, 600);
+    } else if (typeof anPatchLeadTableRow === 'function') {
+      anPatchLeadTableRow(leadId, field ? [field] : ['status']);
+    }
+  } else {
+    var tr = document.querySelector('#crm-content tbody tr[data-lead-id="' + leadId + '"]');
+    if (tr && tr.parentNode) tr.parentNode.removeChild(tr);
+    if (typeof anRefreshCrmCountLabel === 'function') anRefreshCrmCountLabel();
+  }
+
+  if (field === 'status' || field === 'size' || !stillHere) {
+    if (typeof anRefreshCRMStatsBar === 'function') anRefreshCRMStatsBar();
+    if (typeof anRefreshRepCounts === 'function') anRefreshRepCounts();
+  }
+
+  if (document.getElementById('an-side-panel') && window._anPanelLeadId === leadId && typeof anRefreshLeadPanel === 'function') {
+    anRefreshLeadPanel(leadId);
+  }
+
+  if (typeof AN !== 'undefined' && AN.currentView === 'kanban') {
+    if (typeof renderLeadsTableNow === 'function') renderLeadsTableNow();
+    else if (typeof renderLeadsTable === 'function') renderLeadsTable();
+  }
+}
+
 function saveInlineEdit(lead, field, value, td, original) {
+  if (td.dataset.inlineSaving === '1') return;
   if (field === 'phone') value = anNormalizePhone(value);
-  if (field === 'status' && lead.status === value) { td.innerHTML = original; td.style.padding = ''; return; }
-  if (field !== 'status' && lead[field] === value) { td.innerHTML = original; td.style.padding = ''; return; }
+  var unchanged = field === 'status' ? lead.status === value : lead[field] === value;
+  if (unchanged) {
+    td.style.padding = '';
+    renderCellContent(td, field, lead);
+    return;
+  }
+  td.dataset.inlineSaving = '1';
 
   if (field === 'status') {
     if (typeof anApplyLeadStatusChange === 'function') {
@@ -14129,12 +14442,8 @@ function saveInlineEdit(lead, field, value, td, original) {
   lead.updated = new Date().toISOString();
 
   AN.save();
-  // Re-render just this cell
-  td.style.padding = '';
-  renderCellContent(td, field, lead);
-  // Flash green
-  td.style.background = 'rgba(16,185,129,0.1)';
-  setTimeout(function() { td.style.background = ''; }, 600);
+  delete td.dataset.inlineSaving;
+  anRefreshAfterInlineEdit(lead, field, td);
 }
 
 function renderCellContent(td, field, lead) {
@@ -14230,6 +14539,474 @@ window.anBuildLeadDetailRowHtml = function(label, value, opts) {
     +'<span style="font-size:12px;color:var(--text-muted);line-height:1.35;">'+label+'</span>'
     +'<span style="display:inline-flex;align-items:center;justify-content:flex-end;gap:5px;flex-shrink:0;min-width:0;">'+val+copyBtn+'</span>'
     +'</div>';
+};
+
+// ── Lead Intel: free public web research + phone geo + map vs wins ──
+var AN_STATE_COORDS = {
+  Alabama:[32.806671,-86.791130],Alaska:[61.370716,-152.404419],Arizona:[33.729759,-111.431221],
+  Arkansas:[34.969704,-92.373123],California:[36.116203,-119.681564],Colorado:[39.059811,-105.311104],
+  Connecticut:[41.597782,-72.755371],Delaware:[39.318523,-75.507141],Florida:[27.766279,-81.686783],
+  Georgia:[33.040619,-83.643074],Hawaii:[21.094318,-157.498337],Idaho:[44.240459,-114.478828],
+  Illinois:[40.349457,-88.986137],Indiana:[39.849426,-86.258278],Iowa:[42.011539,-93.210526],
+  Kansas:[38.526600,-96.726486],Kentucky:[37.668140,-84.670067],Louisiana:[31.169546,-91.867805],
+  Maine:[44.693947,-69.381927],Maryland:[39.063946,-76.802101],Massachusetts:[42.230171,-71.530106],
+  Michigan:[43.326618,-84.536095],Minnesota:[45.694454,-93.900192],Mississippi:[32.741646,-89.678696],
+  Missouri:[38.456085,-92.288368],Montana:[46.921925,-110.454353],Nebraska:[41.125370,-98.268082],
+  Nevada:[38.313515,-117.055374],New Hampshire:[43.452492,-71.563896],New Jersey:[40.298904,-74.521011],
+  New Mexico:[34.840515,-106.248482],New York:[42.165726,-74.948051],North Carolina:[35.630066,-79.806419],
+  North Dakota:[47.528912,-99.784012],Ohio:[40.388783,-82.764915],Oklahoma:[35.565342,-96.928917],
+  Oregon:[44.572021,-122.070938],Pennsylvania:[40.590752,-77.209755],Rhode Island:[41.680893,-71.511780],
+  South Carolina:[33.856892,-80.945007],South Dakota:[44.299782,-99.438828],Tennessee:[35.747845,-86.692345],
+  Texas:[31.054487,-97.563461],Utah:[40.150032,-111.862434],Vermont:[44.045876,-72.710686],
+  Virginia:[37.769337,-78.169968],Washington:[47.400902,-121.490494],West Virginia:[38.491226,-80.954453],
+  Wisconsin:[44.268543,-89.616508],Wyoming:[42.755966,-107.302490]
+};
+var AN_NPA_GEO = {
+  '201':{s:'New Jersey',c:'North Jersey',lat:40.79,lng:-74.15},'202':{s:'District of Columbia',c:'Washington DC',lat:38.91,lng:-77.04},
+  '203':{s:'Connecticut',c:'New Haven',lat:41.31,lng:-72.92},'205':{s:'Alabama',c:'Birmingham',lat:33.52,lng:-86.80},
+  '206':{s:'Washington',c:'Seattle',lat:47.61,lng:-122.33},'207':{s:'Maine',c:'Maine',lat:43.66,lng:-70.26},
+  '208':{s:'Idaho',c:'Boise',lat:43.62,lng:-116.20},'209':{s:'California',c:'Stockton',lat:37.96,lng:-121.29},
+  '210':{s:'Texas',c:'San Antonio',lat:29.42,lng:-98.49},'212':{s:'New York',c:'Manhattan',lat:40.71,lng:-74.01},
+  '213':{s:'California',c:'Los Angeles',lat:34.05,lng:-118.24},'214':{s:'Texas',c:'Dallas',lat:32.78,lng:-96.80},
+  '215':{s:'Pennsylvania',c:'Philadelphia',lat:39.95,lng:-75.17},'216':{s:'Ohio',c:'Cleveland',lat:41.50,lng:-81.69},
+  '303':{s:'Colorado',c:'Denver',lat:39.74,lng:-104.99},'305':{s:'Florida',c:'Miami',lat:25.76,lng:-80.19},
+  '310':{s:'California',c:'Los Angeles',lat:34.05,lng:-118.24},'312':{s:'Illinois',c:'Chicago',lat:41.88,lng:-87.63},
+  '313':{s:'Michigan',c:'Detroit',lat:42.33,lng:-83.05},'314':{s:'Missouri',c:'St. Louis',lat:38.63,lng:-90.20},
+  '317':{s:'Indiana',c:'Indianapolis',lat:39.77,lng:-86.16},'404':{s:'Georgia',c:'Atlanta',lat:33.75,lng:-84.39},
+  '405':{s:'Oklahoma',c:'Oklahoma City',lat:35.47,lng:-97.52},'407':{s:'Florida',c:'Orlando',lat:28.54,lng:-81.38},
+  '408':{s:'California',c:'San Jose',lat:37.34,lng:-121.89},'410':{s:'Maryland',c:'Baltimore',lat:39.29,lng:-76.61},
+  '412':{s:'Pennsylvania',c:'Pittsburgh',lat:40.44,lng:-79.99},'415':{s:'California',c:'San Francisco',lat:37.77,lng:-122.42},
+  '480':{s:'Arizona',c:'Phoenix',lat:33.45,lng:-112.07},'502':{s:'Kentucky',c:'Louisville',lat:38.25,lng:-85.76},
+  '503':{s:'Oregon',c:'Portland',lat:45.52,lng:-122.68},'504':{s:'Louisiana',c:'New Orleans',lat:29.95,lng:-90.07},
+  '505':{s:'New Mexico',c:'Albuquerque',lat:35.08,lng:-106.65},'512':{s:'Texas',c:'Austin',lat:30.27,lng:-97.74},
+  '513':{s:'Ohio',c:'Cincinnati',lat:39.10,lng:-84.51},'515':{s:'Iowa',c:'Des Moines',lat:41.59,lng:-93.62},
+  '516':{s:'New York',c:'Long Island',lat:40.73,lng:-73.59},'602':{s:'Arizona',c:'Phoenix',lat:33.45,lng:-112.07},
+  '603':{s:'New Hampshire',c:'Manchester',lat:42.99,lng:-71.45},'605':{s:'South Dakota',c:'Sioux Falls',lat:43.55,lng:-96.73},
+  '612':{s:'Minnesota',c:'Minneapolis',lat:44.98,lng:-93.27},'614':{s:'Ohio',c:'Columbus',lat:39.96,lng:-83.00},
+  '615':{s:'Tennessee',c:'Nashville',lat:36.16,lng:-86.78},'617':{s:'Massachusetts',c:'Boston',lat:42.36,lng:-71.06},
+  '619':{s:'California',c:'San Diego',lat:32.72,lng:-117.16},'623':{s:'Arizona',c:'Phoenix',lat:33.45,lng:-112.07},
+  '626':{s:'California',c:'Pasadena',lat:34.15,lng:-118.14},'630':{s:'Illinois',c:'Aurora',lat:41.76,lng:-88.32},
+  '646':{s:'New York',c:'Manhattan',lat:40.71,lng:-74.01},'650':{s:'California',c:'San Mateo',lat:37.56,lng:-122.33},
+  '678':{s:'Georgia',c:'Atlanta',lat:33.75,lng:-84.39},'702':{s:'Nevada',c:'Las Vegas',lat:36.17,lng:-115.14},
+  '703':{s:'Virginia',c:'Northern VA',lat:38.90,lng:-77.26},'704':{s:'North Carolina',c:'Charlotte',lat:35.23,lng:-80.84},
+  '713':{s:'Texas',c:'Houston',lat:29.76,lng:-95.37},'714':{s:'California',c:'Anaheim',lat:33.84,lng:-117.91},
+  '715':{s:'Wisconsin',c:'Wausau',lat:44.96,lng:-89.63},'716':{s:'New York',c:'Buffalo',lat:42.89,lng:-78.88},
+  '717':{s:'Pennsylvania',c:'Harrisburg',lat:40.27,lng:-76.88},'718':{s:'New York',c:'NYC',lat:40.71,lng:-74.01},
+  '719':{s:'Colorado',c:'Colorado Springs',lat:38.83,lng:-104.82},'720':{s:'Colorado',c:'Denver',lat:39.74,lng:-104.99},
+  '727':{s:'Florida',c:'St. Petersburg',lat:27.77,lng:-82.64},'732':{s:'New Jersey',c:'New Brunswick',lat:40.49,lng:-74.44},
+  '734':{s:'Michigan',c:'Ann Arbor',lat:42.28,lng:-83.74},'737':{s:'Texas',c:'Austin',lat:30.27,lng:-97.74},
+  '747':{s:'California',c:'Los Angeles',lat:34.05,lng:-118.24},'754':{s:'Florida',c:'Fort Lauderdale',lat:26.12,lng:-80.14},
+  '757':{s:'Virginia',c:'Norfolk',lat:36.85,lng:-76.29},'770':{s:'Georgia',c:'Atlanta suburbs',lat:33.95,lng:-84.55},
+  '773':{s:'Illinois',c:'Chicago',lat:41.88,lng:-87.63},'801':{s:'Utah',c:'Salt Lake City',lat:40.76,lng:-111.89},
+  '802':{s:'Vermont',c:'Burlington',lat:44.48,lng:-73.21},'803':{s:'South Carolina',c:'Columbia',lat:34.00,lng:-81.03},
+  '804':{s:'Virginia',c:'Richmond',lat:37.54,lng:-77.44},'805':{s:'California',c:'Santa Barbara',lat:34.42,lng:-119.70},
+  '806':{s:'Texas',c:'Lubbock',lat:33.58,lng:-101.86},'808':{s:'Hawaii',c:'Honolulu',lat:21.31,lng:-157.86},
+  '813':{s:'Florida',c:'Tampa',lat:27.95,lng:-82.46},'816':{s:'Missouri',c:'Kansas City',lat:39.10,lng:-94.58},
+  '817':{s:'Texas',c:'Fort Worth',lat:32.76,lng:-97.33},'818':{s:'California',c:'San Fernando Valley',lat:34.18,lng:-118.31},
+  '832':{s:'Texas',c:'Houston',lat:29.76,lng:-95.37},'843':{s:'South Carolina',c:'Charleston',lat:32.78,lng:-79.93},
+  '847':{s:'Illinois',c:'Evanston',lat:42.05,lng:-87.68},'850':{s:'Florida',c:'Tallahassee',lat:30.44,lng:-84.28},
+  '858':{s:'California',c:'San Diego',lat:32.72,lng:-117.16},'859':{s:'Kentucky',c:'Lexington',lat:38.04,lng:-84.50},
+  '860':{s:'Connecticut',c:'Hartford',lat:41.76,lng:-72.68},'901':{s:'Tennessee',c:'Memphis',lat:35.15,lng:-90.05},
+  '904':{s:'Florida',c:'Jacksonville',lat:30.33,lng:-81.66},'907':{s:'Alaska',c:'Anchorage',lat:61.22,lng:-149.90},
+  '908':{s:'New Jersey',c:'Elizabeth',lat:40.66,lng:-74.21},'909':{s:'California',c:'San Bernardino',lat:34.11,lng:-117.29},
+  '912':{s:'Georgia',c:'Savannah',lat:32.08,lng:-81.09},'913':{s:'Kansas',c:'Kansas City KS',lat:39.11,lng:-94.63},
+  '914':{s:'New York',c:'Westchester',lat:41.03,lng:-73.76},'915':{s:'Texas',c:'El Paso',lat:31.76,lng:-106.49},
+  '916':{s:'California',c:'Sacramento',lat:38.58,lng:-121.49},'917':{s:'New York',c:'NYC mobile',lat:40.71,lng:-74.01},
+  '918':{s:'Oklahoma',c:'Tulsa',lat:36.15,lng:-95.99},'919':{s:'North Carolina',c:'Raleigh',lat:35.78,lng:-78.64},
+  '920':{s:'Wisconsin',c:'Green Bay',lat:44.51,lng:-88.01},'925':{s:'California',c:'Concord',lat:37.98,lng:-122.03},
+  '928':{s:'Arizona',c:'Flagstaff',lat:35.20,lng:-111.65},'929':{s:'New York',c:'NYC',lat:40.71,lng:-74.01},
+  '936':{s:'Texas',c:'Huntsville TX',lat:30.72,lng:-95.55},'937':{s:'Ohio',c:'Dayton',lat:39.76,lng:-84.19},
+  '940':{s:'Texas',c:'Denton',lat:33.21,lng:-97.13},'941':{s:'Florida',c:'Sarasota',lat:27.34,lng:-82.53},
+  '949':{s:'California',c:'Irvine',lat:33.68,lng:-117.83},'951':{s:'California',c:'Riverside',lat:33.95,lng:-117.40},
+  '954':{s:'Florida',c:'Fort Lauderdale',lat:26.12,lng:-80.14},'956':{s:'Texas',c:'Laredo',lat:27.53,lng:-99.50},
+  '970':{s:'Colorado',c:'Fort Collins',lat:40.59,lng:-105.08},'971':{s:'Oregon',c:'Portland',lat:45.52,lng:-122.68},
+  '972':{s:'Texas',c:'Dallas',lat:32.78,lng:-96.80},'973':{s:'New Jersey',c:'Newark',lat:40.74,lng:-74.17},
+  '980':{s:'North Carolina',c:'Charlotte',lat:35.23,lng:-80.84}
+};
+window.anHaversineMiles = function(lat1, lng1, lat2, lng2) {
+  var R = 3958.8;
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLng = (lng2 - lng1) * Math.PI / 180;
+  var a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+window.anGeoFromLead = function(lead) {
+  if (!lead) return null;
+  var state = typeof anResolveLeadState === 'function' ? anResolveLeadState(lead) : (lead.state || '');
+  var digits = (lead.phone || '').replace(/\D/g, '');
+  if (digits.length === 11 && digits.charAt(0) === '1') digits = digits.slice(1);
+  var npa = digits.length >= 10 ? digits.slice(0, 3) : '';
+  var npaHit = npa && AN_NPA_GEO[npa] ? AN_NPA_GEO[npa] : null;
+  var stateCoords = state && AN_STATE_COORDS[state] ? AN_STATE_COORDS[state] : null;
+  if (npaHit) {
+    return { lat: npaHit.lat, lng: npaHit.lng, state: npaHit.s || state, city: npaHit.c,
+      source: state ? 'phone_area+state' : 'phone_area', confidence: state ? 'high' : 'medium',
+      label: npaHit.c + (npaHit.s ? ', ' + npaHit.s : '') };
+  }
+  if (stateCoords) {
+    return { lat: stateCoords[0], lng: stateCoords[1], state: state, city: state,
+      source: 'state', confidence: 'low', label: state + ' (state estimate)' };
+  }
+  return null;
+};
+window.anFindNearestWins = function(lead, limit) {
+  limit = limit || 5;
+  var geo = anGeoFromLead(lead);
+  if (!geo || typeof AN === 'undefined' || !AN.leads) return [];
+  var out = [];
+  AN.leads.filter(function(l) { return l.status === 'won'; }).forEach(function(w) {
+    var wg = anGeoFromLead(w);
+    if (!wg) return;
+    var name = ((w.firstName || '') + ' ' + (w.lastName || '')).trim() || w.company || 'Won deal';
+    out.push({ lead: w, miles: anHaversineMiles(geo.lat, geo.lng, wg.lat, wg.lng), name: name });
+  });
+  out.sort(function(a, b) { return a.miles - b.miles; });
+  return out.slice(0, limit);
+};
+window.anEnsureLeaflet = function(cb) {
+  if (window.L && window.L.map) { if (cb) cb(); return; }
+  if (!document.getElementById('leaflet-css')) {
+    var link = document.createElement('link');
+    link.id = 'leaflet-css'; link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(link);
+  }
+  if (document.getElementById('leaflet-js')) {
+    var wait = setInterval(function() { if (window.L) { clearInterval(wait); if (cb) cb(); } }, 50);
+    return;
+  }
+  var script = document.createElement('script');
+  script.id = 'leaflet-js'; script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+  script.onload = function() { if (cb) cb(); };
+  document.head.appendChild(script);
+};
+window.anRenderLeadIntelMap = function(leadId) {
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  var el = document.getElementById('an-intel-map-' + leadId);
+  if (!lead || !el) return;
+  var geo = anGeoFromLead(lead);
+  if (!geo) {
+    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:12px;">Add phone or state to see map</div>';
+    return;
+  }
+  anEnsureLeaflet(function() {
+    el.innerHTML = '';
+    if (el._map) { try { el._map.remove(); } catch(e) {} el._map = null; }
+    var map = L.map(el, { zoomControl: false }).setView([geo.lat, geo.lng], geo.confidence === 'low' ? 6 : 8);
+    el._map = map;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OSM' }).addTo(map);
+    L.circleMarker([geo.lat, geo.lng], { radius: 9, color: '#6366f1', fillColor: '#6366f1', fillOpacity: 0.85, weight: 2 })
+      .addTo(map).bindPopup(anEsc(((lead.firstName||'')+' '+(lead.lastName||'')).trim() || lead.company || 'Lead'));
+    var bounds = [[geo.lat, geo.lng]];
+    anFindNearestWins(lead, 8).forEach(function(n) {
+      var wg = anGeoFromLead(n.lead);
+      if (!wg) return;
+      bounds.push([wg.lat, wg.lng]);
+      L.circleMarker([wg.lat, wg.lng], { radius: 7, color: '#10b981', fillColor: '#10b981', fillOpacity: 0.75, weight: 2 })
+        .addTo(map).bindPopup('🏆 ' + anEsc(n.name) + '<br>' + Math.round(n.miles) + ' mi');
+    });
+    if (bounds.length > 1) map.fitBounds(bounds, { padding: [24, 24], maxZoom: 9 });
+    setTimeout(function() { map.invalidateSize(); }, 120);
+  });
+};
+window.anFormatLeadIntelResults = function(lead, intel) {
+  if (!intel) return '';
+  var html = '';
+  if (intel.geo) {
+    html += '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">📍 <strong>' + anEsc(intel.geo.label) + '</strong></div>';
+  }
+  var nearest = intel.nearestWins || anFindNearestWins(lead, 4);
+  if (nearest.length) {
+    html += '<div style="margin-bottom:10px;"><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Nearest closed wins</div>';
+    nearest.forEach(function(n) {
+      html += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--divider);font-size:12px;">'
+        + '<span style="font-weight:600;">🏆 ' + anEsc(n.name) + '</span>'
+        + '<span style="color:#10b981;font-weight:700;">' + Math.round(n.miles) + ' mi</span></div>';
+    });
+    html += '</div>';
+  }
+  if (intel.website && intel.website.meta) {
+    html += '<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:10px;margin-bottom:10px;">'
+      + '<div style="font-size:10px;font-weight:700;color:#059669;margin-bottom:4px;">WEBSITE</div>'
+      + '<a href="' + anEsc(intel.website.url) + '" target="_blank" rel="noopener" style="font-size:12px;font-weight:700;color:#6366f1;">' + anEsc(intel.website.meta.title || intel.website.url) + '</a>'
+      + (intel.website.meta.description ? '<div style="font-size:11px;color:var(--text-secondary);margin-top:6px;">' + anEsc(intel.website.meta.description.slice(0, 220)) + '</div>' : '')
+      + '</div>';
+  }
+  if (intel.searchResults && intel.searchResults.length) {
+    html += '<div style="margin-bottom:8px;"><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;">Web matches</div>';
+    intel.searchResults.slice(0, 4).forEach(function(r) {
+      html += '<div style="padding:8px 0;border-bottom:1px solid var(--divider);">'
+        + '<a href="' + anEsc(r.url) + '" target="_blank" rel="noopener" style="font-size:12px;font-weight:700;color:#6366f1;">' + anEsc(r.title || r.url) + '</a>'
+        + (r.snippet ? '<div style="font-size:11px;color:var(--text-muted);margin-top:3px;">' + anEsc(r.snippet) + '</div>' : '')
+        + '</div>';
+    });
+    html += '</div>';
+  }
+  if (intel.quickLinks && intel.quickLinks.length) {
+    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">';
+    intel.quickLinks.forEach(function(l) {
+      html += '<a href="' + anEsc(l.url) + '" target="_blank" rel="noopener" style="font-size:10px;font-weight:700;padding:4px 9px;border-radius:20px;border:1px solid var(--divider);color:var(--text-secondary);text-decoration:none;">' + anEsc(l.label) + ' ↗</a>';
+    });
+    html += '</div>';
+  }
+  return html || '<div style="font-size:12px;color:var(--text-muted);">No web results — map uses phone/state.</div>';
+};
+window.anFormatNameSoundResults = function(lead, ns) {
+  ns = ns || {};
+  if (!ns.firstPhonetic) {
+    return '<div style="font-size:12px;color:var(--text-muted);line-height:1.5;">Tap <strong>Hear name</strong> to load pronunciation guide.</div>';
+  }
+  var html = '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
+    + '<div style="flex:1;min-width:140px;">'
+    + '<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">Say the first name like</div>'
+    + '<div style="font-size:22px;font-weight:900;color:#b45309;letter-spacing:0.02em;line-height:1.2;">' + anEsc(ns.firstPhonetic) + '</div>';
+  if (ns.firstSyllables && ns.firstSyllables !== ns.firstPhonetic) {
+    html += '<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">' + anEsc(ns.firstSyllables) + '</div>';
+  }
+  if (ns.lastPhonetic) {
+    html += '<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:10px;margin-bottom:4px;">Last name</div>'
+      + '<div style="font-size:16px;font-weight:800;color:var(--text-primary);">' + anEsc(ns.lastPhonetic) + '</div>';
+  }
+  html += '</div>'
+    + '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">'
+    + '<button type="button" onclick="anPlayNameSound(\'' + lead.id + '\', \'first\')" style="background:#fef3c7;color:#b45309;border:1px solid #fcd34d;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">▶ Hear first name</button>';
+  if ((lead.lastName || '').trim()) {
+    html += '<button type="button" onclick="anPlayNameSound(\'' + lead.id + '\', \'full\')" style="background:var(--body-bg);color:var(--text-secondary);border:1px solid var(--divider);border-radius:8px;padding:7px 12px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">▶ Full name</button>';
+  }
+  html += '</div></div>';
+  if (ns.tip) {
+    html += '<div style="font-size:11px;color:var(--text-secondary);margin-top:10px;line-height:1.5;padding:8px 10px;background:rgba(245,158,11,0.08);border-radius:8px;border:1px solid rgba(245,158,11,0.2);">💡 ' + anEsc(ns.tip) + '</div>';
+  }
+  if (ns.origin) {
+    html += '<div style="font-size:10px;color:var(--text-muted);margin-top:6px;">' + anEsc(ns.origin) + '</div>';
+  }
+  return html;
+};
+
+window.anBuildNameSoundSection = function(lead) {
+  if (!lead || !(lead.firstName || '').trim()) return '';
+  var ns = lead.nameSound || {};
+  var body = ns.firstPhonetic ? anFormatNameSoundResults(lead, ns)
+    : '<div style="font-size:12px;color:var(--text-muted);line-height:1.5;">Loads phonetic spelling + audio so you say <strong>' + anEsc(lead.firstName) + '</strong> correctly on the call.</div>';
+  return '<div id="an-name-sound-wrap-' + lead.id + '" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid #fcd34d;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;">'
+    + '<div style="font-size:10px;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:0.12em;">🔊 How the name sounds</div>'
+    + '<button type="button" id="an-name-sound-btn-' + lead.id + '" onclick="anRunNamePronounce(\'' + lead.id + '\')" style="background:#f59e0b;color:#fff;border:none;border-radius:7px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">' + (ns.firstPhonetic ? 'Refresh' : 'Hear name') + '</button>'
+    + '</div>'
+    + '<div id="an-name-sound-body-' + lead.id + '">' + body + '</div></div>';
+};
+
+window.anPlayNameSound = function(leadId, part) {
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (!lead) return;
+  var ns = lead.nameSound || {};
+  var text = part === 'full'
+    ? (ns.speakFull || ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim())
+    : (ns.speakFirst || lead.firstName || '');
+  text = (text || '').trim();
+  if (!text) {
+    if (typeof showToast === 'function') showToast('No pronunciation loaded yet');
+    return;
+  }
+  if (!window.speechSynthesis) {
+    if (typeof showToast === 'function') showToast('Audio not supported in this browser');
+    return;
+  }
+  window.speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance(text);
+  var langMap = { en: 'en-US', es: 'es-MX', pt: 'pt-BR', fr: 'fr-FR' };
+  u.lang = langMap[lead.preferredLang || 'en'] || 'en-US';
+  u.rate = 0.88;
+  u.pitch = 1;
+  var voices = window.speechSynthesis.getVoices() || [];
+  var match = voices.find(function(v) { return v.lang && v.lang.indexOf((u.lang || '').split('-')[0]) === 0; });
+  if (match) u.voice = match;
+  window.speechSynthesis.speak(u);
+};
+
+window.anMaybeAutoNamePronounce = function(leadId) {
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (!lead || !(lead.firstName || '').trim() || (lead.firstName || '').trim().length < 2) return;
+  if (lead.nameSound && lead.nameSound.firstPhonetic) return;
+  if (!window._anNameSoundAutoRan) window._anNameSoundAutoRan = {};
+  if (window._anNameSoundAutoRan[leadId]) return;
+  window._anNameSoundAutoRan[leadId] = true;
+  setTimeout(function() { anRunNamePronounce(leadId, true); }, 500);
+};
+
+window.anRunNamePronounce = function(leadId, quiet) {
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (!lead || !(lead.firstName || '').trim()) return;
+  var btn = document.getElementById('an-name-sound-btn-' + leadId);
+  var body = document.getElementById('an-name-sound-body-' + leadId);
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+  fetch('/.netlify/functions/name-pronounce', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      firstName: lead.firstName || '',
+      lastName: lead.lastName || '',
+      state: typeof anResolveLeadState === 'function' ? anResolveLeadState(lead) : (lead.state || ''),
+      preferredLang: lead.preferredLang || 'en'
+    })
+  }).then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.error && !data.firstPhonetic) throw new Error(data.error);
+      lead.nameSound = Object.assign({}, lead.nameSound || {}, data);
+      lead.updated = new Date().toISOString();
+      if (AN.save) AN.save();
+      if (body) body.innerHTML = anFormatNameSoundResults(lead, lead.nameSound);
+      if (btn) btn.textContent = 'Refresh';
+      anUpdateCallScriptNameBanner(leadId);
+      if (!quiet && typeof showToast === 'function') showToast('Name pronunciation ready');
+    })
+    .catch(function(err) {
+      if (body && !lead.nameSound) {
+        body.innerHTML = '<div style="font-size:12px;color:#b45309;">Could not load guide — use ▶ Hear first name after retry, or say "' + anEsc(lead.firstName) + '" as written.</div>'
+          + '<button type="button" onclick="anPlayNameSound(\'' + lead.id + '\', \'first\')" style="margin-top:8px;background:#fef3c7;color:#b45309;border:1px solid #fcd34d;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">▶ Try basic audio</button>';
+      }
+      if (!quiet && typeof showToast === 'function') showToast('Name guide unavailable');
+    })
+    .finally(function() {
+      if (btn) { btn.disabled = false; if (btn.textContent === 'Loading…') btn.textContent = lead.nameSound && lead.nameSound.firstPhonetic ? 'Refresh' : 'Hear name'; }
+    });
+};
+
+window.anUpdateCallScriptNameBanner = function(leadId) {
+  var el = document.getElementById('mcm-name-pronounce-banner');
+  if (!el) return;
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (!lead || !lead.nameSound || !lead.nameSound.firstPhonetic) {
+    el.innerHTML = '';
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = 'block';
+  el.innerHTML = '<span style="font-size:10px;font-weight:700;color:#fcd34d;text-transform:uppercase;letter-spacing:0.08em;">Say their name:</span> '
+    + '<span style="font-size:14px;font-weight:800;color:#fff;">' + anEsc(lead.nameSound.firstPhonetic) + '</span> '
+    + '<button type="button" onclick="anPlayNameSound(\'' + leadId + '\', \'first\')" style="margin-left:8px;background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fcd34d;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">▶</button>';
+};
+
+window.anBuildLeadIntelSection = function(lead) {
+  if (!lead) return '';
+  var intel = lead.intel || {};
+  var body = intel.researchedAt || intel.geo ? anFormatLeadIntelResults(lead, intel)
+    : '<div style="font-size:12px;color:var(--text-muted);line-height:1.5;">Scans public web (company site + search). Map from phone area code. No Apollo.</div>';
+  return '<div id="an-intel-wrap-' + lead.id + '" style="background:var(--body-bg);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--divider);">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
+    + '<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;">🔍 Lead Intel</div>'
+    + '<button type="button" id="an-intel-btn-' + lead.id + '" onclick="anRunLeadResearch(\'' + lead.id + '\')" style="background:#6366f1;color:#fff;border:none;border-radius:7px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Research</button>'
+    + '</div>'
+    + '<div id="an-intel-map-' + lead.id + '" style="height:160px;border-radius:8px;overflow:hidden;background:#f4f4f5;margin-bottom:10px;"></div>'
+    + '<div id="an-intel-body-' + lead.id + '">' + body + '</div></div>';
+};
+window.anShouldAutoResearchLead = function(lead) {
+  if (!lead) return false;
+  var last = lead.intel && lead.intel.researchedAt;
+  if (!last) return true;
+  var age = Date.now() - new Date(last).getTime();
+  return age > 24 * 60 * 60 * 1000;
+};
+
+window.anInitLeadIntelUI = function(leadId) {
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (!lead) return;
+  if (!lead.intel) lead.intel = {};
+  lead.intel.geo = anGeoFromLead(lead);
+  lead.intel.nearestWins = anFindNearestWins(lead, 4);
+  setTimeout(function() { anRenderLeadIntelMap(leadId); }, 60);
+  if (typeof anShouldAutoResearchLead === 'function' && anShouldAutoResearchLead(lead)) {
+    if (!window._anIntelAutoRan) window._anIntelAutoRan = {};
+    if (!window._anIntelAutoRan[leadId]) {
+      window._anIntelAutoRan[leadId] = true;
+      setTimeout(function() { anRunLeadResearch(leadId); }, 400);
+    }
+  }
+  if (typeof anMaybeAutoNamePronounce === 'function') anMaybeAutoNamePronounce(leadId);
+};
+window.anRunLeadResearch = function(leadId) {
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (!lead) return;
+  var btn = document.getElementById('an-intel-btn-' + leadId);
+  var body = document.getElementById('an-intel-body-' + leadId);
+  if (btn) { btn.disabled = true; btn.textContent = 'Scanning…'; }
+  var geo = anGeoFromLead(lead);
+  var nearestWins = anFindNearestWins(lead, 5);
+  var name = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim();
+  fetch('/.netlify/functions/lead-research', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: name, company: lead.company || '', email: lead.email || '', phone: lead.phone || '',
+      state: typeof anResolveLeadState === 'function' ? anResolveLeadState(lead) : (lead.state || '') })
+  }).then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.error) throw new Error(data.error);
+      lead.intel = Object.assign({}, lead.intel || {}, data, { geo: geo, nearestWins: nearestWins });
+      lead.updated = new Date().toISOString();
+      if (AN.save) AN.save();
+      if (body) body.innerHTML = anFormatLeadIntelResults(lead, lead.intel);
+      anRenderLeadIntelMap(leadId);
+      if (typeof showToast === 'function') showToast('Lead intel updated');
+    })
+    .catch(function() {
+      lead.intel = { geo: geo, nearestWins: nearestWins, researchedAt: new Date().toISOString() };
+      if (body) body.innerHTML = anFormatLeadIntelResults(lead, lead.intel)
+        + '<div style="font-size:11px;color:#b45309;margin-top:8px;">Web scan unavailable — showing map from phone/state.</div>';
+      anRenderLeadIntelMap(leadId);
+    })
+    .finally(function() { if (btn) { btn.disabled = false; btn.textContent = 'Research'; } });
+};
+
+window.anGetTeamMapLeads = function() {
+  if (typeof AN === 'undefined' || !AN.leads) return { prospects: [], wins: [] };
+  var pool = AN.isAdmin ? AN.leads : (typeof anMyLeads === 'function' ? anMyLeads() : AN.leads);
+  var wins = [];
+  var prospects = [];
+  pool.forEach(function(l) {
+    if (!anGeoFromLead(l)) return;
+    if (l.status === 'won') wins.push(l);
+    else if (typeof anIsProspect === 'function' ? anIsProspect(l) : true) {
+      if (['booked_demo', 'contacted', 'followup', 'demo_complete', 'new'].indexOf(l.status || '') >= 0) prospects.push(l);
+    }
+  });
+  return { prospects: prospects.slice(0, 150), wins: wins };
+};
+
+window.anRenderTeamMap = function() {
+  var el = document.getElementById('hd-team-map');
+  if (!el) return;
+  var data = anGetTeamMapLeads();
+  if (!data.prospects.length && !data.wins.length) {
+    el.innerHTML = '<div style="padding:32px;text-align:center;color:#9999aa;font-size:13px;">Add phone or state on leads to plot them here.</div>';
+    return;
+  }
+  anEnsureLeaflet(function() {
+    el.innerHTML = '';
+    if (el._map) { try { el._map.remove(); } catch(e) {} el._map = null; }
+    var map = L.map(el, { zoomControl: true }).setView([39.5, -98.35], 4);
+    el._map = map;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OSM' }).addTo(map);
+    var bounds = [];
+    data.wins.forEach(function(l) {
+      var g = anGeoFromLead(l);
+      if (!g) return;
+      bounds.push([g.lat, g.lng]);
+      var name = ((l.firstName || '') + ' ' + (l.lastName || '')).trim() || l.company || 'Won';
+      L.circleMarker([g.lat, g.lng], { radius: 7, color: '#10b981', fillColor: '#10b981', fillOpacity: 0.85, weight: 2 })
+        .addTo(map).bindPopup('<b>🏆 ' + anEsc(name) + '</b><br>Closed Won · ' + anEsc(g.label || ''));
+    });
+    data.prospects.forEach(function(l) {
+      var g = anGeoFromLead(l);
+      if (!g) return;
+      bounds.push([g.lat, g.lng]);
+      var name = ((l.firstName || '') + ' ' + (l.lastName || '')).trim() || l.company || 'Lead';
+      L.circleMarker([g.lat, g.lng], { radius: 5, color: '#6366f1', fillColor: '#6366f1', fillOpacity: 0.65, weight: 1.5 })
+        .addTo(map).bindPopup('<b>' + anEsc(name) + '</b><br>' + anEsc(l.status || 'lead') + ' · ' + anEsc(g.label || ''));
+    });
+    if (bounds.length) map.fitBounds(bounds, { padding: [30, 30], maxZoom: 8 });
+    setTimeout(function() { map.invalidateSize(); }, 200);
+  });
 };
 
 window.anOpenLeadPanel = function(leadId) {
@@ -14350,6 +15127,11 @@ window.anOpenLeadPanel = function(leadId) {
       + anBuildLeadDetailRowHtml('📆 Created', anDate(lead.created))
       +'</div>'
 
+      + anBuildCompanyContactsSection(lead)
+      + anBuildQuickLogSection(lead)
+      + anBuildNameSoundSection(lead)
+      + anBuildLeadIntelSection(lead)
+
       // Notes
       +(lead.notes?'<div style="background:var(--body-bg);border-radius:10px;padding:14px;margin-bottom:14px;">'
         +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Notes</div>'
@@ -14373,6 +15155,7 @@ window.anOpenLeadPanel = function(leadId) {
   }
 
   refreshPanel();
+  if (typeof anInitLeadIntelUI === 'function') anInitLeadIntelUI(leadId);
   // Refresh after call logged
   window._anPanelLeadId = leadId;
 };
@@ -14403,6 +15186,238 @@ window.anGetCompanyLeadsForRep = function(name) {
     });
   }
   return leads;
+};
+
+window.anGetSessionVisitHistory = function() {
+  var queue = typeof anGetActiveCallQueue === 'function' ? anGetActiveCallQueue() : null;
+  if (queue && Array.isArray(queue.visitHistory) && queue.visitHistory.length) return queue.visitHistory;
+  if (!AN._adhocVisitHistory) AN._adhocVisitHistory = [];
+  return AN._adhocVisitHistory;
+};
+
+window.anTrackSessionVisit = function(leadId, opts) {
+  opts = opts || {};
+  if (!leadId || opts.fromBack || opts.skipHistory) return;
+  var queue = typeof anGetActiveCallQueue === 'function' ? anGetActiveCallQueue() : null;
+  if (queue) {
+    if (!Array.isArray(queue.visitHistory)) queue.visitHistory = [];
+    if (queue.visitHistory[queue.visitHistory.length - 1] !== leadId) queue.visitHistory.push(leadId);
+    if (queue.visitHistory.length > 80) queue.visitHistory = queue.visitHistory.slice(-80);
+    if (typeof anPersistCallQueue === 'function') anPersistCallQueue();
+  } else {
+    if (!AN._adhocVisitHistory) AN._adhocVisitHistory = [];
+    if (AN._adhocVisitHistory[AN._adhocVisitHistory.length - 1] !== leadId) AN._adhocVisitHistory.push(leadId);
+    if (AN._adhocVisitHistory.length > 80) AN._adhocVisitHistory = AN._adhocVisitHistory.slice(-80);
+  }
+};
+
+window.anCanGoBackInSession = function(leadId) {
+  var hist = anGetSessionVisitHistory();
+  if (hist.length < 2) return false;
+  var idx = hist.lastIndexOf(leadId);
+  if (idx > 0) return true;
+  return hist.length >= 2 && hist[0] !== leadId;
+};
+
+window.mcmPrevLead = function(leadId) {
+  var hist = anGetSessionVisitHistory().slice();
+  if (hist.length < 2) {
+    if (typeof showToast === 'function') showToast('No previous contact in this session');
+    return;
+  }
+  if (hist[hist.length - 1] === leadId) hist.pop();
+  var prevId = hist[hist.length - 1];
+  if (!prevId) {
+    if (typeof showToast === 'function') showToast('No previous contact in this session');
+    return;
+  }
+  var noteEl = document.getElementById('mcm-note');
+  var overlay = document.getElementById('mcm-overlay');
+  var dirty = (noteEl && noteEl.value.trim()) || (overlay && overlay._outcome);
+  if (dirty && !confirm('Go back without logging this call? Unsaved notes and outcome will be lost.')) return;
+  if (typeof anSwitchCallSessionLead === 'function') anSwitchCallSessionLead(prevId, { force: true, fromBack: true });
+};
+
+window.anSwitchCallSessionLead = function(targetId, opts) {
+  opts = opts || {};
+  if (!targetId) return;
+  var overlay = document.getElementById('mcm-overlay');
+  var currentId = overlay && overlay._leadId;
+  if (currentId && currentId !== targetId && !opts.force) {
+    var noteEl = document.getElementById('mcm-note');
+    var dirty = (noteEl && noteEl.value.trim()) || (overlay && overlay._outcome);
+    if (dirty && !confirm('Switch to this contact without logging the current call?')) return;
+  }
+  if (typeof openMobileCallMode === 'function') {
+    openMobileCallMode(targetId, { fromBack: !!opts.fromBack, switchContact: true });
+  }
+};
+
+window.anQuickAddCompanyContact = function(fromLeadId) {
+  var from = AN.leads.find(function(l) { return l.id === fromLeadId; });
+  if (!from) return;
+  var company = (from.company || '').trim();
+  if (!company) {
+    if (typeof showToast === 'function') showToast('Add agency name first');
+    return;
+  }
+  var firstName = prompt('First name of the person they mentioned:');
+  if (!firstName || !firstName.trim()) return;
+  var lastName = prompt('Last name (optional):') || '';
+  var phone = prompt('Phone (optional):') || '';
+  var title = prompt('Title / role (optional):') || '';
+  var newLead = {
+    id: 'l-' + Date.now(),
+    firstName: firstName.trim(),
+    lastName: (lastName || '').trim(),
+    company: company,
+    title: (title || '').trim(),
+    phone: phone ? anNormalizePhone(phone) : '',
+    email: '',
+    state: typeof anResolveLeadState === 'function' ? anResolveLeadState(from) : (from.state || ''),
+    preferredLang: from.preferredLang || 'en',
+    size: from.size || '',
+    source: 'Referral from ' + ((from.firstName || '') + ' ' + (from.lastName || '')).trim(),
+    status: 'new',
+    callLog: [],
+    notes: 'Referred by ' + ((from.firstName || '') + ' ' + (from.lastName || '')).trim() + ' at ' + company,
+    _repEmail: AN.currentRepEmail,
+    created: new Date().toISOString(),
+    updated: new Date().toISOString()
+  };
+  AN.leads.unshift(newLead);
+  if (AN.save) AN.save();
+  if (typeof renderLeadsTable === 'function') renderLeadsTable();
+  if (typeof showToast === 'function') showToast('Added ' + newLead.firstName + ' — switching call');
+  anSwitchCallSessionLead(newLead.id, { force: true });
+};
+
+window.anBuildCompanyContactsSection = function(lead) {
+  var company = (lead.company || '').trim();
+  if (!company) {
+    return '<div style="background:var(--body-bg);border-radius:10px;padding:12px;margin-bottom:12px;border:1px dashed var(--divider);">'
+      + '<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:6px;">👥 People at agency</div>'
+      + '<div style="font-size:12px;color:var(--text-muted);line-height:1.5;">Save the agency name above — then you can jump to other contacts there or add someone they refer you to.</div>'
+      + '</div>';
+  }
+  var contacts = anGetCompanyLeadsForRep(company).filter(function(l) { return l.id !== lead.id; });
+  var rows = contacts.map(function(l) {
+    var name = ((l.firstName || '') + ' ' + (l.lastName || '')).trim() || 'Unnamed';
+    var lc = typeof anColor === 'function' ? anColor(name) : '#6366f1';
+    var phone = l.phone ? anFormatPhone(l.phone) : '';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--divider);">'
+      + '<div style="width:28px;height:28px;border-radius:50%;background:' + lc + '18;border:1.5px solid ' + lc + '33;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:' + lc + ';flex-shrink:0;">' + ((l.firstName || '?')[0].toUpperCase()) + '</div>'
+      + '<div style="flex:1;min-width:0;cursor:pointer;" onclick="anSwitchCallSessionLead(\'' + l.id + '\')">'
+      + '<div style="font-size:12.5px;font-weight:700;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + anEsc(name) + '</div>'
+      + '<div style="font-size:10.5px;color:var(--text-muted);">' + anEsc(l.title || 'No title') + (phone ? ' · ' + anEsc(phone) : '') + '</div>'
+      + '</div>'
+      + '<button type="button" onclick="event.stopPropagation();anSwitchCallSessionLead(\'' + l.id + '\',{force:true})" style="flex-shrink:0;background:#ecfdf5;color:#10b981;border:1px solid #a7f3d0;border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">📞 Call</button>'
+      + '</div>';
+  }).join('');
+  return '<div style="background:var(--body-bg);border-radius:10px;padding:12px;margin-bottom:12px;border:1px solid var(--divider);">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;">'
+    + '<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;">👥 Also at ' + anEsc(company) + '</div>'
+    + '<button type="button" onclick="anQuickAddCompanyContact(\'' + lead.id + '\')" style="background:#eef2ff;color:#6366f1;border:1px solid #c7d2fe;border-radius:6px;padding:4px 9px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">+ Add person</button>'
+    + '</div>'
+    + (rows || '<div style="font-size:12px;color:var(--text-muted);padding:6px 0 8px;">No other contacts yet — add someone they refer you to.</div>')
+    + '</div>';
+};
+
+window.anBuildQuickLogSection = function(lead) {
+  if (!lead) return '';
+  var id = lead.id;
+  return '<div style="background:var(--body-bg);border-radius:10px;padding:12px;margin-bottom:12px;border:1px solid var(--divider);">'
+    + '<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">⚡ Quick log (no full workflow)</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">'
+    + ['noanswer:📵 No answer', 'voicemail:📬 VM', 'pickup:☎️ Pickup', 'emailed:✉️ Email', 'callback:⏰ Follow-up'].map(function(pair) {
+      var p = pair.split(':');
+      return '<button type="button" onclick="anQuickLogActivity(\'' + id + '\',\'' + p[0] + '\')" style="padding:6px 10px;border-radius:20px;border:1px solid var(--divider);background:var(--card-bg);color:var(--text-secondary);font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">' + p[1] + '</button>';
+    }).join('')
+    + '</div>'
+    + '<div style="display:flex;gap:6px;">'
+    + '<input id="an-quick-note-' + id + '" type="text" placeholder="Quick note — press Enter to save" onkeydown="if(event.key===\'Enter\')anQuickLogActivity(\'' + id + '\',\'note\',this.value)" style="flex:1;border:1.5px solid var(--divider);border-radius:8px;padding:8px 10px;font-size:12px;background:var(--card-bg);color:var(--text-primary);outline:none;font-family:inherit;">'
+    + '<button type="button" onclick="var el=document.getElementById(\'an-quick-note-' + id + '\');anQuickLogActivity(\'' + id + '\',\'note\',el?el.value:\'\')" style="background:#f4f4f5;color:#52525b;border:1px solid var(--divider);border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Save</button>'
+    + '</div>'
+    + '<div style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.4;">Logs activity on this lead without advancing the queue. Use the call panel for full outcomes + demo booking.</div>'
+    + '</div>';
+};
+
+window.anQuickLogActivity = function(leadId, outcome, noteArg) {
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (!lead) return;
+  var overlay = document.getElementById('mcm-overlay');
+  var inCall = overlay && overlay._leadId === leadId;
+  var note = typeof noteArg === 'string' ? noteArg.trim() : '';
+  if (!note && inCall) {
+    var noteEl = document.getElementById('mcm-note');
+    note = noteEl ? noteEl.value.trim() : '';
+  }
+  if (!note && outcome === 'note') {
+    var qn = document.getElementById('an-quick-note-' + leadId);
+    note = qn ? qn.value.trim() : '';
+  }
+  if (outcome === 'note' && !note) {
+    if (typeof showToast === 'function') showToast('Type a note first');
+    return;
+  }
+  if (inCall && typeof mcmSetOutcome === 'function' && outcome !== 'note') {
+    mcmSetOutcome(outcome, leadId);
+    if (note) {
+      var mcmNote = document.getElementById('mcm-note');
+      if (mcmNote) mcmNote.value = note;
+    }
+    if (typeof mcmSave === 'function') mcmSave(leadId, { keepOpen: true });
+    return;
+  }
+  var now = new Date();
+  var entry = {
+    date: now.toISOString().split('T')[0],
+    time: now.toTimeString().slice(0, 5),
+    outcome: outcome === 'note' ? 'note' : outcome,
+    notes: note || (outcome === 'note' ? '' : outcome),
+    rep: AN.currentRepEmail || ''
+  };
+  if (!lead.callLog) lead.callLog = [];
+  lead.callLog.unshift(entry);
+  lead.lastContactDate = entry.date;
+  if (note) {
+    var stamp = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    var line = '[' + stamp + '] ' + note;
+    lead.notes = lead.notes ? (lead.notes + '\n' + line) : line;
+  }
+  if (outcome === 'pickup' && lead.status === 'new') lead.status = 'contacted';
+  if (outcome === 'callback') lead.status = 'followup';
+  if (outcome === 'emailed') lead.status = 'emailed';
+  lead.updated = now.toISOString();
+  if (AN.save) AN.save();
+  if (typeof anAfterLeadDataChange === 'function') anAfterLeadDataChange(leadId, { field: 'status' });
+  else if (typeof renderLeadsTableNow === 'function') renderLeadsTableNow();
+  else if (typeof renderLeadsTable === 'function') renderLeadsTable();
+  if (typeof anRenderCallSessionLeadPanel === 'function') anRenderCallSessionLeadPanel(leadId);
+  var qn2 = document.getElementById('an-quick-note-' + leadId);
+  if (qn2) qn2.value = '';
+  if (typeof showToast === 'function') showToast(outcome === 'note' ? 'Note saved' : 'Activity logged');
+};
+
+window.mcmSaveNoteOnly = function(leadId) {
+  var noteEl = document.getElementById('mcm-note');
+  var note = noteEl ? noteEl.value.trim() : '';
+  if (!note) {
+    if (typeof showToast === 'function') showToast('Type a note in the box first');
+    if (noteEl) noteEl.focus();
+    return;
+  }
+  anQuickLogActivity(leadId, 'note', note);
+  if (noteEl) noteEl.value = '';
+};
+
+window.mcmRefreshSessionNavButtons = function(leadId) {
+  var prevBtn = document.getElementById('mcm-btn-prev');
+  if (!prevBtn) return;
+  var canBack = typeof anCanGoBackInSession === 'function' && anCanGoBackInSession(leadId);
+  prevBtn.disabled = !canBack;
+  prevBtn.style.opacity = canBack ? '1' : '0.4';
+  prevBtn.style.cursor = canBack ? 'pointer' : 'not-allowed';
 };
 
 window.anGetCsCompanyPanelRight = function() {
@@ -14586,7 +15601,7 @@ window.anOpenCallSessionCompanyPanel = function(name) {
     var isDM = (l.callLog || []).some(function(c){ return c.outcome === 'pickup' || c.outcome === 'demo' || c.outcome === 'connected'; });
     var lastC = (l.callLog || []).slice().sort(function(a, b){ return b.date.localeCompare(a.date); })[0];
     var lc = typeof anColor === 'function' ? anColor((l.firstName || '') + (l.lastName || '')) : '#6366f1';
-    return '<div onclick="anRenderCallSessionLeadPanel(\'' + l.id + '\')" style="padding:10px 12px;border-bottom:1px solid var(--divider);display:flex;align-items:center;gap:9px;cursor:pointer;background:' + (isCurrent ? 'rgba(99,102,241,0.08)' : 'transparent') + ';" onmouseover="if(!' + isCurrent + ')this.style.background=\'var(--body-bg)\'" onmouseout="this.style.background=\'' + (isCurrent ? 'rgba(99,102,241,0.08)' : 'transparent') + '\'">'
+    return '<div onclick="anSwitchCallSessionLead(\'' + l.id + '\')" style="padding:10px 12px;border-bottom:1px solid var(--divider);display:flex;align-items:center;gap:9px;cursor:pointer;background:' + (isCurrent ? 'rgba(99,102,241,0.08)' : 'transparent') + ';" onmouseover="if(!' + isCurrent + ')this.style.background=\'var(--body-bg)\'" onmouseout="this.style.background=\'' + (isCurrent ? 'rgba(99,102,241,0.08)' : 'transparent') + '\'">'
       + '<div style="width:28px;height:28px;border-radius:50%;background:' + lc + '18;border:1.5px solid ' + lc + '33;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:' + lc + ';flex-shrink:0;">' + ((l.firstName || '?')[0].toUpperCase()) + '</div>'
       + '<div style="flex:1;min-width:0;">'
       + '<div style="font-size:12.5px;font-weight:700;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + anEsc((l.firstName || '') + ' ' + (l.lastName || '')) + (isCurrent ? ' <span style="font-size:9px;color:#6366f1;">(on call)</span>' : '') + '</div>'
@@ -14774,6 +15789,14 @@ window.anRenderCallSessionLeadPanel = function(leadId) {
 
     + anBuildLeadOwnerCardHtml(lead)
 
+    + anBuildCompanyContactsSection(lead)
+
+    + anBuildQuickLogSection(lead)
+
+    + anBuildNameSoundSection(lead)
+
+    + anBuildLeadIntelSection(lead)
+
     +'<div style="background:var(--body-bg);border-radius:10px;padding:12px;margin-bottom:12px;">'
     +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Contact</div>'
     +'<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--divider);">'
@@ -14847,6 +15870,7 @@ window.anRenderCallSessionLeadPanel = function(leadId) {
     +'</div>';
 
   window._anCsLeadPanelId = leadId;
+  if (typeof anInitLeadIntelUI === 'function') anInitLeadIntelUI(leadId);
 };
 
 window.anQuickLogEmail = function(leadId, note) {
@@ -17228,7 +18252,8 @@ window.openMobileCallMode = function(leadId) {
     +'<div style="padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.06);">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
     +'<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.12em;">Quick Note</div>'
-    +'<button type="button" onclick="anQuickLogEmail(\''+leadId+'\', document.getElementById(\'mcm-note\') ? document.getElementById(\'mcm-note\').value : \'\')" style="background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.45);color:#c4b5fd;border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">✉️ Log Email Only</button>'
+    +'<button type="button" onclick="mcmSaveNoteOnly(\''+leadId+'\')" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#fcd34d;border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">📝 Note only</button>'
+    +'<button type="button" onclick="anQuickLogEmail(\''+leadId+'\', document.getElementById(\'mcm-note\') ? document.getElementById(\'mcm-note\').value : \'\')" style="background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.45);color:#c4b5fd;border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">✉️ Email only</button>'
     +'</div>'
     +'<textarea id="mcm-note" rows="3" placeholder="What happened on this call..." '
     +'style="width:100%;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;font-size:13px;color:#fff;font-family:inherit;outline:none;resize:none;box-sizing:border-box;" '
@@ -17237,10 +18262,13 @@ window.openMobileCallMode = function(leadId) {
 
     // Save + next actions
     +'<div id="mcm-action-buttons" style="padding:16px 18px 24px;display:flex;flex-direction:column;gap:10px;flex-shrink:0;">'
-    +'<button id="mcm-btn-save-next" onclick="mcmSaveAndNext(\''+leadId+'\')" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 20px rgba(16,185,129,0.35);">✓ Log &amp; Next →</button>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<button id="mcm-btn-prev" onclick="mcmPrevLead(\''+leadId+'\')" title="Previous contact in this session" style="flex:0 0 auto;padding:14px 14px;border-radius:12px;border:1.5px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.75);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">← Back</button>'
+    +'<button id="mcm-btn-save-next" onclick="mcmSaveAndNext(\''+leadId+'\')" style="flex:1;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 20px rgba(16,185,129,0.35);">✓ Log &amp; Next →</button>'
+    +'</div>'
     +'<button id="mcm-btn-save-stay" onclick="mcmSaveAndStay(\''+leadId+'\')" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid rgba(99,102,241,0.45);background:rgba(99,102,241,0.12);color:#c7d2fe;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">📞 Log Call &amp; Stay</button>'
     +'<button id="mcm-btn-skip" onclick="mcmNextLead(\''+leadId+'\')" style="width:100%;padding:11px;border-radius:12px;border:1.5px solid rgba(255,255,255,0.12);background:transparent;color:rgba(255,255,255,0.55);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">⏭ Skip to Next (no log)</button>'
-    +'<div style="font-size:10px;color:rgba(255,255,255,0.35);text-align:center;line-height:1.45;">Shortcuts: <strong style="color:rgba(255,255,255,0.5);">N</strong> next · <strong style="color:rgba(255,255,255,0.5);">S</strong> stay</div>'
+    +'<div style="font-size:10px;color:rgba(255,255,255,0.35);text-align:center;line-height:1.45;">Shortcuts: <strong style="color:rgba(255,255,255,0.5);">B</strong> back · <strong style="color:rgba(255,255,255,0.5);">N</strong> next · <strong style="color:rgba(255,255,255,0.5);">S</strong> stay · <strong style="color:rgba(255,255,255,0.5);">⌘↵</strong> note only</div>'
     +'<button onclick="mcmClose()" style="width:100%;padding:10px;border-radius:12px;border:none;background:transparent;color:rgba(255,255,255,0.3);font-size:13px;cursor:pointer;font-family:inherit;">Close panel</button>'
     +'</div>';
 
@@ -18510,6 +19538,20 @@ function hdRender() {
     + anRenderDailyLeaderboardHTML(anBuildDailyLeaderboard())
     +'</div></div>'
 
+    // ── Team Territory Map ──
+    +'<div class="hd-card" id="hd-team-map-card" style="grid-column:1/-1;">'
+    +'<div class="hd-card-header"><span class="hd-card-title">🗺 Team Territory Map</span>'
+    +'<span style="font-size:10px;color:#9999aa;"><span style="color:#6366f1;">●</span> Leads &nbsp; <span style="color:#10b981;">●</span> Closed Won</span></div>'
+    +'<div class="hd-card-body" style="padding:0;">'
+    +'<div id="hd-team-map" style="height:340px;width:100%;background:#f4f4f5;"></div>'
+    +'</div></div>'
+
+    // ── Field Insights teaser ──
+    +'<div class="hd-card" id="hd-insights-card" style="grid-column:1/-1;">'
+    +'<div class="hd-card-header"><span class="hd-card-title">📣 Field Insights — What We\'re Hearing</span>'
+    +'<button class="hd-card-action" onclick="showSection(\'fieldinsights\',null)">Open Board →</button></div>'
+    +'<div class="hd-card-body" id="hd-insights-teaser">' + (typeof anRenderFieldInsightsTeaser === 'function' ? anRenderFieldInsightsTeaser(myLeads) : '') + '</div></div>'
+
     // ── Call Session hero card ──
     +'<div class="hd-card hd-cs-card" style="grid-column:1/-1;">'
     +'<div class="hd-cs-inner">'
@@ -18689,6 +19731,9 @@ function hdRender() {
       }
     });
   }
+  if (typeof anRenderTeamMap === 'function') {
+    setTimeout(anRenderTeamMap, 120);
+  }
 }
 
 function hdStatTile(num, label, color) {
@@ -18700,6 +19745,272 @@ function hdStatTile(num, label, color) {
 
 function hdEsc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+// ============================================================
+// FIELD INSIGHTS BOARD — aggregate call notes for marketing
+// ============================================================
+
+window.AN_INSIGHT_CATEGORIES = {
+  all: { label: 'All', icon: '📋', color: '#6366f1' },
+  not_interested: { label: 'Not Interested', icon: '🚫', color: '#ef4444' },
+  pricing: { label: 'Price / Budget', icon: '💰', color: '#f59e0b' },
+  competitor: { label: 'Competitor', icon: '🎯', color: '#8b5cf6' },
+  pain: { label: 'Pain / OEP', icon: '🔥', color: '#f97316' },
+  objection: { label: 'Objections', icon: '🛡️', color: '#06b6d4' },
+  positive: { label: 'Interested', icon: '✅', color: '#10b981' },
+  general: { label: 'Other', icon: '💬', color: '#71717a' }
+};
+
+window.anClassifyInsight = function(text, leadStatus, outcome) {
+  var t = (text || '').toLowerCase();
+  if (leadStatus === 'not_interested' || outcome === 'not_interested') return 'not_interested';
+  if (/not interested|no thanks|don't need|not looking|happy with|all set|we're good|pass for now|not right now/i.test(t)) return 'not_interested';
+  if (/too expensive|too much|price|pricing|cost|\$\d+|can't afford|budget|cheaper|free/i.test(t)) return 'pricing';
+  if (/ezlynx|hawksoft|agencybloc|agency zoom|nowcerts|agent crm|lucie|healthsherpa|already use|using [a-z]|competitor|current platform|current system/i.test(t)) return 'competitor';
+  if (/oep|open enrollment|renewal|manual|spreadsheet|chaos|overwhelm|pain|struggle|problem|fall through|bottleneck/i.test(t)) return 'pain';
+  if (outcome === 'objection' || /objection|push back|pushback|concern about/i.test(t)) return 'objection';
+  if (leadStatus === 'booked_demo' || outcome === 'demo' || outcome === 'pickup' || /interested|sounds good|love to|let's schedule|book a demo/i.test(t)) return 'positive';
+  return 'general';
+};
+
+window.anCollectFieldInsights = function(opts) {
+  opts = opts || {};
+  var leads = opts.leads;
+  if (!leads) {
+    var isAdmin = (typeof AN !== 'undefined' && AN.isAdmin);
+    leads = isAdmin && opts.teamWide !== false
+      ? ((typeof AN !== 'undefined' && AN.leads) ? AN.leads : [])
+      : ((typeof anMyLeads === 'function') ? anMyLeads() : []);
+  }
+  var days = opts.days || 90;
+  var cutoff = '';
+  if (days > 0) {
+    var d = new Date();
+    d.setDate(d.getDate() - days);
+    cutoff = d.toISOString().split('T')[0];
+  }
+  var items = [];
+  var seen = {};
+
+  function pushItem(obj) {
+    var text = (obj.text || '').trim();
+    if (!text || text.length < 12) return;
+    if (/^record id|^create date|^marketing contact/i.test(text)) return;
+    var key = obj.leadId + '|' + text.slice(0, 80);
+    if (seen[key]) return;
+    seen[key] = true;
+    obj.category = anClassifyInsight(text, obj.leadStatus, obj.outcome);
+    items.push(obj);
+  }
+
+  leads.forEach(function(lead) {
+    var leadName = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || lead.company || 'Unknown';
+    var rep = typeof anGetRepName === 'function' ? anGetRepName(lead._repEmail) : (lead._repEmail || '').split('@')[0];
+
+    (lead.callLog || []).forEach(function(c, i) {
+      if (cutoff && c.date && c.date < cutoff) return;
+      if (c.notes && c.notes.trim()) {
+        pushItem({
+          id: lead.id + '-c-' + i + '-' + (c.date || ''),
+          leadId: lead.id,
+          leadName: leadName,
+          company: lead.company || '',
+          state: typeof anResolveLeadState === 'function' ? anResolveLeadState(lead) : (lead.state || ''),
+          rep: rep,
+          leadStatus: lead.status || '',
+          outcome: c.outcome || '',
+          date: c.date || '',
+          time: c.time || '',
+          text: c.notes.trim(),
+          source: 'call'
+        });
+      }
+    });
+
+    if (lead.notes) {
+      lead.notes.split(/\n+/).forEach(function(line, i) {
+        line = line.replace(/^\[[^\]]+\]\s*/, '').trim();
+        if (!line || line.length < 12) return;
+        var noteDate = lead.updated ? String(lead.updated).slice(0, 10) : (lead.created || '').slice(0, 10);
+        if (cutoff && noteDate && noteDate < cutoff) return;
+        pushItem({
+          id: lead.id + '-n-' + i,
+          leadId: lead.id,
+          leadName: leadName,
+          company: lead.company || '',
+          state: typeof anResolveLeadState === 'function' ? anResolveLeadState(lead) : (lead.state || ''),
+          rep: rep,
+          leadStatus: lead.status || '',
+          outcome: '',
+          date: noteDate,
+          time: '',
+          text: line,
+          source: 'notes'
+        });
+      });
+    }
+  });
+
+  items.sort(function(a, b) {
+    return (b.date + (b.time || '')).localeCompare(a.date + (a.date || ''));
+  });
+  return items;
+};
+
+window.anGetInsightPins = function() {
+  try { return JSON.parse(localStorage.getItem('an-insight-pins') || '[]'); } catch(e) { return []; }
+};
+
+window.anToggleInsightPin = function(id) {
+  var pins = anGetInsightPins();
+  var idx = pins.indexOf(id);
+  if (idx >= 0) pins.splice(idx, 1);
+  else pins.unshift(id);
+  pins = pins.slice(0, 100);
+  localStorage.setItem('an-insight-pins', JSON.stringify(pins));
+  if (typeof anRenderFieldInsights === 'function') anRenderFieldInsights();
+};
+
+window.anRenderInsightCard = function(item, opts) {
+  opts = opts || {};
+  var cat = AN_INSIGHT_CATEGORIES[item.category] || AN_INSIGHT_CATEGORIES.general;
+  var pins = anGetInsightPins();
+  var pinned = pins.indexOf(item.id) >= 0;
+  var dateStr = item.date ? (typeof anDate === 'function' ? anDate(item.date) : item.date) : '';
+  return '<div class="fi-card' + (pinned ? ' fi-pinned' : '') + '" data-cat="' + item.category + '" style="background:#fff;border:1px solid #e4e4e7;border-left:4px solid ' + cat.color + ';border-radius:12px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">'
+    + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">'
+    + '<span style="font-size:10px;font-weight:700;color:' + cat.color + ';text-transform:uppercase;letter-spacing:0.08em;">' + cat.icon + ' ' + cat.label + '</span>'
+    + '<button type="button" onclick="anToggleInsightPin(\'' + item.id.replace(/'/g, "\\'") + '\')" title="Pin for marketing" style="background:' + (pinned ? '#fef3c7' : 'transparent') + ';border:1px solid ' + (pinned ? '#fcd34d' : '#e4e4e7') + ';border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;font-family:inherit;">' + (pinned ? '📌' : 'Pin') + '</button>'
+    + '</div>'
+    + '<div style="font-size:14px;color:#18181b;line-height:1.65;margin-bottom:10px;">"' + hdEsc(item.text) + '"</div>'
+    + '<div style="font-size:11px;color:#71717a;line-height:1.5;">'
+    + '<strong style="color:#52525b;">' + hdEsc(item.leadName) + '</strong>'
+    + (item.company ? ' · ' + hdEsc(item.company) : '')
+    + (item.state ? ' · ' + hdEsc(item.state) : '')
+    + '</div>'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;flex-wrap:wrap;gap:6px;">'
+    + '<span style="font-size:10px;color:#a1a1aa;">' + hdEsc(item.rep) + (dateStr ? ' · ' + dateStr : '') + (item.outcome ? ' · ' + item.outcome : '') + '</span>'
+    + '<button type="button" onclick="showSection(\'crm\',null);setTimeout(function(){anOpenLeadPanel(\'' + item.leadId + '\')},300)" style="background:#f4f4f5;border:1px solid #e4e4e7;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:600;color:#52525b;cursor:pointer;font-family:inherit;">View lead</button>'
+    + '</div></div>';
+};
+
+window.anRenderFieldInsightsTeaser = function(leads) {
+  var items = anCollectFieldInsights({ leads: leads, days: 30 });
+  var notInt = items.filter(function(i) { return i.category === 'not_interested'; }).slice(0, 2);
+  var pain = items.filter(function(i) { return i.category === 'pain' || i.category === 'pricing'; }).slice(0, 1);
+  var preview = notInt.concat(pain).slice(0, 3);
+  if (!preview.length) {
+    return '<div style="font-size:13px;color:#71717a;line-height:1.6;">Log call notes during sessions — they\'ll show up here grouped for marketing. Try marking leads <strong>Not Interested</strong> and adding what they said.</div>';
+  }
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">'
+    + preview.map(function(item) { return anRenderInsightCard(item); }).join('')
+    + '</div>';
+};
+
+window.anExportFieldInsightsMarkdown = function(items, opts) {
+  opts = opts || {};
+  var grouped = {};
+  items.forEach(function(item) {
+    if (!grouped[item.category]) grouped[item.category] = [];
+    grouped[item.category].push(item);
+  });
+  var lines = ['# AgentNav Field Insights', '', 'Generated ' + new Date().toLocaleDateString(), ''];
+  Object.keys(AN_INSIGHT_CATEGORIES).forEach(function(key) {
+    if (key === 'all' || !grouped[key] || !grouped[key].length) return;
+    var cat = AN_INSIGHT_CATEGORIES[key];
+    lines.push('## ' + cat.icon + ' ' + cat.label + ' (' + grouped[key].length + ')', '');
+    grouped[key].forEach(function(item) {
+      lines.push('- **"' + item.text.replace(/"/g, "'") + '"**');
+      lines.push('  - ' + item.leadName + (item.company ? ' @ ' + item.company : '') + (item.state ? ', ' + item.state : ''));
+      lines.push('  - Rep: ' + item.rep + (item.date ? ' · ' + item.date : ''));
+      lines.push('');
+    });
+  });
+  return lines.join('\n');
+};
+
+window.anRenderFieldInsights = function() {
+  var root = document.getElementById('field-insights-root');
+  if (!root) return;
+
+  var filter = window._fiFilter || 'all';
+  var days = window._fiDays || 90;
+  var search = (window._fiSearch || '').toLowerCase();
+  var pinsOnly = !!window._fiPinsOnly;
+  var isAdmin = (typeof AN !== 'undefined' && AN.isAdmin);
+  var teamWide = window._fiTeamWide !== false && isAdmin;
+
+  var items = anCollectFieldInsights({ days: days, teamWide: teamWide });
+  var counts = { all: items.length };
+  items.forEach(function(i) { counts[i.category] = (counts[i.category] || 0) + 1; });
+
+  if (pinsOnly) {
+    var pinSet = anGetInsightPins();
+    items = items.filter(function(i) { return pinSet.indexOf(i.id) >= 0; });
+  } else if (filter !== 'all') {
+    items = items.filter(function(i) { return i.category === filter; });
+  }
+  if (search) {
+    items = items.filter(function(i) {
+      return (i.text + ' ' + i.leadName + ' ' + i.company + ' ' + i.rep).toLowerCase().indexOf(search) >= 0;
+    });
+  }
+
+  var pins = anGetInsightPins();
+  items.sort(function(a, b) {
+    var ap = pins.indexOf(a.id) >= 0 ? 1 : 0;
+    var bp = pins.indexOf(b.id) >= 0 ? 1 : 0;
+    if (ap !== bp) return bp - ap;
+    return (b.date + (b.time || '')).localeCompare(a.date + (a.time || ''));
+  });
+
+  var tabs = Object.keys(AN_INSIGHT_CATEGORIES).map(function(key) {
+    var cat = AN_INSIGHT_CATEGORIES[key];
+    var n = counts[key] || 0;
+    var active = filter === key && !pinsOnly;
+    return '<button type="button" onclick="window._fiFilter=\'' + key + '\';window._fiPinsOnly=false;anRenderFieldInsights()" '
+      + 'style="padding:8px 14px;border-radius:20px;border:1.5px solid ' + (active ? cat.color : '#e4e4e7') + ';background:' + (active ? cat.color + '15' : '#fff') + ';color:' + (active ? cat.color : '#52525b') + ';font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">'
+      + cat.icon + ' ' + cat.label + (n ? ' (' + n + ')' : '') + '</button>';
+  }).join('');
+
+  root.innerHTML = '<style>.fi-card.fi-pinned{box-shadow:0 0 0 2px #fcd34d44;}.fi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;}</style>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px;padding:14px 16px;background:#fff;border:1px solid #e4e4e7;border-radius:12px;">'
+    + '<input type="search" placeholder="Search quotes..." value="' + hdEsc(window._fiSearch || '') + '" oninput="window._fiSearch=this.value;anRenderFieldInsights()" style="flex:1;min-width:180px;border:1.5px solid #e4e4e7;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;font-family:inherit;">'
+    + '<select onchange="window._fiDays=parseInt(this.value,10);anRenderFieldInsights()" style="border:1.5px solid #e4e4e7;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">'
+    + '<option value="7"' + (days === 7 ? ' selected' : '') + '>Last 7 days</option>'
+    + '<option value="30"' + (days === 30 ? ' selected' : '') + '>Last 30 days</option>'
+    + '<option value="90"' + (days === 90 ? ' selected' : '') + '>Last 90 days</option>'
+    + '<option value="365"' + (days === 365 ? ' selected' : '') + '>Last year</option>'
+    + '<option value="0"' + (days === 0 ? ' selected' : '') + '>All time</option>'
+    + '</select>'
+    + (isAdmin ? '<label style="font-size:12px;font-weight:600;color:#52525b;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox"' + (teamWide ? ' checked' : '') + ' onchange="window._fiTeamWide=this.checked;anRenderFieldInsights()"> Whole team</label>' : '')
+    + '<button type="button" onclick="window._fiPinsOnly=!window._fiPinsOnly;anRenderFieldInsights()" style="padding:8px 12px;border-radius:8px;border:1px solid #fcd34d;background:#fffbeb;color:#b45309;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📌 Pinned' + (pins.length ? ' (' + pins.length + ')' : '') + '</button>'
+    + '<button type="button" onclick="anCopyFieldInsights()" style="padding:8px 14px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📋 Copy for Marketing</button>'
+    + '</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">' + tabs + '</div>'
+    + '<div style="font-size:12px;color:#71717a;margin-bottom:14px;">Showing <strong>' + items.length + '</strong> quotes from call notes & lead records. Pin the best ones for your marketing deck.</div>'
+    + (items.length
+      ? '<div class="fi-grid">' + items.map(function(item) { return anRenderInsightCard(item); }).join('') + '</div>'
+      : '<div style="text-align:center;padding:48px 24px;background:#fff;border:1px dashed #e4e4e7;border-radius:12px;color:#71717a;"><div style="font-size:32px;margin-bottom:8px;">📭</div>No quotes match this filter yet.<br><span style="font-size:12px;">Log notes on calls — especially when marking <strong>Not Interested</strong>.</span></div>');
+};
+
+window.anCopyFieldInsights = function() {
+  var items = anCollectFieldInsights({ days: window._fiDays || 90, teamWide: window._fiTeamWide !== false });
+  var filter = window._fiFilter || 'all';
+  if (window._fiPinsOnly) {
+    var pinSet = anGetInsightPins();
+    items = items.filter(function(i) { return pinSet.indexOf(i.id) >= 0; });
+  } else if (filter !== 'all') {
+    items = items.filter(function(i) { return i.category === filter; });
+  }
+  var md = anExportFieldInsightsMarkdown(items);
+  if (typeof anCopyToClipboard === 'function') {
+    anCopyToClipboard(md);
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(md);
+  }
+  if (typeof showToast === 'function') showToast('Copied ' + items.length + ' quotes for marketing');
+};
+
 // ── Wire into showSection ─────────────────────────────────────
 var _origShowSection_hd = window.showSection;
 window.showSection = function(id, btn) {
@@ -18708,6 +20019,13 @@ window.showSection = function(id, btn) {
     setTimeout(hdRender, 30);
     if (typeof anEnsureLeadsLoaded === 'function') {
       anEnsureLeadsLoaded(function(){ setTimeout(hdRender, 60); });
+    }
+  }
+  if (id === 'fieldinsights') {
+    if (typeof anEnsureLeadsLoaded === 'function') {
+      anEnsureLeadsLoaded(function() { anRenderFieldInsights(); });
+    } else {
+      setTimeout(anRenderFieldInsights, 30);
     }
   }
 };
@@ -20387,8 +21705,10 @@ function anLoadCallQueue(){
   try { AN.callQueue = JSON.parse(localStorage.getItem('an-call-queue') || 'null'); } catch(e) { AN.callQueue = null; }
   try { AN.oppCallQueue = JSON.parse(localStorage.getItem('an-opp-call-queue') || 'null'); } catch(e) { AN.oppCallQueue = null; }
   if (AN.callQueue && !Array.isArray(AN.callQueue.completed)) AN.callQueue.completed = [];
+  if (AN.callQueue && !Array.isArray(AN.callQueue.visitHistory)) AN.callQueue.visitHistory = [];
   if (AN.callQueue && !Array.isArray(AN.callQueue.ids)) AN.callQueue = null;
   if (AN.oppCallQueue && !Array.isArray(AN.oppCallQueue.completed)) AN.oppCallQueue.completed = [];
+  if (AN.oppCallQueue && !Array.isArray(AN.oppCallQueue.visitHistory)) AN.oppCallQueue.visitHistory = [];
   if (AN.oppCallQueue && !Array.isArray(AN.oppCallQueue.ids)) AN.oppCallQueue = null;
 }
 
@@ -20789,6 +22109,7 @@ window.anStartCallSession = function(ids, mode, scriptId, stateFilter){
     ids: ids,
     index: 0,
     completed: [],
+    visitHistory: [],
     startedAt: new Date().toISOString(),
     scriptId: scriptId || null,
     stateFilter: stateFilter || null
@@ -20938,19 +22259,51 @@ var AN_SCRIPT_MERGE_FIELDS = [
 var AN_DEFAULT_COLD_SCRIPT = {
   name: 'Cold Call Script',
   steps: [
-    { title: 'Opening — say this when they pick up', body: 'Hey {{first_name}}, this is {{rep_name}} from AgentNav. Quick question — we built a platform for health brokers: ACA and STM quoting, full CRM, SMS, and Renewal Autopilot that automates your entire OEP. Worth two minutes?' },
-    { title: 'Earn the minute (0:15–0:45)', body: 'What does your OEP process look like right now? Running it manually or do you have something in place?' },
-    { title: 'Connect pain to feature (0:45–1:30)', body: '[Repeat back what they said.] That is exactly the problem we solve. [Name one specific feature that addresses their pain.]' },
-    { title: 'Soft pitch (1:30–2:00)', body: 'AgentNav is the only platform built for health brokers — ACA quoting, HealthSherpa, Renewal Autopilot, CRM, SMS, all in one place. Starts at $79 per month.' },
-    { title: 'Close for meeting (2:00–2:30)', body: 'I would love to show you a 15-minute demo. Do you have time Thursday or Friday?' }
+    { title: 'Opening — say this when they pick up', time: '0:00-0:15', body: 'Hey {{first_name}}, this is {{rep_name}} from AgentNav. Quick question — we built a platform for health brokers: ACA and STM quoting, full CRM, SMS, and Renewal Autopilot that automates your entire OEP. Worth two minutes?' },
+    { title: 'Earn the minute', time: '0:15-0:45', body: 'What does your OEP process look like right now? Running it manually or do you have something in place?' },
+    { title: 'Connect pain to feature', time: '0:45-1:30', body: '[Repeat back what they said.] That is exactly the problem we solve. [Name one specific feature that addresses their pain.]' },
+    { title: 'Soft pitch', time: '1:30-2:00', body: 'AgentNav is the only platform built for health brokers — ACA quoting, HealthSherpa, Renewal Autopilot, CRM, SMS, all in one place. Starts at $79 per month.' },
+    { title: 'Close for meeting', time: '2:00-2:30', body: 'I would love to show you a 15-minute demo. Do you have time Thursday or Friday?' }
   ]
+};
+
+window.anSplitTitleTime = function(title) {
+  title = (title || '').trim();
+  var m = title.match(/^(.+?)\s*\(([0-9]+:[0-9]+\s*[–\-—to]+\s*[0-9]+:[0-9]+)\)\s*$/i);
+  if (m) {
+    return {
+      title: m[1].trim(),
+      time: m[2].replace(/[–—]/g, '-').replace(/\s*to\s*/gi, '-').replace(/\s+/g, '')
+    };
+  }
+  return { title: title, time: '' };
+};
+
+window.anGetStepLabel = function(st) {
+  if (!st) return '';
+  var title = (st.title || '').trim();
+  var time = (st.time || '').trim();
+  if (!time) {
+    var split = anSplitTitleTime(title);
+    title = split.title;
+    time = split.time;
+  }
+  return time ? (title + ' (' + time + ')') : title;
 };
 
 function anNormalizeScriptSteps(steps) {
   if (!steps || !steps.length) return null;
   var out = steps.map(function(st) {
+    var title = (st.title || st.name || '').trim();
+    var time = (st.time || '').trim();
+    if (!time) {
+      var split = anSplitTitleTime(title);
+      title = split.title;
+      time = split.time;
+    }
     return {
-      title: (st.title || st.name || '').trim(),
+      title: title,
+      time: time,
       body: (st.body || st.text || st.content || '').trim()
     };
   }).filter(function(st) { return st.body; });
@@ -21014,6 +22367,7 @@ window.anApplyScriptStepsMerge = function(steps, lead) {
   return (steps || []).map(function(st) {
     return {
       title: anApplyScriptMergeFields(st.title, lead),
+      time: st.time || '',
       body: anApplyScriptMergeFields(st.body, lead)
     };
   });
@@ -21103,7 +22457,11 @@ window.anLoadRawScriptSteps = function(mode, lead, opts) {
       }
     }
     if (script) {
-      steps = anNormalizeScriptSteps(script.steps);
+      var leadLang = (lead && lead.preferredLang) ? lead.preferredLang : 'en';
+      var resolved = (typeof seGetScriptStepsForLead === 'function')
+        ? seGetScriptStepsForLead(script, leadLang)
+        : script.steps;
+      steps = anNormalizeScriptSteps(resolved);
       scriptName = script.name || scriptName;
       scriptId = script.id;
     }
@@ -21386,9 +22744,11 @@ window.anSaveCallScriptInline = function(leadId) {
   var steps = [];
   document.querySelectorAll('[data-mcm-script-step]').forEach(function(el) {
     var titleIn = el.querySelector('.mcm-script-title-input');
+    var timeIn = el.querySelector('.mcm-script-time-input');
     var bodyIn = el.querySelector('.mcm-script-body-input');
     steps.push({
       title: titleIn ? titleIn.value.trim() : '',
+      time: timeIn ? timeIn.value.trim() : '',
       body: bodyIn ? bodyIn.value.trim() : ''
     });
   });
@@ -21513,8 +22873,12 @@ window.anRenderCallScript = function(leadId) {
       + anBuildScriptMergeFieldBar(lead)
       + raw.steps.map(function(st, i) {
         return '<div data-mcm-script-step style="margin-bottom:'+(i < raw.steps.length - 1 ? '10' : '0')+'px;">'
+          +'<div style="display:flex;gap:6px;margin-bottom:5px;">'
           +'<input class="mcm-script-title-input" value="'+mcmEsc(st.title)+'" placeholder="Step title..." '
-          +'style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:6px 8px;font-size:10px;font-weight:700;color:rgba(255,255,255,0.5);font-family:inherit;margin-bottom:5px;box-sizing:border-box;">'
+          +'style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:6px 8px;font-size:10px;font-weight:700;color:rgba(255,255,255,0.5);font-family:inherit;box-sizing:border-box;">'
+          +'<input class="mcm-script-time-input" value="'+mcmEsc(st.time || '')+'" placeholder="0:00-0:15" '
+          +'style="width:88px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:6px 8px;font-size:10px;font-weight:600;color:rgba(255,255,255,0.45);font-family:var(--mono,monospace);box-sizing:border-box;">'
+          +'</div>'
           +'<textarea class="mcm-script-body-input" rows="'+(i === 0 ? '4' : '3')+'" placeholder="e.g. Hey {{first_name}}, this is {{rep_name}} from AgentNav..." '
           +'style="width:100%;background:rgba(99,102,241,0.12);border:1.5px solid rgba(99,102,241,0.35);border-radius:10px;padding:10px 12px;font-size:'+(i === 0 ? '14' : '13')+'px;color:#fff;font-family:inherit;line-height:1.55;resize:vertical;box-sizing:border-box;outline:none;">'+mcmEsc(st.body)+'</textarea>'
           +'<div style="font-size:9px;color:rgba(255,255,255,0.3);margin-top:4px;">Preview for this lead: '+mcmEsc(anApplyScriptMergeFields(st.body, lead))+'</div>'
@@ -21550,11 +22914,11 @@ window.anRenderCallScript = function(leadId) {
   var stepBody = showAll
     ? steps.map(function(st, i) {
         return '<div style="margin-bottom:'+(i < steps.length - 1 ? '10' : '0')+'px;">'
-          +'<div style="font-size:10px;font-weight:700;color:'+(i===0?'#fbbf24':'rgba(255,255,255,0.4)')+';margin-bottom:4px;">'+mcmEsc(st.title)+'</div>'
+          +'<div style="font-size:10px;font-weight:700;color:'+(i===0?'#fbbf24':'rgba(255,255,255,0.4)')+';margin-bottom:4px;">'+mcmEsc(typeof anGetStepLabel === 'function' ? anGetStepLabel(st) : st.title)+'</div>'
           +'<div style="font-size:'+(i===0?'14':'13')+'px;color:rgba(255,255,255,0.9);line-height:1.55;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;white-space:pre-wrap;word-break:break-word;">'+mcmEsc(st.body)+'</div>'
           +'</div>';
       }).join('')
-    : '<div style="font-size:10px;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">🎙 '+mcmEsc(current.title)+'</div>'
+    : '<div style="font-size:10px;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">🎙 '+mcmEsc(typeof anGetStepLabel === 'function' ? anGetStepLabel(current) : current.title)+'</div>'
       +'<div style="font-size:15px;font-weight:600;color:#fff;line-height:1.65;background:rgba(99,102,241,0.18);border:2px solid rgba(99,102,241,0.45);border-radius:12px;padding:14px 16px;white-space:pre-wrap;word-break:break-word;">'+mcmEsc(current.body)+'</div>';
 
   var stepNav = steps.length > 1 && !showAll
@@ -21569,9 +22933,12 @@ window.anRenderCallScript = function(leadId) {
       +'</div>'
     : '';
 
+  var nameBanner = '<div id="mcm-name-pronounce-banner" style="display:none;margin-bottom:10px;padding:8px 12px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);border-radius:10px;"></div>';
+
   slot.innerHTML =
     '<div id="mcm-script-block" style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.06);background:linear-gradient(180deg,rgba(99,102,241,0.1) 0%,rgba(10,10,20,0) 100%);flex-shrink:0;">'
     + savedBanner
+    + nameBanner
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
     +'<div style="font-size:10px;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:0.12em;">📋 Script</div>'
     +'<div style="display:flex;gap:6px;">'
@@ -21584,6 +22951,8 @@ window.anRenderCallScript = function(leadId) {
     +'<div style="margin-bottom:4px;">'+stepBody+'</div>'
     + stepNav
     +'</div>';
+  if (typeof anUpdateCallScriptNameBanner === 'function') anUpdateCallScriptNameBanner(leadId);
+  if (stepIdx === 0 && typeof anMaybeAutoNamePronounce === 'function') anMaybeAutoNamePronounce(leadId);
 };
 
 // Back-compat alias
@@ -21619,6 +22988,7 @@ window._anEnhanceCallPanel = function(leadId) {
   }
   if (typeof mcmRenderDayGoalsWidget === 'function') mcmRenderDayGoalsWidget();
   if (typeof anRefreshCallSessionCompanyPanel === 'function') anRefreshCallSessionCompanyPanel(leadId);
+  if (typeof mcmRefreshSessionNavButtons === 'function') mcmRefreshSessionNavButtons(leadId);
 
   // Show existing notes for context
   var noteArea = document.getElementById('mcm-note');
@@ -21635,7 +23005,7 @@ window._anEnhanceCallPanel = function(leadId) {
   // Keyboard shortcuts
   overlay._keyHandler = function(e){
     if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
-      if (e.key === 'Enter' && e.metaKey) { e.preventDefault(); mcmSaveAndStay(leadId); }
+      if (e.key === 'Enter' && e.metaKey) { e.preventDefault(); mcmSaveNoteOnly(leadId); }
       return;
     }
     if (e.key === '1') mcmSetOutcome('noanswer', leadId);
@@ -21643,6 +23013,7 @@ window._anEnhanceCallPanel = function(leadId) {
     if (e.key === '3') mcmSetOutcome('pickup', leadId);
     if (e.key === '4') mcmSetOutcome('demo', leadId);
     if (e.key === '5') mcmSetOutcome('callback', leadId);
+    if (e.key === 'b' || e.key === 'B') { e.preventDefault(); mcmPrevLead(leadId); }
     if (e.key === 's' || e.key === 'S') { e.preventDefault(); mcmSaveAndStay(leadId); }
     if (e.key === 'n' || e.key === 'N') { e.preventDefault(); mcmSaveAndNext(leadId); }
   };
@@ -21650,12 +23021,15 @@ window._anEnhanceCallPanel = function(leadId) {
   if (typeof mcmWireCallPanelHeader === 'function') mcmWireCallPanelHeader();
 };
 
-window.openMobileCallMode = function(leadId){
+window.openMobileCallMode = function(leadId, opts){
+  opts = opts || {};
   anLoadCallQueue();
   var lead = AN.leads && AN.leads.find(function(l){ return l.id === leadId; });
   var run = function() {
+    if (typeof anTrackSessionVisit === 'function') anTrackSessionVisit(leadId, opts);
     _origOpenMobileCallMode(leadId);
     _anEnhanceCallPanel(leadId);
+    if (typeof mcmRefreshSessionNavButtons === 'function') mcmRefreshSessionNavButtons(leadId);
   };
   if (!lead && typeof anEnsureLeadsLoaded === 'function') {
     anEnsureLeadsLoaded(run);
@@ -21710,16 +23084,17 @@ window.mcmNextLead = function(leadId){
   if (overlay && overlay._keyHandler) document.removeEventListener('keydown', overlay._keyHandler);
   mcmCloseCallPanelOnly();
 
-  if (AN.callQueue && AN.callQueue.ids && AN.callQueue.ids.length) {
-    var idx = AN.callQueue.ids.indexOf(leadId);
+  var activeQ = typeof anGetActiveCallQueue === 'function' ? anGetActiveCallQueue() : null;
+  if (activeQ && activeQ.ids && activeQ.ids.length) {
+    var idx = activeQ.ids.indexOf(leadId);
     var nextId = null;
     var i;
-    for (i = idx + 1; i < AN.callQueue.ids.length; i++) {
-      if (AN.callQueue.completed.indexOf(AN.callQueue.ids[i]) < 0) { nextId = AN.callQueue.ids[i]; break; }
+    for (i = idx + 1; i < activeQ.ids.length; i++) {
+      if (activeQ.completed.indexOf(activeQ.ids[i]) < 0) { nextId = activeQ.ids[i]; break; }
     }
     if (!nextId) {
       for (i = 0; i < idx; i++) {
-        if (AN.callQueue.completed.indexOf(AN.callQueue.ids[i]) < 0) { nextId = AN.callQueue.ids[i]; break; }
+        if (activeQ.completed.indexOf(activeQ.ids[i]) < 0) { nextId = activeQ.ids[i]; break; }
       }
     }
     if (nextId) setTimeout(function(){ openMobileCallMode(nextId); }, 180);
@@ -22068,28 +23443,88 @@ console.log('[CRM PERF] Debounced render + side panel stability patch loaded.');
     if (!steps || !steps.length) return '## Step 1\n\n';
     return steps.map(function(s, i) {
       var title = (s.title || '').trim() || ('Step ' + (i + 1));
+      var time = (s.time || '').trim();
       var body = (s.body || '').trim();
-      return '## ' + title + (body ? '\n\n' + body : '');
+      var heading = '## ' + title + (time ? ' (' + time + ')' : '');
+      return heading + (body ? '\n\n' + body : '');
     }).join('\n\n');
+  };
+
+  var SE_DEFAULT_STEP_TITLES = [
+    'Opening — say this when they pick up',
+    'Earn the minute',
+    'Connect pain to feature',
+    'Soft pitch',
+    'Close for meeting'
+  ];
+  var SE_DEFAULT_STEP_TIMES = ['0:00-0:15', '0:15-0:45', '0:45-1:30', '1:30-2:00', '2:00-2:30'];
+
+  window.seSmartSplitPlainScript = function(text) {
+    var raw = (text || '').trim();
+    if (!raw) return [{ title: 'Step 1', time: '', body: '' }];
+    if (/^##\s/m.test(raw)) return seDocToSteps(raw);
+    var blocks = [];
+    var current = [];
+    raw.split('\n').forEach(function(line) {
+      var t = line.trim();
+      if (!t && current.length) {
+        blocks.push(current.join('\n').trim());
+        current = [];
+      } else if (t) {
+        if (/^\([^)]+\)$/.test(t) && current.length) current.push(t);
+        else if ((/^["\u201c]/.test(t) || /^Hey\b/i.test(t)) && current.length && current.join('\n').trim().length > 20) {
+          blocks.push(current.join('\n').trim());
+          current = [line];
+        } else current.push(line);
+      }
+    });
+    if (current.length) blocks.push(current.join('\n').trim());
+    blocks = blocks.filter(function(b) { return b && !/^\([^)]+\)$/.test(b); });
+    if (blocks.length <= 1) return [{ title: SE_DEFAULT_STEP_TITLES[0] || 'Step 1', time: SE_DEFAULT_STEP_TIMES[0] || '', body: raw }];
+    return blocks.map(function(body, i) {
+      return {
+        title: SE_DEFAULT_STEP_TITLES[i] || ('Step ' + (i + 1)),
+        time: SE_DEFAULT_STEP_TIMES[i] || '',
+        body: body
+      };
+    });
   };
 
   window.seDocToSteps = function(text) {
     var raw = (text || '').trim();
-    if (!raw) return [{ title: 'Step 1', body: '' }];
+    if (!raw) return [{ title: 'Step 1', time: '', body: '' }];
+    if (!/^##\s/m.test(raw)) return seSmartSplitPlainScript(raw);
     var chunks = raw.split(/\n(?=##\s+)/);
     var steps = chunks.map(function(chunk, i) {
       chunk = chunk.replace(/^##\s+/, '');
       var nl = chunk.indexOf('\n');
-      var title, body;
-      if (nl === -1) { title = chunk.trim() || ('Step ' + (i + 1)); body = ''; }
-      else { title = chunk.slice(0, nl).trim() || ('Step ' + (i + 1)); body = chunk.slice(nl + 1).replace(/^\n+/, '').trim(); }
-      return { title: title, body: body };
+      var titleLine, body;
+      if (nl === -1) { titleLine = chunk.trim() || ('Step ' + (i + 1)); body = ''; }
+      else { titleLine = chunk.slice(0, nl).trim() || ('Step ' + (i + 1)); body = chunk.slice(nl + 1).replace(/^\n+/, '').trim(); }
+      var split = (typeof anSplitTitleTime === 'function') ? anSplitTitleTime(titleLine) : { title: titleLine, time: '' };
+      return { title: split.title, time: split.time, body: body };
     }).filter(function(s) { return s.title || s.body; });
-    return steps.length ? steps : [{ title: 'Step 1', body: raw }];
+    return steps.length ? steps : [{ title: 'Step 1', time: '', body: raw }];
+  };
+
+  window.seRenderCallPreview = function(steps) {
+    var box = document.getElementById('se-call-preview');
+    if (!box) return;
+    steps = steps || [];
+    if (!steps.length) { box.innerHTML = ''; return; }
+    box.innerHTML = '<div style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px;">Call session preview</div>'
+      + steps.map(function(st, i) {
+        return '<div style="margin-bottom:' + (i < steps.length - 1 ? '10' : '0') + 'px;">'
+          + '<div style="font-size:10px;font-weight:700;color:' + (i === 0 ? '#b45309' : '#71717a') + ';margin-bottom:4px;">' + ((typeof anGetStepLabel === 'function' ? anGetStepLabel(st) : st.title) || ('Step ' + (i + 1))).replace(/</g, '&lt;') + '</div>'
+          + '<div style="font-size:13px;color:#3f3f46;line-height:1.55;background:#f8f8fc;border:1px solid #e4e4e7;border-radius:10px;padding:10px 12px;white-space:pre-wrap;">' + (st.body || '').replace(/</g, '&lt;') + '</div>'
+          + '</div>';
+      }).join('');
   };
 
   window.seGetEditorMode = function() {
-    return localStorage.getItem('se-editor-mode') === 'cards' ? 'cards' : 'doc';
+    var saved = localStorage.getItem('se-editor-mode');
+    if (saved === 'doc') return 'doc';
+    return 'cards';
   };
 
   window.seSetEditorMode = function(mode) {
@@ -22114,24 +23549,47 @@ console.log('[CRM PERF] Debounced render + side panel stability patch loaded.');
       if (btn) { btn.textContent = 'Cards'; btn.classList.remove('se-mode-doc'); btn.title = 'Switch to document mode'; }
     }
     if (typeof seUpdateCount === 'function') seUpdateCount(seCollectSteps());
+    if (typeof seRenderCallPreview === 'function') seRenderCallPreview(seCollectSteps());
   };
 
   window.seRenderSteps = function(steps) {
+    steps = steps || [];
+    if (steps.length === 1 && (steps[0].body || '').length > 120 && typeof seSmartSplitPlainScript === 'function') {
+      var split = seSmartSplitPlainScript(steps[0].body);
+      if (split.length > 1) steps = split;
+    }
     if (seGetEditorMode() === 'doc') {
       var doc = document.getElementById('se-doc-editor');
       var body = document.getElementById('se-steps-body');
       if (body) body.classList.add('se-doc-active');
-      if (doc) doc.value = seStepsToDoc(steps || []);
-      if (typeof seUpdateCount === 'function') seUpdateCount(steps || []);
+      if (doc) doc.value = seStepsToDoc(steps);
+      if (typeof seUpdateCount === 'function') seUpdateCount(steps);
+      if (typeof seRenderCallPreview === 'function') seRenderCallPreview(steps);
       return;
     }
     if (typeof _origRenderSteps === 'function') _origRenderSteps(steps);
+    if (typeof seRenderCallPreview === 'function') seRenderCallPreview(steps);
   };
 
   window.seCollectSteps = function() {
     if (seGetEditorMode() === 'doc') {
       var doc = document.getElementById('se-doc-editor');
       return seDocToSteps(doc ? doc.value : '');
+    }
+    var list = document.getElementById('se-steps-list');
+    if (list) {
+      var steps = [];
+      list.querySelectorAll('.se-step-card').forEach(function(card) {
+        var ti = card.querySelector('.se-step-title-input');
+        var tm = card.querySelector('.se-step-time-input');
+        var ta = card.querySelector('textarea');
+        steps.push({
+          title: ti ? ti.value.trim() : '',
+          time: tm ? tm.value.trim() : '',
+          body: ta ? ta.value.trim() : ''
+        });
+      });
+      if (steps.length) return steps;
     }
     return typeof _origCollectSteps === 'function' ? _origCollectSteps() : [];
   };
@@ -22248,20 +23706,31 @@ console.log('[CRM PERF] Debounced render + side panel stability patch loaded.');
     if (tgl) tgl.textContent = show ? '🧠 Hide AI' : '🧠 Ask AI';
   };
 
+  function seEnsureCallPreview() {
+    var body = document.getElementById('se-steps-body');
+    if (!body || document.getElementById('se-call-preview')) return;
+    var prev = document.createElement('div');
+    prev.id = 'se-call-preview';
+    prev.style.cssText = 'margin-top:14px;padding-top:14px;border-top:1px solid #e4e4e7;max-height:280px;overflow-y:auto;';
+    body.appendChild(prev);
+  }
+
   function seEnsureDocEditor() {
     var body = document.getElementById('se-steps-body');
     if (!body || document.getElementById('se-doc-wrap')) return;
     var wrap = document.createElement('div');
     wrap.id = 'se-doc-wrap';
-    wrap.innerHTML = '<div id="se-doc-hint">Write your script as one document. Use <strong>## Step title</strong> on its own line to mark each step.</div>'
-      + '<textarea id="se-doc-editor" placeholder="## Opening\n\nHey [Name], this is...\n\n## Discovery\n\nWhat does your OEP process look like?"></textarea>';
+    wrap.innerHTML = '<div id="se-doc-hint">Use <strong>Cards</strong> mode to match the call session step-by-step view. In Document mode, separate steps with a blank line — or use <strong>## Step title</strong> on its own line.</div>'
+      + '<textarea id="se-doc-editor" placeholder="## Opening — say this when they pick up\n\nHey {{first_name}}, this is {{rep_name}} from AgentNav...\n\n## Earn the minute (0:15–0:45)\n\nWhat does your OEP process look like?"></textarea>';
     var list = document.getElementById('se-steps-list');
     if (list && list.parentNode) body.insertBefore(wrap, list);
     else body.appendChild(wrap);
     var doc = document.getElementById('se-doc-editor');
     if (doc) doc.oninput = function() {
       if (typeof seMarkDirty === 'function') seMarkDirty();
-      if (typeof seUpdateCount === 'function') seUpdateCount(seCollectSteps());
+      var steps = typeof seDocToSteps === 'function' ? seDocToSteps(doc.value) : [];
+      if (typeof seUpdateCount === 'function') seUpdateCount(steps);
+      if (typeof seRenderCallPreview === 'function') seRenderCallPreview(steps);
     };
   }
 
@@ -22322,12 +23791,13 @@ console.log('[CRM PERF] Debounced render + side panel stability patch loaded.');
     }
 
     seEnsureDocEditor();
+    seEnsureCallPreview();
 
     var toolbar = document.querySelector('#se-editor-wrap > div');
     if (toolbar && !document.getElementById('se-focus-btn')) {
       var wrap = document.createElement('div');
       wrap.style.cssText = 'display:flex;gap:6px;flex-shrink:0;';
-      wrap.innerHTML = '<button type="button" id="se-mode-toggle" title="Switch editing mode" style="padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid #e4e4e7;background:#fafafa;color:#52525b;">Document</button>'
+      wrap.innerHTML = '<button type="button" id="se-mode-toggle" title="Switch editing mode" style="padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid #e4e4e7;background:#fafafa;color:#52525b;">Cards</button>'
         + '<button type="button" id="se-focus-btn" style="padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid #e4e4e7;background:#fafafa;color:#52525b;">Focus</button>'
         + '<button type="button" id="se-ai-toggle-btn" style="padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid #c7d2fe;background:#eef2ff;color:#6366f1;">🧠 Hide AI</button>';
       var saveBtn = toolbar.querySelector('button[onclick*="seSave"]');
@@ -22366,6 +23836,15 @@ console.log('[CRM PERF] Debounced render + side panel stability patch loaded.');
         setTimeout(seInitEditorUI, 50);
       };
       window.initScriptEditor._v2patched = true;
+    }
+
+    var _origMarkDirty = window.seMarkDirty;
+    if (typeof _origMarkDirty === 'function' && !_origMarkDirty._v2prev) {
+      window.seMarkDirty = function() {
+        _origMarkDirty();
+        if (typeof seRenderCallPreview === 'function') seRenderCallPreview(seCollectSteps());
+      };
+      window.seMarkDirty._v2prev = true;
     }
 
     if (typeof seRenderLib === 'function') seRenderLib();
