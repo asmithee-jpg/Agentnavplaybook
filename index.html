@@ -3985,6 +3985,7 @@ window.onUserLoggedIn = function(user) {
   if (typeof _origOnUserLoggedIn_dash === 'function') _origOnUserLoggedIn_dash(user);
   // Load dashboard data from Supabase after login
   setTimeout(function() {
+    if (typeof anFetchTeamActivityCloud === 'function') anFetchTeamActivityCloud();
     dashLoad(function() {
       var sec = document.getElementById('section-dashboard');
       if (sec && sec.classList.contains('active')) {
@@ -4935,17 +4936,35 @@ function getActivityDates() {
   var days = _dashTimeRange === 'day' ? 1 : _dashTimeRange === 'week' ? 7 : 30;
   for (var i = days - 1; i >= 0; i--) {
     var d = new Date(now); d.setDate(d.getDate() - i);
-    dates.push(d.toISOString().split('T')[0]);
+    dates.push(typeof anLocalDateStr === 'function' ? anLocalDateStr(d) : d.toISOString().split('T')[0]);
   }
   return dates;
 }
 
 function getActivityForPeriod(period) {
-  var log = _dash.activityLog || [];
   var now = new Date();
   var result = { calls:0, demos:0, closes:0 };
+  var useTeam = typeof AN !== 'undefined' && AN.isAdmin && typeof anGetTeamViewScope === 'function' && !anGetTeamViewScope();
+  if (useTeam && typeof anGetScopedActivityLog === 'function') {
+    var savedRange = typeof _dashTimeRange !== 'undefined' ? _dashTimeRange : null;
+    var savedGoal = typeof _goalPeriod !== 'undefined' ? _goalPeriod : null;
+    if (period === 'today') _dashTimeRange = 'day';
+    else if (period === 'week') _dashTimeRange = 'week';
+    else if (period === 'month') _dashTimeRange = 'month';
+    _goalPeriod = period;
+    var scoped = anGetScopedActivityLog();
+    if (savedRange !== null) _dashTimeRange = savedRange;
+    if (savedGoal !== null) _goalPeriod = savedGoal;
+    scoped.forEach(function(e) {
+      result.calls += e.calls || 0;
+      result.demos += e.demos || 0;
+      result.closes += e.closes || 0;
+    });
+    return result;
+  }
+  var log = _dash.activityLog || [];
   if (period === 'today') {
-    var today = now.toISOString().split('T')[0];
+    var today = anLocalDateStr(now);
     var e = log.filter(function(x){ return x.date === today; })[0];
     if (e) {
       result.calls = e.calls || 0;
@@ -4960,8 +4979,11 @@ function getActivityForPeriod(period) {
   if (period === 'week')  cutoff.setDate(cutoff.getDate() - 7);
   else if (period === 'month') cutoff.setDate(cutoff.getDate() - 30);
   else cutoff = new Date(0);
+  var end = new Date(now);
+  end.setHours(23, 59, 59, 999);
   log.forEach(function(e) {
-    if (new Date(e.date+'T12:00:00') >= cutoff && new Date(e.date+'T12:00:00') <= sdrTo2) {
+    var ed = new Date(e.date + 'T12:00:00');
+    if (ed >= cutoff && ed <= end) {
       result.calls  += e.calls  || 0;
       result.demos  += e.demos  || 0;
       result.closes += e.closes || 0;
@@ -5378,28 +5400,30 @@ window.anGetScopedActivityLog = function() {
         }
       });
     });
+    anMergeTeamActivityIntoByDate(byDate, dates, scope === '__mine__' ? (AN.currentRepEmail || '').toLowerCase() : (scope || '__all__'));
     return dates.map(function(d) { return byDate[d]; });
   }
-  if (useTeam && typeof AN !== 'undefined' && AN.leads && AN.leads.length) {
+  if (useTeam) {
     var teamByDate = {};
     dates.forEach(function(d) { teamByDate[d] = { date: d, calls: 0, demos: 0, closes: 0, calls_by_hour: {}, pickups_by_hour: {}, demos_by_hour: {} }; });
-    AN.leads.forEach(function(lead) {
-      (lead.callLog || []).forEach(function(c) {
-        if (!teamByDate[c.date]) return;
-        teamByDate[c.date].calls++;
-        if (c.outcome === 'demo') teamByDate[c.date].demos++;
-        if (c.outcome === 'won') teamByDate[c.date].closes++;
-        if (c.time) {
-          var hr2 = parseInt(String(c.time).split(':')[0], 10);
-          if (!isNaN(hr2)) {
-            teamByDate[c.date].calls_by_hour[hr2] = (teamByDate[c.date].calls_by_hour[hr2] || 0) + 1;
+    if (typeof AN !== 'undefined' && AN.leads && AN.leads.length) {
+      AN.leads.forEach(function(lead) {
+        (lead.callLog || []).forEach(function(c) {
+          if (!teamByDate[c.date]) return;
+          teamByDate[c.date].calls++;
+          if (c.outcome === 'demo') teamByDate[c.date].demos++;
+          if (c.outcome === 'won') teamByDate[c.date].closes++;
+          if (c.time) {
+            var hr2 = parseInt(String(c.time).split(':')[0], 10);
+            if (!isNaN(hr2)) {
+              teamByDate[c.date].calls_by_hour[hr2] = (teamByDate[c.date].calls_by_hour[hr2] || 0) + 1;
+            }
           }
-        }
+        });
       });
-    });
-    var teamLog = dates.map(function(d) { return teamByDate[d]; });
-    var hasTeamData = teamLog.some(function(e) { return (e.calls || 0) + (e.demos || 0) + (e.closes || 0) > 0; });
-    if (hasTeamData) return teamLog;
+    }
+    anMergeTeamActivityIntoByDate(teamByDate, dates, '__all__');
+    return dates.map(function(d) { return teamByDate[d]; });
   }
   return _dash.activityLog || [];
 };
@@ -6878,7 +6902,7 @@ window.openQuickCallLog = function() {
 
 window.logCallOutcome = function(outcome) {
   var hour  = new Date().getHours();
-  var today = new Date().toISOString().split('T')[0];
+  var today = typeof anLocalDateStr === 'function' ? anLocalDateStr() : new Date().toISOString().split('T')[0];
   if (!_dash.activityLog) _dash.activityLog = [];
   var entry = _dash.activityLog.filter(function(e){ return e.date === today; })[0];
   if (!entry) { entry = {date:today,calls:0,demos:0,closes:0}; _dash.activityLog.push(entry); }
@@ -6887,6 +6911,11 @@ window.logCallOutcome = function(outcome) {
   if (!entry.voicemails_by_hour) entry.voicemails_by_hour = {};
   if (!entry.demos_by_hour)     entry.demos_by_hour     = {};
   if (!entry.noanswer_by_hour)  entry.noanswer_by_hour  = {};
+  if (!entry.calls_by_hour)     entry.calls_by_hour     = {};
+
+  entry.calls = (entry.calls || 0) + 1;
+  _dash.activity.calls = (_dash.activity.calls || 0) + 1;
+  entry.calls_by_hour[hour] = (entry.calls_by_hour[hour] || 0) + 1;
 
   if (outcome === 'pickup') {
     entry.pickups_by_hour[hour]   = (entry.pickups_by_hour[hour]   || 0) + 1;
@@ -6897,7 +6926,6 @@ window.logCallOutcome = function(outcome) {
   } else if (outcome === 'demo') {
     entry.pickups_by_hour[hour]   = (entry.pickups_by_hour[hour]   || 0) + 1;
     entry.demos_by_hour[hour]     = (entry.demos_by_hour[hour]     || 0) + 1;
-    // Also increment demos counter
     entry.demos = (entry.demos || 0) + 1;
     _dash.activity.demos = (_dash.activity.demos || 0) + 1;
     var dInp = document.getElementById('gact-demos');
@@ -6905,6 +6933,11 @@ window.logCallOutcome = function(outcome) {
   }
 
   dashSave();
+  if (typeof anPushTeamActivityCloud === 'function') {
+    var cloudDelta = { calls: 1 };
+    if (outcome === 'demo') cloudDelta.demos = 1;
+    anPushTeamActivityCloud(cloudDelta);
+  }
   var panel = document.getElementById('quick-call-log');
   if (panel) {
     var labels = { pickup:'✓ Logged', voicemail:'📬 Logged', noanswer:'📵 Logged', demo:'🎯 Demo set!' };
@@ -9196,6 +9229,120 @@ window.anCallLogRep = function(call, lead) {
   return ((call && call.rep) || (lead && lead._repEmail) || (typeof AN !== 'undefined' && AN.currentRepEmail) || '').toLowerCase();
 };
 
+window.anLocalDateStr = function(d) {
+  d = d || new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+};
+
+window.anTeamActStorageKey = function(email, date) {
+  return 'team_act_' + (email || '').toLowerCase().replace('@', '_at_') + '_' + (date || anLocalDateStr());
+};
+
+window.anParseTeamActStorageKey = function(key) {
+  if (!key || key.indexOf('team_act_') !== 0) return null;
+  var rest = key.slice('team_act_'.length);
+  var date = rest.slice(-10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  var email = rest.slice(0, -11).replace('_at_', '@');
+  return { email: email, date: date };
+};
+
+window.anMergeTeamActivityIntoByDate = function(byDate, dates, repFilter) {
+  if (!AN || !AN._teamActivityByRep || !byDate) return;
+  repFilter = repFilter ? repFilter.toLowerCase() : '';
+  Object.keys(AN._teamActivityByRep).forEach(function(em) {
+    if (repFilter && repFilter !== '__all__' && em !== repFilter) return;
+    var repDays = AN._teamActivityByRep[em] || {};
+    (dates || []).forEach(function(d) {
+      var day = repDays[d];
+      if (!day || !byDate[d]) return;
+      byDate[d].calls = Math.max(byDate[d].calls || 0, day.calls || 0);
+      byDate[d].demos = Math.max(byDate[d].demos || 0, day.demos || 0);
+      byDate[d].closes = Math.max(byDate[d].closes || 0, day.closes || 0);
+      if (day.calls_by_hour) {
+        if (!byDate[d].calls_by_hour) byDate[d].calls_by_hour = {};
+        Object.keys(day.calls_by_hour).forEach(function(h) {
+          byDate[d].calls_by_hour[h] = Math.max(byDate[d].calls_by_hour[h] || 0, day.calls_by_hour[h] || 0);
+        });
+      }
+    });
+  });
+};
+
+window.anPushTeamActivityCloud = function(delta) {
+  delta = delta || {};
+  if (!delta.calls && !delta.demos && !delta.closes && !delta.showed) return;
+  var repEmail = ((typeof AN !== 'undefined' && AN.currentRepEmail) || (_currentUser && _currentUser.email) || '').toLowerCase();
+  if (!repEmail) return;
+  var today = anLocalDateStr();
+  if (!AN._teamActivityByRep) AN._teamActivityByRep = {};
+  if (!AN._teamActivityByRep[repEmail]) AN._teamActivityByRep[repEmail] = {};
+  var cur = Object.assign({ calls: 0, demos: 0, closes: 0, showed: 0, calls_by_hour: {} }, AN._teamActivityByRep[repEmail][today] || {});
+  if (delta.calls) {
+    cur.calls = (cur.calls || 0) + delta.calls;
+    var hr = new Date().getHours();
+    if (!cur.calls_by_hour) cur.calls_by_hour = {};
+    cur.calls_by_hour[hr] = (cur.calls_by_hour[hr] || 0) + delta.calls;
+  }
+  if (delta.demos) cur.demos = (cur.demos || 0) + delta.demos;
+  if (delta.closes) cur.closes = (cur.closes || 0) + delta.closes;
+  if (delta.showed) cur.showed = (cur.showed || 0) + delta.showed;
+  AN._teamActivityByRep[repEmail][today] = cur;
+
+  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
+  if (!sb) return;
+  var key = anTeamActStorageKey(repEmail, today);
+  sb.from('admin_content').upsert({
+    key: key,
+    value: JSON.stringify(cur),
+    updated_by: repEmail,
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'key' }).then(function(r) {
+    if (r.error) console.warn('[Team activity] Cloud sync warning:', r.error.message);
+  });
+};
+
+window.anBackfillTeamActivityFromLeads = function(leads) {
+  if (!leads || !leads.length) return;
+  if (!AN._teamActivityByRep) AN._teamActivityByRep = {};
+  leads.forEach(function(lead) {
+    (lead.callLog || []).forEach(function(c) {
+      if (!c || !c.date) return;
+      var rep = typeof anCallLogRep === 'function' ? anCallLogRep(c, lead) : (lead._repEmail || '').toLowerCase();
+      if (!rep) return;
+      if (!AN._teamActivityByRep[rep]) AN._teamActivityByRep[rep] = {};
+      if (!AN._teamActivityByRep[rep][c.date]) AN._teamActivityByRep[rep][c.date] = { calls: 0, demos: 0, closes: 0, showed: 0 };
+      var day = AN._teamActivityByRep[rep][c.date];
+      day.calls = (day.calls || 0) + 1;
+      if (c.outcome === 'demo') day.demos = (day.demos || 0) + 1;
+      if (c.outcome === 'won') day.closes = (day.closes || 0) + 1;
+    });
+  });
+};
+
+window.anFetchTeamActivityCloud = function(cb) {
+  cb = cb || function() {};
+  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
+  if (!sb) { cb(); return; }
+  sb.from('admin_content').select('key, value').like('key', 'team_act_%').then(function(r) {
+    var byRep = {};
+    (r.data || []).forEach(function(row) {
+      var parsed = anParseTeamActStorageKey(row.key);
+      if (!parsed || !parsed.email) return;
+      var em = parsed.email.toLowerCase();
+      if (!byRep[em]) byRep[em] = {};
+      try {
+        byRep[em][parsed.date] = Object.assign({ calls: 0, demos: 0, closes: 0, showed: 0 }, JSON.parse(row.value || '{}'));
+      } catch(e) {}
+    });
+    AN._teamActivityByRep = byRep;
+    cb(byRep);
+  }).catch(function(err) {
+    console.warn('[Team activity] Cloud fetch failed:', err);
+    cb(AN._teamActivityByRep || {});
+  });
+};
+
 window.anFilterLeaderboardByScope = function(rows) {
   rows = rows || [];
   if (typeof AN === 'undefined') return rows;
@@ -9215,7 +9362,7 @@ window.anFilterLeaderboardByScope = function(rows) {
 
 window.anBuildDailyLeaderboard = function(extraRows, opts) {
   opts = opts || {};
-  var today = new Date().toISOString().split('T')[0];
+  var today = anLocalDateStr();
   var byEmail = {};
   function ensure(email) {
     email = (email || '').toLowerCase();
@@ -9272,6 +9419,16 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
     maxField(em, 'showed', entry.demos_showed || row.demos_showed || row.showed || 0);
     maxField(em, 'closes', entry.closes || row.closes || 0);
   });
+  if (AN && AN._teamActivityByRep) {
+    Object.keys(AN._teamActivityByRep).forEach(function(em) {
+      var day = (AN._teamActivityByRep[em] || {})[today];
+      if (!day) return;
+      maxField(em, 'calls', day.calls || 0);
+      maxField(em, 'demos', day.demos || 0);
+      maxField(em, 'showed', day.showed || 0);
+      maxField(em, 'closes', day.closes || 0);
+    });
+  }
   var myEmail = (typeof AN !== 'undefined' && AN.currentRepEmail) ? AN.currentRepEmail.toLowerCase() : '';
   if (myEmail && typeof getActivityForPeriod === 'function') {
     var act = getActivityForPeriod('today');
@@ -9292,19 +9449,22 @@ window.anLoadTeamDailyLeaderboard = function(cb) {
   var local = anBuildDailyLeaderboard();
   var sb = typeof getSupabase === 'function' ? getSupabase() : null;
   if (!sb || typeof _currentUser === 'undefined' || !_currentUser) { if (cb) cb(local); return; }
-  var queries = [sb.from('sales_dashboard').select('rep_email, activity, activityLog')];
-  if (typeof AN !== 'undefined' && AN.isAdmin) {
-    queries.push(sb.from('an_leads').select('rep_email, data, updated_at'));
-  }
-  Promise.all(queries).then(function(results) {
-    var dashRows = (results[0].data && !results[0].error) ? results[0].data : [];
-    var extraLeads = [];
-    if (results[1] && results[1].data && !results[1].error) {
-      extraLeads = anParseLeadsFromSupabaseRows(results[1].data);
+  anFetchTeamActivityCloud(function() {
+    var queries = [sb.from('sales_dashboard').select('rep_email, activity, activityLog')];
+    if (typeof AN !== 'undefined' && AN.isAdmin) {
+      queries.push(sb.from('an_leads').select('rep_email, data, updated_at'));
     }
-    var merged = anBuildDailyLeaderboard(dashRows, { extraLeads: extraLeads });
-    if (cb) cb(merged);
-  }).catch(function() { if (cb) cb(local); });
+    Promise.all(queries).then(function(results) {
+      var dashRows = (results[0].data && !results[0].error) ? results[0].data : [];
+      var extraLeads = [];
+      if (results[1] && results[1].data && !results[1].error) {
+        extraLeads = anParseLeadsFromSupabaseRows(results[1].data);
+        if (typeof anBackfillTeamActivityFromLeads === 'function') anBackfillTeamActivityFromLeads(extraLeads);
+      }
+      var merged = anBuildDailyLeaderboard(dashRows, { extraLeads: extraLeads });
+      if (cb) cb(merged);
+    }).catch(function() { if (cb) cb(anBuildDailyLeaderboard()); });
+  });
 };
 
 window.anRenderDailyLeaderboardHTML = function(rows) {
@@ -9617,6 +9777,7 @@ function anColor(str){ if(!str) return '#6366f1'; var h=0; for(var i=0;i<str.len
 // ── Supabase load/save ────────────────────────────────────────
 function anSanitizeLeadStatus(lead) {
   if (!lead) return lead;
+  if (lead.isOpportunity || (typeof anIsOpportunity === 'function' && anIsOpportunity(lead))) return lead;
   var oppOnly = ['showed', 'proposal', 'negotiation', 'won', 'lost'];
   if (!lead.isOpportunity && oppOnly.indexOf(lead.status) >= 0) {
     if (lead.status === 'showed' || lead.status === 'demo') lead.status = 'booked_demo';
@@ -9642,11 +9803,72 @@ function anOppDedupeKey(lead) {
 }
 
 function anIsOpportunityRecord(lead) {
-  if (!lead) return false;
-  if (lead.isOpportunity) return true;
-  var oppStatuses = ['demo', 'showed', 'proposal', 'negotiation', 'won', 'lost', 'booked_demo', 'demo_complete'];
-  return oppStatuses.indexOf(lead.status || '') >= 0;
+  return typeof anIsOpportunity === 'function' ? anIsOpportunity(lead) : !!(lead && lead.isOpportunity);
 }
+
+function anOppStageRank(status) {
+  var order = { demo: 1, showed: 2, proposal: 3, negotiation: 4, won: 5, lost: 5 };
+  return order[status] || 0;
+}
+
+function anMergeOpportunityRecords(keep, drop) {
+  if (!keep || !drop || keep.id === drop.id) return keep;
+  if (drop.callLog && drop.callLog.length) {
+    keep.callLog = (keep.callLog || []).concat(drop.callLog);
+    keep.callLog.sort(function(a, b) { return (b.date + b.time).localeCompare(a.date + a.time); });
+  }
+  ['notes', 'oppNotes', 'demoDate', 'demoTime', 'demoBookedAt', 'demoCompletedAt', 'company', 'email', 'phone', 'firstName', 'lastName', 'oppMRR', 'size', 'oppCloseDate'].forEach(function(f) {
+    if ((keep[f] === undefined || keep[f] === null || keep[f] === '') && drop[f]) keep[f] = drop[f];
+  });
+  if (anOppStageRank(drop.status) > anOppStageRank(keep.status)) keep.status = drop.status;
+  keep.isOpportunity = true;
+  keep.updated = new Date().toISOString();
+  return keep;
+}
+
+window.anOppPipelineStage = function(lead) {
+  if (!lead) return 'demo';
+  var s = lead.status || '';
+  if (s === 'booked_demo') return 'demo';
+  if (s === 'demo_complete') return 'showed';
+  if (['demo', 'showed', 'proposal', 'negotiation', 'won', 'lost'].indexOf(s) >= 0) return s;
+  return lead.isOpportunity ? 'demo' : s;
+};
+
+window.anRepairMisclassifiedLeads = function(leads) {
+  var changed = false;
+  (leads || []).forEach(function(l) {
+    if (!l) return;
+    var prospectStatuses = ['booked_demo', 'demo_complete', 'new', 'contacted', 'followup', 'emailed', 'nurture'];
+    if (l.isOpportunity && prospectStatuses.indexOf(l.status || '') >= 0 && !l.convertedAt) {
+      l.isOpportunity = false;
+      changed = true;
+    }
+    if (!l.isOpportunity && ['showed', 'proposal', 'negotiation', 'won', 'lost'].indexOf(l.status || '') >= 0) {
+      l.isOpportunity = true;
+      changed = true;
+    }
+    if (!l.isOpportunity && l.status === 'demo' && l.convertedAt) {
+      l.isOpportunity = true;
+      changed = true;
+    }
+  });
+  return changed;
+};
+
+window.anNormalizeOpportunityStatuses = function(opps) {
+  var changed = false;
+  (opps || []).forEach(function(o) {
+    if (!o || !o.isOpportunity) return;
+    var stage = anOppPipelineStage(o);
+    if (['booked_demo', 'demo_complete'].indexOf(o.status) >= 0 && o.status !== stage) {
+      o.status = stage;
+      o.updated = new Date().toISOString();
+      changed = true;
+    }
+  });
+  return changed;
+};
 
 function anDedupeOpportunitiesForDisplay(opps) {
   var seenKeys = {};
@@ -9666,7 +9888,7 @@ function anDedupeOpportunityLeads(arr) {
   var seen = {};
   var removeIds = {};
   arr.forEach(function(l) {
-    if (!l || !anIsOpportunityRecord(l)) return;
+    if (!l || !l.isOpportunity) return;
     var key = anOppDedupeKey(l);
     if (!key) return;
     var prev = seen[key];
@@ -9675,25 +9897,27 @@ function anDedupeOpportunityLeads(arr) {
       return;
     }
     var keepNew = false;
-    if (l.isOpportunity && !prev.isOpportunity) keepNew = true;
-    else if (!l.isOpportunity && prev.isOpportunity) keepNew = false;
-    else if (anLeadUpdatedMs(l) > anLeadUpdatedMs(prev)) keepNew = true;
+    if (anOppStageRank(l.status) > anOppStageRank(prev.status)) keepNew = true;
+    else if (anOppStageRank(l.status) === anOppStageRank(prev.status) && anLeadUpdatedMs(l) > anLeadUpdatedMs(prev)) keepNew = true;
     if (keepNew) {
+      anMergeOpportunityRecords(l, prev);
       removeIds[prev.id] = true;
       seen[key] = l;
     } else {
+      anMergeOpportunityRecords(prev, l);
       removeIds[l.id] = true;
     }
   });
   var removed = Object.keys(removeIds).length;
   if (!removed) return arr;
-  if (typeof console !== 'undefined') console.info('[CRM] Removed ' + removed + ' duplicate opportunit' + (removed === 1 ? 'y' : 'ies'));
+  if (typeof console !== 'undefined') console.info('[CRM] Merged ' + removed + ' duplicate opportunit' + (removed === 1 ? 'y' : 'ies'));
   return arr.filter(function(l) { return !removeIds[l.id]; });
 }
 
 function anNormalizeLeads(arr){
   if(!Array.isArray(arr)) return [];
   if(arr.length && Array.isArray(arr[0]) && !arr[0].id) return arr.reduce(function(flat, item){ return flat.concat(item); }, []);
+  if (typeof anRepairMisclassifiedLeads === 'function') anRepairMisclassifiedLeads(arr);
   var normalized = arr.map(function(l){
     if(l && l.phone) l.phone = anNormalizePhone(l.phone);
     if(l && typeof anHydrateLeadState === 'function') anHydrateLeadState(l);
@@ -9928,6 +10152,7 @@ function anAssignLeadsChunked(leads, cb){
       setTimeout(step, 0);
     } else {
       AN.leadsLoading = false;
+      if (typeof anEnforceRepLeadScope === 'function') anEnforceRepLeadScope();
       AN.invalidateLeadCaches();
       if(typeof hdRefreshCallableSlot === 'function') hdRefreshCallableSlot();
       if(cb) cb();
@@ -10007,6 +10232,7 @@ AN.load = function(cb){
   }
   if(localLeads && localLeads.length){
     AN.leads = anApplyOwnerPatches(localLeads);
+    if (typeof anEnforceRepLeadScope === 'function') anEnforceRepLeadScope();
     AN.leadsStorage = 'local';
     if(!sb||!_currentUser){ anLeadsLoadDone(); return; }
   } else if(localStorage.getItem('an-crm-leads-idb') === '1'){
@@ -10023,6 +10249,7 @@ AN.load = function(cb){
     return;
   } else {
     AN.leads = anApplyOwnerPatches(localLeads || []);
+    if (typeof anEnforceRepLeadScope === 'function') anEnforceRepLeadScope();
     AN.leadsStorage = 'local';
     if(!sb||!_currentUser){ anLeadsLoadDone(); return; }
   }
@@ -10834,7 +11061,7 @@ AN.filtered = function(){
   var adv = AN.advancedFilters || {};
   var demoFilterActive = AN.currentFilter === 'demo' || AN.currentFilter === 'booked_demo';
   var list = AN.leads.filter(function(l){
-    if (!demoFilterActive && !anIsProspect(l)) return false;
+    if (!demoFilterActive && !q && !anIsProspect(l)) return false;
     if(!AN.isAdmin && !anRepOwnsLead(l)) return false;
     var leadOwner = (l._repEmail || '').toLowerCase();
     if(AN.isAdmin && AN.repFilter === '__mine__'){
@@ -14394,6 +14621,9 @@ window.onUserLoggedIn = function(user){
     AN.currentRepEmail = user.email;
     AN.isAdmin = user.email === AN_CRM_ADMIN_EMAIL;
     AN.currentRep = (user.user_metadata&&user.user_metadata.full_name)||user.email.split('@')[0];
+    if (!AN.isAdmin && Array.isArray(AN.leads) && AN.leads.length && typeof anEnforceRepLeadScope === 'function') {
+      anEnforceRepLeadScope();
+    }
     AN.leadsReady = false;
     if (typeof AN.invalidateLeadCaches === 'function') AN.invalidateLeadCaches();
     if (typeof AN.load === 'function') {
@@ -14651,6 +14881,11 @@ function syncActivityFromCRM(key, count) {
   entry[key] = (entry[key]||0) + count;
 
   if (typeof dashSave === 'function') dashSave();
+  if (typeof anPushTeamActivityCloud === 'function') {
+    var delta = {};
+    delta[key] = count;
+    anPushTeamActivityCloud(delta);
+  }
 
   // Update goals display if visible
   var inp = document.getElementById('gact-'+key);
@@ -15142,55 +15377,217 @@ window.anLeadMatchesTeamScope = function(lead) {
   return owner === scope.toLowerCase();
 };
 
-window.anGetTeamMapLeads = function() {
-  if (typeof AN === 'undefined' || !AN.leads) return { prospects: [], wins: [] };
-  var pool = AN.isAdmin ? AN.leads : (typeof anMyLeads === 'function' ? anMyLeads() : AN.leads);
-  var wins = [];
-  var prospects = [];
-  pool.forEach(function(l) {
-    if (!anLeadMatchesTeamScope(l)) return;
-    if (!anGeoFromLead(l)) return;
-    if (l.status === 'won') wins.push(l);
-    else if (l.status !== 'lost' && (typeof anIsOpportunityRecord === 'function' ? !anIsOpportunityRecord(l) : true)) {
-      prospects.push(l);
+window.anGetTeamMapMode = function() {
+  if (typeof AN === 'undefined') return 'leads';
+  if (!AN._teamMapModeLoaded) {
+    AN._teamMapModeLoaded = true;
+    try {
+      var saved = localStorage.getItem('an-team-map-mode');
+      if (saved === 'won' || saved === 'leads') AN.teamMapMode = saved;
+      else AN.teamMapMode = 'leads';
+    } catch(e) { AN.teamMapMode = 'leads'; }
+  }
+  return AN.teamMapMode === 'won' ? 'won' : 'leads';
+};
+
+window.anSetTeamMapMode = function(mode) {
+  if (typeof AN === 'undefined') return;
+  AN.teamMapMode = mode === 'won' ? 'won' : 'leads';
+  AN._teamMapModeLoaded = true;
+  try { localStorage.setItem('an-team-map-mode', AN.teamMapMode); } catch(e) {}
+  var sel = document.getElementById('hd-team-map-mode');
+  if (sel) sel.value = AN.teamMapMode;
+  anRenderTeamMap();
+};
+
+window.anGetTeamMapScope = function() {
+  if (typeof AN === 'undefined') return '__mine__';
+  if (!AN._teamMapScopeLoaded) {
+    AN._teamMapScopeLoaded = true;
+    try {
+      var saved = localStorage.getItem('an-team-map-scope');
+      if (saved !== null) AN.teamMapScope = saved;
+      else AN.teamMapScope = AN.isAdmin ? '' : '__mine__';
+    } catch(e) {
+      AN.teamMapScope = AN.isAdmin ? '' : '__mine__';
     }
+  }
+  return AN.teamMapScope || '';
+};
+
+window.anSetTeamMapScope = function(val) {
+  if (typeof AN === 'undefined') return;
+  AN.teamMapScope = val || '';
+  AN._teamMapScopeLoaded = true;
+  try { localStorage.setItem('an-team-map-scope', AN.teamMapScope); } catch(e) {}
+  var sel = document.getElementById('hd-team-map-scope');
+  if (sel) sel.value = AN.teamMapScope;
+  anRenderTeamMap();
+};
+
+window.anLeadMatchesMapScope = function(lead) {
+  if (!lead || typeof AN === 'undefined') return false;
+  if (!AN.isAdmin) {
+    return typeof anRepOwnsLead === 'function' ? anRepOwnsLead(lead) : true;
+  }
+  var scope = anGetTeamMapScope();
+  if (!scope || scope === '') return true;
+  var owner = (lead._repEmail || '').toLowerCase();
+  if (scope === '__mine__') return owner === (AN.currentRepEmail || '').toLowerCase();
+  return owner === scope.toLowerCase();
+};
+
+window.anBuildTeamMapScopeSelectHTML = function() {
+  if (typeof AN === 'undefined' || !AN.isAdmin) return '';
+  var scope = anGetTeamMapScope();
+  var reps = typeof anGetKnownRepEmails === 'function' ? anGetKnownRepEmails() : [];
+  var html = '<select id="hd-team-map-scope" onchange="anSetTeamMapScope(this.value)" title="Filter by rep" style="padding:5px 10px;border-radius:8px;border:1.5px solid #e4e4e7;background:#fff;font-size:12px;font-weight:600;color:#52525b;cursor:pointer;font-family:inherit;">'
+    + '<option value=""'+((!scope || scope==='')?' selected':'')+'>All team</option>'
+    + '<option value="__mine__"'+(scope==='__mine__'?' selected':'')+'>My leads</option>';
+  reps.forEach(function(em) {
+    var name = typeof anGetRepName === 'function' ? anGetRepName(em) : em.split('@')[0];
+    html += '<option value="'+anEsc(em)+'"'+(scope===em.toLowerCase()?' selected':'')+'>'+anEsc(name)+'</option>';
   });
-  return { prospects: prospects.slice(0, 200), wins: wins };
+  html += '</select>';
+  return html;
+};
+
+window.anMergeTeamMapLeadPool = function(localLeads, extraLeads) {
+  var byId = {};
+  (localLeads || []).forEach(function(l) { if (l && l.id) byId[l.id] = l; });
+  (extraLeads || []).forEach(function(l) {
+    if (!l || !l.id) return;
+    var existing = byId[l.id];
+    if (!existing || anLeadUpdatedMs(l) > anLeadUpdatedMs(existing)) byId[l.id] = l;
+  });
+  return Object.keys(byId).map(function(id) { return byId[id]; });
+};
+
+window.anEnsureTeamMapLeads = function(cb) {
+  cb = cb || function() {};
+  if (typeof AN === 'undefined') { cb([]); return; }
+  var local = AN.leads ? AN.leads.slice() : [];
+  if (!AN.isAdmin) {
+    AN._teamMapLeadsPool = typeof anFilterLeadsForCurrentRep === 'function' ? anFilterLeadsForCurrentRep(local) : local;
+    cb(AN._teamMapLeadsPool);
+    return;
+  }
+  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
+  if (!sb || typeof _currentUser === 'undefined' || !_currentUser) {
+    AN._teamMapLeadsPool = local;
+    cb(local);
+    return;
+  }
+  sb.from('an_leads').select('rep_email, data, updated_at').then(function(r) {
+    var extra = (r.data && !r.error) ? anParseLeadsFromSupabaseRows(r.data) : [];
+    AN._teamMapLeadsPool = anMergeTeamMapLeadPool(local, extra);
+    cb(AN._teamMapLeadsPool);
+  }).catch(function() {
+    AN._teamMapLeadsPool = local;
+    cb(local);
+  });
+};
+
+window.anLeadMapStatusLabel = function(lead) {
+  if (!lead) return 'Lead';
+  if (lead.status === 'won') return 'Closed Won';
+  var labels = { new:'New', contacted:'Contacted', booked_demo:'Demo Booked', followup:'Following Up', demo:'Demo Set', showed:'Showed', proposal:'Proposal', nurture:'Nurture', emailed:'Emailed', lost:'Lost' };
+  return labels[lead.status] || (lead.status || 'Lead');
+};
+
+window.anLeadMapOwnerLabel = function(lead) {
+  var em = (lead && lead._repEmail) ? lead._repEmail : '';
+  if (!em) return 'Unassigned';
+  return typeof anGetRepName === 'function' ? anGetRepName(em) : em.split('@')[0].replace(/[._]/g, ' ');
+};
+
+window.anGetTeamMapLeads = function(pool) {
+  pool = pool || (AN && AN._teamMapLeadsPool) || (AN && AN.leads) || [];
+  var mode = anGetTeamMapMode();
+  var items = [];
+  pool.forEach(function(l) {
+    if (!l || !anLeadMatchesMapScope(l)) return;
+    if (!anGeoFromLead(l)) return;
+    if (mode === 'won') {
+      if (l.status === 'won') items.push(l);
+      return;
+    }
+    if (l.status === 'won' || l.status === 'lost' || l.status === 'not_interested') return;
+    if (typeof anIsOpportunityRecord === 'function' && anIsOpportunityRecord(l)) return;
+    items.push(l);
+  });
+  items.sort(function(a, b) {
+    return ((a.lastName || '') + (a.firstName || '')).localeCompare((b.lastName || '') + (b.firstName || ''));
+  });
+  return { mode: mode, items: items, total: items.length, shown: items.slice(0, 300) };
+};
+
+window.anRenderTeamMapPopup = function(lead, mode) {
+  var name = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || lead.company || 'Contact';
+  var company = lead.company && name !== lead.company ? lead.company : '';
+  var g = anGeoFromLead(lead);
+  var owner = anLeadMapOwnerLabel(lead);
+  var status = anLeadMapStatusLabel(lead);
+  var loc = g ? g.label : '';
+  var lines = [];
+  if (mode === 'won') lines.push('<b>🏆 ' + anEsc(name) + '</b>');
+  else lines.push('<b>' + anEsc(name) + '</b>');
+  if (company) lines.push(anEsc(company));
+  lines.push('<span style="color:#6366f1;font-weight:700;">' + anEsc(status) + '</span>');
+  lines.push('👤 ' + anEsc(owner));
+  if (loc) lines.push('📍 ' + anEsc(loc));
+  if (lead.phone) lines.push('📞 ' + anEsc(lead.phone));
+  return lines.join('<br>');
 };
 
 window.anRenderTeamMap = function() {
   var el = document.getElementById('hd-team-map');
   if (!el) return;
-  var data = anGetTeamMapLeads();
-  if (!data.prospects.length && !data.wins.length) {
-    el.innerHTML = '<div style="padding:32px;text-align:center;color:#9999aa;font-size:13px;">Add phone or state on leads to plot them here.</div>';
-    return;
-  }
-  anEnsureLeaflet(function() {
-    el.innerHTML = '';
-    if (el._map) { try { el._map.remove(); } catch(e) {} el._map = null; }
-    var map = L.map(el, { zoomControl: true }).setView([39.5, -98.35], 4);
-    el._map = map;
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OSM' }).addTo(map);
-    var bounds = [];
-    data.wins.forEach(function(l) {
-      var g = anGeoFromLead(l);
-      if (!g) return;
-      bounds.push([g.lat, g.lng]);
-      var name = ((l.firstName || '') + ' ' + (l.lastName || '')).trim() || l.company || 'Won';
-      L.circleMarker([g.lat, g.lng], { radius: 7, color: '#10b981', fillColor: '#10b981', fillOpacity: 0.85, weight: 2 })
-        .addTo(map).bindPopup('<b>🏆 ' + anEsc(name) + '</b><br>Closed Won · ' + anEsc(g.label || ''));
+  anEnsureTeamMapLeads(function(pool) {
+    var data = anGetTeamMapLeads(pool);
+    var mode = data.mode;
+    var countEl = document.getElementById('hd-team-map-count');
+    if (countEl) {
+      var modeLabel = mode === 'won' ? 'closed won' : 'active leads';
+      var scopeLabel = 'all team';
+      if (AN.isAdmin) {
+        var scope = anGetTeamMapScope();
+        if (scope === '__mine__') scopeLabel = 'my leads';
+        else if (scope) scopeLabel = anLeadMapOwnerLabel({ _repEmail: scope });
+      }
+      countEl.innerHTML = '<span style="color:'+(mode==='won'?'#10b981':'#6366f1')+'">●</span> '
+        + data.total + ' ' + modeLabel + ' · ' + scopeLabel
+        + (data.total > data.shown.length ? ' (showing ' + data.shown.length + ')' : '');
+    }
+    var modeSel = document.getElementById('hd-team-map-mode');
+    if (modeSel) modeSel.value = mode;
+    if (!data.shown.length) {
+      if (el._map) { try { el._map.remove(); } catch(e) {} el._map = null; }
+      el.innerHTML = '<div style="padding:32px;text-align:center;color:#9999aa;font-size:13px;">No '
+        + (mode === 'won' ? 'closed won deals' : 'active leads')
+        + ' with a state or phone to plot.<br><small style="font-size:11px;margin-top:8px;display:block;">Add state on the lead record, or a phone number for area-code placement.</small></div>';
+      return;
+    }
+    anEnsureLeaflet(function() {
+      el.innerHTML = '';
+      if (el._map) { try { el._map.remove(); } catch(e) {} el._map = null; }
+      var map = L.map(el, { zoomControl: true }).setView([39.5, -98.35], 4);
+      el._map = map;
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OSM' }).addTo(map);
+      var bounds = [];
+      var color = mode === 'won' ? '#10b981' : '#6366f1';
+      var radius = mode === 'won' ? 7 : 5;
+      data.shown.forEach(function(l) {
+        var g = anGeoFromLead(l);
+        if (!g) return;
+        bounds.push([g.lat, g.lng]);
+        L.circleMarker([g.lat, g.lng], { radius: radius, color: color, fillColor: color, fillOpacity: mode === 'won' ? 0.85 : 0.7, weight: 2 })
+          .addTo(map).bindPopup(anRenderTeamMapPopup(l, mode));
+      });
+      if (bounds.length === 1) map.setView(bounds[0], 7);
+      else if (bounds.length) map.fitBounds(bounds, { padding: [30, 30], maxZoom: 8 });
+      setTimeout(function() { map.invalidateSize(); }, 200);
     });
-    data.prospects.forEach(function(l) {
-      var g = anGeoFromLead(l);
-      if (!g) return;
-      bounds.push([g.lat, g.lng]);
-      var name = ((l.firstName || '') + ' ' + (l.lastName || '')).trim() || l.company || 'Lead';
-      L.circleMarker([g.lat, g.lng], { radius: 5, color: '#6366f1', fillColor: '#6366f1', fillOpacity: 0.65, weight: 1.5 })
-        .addTo(map).bindPopup('<b>' + anEsc(name) + '</b><br>' + anEsc(l.status || 'lead') + ' · ' + anEsc(g.label || ''));
-    });
-    if (bounds.length) map.fitBounds(bounds, { padding: [30, 30], maxZoom: 8 });
-    setTimeout(function() { map.invalidateSize(); }, 200);
   });
 };
 
@@ -16530,7 +16927,8 @@ function anBuildOppTableHTML(opps, stages) {
   var stageMap = {};
   stages.forEach(function(s) { stageMap[s.id] = s; });
   var rows = opps.map(function(o) {
-    var st = stageMap[o.status] || { label: o.status, color: '#6366f1' };
+    var stageId = typeof anOppPipelineStage === 'function' ? anOppPipelineStage(o) : o.status;
+    var st = stageMap[stageId] || { label: stageId, color: '#6366f1' };
     var mrr = o.oppMRR || (AN_SIZES.find(function(s){ return s.id === o.size; }) || { price: 79 }).price;
     var owner = o._repEmail && typeof anGetRepName === 'function' ? anGetRepName(o._repEmail) : (o._repEmail || '—');
     var name = ((o.firstName||'')+' '+(o.lastName||'')).trim() || o.company || 'Deal';
@@ -16570,7 +16968,8 @@ function anBuildOppCalendarHTML(opps) {
     })();
     var items = byMonth[m].map(function(o) {
       var name = ((o.firstName||'')+' '+(o.lastName||'')).trim() || o.company || 'Deal';
-      var st = (typeof anStatus === 'function') ? anStatus(o.status || 'demo') : { label: o.status, color: '#6366f1' };
+      var stageId = typeof anOppPipelineStage === 'function' ? anOppPipelineStage(o) : (o.status || 'demo');
+      var st = (typeof anStatus === 'function') ? anStatus(stageId) : { label: stageId, color: '#6366f1' };
       var mrr = o.oppMRR || 79;
       return '<div onclick="anOpenOppRecord(\''+o.id+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid var(--divider);border-radius:10px;margin-bottom:8px;cursor:pointer;background:var(--card-bg);" onmouseover="this.style.borderColor=\'#c7d2fe\'" onmouseout="this.style.borderColor=\'var(--divider)\'">'
         +'<div><div style="font-weight:700;color:var(--text-primary);">'+anEsc(name)+'</div>'
@@ -16745,20 +17144,25 @@ window.renderOpportunities = function() {
   }
   if (!Array.isArray(AN.leads)) AN.leads = [];
 
-  var beforeCount = AN.leads.length;
-  AN.leads = anDedupeOpportunityLeads(AN.leads);
-  if (AN.leads.length < beforeCount) {
+  if (typeof anRepairMisclassifiedLeads === 'function' && anRepairMisclassifiedLeads(AN.leads)) {
     if (typeof AN.invalidateLeadCaches === 'function') AN.invalidateLeadCaches();
-    clearTimeout(window._anOppDedupeSaveTimer);
-    window._anOppDedupeSaveTimer = setTimeout(function() {
+    clearTimeout(window._anOppRepairSaveTimer);
+    window._anOppRepairSaveTimer = setTimeout(function() {
       if (typeof AN.save === 'function') AN.save();
     }, 600);
   }
 
   var opps = AN.leads.filter(function(l){
-    return anIsOpportunityRecord(l);
+    return anIsOpportunity(l);
   });
   if (!AN.isAdmin) opps = opps.filter(function(l){ return typeof anRepOwnsLead === 'function' ? anRepOwnsLead(l) : (l._repEmail === AN.currentRepEmail); });
+  if (typeof anNormalizeOpportunityStatuses === 'function' && anNormalizeOpportunityStatuses(opps)) {
+    if (typeof AN.invalidateLeadCaches === 'function') AN.invalidateLeadCaches();
+    clearTimeout(window._anOppNormSaveTimer);
+    window._anOppNormSaveTimer = setTimeout(function() {
+      if (typeof AN.save === 'function') AN.save();
+    }, 400);
+  }
   opps = anDedupeOpportunitiesForDisplay(opps);
   opps = anFilterOppsForSearch(opps);
   var oppView = (AN && AN.oppView) || 'board';
@@ -16784,7 +17188,7 @@ window.renderOpportunities = function() {
 
   var kanbanHTML = '<div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:16px;min-height:400px;">'
     +stages.map(function(stage){
-      var stageLead = opps.filter(function(o){return o.status===stage.id;});
+      var stageLead = opps.filter(function(o){ return anOppPipelineStage(o) === stage.id; });
       var stageMRR  = stageLead.reduce(function(s,o){ return s+(o.oppMRR||( AN_SIZES.find(function(x){return x.id===o.size;})||{price:79}).price); },0);
 
       var cards = stageLead.map(function(opp){
@@ -19516,22 +19920,33 @@ body.sb-collapsed #nav-collapse-btn { right: -10px !important; transform: scaleX
 // ============================================================
 
 window.hdRefreshTeamWidgets = function() {
-  if (typeof anLoadTeamDailyLeaderboard === 'function') {
-    anLoadTeamDailyLeaderboard(function(rows) {
-      var body = document.getElementById('hd-leaderboard-body');
-      if (body && typeof anRenderDailyLeaderboardHTML === 'function') {
-        body.innerHTML = anRenderDailyLeaderboardHTML(rows);
-      }
-    });
+  function finishRefresh() {
+    if (typeof anLoadTeamDailyLeaderboard === 'function') {
+      anLoadTeamDailyLeaderboard(function(rows) {
+        var body = document.getElementById('hd-leaderboard-body');
+        if (body && typeof anRenderDailyLeaderboardHTML === 'function') {
+          body.innerHTML = anRenderDailyLeaderboardHTML(rows);
+        }
+      });
+    }
+    var statsEl = document.querySelector('.hd-shout-stats');
+    if (statsEl && typeof hdGetTodayDashStats === 'function') {
+      var stats = hdGetTodayDashStats();
+      statsEl.textContent = 'Today: ' + stats.dashCalls + ' calls · ' + stats.dashDemos + ' demos · ' + stats.dashCloses + ' closes';
+    }
+    if (typeof anRenderTeamMap === 'function') {
+      setTimeout(anRenderTeamMap, 80);
+    }
+    var dashSec = document.getElementById('section-dashboard');
+    if (dashSec && dashSec.classList.contains('active') && typeof dashRefreshVisiblePanes === 'function') {
+      dashRefreshVisiblePanes();
+    }
   }
-  var statsEl = document.querySelector('.hd-shout-stats');
-  if (statsEl && typeof hdGetTodayDashStats === 'function') {
-    var stats = hdGetTodayDashStats();
-    statsEl.textContent = 'Today: ' + stats.dashCalls + ' calls · ' + stats.dashDemos + ' demos · ' + stats.dashCloses + ' closes';
+  if (typeof anFetchTeamActivityCloud === 'function') {
+    anFetchTeamActivityCloud(finishRefresh);
+    return;
   }
-  if (typeof anRenderTeamMap === 'function') {
-    setTimeout(anRenderTeamMap, 80);
-  }
+  finishRefresh();
 };
 
 function hdGetTodayDashStats() {
@@ -19640,22 +20055,33 @@ function hdRenderCore() {
   var root = document.getElementById('home-dashboard-root');
   if (!root) return;
 
+  if (typeof AN !== 'undefined' && AN.leadsLoading && !AN.isAdmin) {
+    if (!root.querySelector('.hd-body')) {
+      root.innerHTML = '<div style="padding:48px 24px;text-align:center;color:#71717a;font-size:14px;"><div style="font-size:28px;margin-bottom:12px;">⏳</div>Loading your leads…</div>';
+    }
+    return;
+  }
+
   var now = new Date();
   var days  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   var todayStr = now.getFullYear()+'-'+pad2(now.getMonth()+1)+'-'+pad2(now.getDate());
 
   // ── Gather data from AN.leads (sync cache if memory empty) ──
+  var myEmail = (typeof AN !== 'undefined' && AN.currentRepEmail) || '';
+  var isAdmin = (typeof AN !== 'undefined' && AN.isAdmin) || false;
   if (typeof AN !== 'undefined' && (!AN.leads || !AN.leads.length) && !AN.leadsLoading) {
     try {
       if (localStorage.getItem('an-crm-leads-idb') !== '1') {
-        AN.leads = anApplyOwnerPatches(anNormalizeLeads(JSON.parse(localStorage.getItem('an-crm-leads') || '[]')));
+        var cachedLeads = anApplyOwnerPatches(anNormalizeLeads(JSON.parse(localStorage.getItem('an-crm-leads') || '[]')));
+        if (!isAdmin && myEmail && typeof anFilterLeadsForCurrentRep === 'function') {
+          cachedLeads = anFilterLeadsForCurrentRep(cachedLeads);
+        }
+        AN.leads = cachedLeads;
       }
     } catch(e) {}
   }
   var leads = (typeof AN !== 'undefined' && AN.leads) ? AN.leads : [];
-  var myEmail = (typeof AN !== 'undefined' && AN.currentRepEmail) || '';
-  var isAdmin = (typeof AN !== 'undefined' && AN.isAdmin) || false;
   var myLeads;
   if (isAdmin && typeof anGetTeamViewScope === 'function') {
     var scope = anGetTeamViewScope();
@@ -19957,8 +20383,16 @@ function hdRenderCore() {
 
     // ── Team Territory Map (bottom) ──
     +'<div class="hd-card" id="hd-team-map-card" style="grid-column:1/-1;">'
-    +'<div class="hd-card-header"><span class="hd-card-title">🗺 Team Territory Map</span>'
-    +'<span style="font-size:10px;color:#9999aa;"><span style="color:#6366f1;">●</span> Leads &nbsp; <span style="color:#10b981;">●</span> Closed Won</span></div>'
+    +'<div class="hd-card-header" style="flex-wrap:wrap;gap:8px;">'
+    +'<span class="hd-card-title">🗺 Team Territory Map</span>'
+    +'<div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+    +'<select id="hd-team-map-mode" onchange="anSetTeamMapMode(this.value)" title="What to plot on the map" style="padding:5px 10px;border-radius:8px;border:1.5px solid #e4e4e7;background:#fff;font-size:12px;font-weight:600;color:#52525b;cursor:pointer;font-family:inherit;">'
+    +'<option value="leads"'+(anGetTeamMapMode()==='leads'?' selected':'')+'>Active leads</option>'
+    +'<option value="won"'+(anGetTeamMapMode()==='won'?' selected':'')+'>Closed won</option>'
+    +'</select>'
+    +(isAdmin && typeof anBuildTeamMapScopeSelectHTML === 'function' ? anBuildTeamMapScopeSelectHTML() : '')
+    +'<span id="hd-team-map-count" style="font-size:10px;color:#9999aa;white-space:nowrap;"></span>'
+    +'</div></div>'
     +'<div class="hd-card-body" style="padding:0;">'
     +'<div id="hd-team-map" style="height:340px;width:100%;background:#f4f4f5;"></div>'
     +'</div></div>'
@@ -21943,11 +22377,14 @@ if (typeof AN !== 'undefined' && AN.load) {
     var localBefore = [];
     try { localBefore = JSON.parse(localStorage.getItem('an-crm-leads') || '[]'); } catch(e) {}
     _origANLoad(function() {
-      if (!AN.isAdmin && Array.isArray(localBefore) && localBefore.length && (!AN.leads || !AN.leads.length)) {
-        AN.leads = typeof anFilterLeadsForCurrentRep === 'function' ? anFilterLeadsForCurrentRep(localBefore) : localBefore;
-        try { localStorage.setItem('an-crm-leads', JSON.stringify(AN.leads)); } catch(e){}
-      }
       if (typeof anEnforceRepLeadScope === 'function') anEnforceRepLeadScope();
+      if (!AN.isAdmin && Array.isArray(AN.leads) && AN.leads.length) {
+        try {
+          if (localStorage.getItem('an-crm-leads-idb') !== '1') {
+            localStorage.setItem('an-crm-leads', JSON.stringify(AN.leads));
+          }
+        } catch(e){}
+      }
       if (cb) cb();
     });
   };
@@ -23469,6 +23906,12 @@ window.anSyncCallToDashboard = function(lead, outcome, newStatus) {
   }
 
   if (typeof dashSave === 'function') dashSave();
+  if (typeof anPushTeamActivityCloud === 'function') {
+    var cloudDelta = { calls: 1 };
+    if (isDemoBooked) cloudDelta.demos = 1;
+    if (isWon) cloudDelta.closes = 1;
+    anPushTeamActivityCloud(cloudDelta);
+  }
   if (typeof anRefreshCRMStatsBar === 'function') anRefreshCRMStatsBar();
   if (typeof mcmRenderDayGoalsWidget === 'function') mcmRenderDayGoalsWidget();
   if (typeof mcmRenderDockBar === 'function') mcmRenderDockBar();
