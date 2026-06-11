@@ -7130,6 +7130,36 @@ window.logCallOutcome = function(outcome) {
     if (dInp) dInp.value = parseInt(dInp.value||0) + 1;
   }
 
+  // ── Also stamp the call on the lead's callLog so the leaderboard
+  //    backfill (anBackfillTeamActivityFromLeads) can attribute it correctly ──
+  var csLeadId = window._anCsLeadPanelId || (document.getElementById('mcm-overlay') && document.getElementById('mcm-overlay')._leadId);
+  if (csLeadId && typeof AN !== 'undefined' && AN.leadById) {
+    var csLead = AN.leadById(csLeadId);
+    if (csLead) {
+      if (!csLead.callLog) csLead.callLog = [];
+      var repEmail = (typeof AN !== 'undefined' && AN.currentRepEmail) || (typeof _currentUser !== 'undefined' && _currentUser && _currentUser.email) || '';
+      // Only add if not already logged (avoid double-counting if mcmSave also runs)
+      var now = new Date();
+      var timeStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+      var alreadyLogged = csLead.callLog.some(function(c) {
+        return c.date === today && c.time === timeStr && c.outcome === outcome && c.rep === repEmail;
+      });
+      if (!alreadyLogged) {
+        csLead.callLog.push({
+          id: 'act-' + Date.now(),
+          type: 'call',
+          outcome: outcome,
+          date: today,
+          time: timeStr,
+          rep: repEmail,
+          loggedAt: now.toISOString(),
+          _fromSession: true
+        });
+        csLead.updated = now.toISOString();
+      }
+    }
+  }
+
   dashSave();
   if (typeof anPushTeamActivityCloud === 'function') {
     var cloudDelta = { calls: 1 };
@@ -9860,34 +9890,28 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
 };
 
 window.anLoadTeamDailyLeaderboard = function(cb) {
-  function runLoad() {
   var local = anBuildDailyLeaderboard();
   var sb = typeof getSupabase === 'function' ? getSupabase() : null;
   if (!sb || typeof _currentUser === 'undefined' || !_currentUser) { if (cb) cb(local); return; }
   anFetchAllTeamStats(function() {
-    var queries = [sb.from('sales_dashboard').select('rep_email, activity, activityLog')];
-    if (typeof AN !== 'undefined' && AN.isAdmin) {
-      queries.push(sb.from('an_leads').select('rep_email, data, updated_at'));
-    }
+    // Always fetch an_leads so non-admin reps see all teammates' calls on the leaderboard.
+    // Use select of only rep_email + data to avoid pulling unnecessary columns.
+    // Non-admins only get today's call data from sales_dashboard activity rows (lightweight).
+    var queries = [
+      sb.from('sales_dashboard').select('rep_email, activity, activityLog'),
+      sb.from('an_leads').select('rep_email, data, updated_at')
+    ];
     Promise.all(queries).then(function(results) {
       var dashRows = (results[0].data && !results[0].error) ? results[0].data : [];
       var extraLeads = [];
       if (results[1] && results[1].data && !results[1].error) {
         extraLeads = anParseLeadsFromSupabaseRows(results[1].data);
-      }
-      if (typeof AN !== 'undefined' && AN.leads && AN.leads.length && typeof anBackfillTeamActivityFromLeads === 'function') {
-        anBackfillTeamActivityFromLeads(AN.leads);
-      }
-      if (extraLeads.length && typeof anBackfillTeamActivityFromLeads === 'function') {
-        anBackfillTeamActivityFromLeads(extraLeads);
+        if (typeof anBackfillTeamActivityFromLeads === 'function') anBackfillTeamActivityFromLeads(extraLeads);
       }
       var merged = anBuildDailyLeaderboard(dashRows, { extraLeads: extraLeads });
       if (cb) cb(merged);
     }).catch(function() { if (cb) cb(anBuildDailyLeaderboard()); });
   });
-  }
-  if (typeof anEnsureLeadsLoaded === 'function') anEnsureLeadsLoaded(runLoad);
-  else runLoad();
 };
 
 window.anRenderDailyLeaderboardHTML = function(rows) {
@@ -10037,7 +10061,8 @@ window.anSyncLeadDemoToDashboard = function(lead, action, syncOpts) {
         scheduledTime: lead.demoTime || '',
         status: 'booked',
         bookedDate: lead.demoBookedAt ? String(lead.demoBookedAt).slice(0, 10) : today,
-        notes: ''
+        notes: '',
+        _userAdded: true
       });
       if (!syncOpts.silentActivity && typeof syncActivityFromCRM === 'function') syncActivityFromCRM('demos', 1);
     } else {
@@ -10060,7 +10085,8 @@ window.anSyncLeadDemoToDashboard = function(lead, action, syncOpts) {
         status: 'showed',
         bookedDate: bookDate,
         completedDate: lead.demoCompletedAt ? String(lead.demoCompletedAt).slice(0, 10) : today,
-        notes: ''
+        notes: '',
+        _userAdded: true
       });
       existing = anFindDashDemoForLead(lead);
     }
@@ -10172,8 +10198,15 @@ window.anBackfillDashboardDemosFromLeads = function(leads) {
     }
     if (typeof anSyncLeadDemoToDashboard === 'function') {
       anSyncLeadDemoToDashboard(lead, action, { silentActivity: true, skipCounters: true });
+      // Mark newly-created demo entries as backfill so the period filter excludes them
+      if (_dash.demos) {
+        var d = _dash.demos.find(function(x) { return x.leadId === lead.id || x.id === 'demo-' + lead.id; });
+        if (d && !d._userAdded) d.source = 'backfill';
+      }
     }
   });
+  // Refresh the stat tiles now that backfill may have changed counts
+  if (typeof dashRefreshTopStatTiles === 'function') dashRefreshTopStatTiles();
 };
 
 window.anGetCallPanelMode = function(lead) {
@@ -20683,10 +20716,14 @@ function hdRenderCore() {
   var callsToday = 0, demosThisWeek = 0;
   var weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
   var weekStartStr = weekStart.getFullYear()+'-'+pad2(weekStart.getMonth()+1)+'-'+pad2(weekStart.getDate());
-  myLeads.forEach(function(l) {
+  // Scan ALL leads (not just owned ones) so calls logged by this rep on any lead are counted
+  var allLeadsForKPI = (typeof AN !== 'undefined' && AN.leads) ? AN.leads : leads;
+  allLeadsForKPI.forEach(function(l) {
     (l.callLog || []).forEach(function(c) {
-      if (c.date === todayStr) callsToday++;
-      if (c.date >= weekStartStr) { if (c.outcome === 'demo') demosThisWeek++; }
+      var callRep = (typeof anCallLogRep === 'function') ? anCallLogRep(c, l) : ((c.rep || l._repEmail || '').toLowerCase());
+      var isMyCall = !myEmail || callRep === myEmail.toLowerCase();
+      if (isMyCall && (typeof anCallOnLocalDate === 'function' ? anCallOnLocalDate(c, todayStr) : c.date === todayStr)) callsToday++;
+      if (isMyCall && c.date >= weekStartStr) { if (c.outcome === 'demo') demosThisWeek++; }
     });
   });
   var wonCount = myLeads.filter(function(l){ return l.status === 'won'; }).length;
