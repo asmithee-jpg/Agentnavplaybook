@@ -4963,7 +4963,9 @@ function dashDemoDate(d, field) {
   if (!d) return '';
   field = field || 'bookedDate';
   if (d[field]) return String(d[field]).slice(0, 10);
-  if (field === 'bookedDate' && d.scheduledDate) return String(d.scheduledDate).slice(0, 10);
+  // Do NOT fall back to scheduledDate when looking for bookedDate — that causes
+  // demos to appear in the wrong time period (e.g. "Last Month" when only their
+  // scheduled date is old but they were actually booked this month).
   return '';
 }
 
@@ -4976,7 +4978,11 @@ function dashGetScopedDemos(dateField) {
 
 function dashDemoInRange(d) {
   if (d.source === 'backfill') return false;
-  return dashDateInRange(dashDemoDate(d, 'bookedDate')) || dashDateInRange(dashDemoDate(d, 'scheduledDate'));
+  // Use bookedDate as the authoritative date; only fall back to scheduledDate if no bookedDate exists
+  var booked = d.bookedDate ? String(d.bookedDate).slice(0, 10) : '';
+  if (booked) return dashDateInRange(booked);
+  var sched = d.scheduledDate ? String(d.scheduledDate).slice(0, 10) : '';
+  return sched ? dashDateInRange(sched) : false;
 }
 
 function dashGetScopedDemosAnyDate() {
@@ -9893,22 +9899,16 @@ window.anLoadTeamDailyLeaderboard = function(cb) {
   var local = anBuildDailyLeaderboard();
   var sb = typeof getSupabase === 'function' ? getSupabase() : null;
   if (!sb || typeof _currentUser === 'undefined' || !_currentUser) { if (cb) cb(local); return; }
+  // Use only sales_dashboard (lightweight per-rep activity rows) + already-loaded AN.leads.
+  // Never fetch an_leads here — that query pulls megabytes of lead JSON and blocks page load.
   anFetchAllTeamStats(function() {
-    // Always fetch an_leads so non-admin reps see all teammates' calls on the leaderboard.
-    // Use select of only rep_email + data to avoid pulling unnecessary columns.
-    // Non-admins only get today's call data from sales_dashboard activity rows (lightweight).
-    var queries = [
-      sb.from('sales_dashboard').select('rep_email, activity, activityLog'),
-      sb.from('an_leads').select('rep_email, data, updated_at')
-    ];
-    Promise.all(queries).then(function(results) {
-      var dashRows = (results[0].data && !results[0].error) ? results[0].data : [];
-      var extraLeads = [];
-      if (results[1] && results[1].data && !results[1].error) {
-        extraLeads = anParseLeadsFromSupabaseRows(results[1].data);
-        if (typeof anBackfillTeamActivityFromLeads === 'function') anBackfillTeamActivityFromLeads(extraLeads);
+    sb.from('sales_dashboard').select('rep_email, activity, activityLog').then(function(r) {
+      var dashRows = (r.data && !r.error) ? r.data : [];
+      // Backfill from leads already in memory (no extra network call)
+      if (typeof AN !== 'undefined' && AN.leads && AN.leads.length && typeof anBackfillTeamActivityFromLeads === 'function') {
+        anBackfillTeamActivityFromLeads(AN.leads);
       }
-      var merged = anBuildDailyLeaderboard(dashRows, { extraLeads: extraLeads });
+      var merged = anBuildDailyLeaderboard(dashRows, {});
       if (cb) cb(merged);
     }).catch(function() { if (cb) cb(anBuildDailyLeaderboard()); });
   });
@@ -21800,11 +21800,21 @@ function coDeriveLifecycleFromLeads(leads, co) {
   return 'prospecting';
 }
 
+var _coSyncedFromLeadsThisSession = false;
+
 function coEnsureSyncedFromLeads(done) {
   if (typeof AN === 'undefined' || !Array.isArray(AN.leads)) {
     if (done) done(_coData || []);
     return;
   }
+  // Only sync from leads once per page session — prevents iterating 6000+ leads on every tab open
+  if (_coSyncedFromLeadsThisSession) {
+    var companies = (_coData && _coData.length) ? _coData.slice() : [];
+    if (!companies.length) { try { companies = JSON.parse(localStorage.getItem(CO_KEY) || '[]'); } catch(e) { companies = []; } }
+    if (done) done(companies);
+    return;
+  }
+  _coSyncedFromLeadsThisSession = true;
   if (typeof anSyncCompaniesFromLeads === 'function') anSyncCompaniesFromLeads();
   var companies = (_coData && _coData.length) ? _coData.slice() : [];
   if (!companies.length) {
