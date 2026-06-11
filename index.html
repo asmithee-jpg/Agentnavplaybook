@@ -10434,6 +10434,8 @@ function anParseLeadsFromSupabaseRows(rows){
       var lead = Object.assign({}, d);
       lead._repEmail = (lead._repEmail || row.rep_email || '').toLowerCase();
       if(lead._repEmail === '') delete lead._repEmail;
+      // If the lead has its own _repEmail, always trust it over the row-level rep_email
+      // (row.rep_email just tells us which account owns the row, not which rep owns each lead)
       if(!lead.id) lead.id = 'l-' + Date.now() + '-' + merged.length;
       merged.push(lead);
     });
@@ -10493,7 +10495,8 @@ function anSyncRepLeadsToCloud(opts, cb){
       if(only && only.indexOf(em) < 0) return;
       if(!byRep[em]) byRep[em] = [];
       var c = Object.assign({}, l);
-      delete c._repEmail;
+      // Keep _repEmail in the stored data so ownership survives reload
+      c._repEmail = em;
       byRep[em].push(c);
     });
     var upserts = [];
@@ -10558,12 +10561,11 @@ function anGetOwnerPatches(){
 
 function anRecordOwnerPatches(leadIds, email){
   if(!leadIds || !leadIds.length) return;
-  if(leadIds.length > 3000) return;
   try {
     var patches = anGetOwnerPatches();
     var n = 0;
     leadIds.forEach(function(id){
-      if(!id || n >= 3000) return;
+      if(!id) return;
       if(email && email.indexOf('@') > 0) patches[id] = email.toLowerCase();
       else delete patches[id];
       n++;
