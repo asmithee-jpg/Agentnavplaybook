@@ -5379,22 +5379,26 @@ window.anGetScopedActivityLog = function() {
     pool.forEach(function(lead) {
       var owner = (lead._repEmail || '').toLowerCase();
       (lead.callLog || []).forEach(function(c) {
-        if (!byDate[c.date]) return;
+        var matchedDate = null;
+        Object.keys(byDate).forEach(function(d) {
+          if (typeof anCallOnLocalDate === 'function' ? anCallOnLocalDate(c, d) : c.date === d) matchedDate = d;
+        });
+        if (!matchedDate) return;
         var rep = typeof anCallLogRep === 'function' ? anCallLogRep(c, lead) : owner;
         if (scope === '__mine__' && rep !== (AN.currentRepEmail || '').toLowerCase()) return;
         if (scope && scope !== '__mine__' && rep !== scope.toLowerCase()) return;
-        byDate[c.date].calls++;
-        if (c.outcome === 'demo') byDate[c.date].demos++;
-        if (c.outcome === 'won') byDate[c.date].closes++;
+        byDate[matchedDate].calls++;
+        if (typeof anCallCountsAsDemo === 'function' ? anCallCountsAsDemo(c) : c.outcome === 'demo') byDate[matchedDate].demos++;
+        if (c.outcome === 'won') byDate[matchedDate].closes++;
         if (c.time) {
           var hr = parseInt(String(c.time).split(':')[0], 10);
           if (!isNaN(hr)) {
-            byDate[c.date].calls_by_hour[hr] = (byDate[c.date].calls_by_hour[hr] || 0) + 1;
+            byDate[matchedDate].calls_by_hour[hr] = (byDate[matchedDate].calls_by_hour[hr] || 0) + 1;
             if (c.outcome === 'pickup' || c.outcome === 'demo') {
-              byDate[c.date].pickups_by_hour[hr] = (byDate[c.date].pickups_by_hour[hr] || 0) + 1;
+              byDate[matchedDate].pickups_by_hour[hr] = (byDate[matchedDate].pickups_by_hour[hr] || 0) + 1;
             }
-            if (c.outcome === 'demo') {
-              byDate[c.date].demos_by_hour[hr] = (byDate[c.date].demos_by_hour[hr] || 0) + 1;
+            if (typeof anCallCountsAsDemo === 'function' ? anCallCountsAsDemo(c) : c.outcome === 'demo') {
+              byDate[matchedDate].demos_by_hour[hr] = (byDate[matchedDate].demos_by_hour[hr] || 0) + 1;
             }
           }
         }
@@ -5409,14 +5413,18 @@ window.anGetScopedActivityLog = function() {
     if (typeof AN !== 'undefined' && AN.leads && AN.leads.length) {
       AN.leads.forEach(function(lead) {
         (lead.callLog || []).forEach(function(c) {
-          if (!teamByDate[c.date]) return;
-          teamByDate[c.date].calls++;
-          if (c.outcome === 'demo') teamByDate[c.date].demos++;
-          if (c.outcome === 'won') teamByDate[c.date].closes++;
+          var matchedDate = null;
+          Object.keys(teamByDate).forEach(function(d) {
+            if (typeof anCallOnLocalDate === 'function' ? anCallOnLocalDate(c, d) : c.date === d) matchedDate = d;
+          });
+          if (!matchedDate) return;
+          teamByDate[matchedDate].calls++;
+          if (typeof anCallCountsAsDemo === 'function' ? anCallCountsAsDemo(c) : c.outcome === 'demo') teamByDate[matchedDate].demos++;
+          if (c.outcome === 'won') teamByDate[matchedDate].closes++;
           if (c.time) {
             var hr2 = parseInt(String(c.time).split(':')[0], 10);
             if (!isNaN(hr2)) {
-              teamByDate[c.date].calls_by_hour[hr2] = (teamByDate[c.date].calls_by_hour[hr2] || 0) + 1;
+              teamByDate[matchedDate].calls_by_hour[hr2] = (teamByDate[matchedDate].calls_by_hour[hr2] || 0) + 1;
             }
           }
         });
@@ -9234,6 +9242,24 @@ window.anLocalDateStr = function(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 };
 
+window.anCallOnLocalDate = function(call, dateStr) {
+  if (!call || !dateStr) return false;
+  if (call.date === dateStr) return true;
+  if (call.time) {
+    try {
+      var parts = String(call.time).split(':');
+      var d = new Date(call.date + 'T' + String(parts[0] || '12').padStart(2, '0') + ':' + String(parts[1] || '00').padStart(2, '0') + ':00');
+      if (!isNaN(d.getTime()) && anLocalDateStr(d) === dateStr) return true;
+    } catch (e) {}
+  }
+  return false;
+};
+
+window.anCallCountsAsDemo = function(call) {
+  if (!call) return false;
+  return call.outcome === 'demo' || call.outcome === 'booked_demo' || call.bookedDemo === true;
+};
+
 window.anTeamActStorageKey = function(email, date) {
   return 'team_act_' + (email || '').toLowerCase().replace('@', '_at_') + '_' + (date || anLocalDateStr());
 };
@@ -9289,6 +9315,14 @@ window.anPushTeamActivityCloud = function(delta) {
   if (delta.showed) cur.showed = (cur.showed || 0) + delta.showed;
   AN._teamActivityByRep[repEmail][today] = cur;
 
+  try {
+    var localKey = 'an-team-activity-v1';
+    var local = JSON.parse(localStorage.getItem(localKey) || '{}');
+    if (!local[repEmail]) local[repEmail] = {};
+    local[repEmail][today] = cur;
+    localStorage.setItem(localKey, JSON.stringify(local));
+  } catch (e) {}
+
   var sb = typeof getSupabase === 'function' ? getSupabase() : null;
   if (!sb) return;
   var key = anTeamActStorageKey(repEmail, today);
@@ -9310,11 +9344,12 @@ window.anBackfillTeamActivityFromLeads = function(leads) {
       if (!c || !c.date) return;
       var rep = typeof anCallLogRep === 'function' ? anCallLogRep(c, lead) : (lead._repEmail || '').toLowerCase();
       if (!rep) return;
+      var dayKey = (typeof anCallOnLocalDate === 'function' && c.time) ? anLocalDateStr(new Date(c.date + 'T' + String(c.time).slice(0, 5) + ':00')) : c.date;
       if (!AN._teamActivityByRep[rep]) AN._teamActivityByRep[rep] = {};
-      if (!AN._teamActivityByRep[rep][c.date]) AN._teamActivityByRep[rep][c.date] = { calls: 0, demos: 0, closes: 0, showed: 0 };
-      var day = AN._teamActivityByRep[rep][c.date];
+      if (!AN._teamActivityByRep[rep][dayKey]) AN._teamActivityByRep[rep][dayKey] = { calls: 0, demos: 0, closes: 0, showed: 0 };
+      var day = AN._teamActivityByRep[rep][dayKey];
       day.calls = (day.calls || 0) + 1;
-      if (c.outcome === 'demo') day.demos = (day.demos || 0) + 1;
+      if (typeof anCallCountsAsDemo === 'function' ? anCallCountsAsDemo(c) : c.outcome === 'demo') day.demos = (day.demos || 0) + 1;
       if (c.outcome === 'won') day.closes = (day.closes || 0) + 1;
     });
   });
@@ -9336,7 +9371,24 @@ window.anFetchTeamActivityCloud = function(cb) {
       } catch(e) {}
     });
     AN._teamActivityByRep = byRep;
-    cb(byRep);
+    try {
+      var local = JSON.parse(localStorage.getItem('an-team-activity-v1') || '{}');
+      Object.keys(local).forEach(function(em) {
+        if (!AN._teamActivityByRep[em]) AN._teamActivityByRep[em] = {};
+        Object.keys(local[em] || {}).forEach(function(d) {
+          var day = local[em][d] || {};
+          var cur = AN._teamActivityByRep[em][d] || { calls: 0, demos: 0, closes: 0, showed: 0 };
+          AN._teamActivityByRep[em][d] = {
+            calls: Math.max(cur.calls || 0, day.calls || 0),
+            demos: Math.max(cur.demos || 0, day.demos || 0),
+            closes: Math.max(cur.closes || 0, day.closes || 0),
+            showed: Math.max(cur.showed || 0, day.showed || 0),
+            calls_by_hour: Object.assign({}, cur.calls_by_hour || {}, day.calls_by_hour || {})
+          };
+        });
+      });
+    } catch (e) {}
+    cb(AN._teamActivityByRep);
   }).catch(function(err) {
     console.warn('[Team activity] Cloud fetch failed:', err);
     cb(AN._teamActivityByRep || {});
@@ -9396,10 +9448,10 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
   leadPool.forEach(function(lead) {
     var owner = (lead._repEmail || '').toLowerCase();
     (lead.callLog || []).forEach(function(c) {
-      if (c.date !== today) return;
+      if (typeof anCallOnLocalDate === 'function' ? !anCallOnLocalDate(c, today) : c.date !== today) return;
       var callRep = anCallLogRep(c, lead);
       bump(callRep, 'calls', 1);
-      if (c.outcome === 'demo') bump(callRep, 'demos', 1);
+      if (typeof anCallCountsAsDemo === 'function' ? anCallCountsAsDemo(c) : c.outcome === 'demo') bump(callRep, 'demos', 1);
       if (c.outcome === 'won') bump(callRep, 'closes', 1);
     });
     (lead.demoLifecycle || []).forEach(function(ev) {
@@ -9413,7 +9465,13 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
     var em = (row.rep_email || row.email || '').toLowerCase();
     if (!em) return;
     ensure(em);
-    var entry = (row.activityLog || []).find(function(e) { return e.date === today; }) || row;
+    var entry = (row.activityLog || []).find(function(e) {
+      return e.date === today || (typeof anCallOnLocalDate === 'function' && anCallOnLocalDate(e, today));
+    });
+    if (!entry && row.activity && typeof row.activity === 'object') {
+      entry = { calls: row.activity.calls, demos: row.activity.demos, closes: row.activity.closes };
+    }
+    entry = entry || row;
     maxField(em, 'calls', entry.calls || row.calls || 0);
     maxField(em, 'demos', entry.demos || row.demos || 0);
     maxField(em, 'showed', entry.demos_showed || row.demos_showed || row.showed || 0);
@@ -9778,15 +9836,13 @@ function anColor(str){ if(!str) return '#6366f1'; var h=0; for(var i=0;i<str.len
 function anSanitizeLeadStatus(lead) {
   if (!lead) return lead;
   if (lead.isOpportunity || (typeof anIsOpportunity === 'function' && anIsOpportunity(lead))) return lead;
-  var oppOnly = ['showed', 'proposal', 'negotiation', 'won', 'lost'];
-  if (!lead.isOpportunity && oppOnly.indexOf(lead.status) >= 0) {
-    if (lead.status === 'showed' || lead.status === 'demo') lead.status = 'booked_demo';
-    else if (lead.status === 'proposal' || lead.status === 'negotiation') lead.status = 'booked_demo';
-    else lead.status = 'contacted';
-  }
-  if (lead.status === 'demo' && !lead.isOpportunity) {
+  if (lead.status === 'demo' && !lead.isOpportunity && typeof anLeadHasRealBookedDemo === 'function' && anLeadHasRealBookedDemo(lead)) {
     lead.status = 'booked_demo';
-    lead.isOpportunity = false;
+  } else if (lead.status === 'demo' && !lead.isOpportunity) {
+    lead.status = 'contacted';
+  }
+  if (lead.status === 'booked_demo' && typeof anLeadHasRealBookedDemo === 'function' && !anLeadHasRealBookedDemo(lead)) {
+    lead.status = lead._importStatus ? anMapImportStatus(lead._importStatus) : 'new';
   }
   return lead;
 }
@@ -9918,6 +9974,14 @@ function anNormalizeLeads(arr){
   if(!Array.isArray(arr)) return [];
   if(arr.length && Array.isArray(arr[0]) && !arr[0].id) return arr.reduce(function(flat, item){ return flat.concat(item); }, []);
   if (typeof anRepairMisclassifiedLeads === 'function') anRepairMisclassifiedLeads(arr);
+  if (typeof anRepairPhantomBookedDemos === 'function' && anRepairPhantomBookedDemos(arr)) {
+    if (typeof console !== 'undefined') console.info('[CRM] Reset imported leads that were wrongly marked Booked Demo');
+    clearTimeout(window._anPhantomDemoSaveTimer);
+    window._anPhantomDemoSaveTimer = setTimeout(function() {
+      if (typeof AN !== 'undefined' && typeof AN.save === 'function') AN.save();
+      if (typeof renderLeadsTable === 'function') renderLeadsTable();
+    }, 700);
+  }
   var normalized = arr.map(function(l){
     if(l && l.phone) l.phone = anNormalizePhone(l.phone);
     if(l && typeof anHydrateLeadState === 'function') anHydrateLeadState(l);
@@ -13596,19 +13660,52 @@ window.anImportFieldChanged = function(fieldKey, value){
 
 window.anImportMappingChanged = window.anImportFieldChanged;
 
-function anMapStatus(val){
-  var lv = (val || '').toLowerCase();
-  if(lv.includes('customer') || lv.includes('won') || lv.includes('closed won')) return 'won';
-  if(lv.includes('showed') || lv.includes('attended') || lv.includes('completed demo')) return 'booked_demo';
-  if(lv.includes('demo') || lv.includes('meeting')) return 'booked_demo';
-  if(lv.includes('proposal') || lv.includes('quote')) return 'proposal';
-  if(lv.includes('lost')) return 'lost';
-  if(lv.includes('nurture')) return 'nurture';
-  if(lv.includes('follow')) return 'followup';
-  if(lv.includes('lead') || lv.includes('new')) return 'new';
-  if(lv) return 'contacted';
-  return 'new';
+function anMapImportStatus(val) {
+  var lv = (val || '').toLowerCase().trim();
+  if (!lv) return 'new';
+  if (lv.indexOf('non-marketing') >= 0 || lv.indexOf('marketing contact') >= 0) return 'new';
+  if (lv.includes('customer') || lv.includes('won') || lv.includes('closed won')) return 'won';
+  if (lv.includes('demo booked') || lv.includes('demo scheduled') || lv === 'booked demo') return 'booked_demo';
+  if (lv.includes('demo complete') || lv.includes('demo completed') || lv.includes('demo held')) return 'demo_complete';
+  if (lv === 'meeting booked' || lv === 'meeting scheduled') return 'contacted';
+  if (lv === 'meeting held' || lv === 'meeting completed' || lv === 'meeting done') return 'contacted';
+  if (lv.includes('proposal') || lv.includes('quote')) return 'proposal';
+  if (lv.includes('lost')) return 'lost';
+  if (lv.includes('nurture')) return 'nurture';
+  if (lv.includes('follow')) return 'followup';
+  if (lv.includes('lead') || lv.includes('new') || lv.includes('subscriber')) return 'new';
+  if (lv.includes('attempted') || lv.includes('contacted')) return 'contacted';
+  if (lv.includes('meeting') || lv.includes('demo') || lv.includes('showed') || lv.includes('attended')) return 'contacted';
+  return 'contacted';
 }
+
+function anMapStatus(val) {
+  return anMapImportStatus(val);
+}
+
+window.anLeadHasRealBookedDemo = function(lead) {
+  if (!lead) return false;
+  if (lead.demoDate && lead.demoTime) return true;
+  if ((lead.demoLifecycle || []).some(function(e) { return e.type === 'booked'; })) return true;
+  if ((lead.callLog || []).some(function(c) { return c && (c.bookedDemo || c.outcome === 'demo'); })) return true;
+  return false;
+};
+
+window.anRepairPhantomBookedDemos = function(leads) {
+  var changed = false;
+  (leads || []).forEach(function(l) {
+    if (!l || l.status !== 'booked_demo') return;
+    if (anLeadHasRealBookedDemo(l)) return;
+    var prev = l._importStatus || '';
+    l.status = /meeting held|meeting completed|demo complete/i.test(prev) ? 'contacted' : 'new';
+    if (!prev && ((l.source || '').indexOf('CSV') >= 0 || (l.notes || '').indexOf('HubSpot') >= 0)) {
+      l.status = 'contacted';
+    }
+    l.updated = new Date().toISOString();
+    changed = true;
+  });
+  return changed;
+};
 
 function anBuildContactsFromMapping(mapping, limit, assignEmailOverride, rawData){
   var raw = rawData || _anImportRaw;
@@ -13642,7 +13739,14 @@ function anBuildContactsFromMapping(mapping, limit, assignEmailOverride, rawData
       usedColIdx[idx] = true;
       var v = (vals[idx] || '').trim();
       if(!v) return;
-      if(field.key === 'status') c.status = anMapStatus(v);
+      if (field.key === 'status') {
+        c._importStatus = v;
+        c.status = anMapImportStatus(v);
+        if (v) {
+          var hsNote = 'HubSpot status: ' + v;
+          c.notes = c.notes ? (hsNote + '\n' + c.notes) : hsNote;
+        }
+      }
       else if(field.key === 'phone') c.phone = anNormalizePhone(v);
       else if(field.key === 'nextFollowUp') c.nextFollowUp = anParseImportDate(v);
       else if(field.key === 'notes'){
@@ -14874,7 +14978,7 @@ function syncActivityFromCRM(key, count) {
   _dash.activity[key] = (_dash.activity[key]||0) + count;
 
   // Also log to activityLog for today
-  var today = new Date().toISOString().split('T')[0];
+  var today = typeof anLocalDateStr === 'function' ? anLocalDateStr() : new Date().toISOString().split('T')[0];
   if (!_dash.activityLog) _dash.activityLog = [];
   var entry = _dash.activityLog.find(function(e){ return e.date === today; });
   if (!entry) { entry = {date:today,calls:0,demos:0,closes:0}; _dash.activityLog.push(entry); }
@@ -19540,13 +19644,15 @@ window.mcmSave = function(leadId, opts) {
 
   // Log call / email activity
   var now = new Date();
+  if (demoJustBooked) outcome = 'demo';
   var entry = {
-    date: now.toISOString().split('T')[0],
+    date: typeof anLocalDateStr === 'function' ? anLocalDateStr(now) : now.toISOString().split('T')[0],
     time: now.toTimeString().slice(0,5),
     outcome: outcome,
     notes: note,
     rep: (typeof AN !== 'undefined' && AN.currentRepEmail) || ''
   };
+  if (demoJustBooked) entry.bookedDemo = true;
   if (!lead.callLog) lead.callLog = [];
   lead.callLog.unshift(entry);
   lead.lastContactDate = entry.date;
@@ -19960,7 +20066,7 @@ function hdGetTodayDashStats() {
     });
     return { dashCalls: calls, dashDemos: demos, dashCloses: closes };
   }
-  var todayStr = new Date().toISOString().split('T')[0];
+  var todayStr = typeof anLocalDateStr === 'function' ? anLocalDateStr() : new Date().toISOString().split('T')[0];
   var dashCalls = 0, dashDemos = 0, dashCloses = 0;
   if (typeof _dash !== 'undefined' && _dash.activityLog) {
     var entry = _dash.activityLog.filter(function(e){ return e.date === todayStr; })[0];
@@ -23862,7 +23968,7 @@ console.log('[CALL SESSION] Queue workflow loaded.');
 
 window.anSyncCallToDashboard = function(lead, outcome, newStatus) {
   if (typeof _dash === 'undefined') return;
-  var today = new Date().toISOString().split('T')[0];
+  var today = typeof anLocalDateStr === 'function' ? anLocalDateStr() : new Date().toISOString().split('T')[0];
   if (!_dash.activity) _dash.activity = { calls:0, demos:0, closes:0 };
   if (!_dash.activityLog) _dash.activityLog = [];
   var e = _dash.activityLog.filter(function(x){ return x.date === today; })[0];
@@ -23879,7 +23985,9 @@ window.anSyncCallToDashboard = function(lead, outcome, newStatus) {
   var isWon = newStatus === 'won';
 
   if (isDemoBooked && typeof anRecordDemoBooked === 'function') {
-    anRecordDemoBooked(lead, { source: 'call_log' });
+    anRecordDemoBooked(lead, { source: 'call_log', silentActivity: true });
+    e.demos = (e.demos || 0) + 1;
+    _dash.activity.demos = (_dash.activity.demos || 0) + 1;
   } else if (isDemoComplete && typeof anRecordDemoCompleted === 'function') {
     anRecordDemoCompleted(lead, { source: 'call_log' });
   }
@@ -23921,8 +24029,7 @@ window.anSyncCallToDashboard = function(lead, outcome, newStatus) {
   }
   var homeSec = document.getElementById('section-home');
   if (homeSec && homeSec.classList.contains('active')) {
-    var inCall = !!(document.getElementById('mcm-panel-wrap') || document.body.classList.contains('call-panel-open'));
-    if (inCall && typeof hdRefreshTeamWidgets === 'function') hdRefreshTeamWidgets();
+    if (typeof hdRefreshTeamWidgets === 'function') hdRefreshTeamWidgets();
     else if (typeof hdRender === 'function') hdRender();
   }
 };
