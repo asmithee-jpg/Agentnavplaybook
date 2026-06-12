@@ -41,6 +41,7 @@
     <button class="nav-item" data-section="companies" onclick="showSection('companies',this)"><span class="nav-icon">🏢</span><span class="nav-label">Companies</span></button>
     <button class="nav-item" data-section="dashboard" onclick="showSection('dashboard',this)"><span class="nav-icon">📊</span><span class="nav-label">Sales Dashboard</span></button>
     <button class="nav-item" data-section="fieldinsights" onclick="showSection('fieldinsights',this)"><span class="nav-icon">📣</span><span class="nav-label">Field Insights</span></button>
+    <button class="nav-item" data-section="sponsors" onclick="showSection('sponsors',this)"><span class="nav-icon">🏆</span><span class="nav-label">ACA Summit Sponsors</span></button>
   </div>
 </div>
 
@@ -63,7 +64,7 @@
 <div class="section home-section active" id="section-home">
 <div id="home-dashboard-root" style="min-height:100vh;background:#f7f7f9;"></div>
 </div>
-</div><div class="section" id="section-fieldinsights"><div class="page-header"><div class="page-label">Voice of the Market</div><h1>Field Insights Board</h1><p>Real quotes from the field — what prospects say on calls, grouped for marketing, product, and messaging. Pulled from call notes and lead records.</p></div><div id="field-insights-root" style="padding:0 36px 48px;max-width:1180px;margin:0 auto;"></div></div><div class="section" id="section-personas"><div class="page-header"><div class="page-label">Who You're Selling To</div><h1>Buyer Personas</h1><p>Four types of people buy AgentNav. Each one has a different reason for needing us, a different fear about switching, and a different version of success. Click any card to go deeper.</p></div><div class="nba-bar"><span class="nba-label">⚡ Next Best Action</span><div class="nba-actions"><button class="nba-btn primary" onclick="showSection('pitches', null)">Open Elevator Pitches</button><button class="nba-btn" onclick="showSection('coldcall', null)">Cold Call Guide</button><button class="nba-btn" onclick="openCoach()">🧠 Ask AI Coach</button></div></div><div class="content"><div class="persona-selector"><button class="persona-sel-btn active" onclick="showSnapshot('solo',this)">Solo Agent</button><button class="persona-sel-btn" onclick="showSnapshot('small',this)">Small Agency</button><button class="persona-sel-btn" onclick="showSnapshot('large',this)">Large Agency</button><button class="persona-sel-btn" onclick="showSnapshot('enterprise',this)">Enterprise</button></div><div class="persona-snapshot" id="personaSnapshot"><div class="snap-cell"><div class="snap-label">What They Care About</div><div class="snap-value" id="snapCares">Replacing 4-5 tools at under $100/mo</div></div><div class="snap-cell"><div class="snap-label">Main Pain Point</div><div class="snap-value" id="snapPain">OEP is manual chaos every November</div></div><div class="snap-cell"><div class="snap-label">Best Pitch Angle</div><div class="snap-value" id="snapPitch">One login. One client record. Renewal Autopilot.</div></div></div><div class="persona-grid-wrap" id="personaGridWrap"><div class="persona-single-card" id="personaSingleCard"><div class="persona-card blue" onclick="showSnapshot('solo',null)"><div class="persona-emoji">🦊</div><h3>The Solo Agent</h3><div class="persona-size">1 Agent · Going Independent</div><div class="persona-tags" style="margin-top:10px;"><span class="persona-tag">ACA focused</span><span class="persona-tag">Under $100/mo</span><span class="persona-tag">Replacing 4-5 tools</span><span class="persona-tag">One-call close</span></div></div><div class="persona-card green" onclick="showSnapshot('small',null)"><div class="persona-emoji">👥</div><h3>The Small Agency</h3><div class="persona-size">2–8 Agents</div><div class="persona-tags" style="margin-top:10px;"><span class="persona-tag">OEP chaos</span><span class="persona-tag">No team visibility</span><span class="persona-tag">Personal phones</span><span class="persona-tag">White label</span></div></div><div class="persona-card amber" onclick="showSnapshot('large',null)"><div class="persona-emoji">🏢</div><h3>The Large Agency</h3><div class="persona-size">9–20 Agents</div><div class="persona-tags" style="margin-top:10px;"><span class="persona-tag">3-4 disconnected tools</span><span class="persona-tag">Process driven</span><span class="persona-tag">Reporting needs</span><span class="persona-tag">White label</span></div></div><div class="persona-card purple" onclick="showSnapshot('enterprise',null)"><div class="persona-emoji">🏛️</div><h3>The Enterprise</h3><div class="persona-size">21+ Agents</div><div class="persona-tags" style="margin-top:10px;"><span class="persona-tag">Multi-location</span><span class="persona-tag">Compliance</span><span class="persona-tag">Not Salesforce</span><span class="persona-tag">Custom setup</span></div></div></div></div><div class="platform-section-wrap" id="platformSectionWrap"><div class="divider"></div><h2 class="content-heading">The Platform They're Buying</h2><p class="content-sub">AgentNav is the ultimate platform built for the professional health insurance broker.</p><div class="module-grid"><div class="module-card"><div class="module-tag">Quoting & Enrollment</div><h3>End-to-end multi-product quoting</h3><p>ACA, STM, Life, Ancillary, and Indemnity products — all quoted and enrolled in one engine. Side-by-side proposals, HealthSherpa and EDE sync.</p></div><div class="module-card"><div class="module-tag">CRM & Automation</div><h3>Seamless broker management hub</h3><p>Contacts, tasks, marketing, analytics, SMS, and client presentations — all in one place. Household-level records built around how health brokers work.</p></div><div class="module-card green"><div class="module-tag">AI Powered</div><h3>AI Autopilot for maximum efficiency</h3><p>AI-driven automation for Open Enrollment, renewals, and compliance. Auto-generated outreach, smart response tracking, and AI-powered SMS.</p></div><div class="module-card"><div class="module-tag">Reconciliation</div><h3>No-hassle book-of-business reconciliation</h3><p>One-click carrier verification and organized sales and policy logs. Status tracking from Active to Cancelled with commission visibility.</p></div><div class="module-card"><div class="module-tag">Compliance</div><h3>Required compliance forms & secure uploads</h3><p>CMS-required compliance forms including Open Enrollment documentation, plus secure client document uploads. Stay audit-ready automatically.</p></div><div class="module-card"><div class="module-tag">Integrations</div><h3>Marketplace & Medicare integration</h3><p>Native HealthSherpa and EDE platform integration for ACA marketplace enrollment. All client activity synced automatically. No manual imports.</p></div></div></div></div>
+</div><div class="section" id="section-fieldinsights"><div class="page-header"><div class="page-label">Voice of the Market</div><h1>Field Insights Board</h1><p>Real quotes from the field — what prospects say on calls, grouped for marketing, product, and messaging. Pulled from call notes and lead records.</p></div><div id="field-insights-root" style="padding:0 36px 48px;max-width:1180px;margin:0 auto;"></div></div><div class="section" id="section-sponsors"><div id="sponsors-root"></div></div><div class="section" id="section-personas"><div class="page-header"><div class="page-label">Who You're Selling To</div><h1>Buyer Personas</h1><p>Four types of people buy AgentNav. Each one has a different reason for needing us, a different fear about switching, and a different version of success. Click any card to go deeper.</p></div><div class="nba-bar"><span class="nba-label">⚡ Next Best Action</span><div class="nba-actions"><button class="nba-btn primary" onclick="showSection('pitches', null)">Open Elevator Pitches</button><button class="nba-btn" onclick="showSection('coldcall', null)">Cold Call Guide</button><button class="nba-btn" onclick="openCoach()">🧠 Ask AI Coach</button></div></div><div class="content"><div class="persona-selector"><button class="persona-sel-btn active" onclick="showSnapshot('solo',this)">Solo Agent</button><button class="persona-sel-btn" onclick="showSnapshot('small',this)">Small Agency</button><button class="persona-sel-btn" onclick="showSnapshot('large',this)">Large Agency</button><button class="persona-sel-btn" onclick="showSnapshot('enterprise',this)">Enterprise</button></div><div class="persona-snapshot" id="personaSnapshot"><div class="snap-cell"><div class="snap-label">What They Care About</div><div class="snap-value" id="snapCares">Replacing 4-5 tools at under $100/mo</div></div><div class="snap-cell"><div class="snap-label">Main Pain Point</div><div class="snap-value" id="snapPain">OEP is manual chaos every November</div></div><div class="snap-cell"><div class="snap-label">Best Pitch Angle</div><div class="snap-value" id="snapPitch">One login. One client record. Renewal Autopilot.</div></div></div><div class="persona-grid-wrap" id="personaGridWrap"><div class="persona-single-card" id="personaSingleCard"><div class="persona-card blue" onclick="showSnapshot('solo',null)"><div class="persona-emoji">🦊</div><h3>The Solo Agent</h3><div class="persona-size">1 Agent · Going Independent</div><div class="persona-tags" style="margin-top:10px;"><span class="persona-tag">ACA focused</span><span class="persona-tag">Under $100/mo</span><span class="persona-tag">Replacing 4-5 tools</span><span class="persona-tag">One-call close</span></div></div><div class="persona-card green" onclick="showSnapshot('small',null)"><div class="persona-emoji">👥</div><h3>The Small Agency</h3><div class="persona-size">2–8 Agents</div><div class="persona-tags" style="margin-top:10px;"><span class="persona-tag">OEP chaos</span><span class="persona-tag">No team visibility</span><span class="persona-tag">Personal phones</span><span class="persona-tag">White label</span></div></div><div class="persona-card amber" onclick="showSnapshot('large',null)"><div class="persona-emoji">🏢</div><h3>The Large Agency</h3><div class="persona-size">9–20 Agents</div><div class="persona-tags" style="margin-top:10px;"><span class="persona-tag">3-4 disconnected tools</span><span class="persona-tag">Process driven</span><span class="persona-tag">Reporting needs</span><span class="persona-tag">White label</span></div></div><div class="persona-card purple" onclick="showSnapshot('enterprise',null)"><div class="persona-emoji">🏛️</div><h3>The Enterprise</h3><div class="persona-size">21+ Agents</div><div class="persona-tags" style="margin-top:10px;"><span class="persona-tag">Multi-location</span><span class="persona-tag">Compliance</span><span class="persona-tag">Not Salesforce</span><span class="persona-tag">Custom setup</span></div></div></div></div><div class="platform-section-wrap" id="platformSectionWrap"><div class="divider"></div><h2 class="content-heading">The Platform They're Buying</h2><p class="content-sub">AgentNav is the ultimate platform built for the professional health insurance broker.</p><div class="module-grid"><div class="module-card"><div class="module-tag">Quoting & Enrollment</div><h3>End-to-end multi-product quoting</h3><p>ACA, STM, Life, Ancillary, and Indemnity products — all quoted and enrolled in one engine. Side-by-side proposals, HealthSherpa and EDE sync.</p></div><div class="module-card"><div class="module-tag">CRM & Automation</div><h3>Seamless broker management hub</h3><p>Contacts, tasks, marketing, analytics, SMS, and client presentations — all in one place. Household-level records built around how health brokers work.</p></div><div class="module-card green"><div class="module-tag">AI Powered</div><h3>AI Autopilot for maximum efficiency</h3><p>AI-driven automation for Open Enrollment, renewals, and compliance. Auto-generated outreach, smart response tracking, and AI-powered SMS.</p></div><div class="module-card"><div class="module-tag">Reconciliation</div><h3>No-hassle book-of-business reconciliation</h3><p>One-click carrier verification and organized sales and policy logs. Status tracking from Active to Cancelled with commission visibility.</p></div><div class="module-card"><div class="module-tag">Compliance</div><h3>Required compliance forms & secure uploads</h3><p>CMS-required compliance forms including Open Enrollment documentation, plus secure client document uploads. Stay audit-ready automatically.</p></div><div class="module-card"><div class="module-tag">Integrations</div><h3>Marketplace & Medicare integration</h3><p>Native HealthSherpa and EDE platform integration for ACA marketplace enrollment. All client activity synced automatically. No manual imports.</p></div></div></div></div>
 </div><div class="section" id="section-pitches"><div class="page-header"><div class="page-label">Before The Call</div><h1>Elevator Pitches</h1><p>These are not scripts. They're starting points. Use the one that fits the conversation, then make it yours.</p></div><div class="nba-bar"><span class="nba-label">⚡ Next Best Action</span><div class="nba-actions"><button class="nba-btn primary" onclick="qaCopy('AgentNav is everything a professional health insurance broker needs in one place — ACA, STM, Life, Ancillary, and Indemnity quoting, CRM, SMS, and Renewal Autopilot that runs your entire OEP. $79/month for solo agents.')">📋 Copy 20-Second Pitch</button><button class="nba-btn" onclick="openCoach()">🧠 Get Personalized Script</button><button class="nba-btn" id="btn-guide-pitches" onclick="openSplitGuide('pitches',this)" style="background:#0f0f17;color:#fff;border-color:#0f0f17;">📖 Prebuilt Pitches</button></div></div><div class="myscript-panel" id="msp-pitches" style="margin:0 auto 6px;"><div class="myscript-header"><div><div class="myscript-title" style="color:#6366f1;">✏️ My Elevator Pitches</div><div class="myscript-subtitle">Write your own pitches for different scenarios.</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;"><button onclick="addMSStep('pitches','')" class="qa-btn" style="border-color:#6366f1;color:#6366f1;white-space:nowrap;">+ Step</button><button onclick="loadDefaultMS('pitches')" class="qa-btn" style="white-space:nowrap;">↺ Default</button><button onclick="copyMyScript('pitches')" class="qa-btn" style="white-space:nowrap;">📋 Copy All</button></div></div><div class="myscript-steps" id="mss-pitches"><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">1</div><input class="myscript-step-title" type="text" value="20-Second Pitch" placeholder="Pitch name..." onchange="schedSave('pitches')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;">✕</button></div><textarea class="myscript-step-body" placeholder="Write your 20-second pitch here..." onchange="schedSave('pitches')" oninput="schedSave('pitches')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">2</div><input class="myscript-step-title" type="text" value="Solo Agent Pitch" placeholder="Pitch name..." onchange="schedSave('pitches')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;">✕</button></div><textarea class="myscript-step-body" placeholder="Pitch for solo agents who use multiple tools..." onchange="schedSave('pitches')" oninput="schedSave('pitches')"></textarea></div><div class="myscript-step"><div class="myscript-step-header"><div class="myscript-step-num">3</div><input class="myscript-step-title" type="text" value="Agency Owner Pitch" placeholder="Pitch name..." onchange="schedSave('pitches')"><button onclick="removeStep(this)" style="background:none;border:none;cursor:pointer;color:#a1a1aa;font-size:12px;padding:2px 4px;">✕</button></div><textarea class="myscript-step-body" placeholder="Pitch for small agency owners..." onchange="schedSave('pitches')" oninput="schedSave('pitches')"></textarea></div></div><div class="myscript-footer"><button onclick="saveMyScript('pitches')" class="myscript-save-btn" style="background:#10b981;">☁ Save</button><span id="mss-status-pitches" style="font-size:11px;color:#10b981;display:none;">✓ Saved</span><span style="flex:1;"></span><span style="font-size:10.5px;color:#a1a1aa;">Visible in My Scripts →</span></div></div><div id="pitches-guide" style="display:none;"><div class="content"><div class="pitch-card"><div class="pitch-situation">When Someone Asks What AgentNav Is</div><div class="pitch-quote"><p>AgentNav is everything a professional health insurance broker needs in one place. CRM, quoting for ACA, STM, Life, Ancillary, and Indemnity products, SMS, scheduling, policy management, marketing campaigns, and a tool called Renewal Autopilot that runs your entire Open Enrollment season without you doing it manually. It's $79 a month for a solo agent.</p></div><p class="pitch-tip">Use this when you have 20 seconds. Stop there and let them ask the next question.</p><div class="qa-bar"><button class="qa-btn" onclick="copyPitchScript(this)">📋 Copy Script</button><button class="qa-btn-hs" onclick="copyPitchScriptHS(this)">🔗 Copy + Log to HubSpot</button><button class="qa-btn" onclick="openCoach()">🧠 Customize</button></div></div><div class="pitch-card"><div class="pitch-situation">When Talking To A Solo Agent Who Uses Multiple Tools</div><div class="pitch-quote"><p>Most agents I talk to are running four or five different tools and none of them really talk to each other. Their quoting tool doesn't know about their CRM, their CRM doesn't connect to their SMS, and then OE comes and they're manually reaching out to 200 clients one by one. AgentNav connects all of that. One login, one client record, one place where everything lives from first quote to re-enrollment next year.</p></div><p class="pitch-tip">Pause after "one by one." That usually lands.</p></div><div class="pitch-card"><div class="pitch-situation">When Talking To A Small Agency Owner</div><div class="pitch-quote"><p>The thing I hear most from small agency owners is that OE season nearly breaks them every year. They're chasing clients, their agents are texting from personal phones, and there's no way to know which clients haven't responded yet. AgentNav's Renewal Autopilot takes that whole process and automates it. It sends the outreach, tracks who responds, generates updated quotes automatically, and gives you a board where every client has a clear next action. Your agents stop being the bottleneck.</p></div><p class="pitch-tip">Emphasize the board visual. It's something people can picture.</p></div><div class="pitch-card"><div class="pitch-situation">When Comparing To EZLynx</div><div class="pitch-quote"><p>EZLynx is great for P&C agents. If that's your world, they're worth looking at. But if you're selling ACA, STM, Life, Ancillary, and Indemnity products, EZLynx wasn't really built for you. It doesn't have ACA quoting, it doesn't have Renewal Autopilot, and you'll pay $150 or more per user for a platform that's missing half the tools health brokers actually need daily.</p></div><p class="pitch-tip">Don't trash them. Respect the tool, then explain the fit problem.</p></div><div class="pitch-card"><div class="pitch-situation">When Price Comes Up</div><div class="pitch-quote"><p>I get it — $79 a month sounds almost too good. Most agents are spending more than that on just their texting app alone. AgentNav replaces your CRM, quoting tool, SMS platform, enrollment tracker, and renewal workflow. If you're paying for any of those separately right now, you're probably spending more and still not getting what AgentNav gives you in one place.</p></div><p class="pitch-tip">Let the math do the work. Don't over-explain.</p></div></div>
 </div>
 </div><div class="section" id="section-competition"><div class="page-header"><div class="page-label">Before The Call</div><h1>Know Your Competition</h1><p>Seven competitors you'll come up against. Each one has a real strength worth acknowledging. The goal is not to trash the competition. It's to know where AgentNav fits better.</p></div><div class="content"><div class="comp-tabs"><button class="comp-tab active" onclick="showComp('ezlynx',this)">EZLynx</button><button class="comp-tab" onclick="showComp('hawksoft',this)">HawkSoft</button><button class="comp-tab" onclick="showComp('agencybloc',this)">AgencyBloc</button><button class="comp-tab" onclick="showComp('agentcrm',this)">Agent CRM</button><button class="comp-tab" onclick="showComp('lucie',this)">Lucie Health</button><button class="comp-tab" onclick="showComp('agencyzoom',this)">AgencyZoom</button><button class="comp-tab" onclick="showComp('nowcerts',this)">NowCerts</button></div><div class="comp-panel active" id="comp-ezlynx"><div class="comp-dark-banner"><h3>The honest truth about EZLynx</h3><p>EZLynx is the most recognized name in agency management software. 330 plus carriers, 20 years in the market, built for P&C agents. Respect what they've built. But it wasn't designed for health and ACA work, and you'll pay $150 or more per user for a platform that doesn't have half the tools ACA agents actually need.</p></div><div class="comp-two-col"><div class="comp-col"><h4>What they'll say about themselves</h4><div class="comp-quote"><p>"We're the industry's number one comparative rater with 330 plus carriers, a full AMS, built-in AI, and 20 years in the market. Everyone knows EZLynx."</p></div><div class="comp-strength-label">Their Genuine Strengths</div><div class="strength-tags"><span class="strength-tag">330+ P&C carriers</span><span class="strength-tag">Brand recognition</span><span class="strength-tag">Enterprise scale</span><span class="strength-tag">ACORD forms</span></div></div><div class="comp-col"><h4>Where AgentNav wins</h4><div class="win-section-label">You Win When</div><ul class="win-list"><li><span class="win-icon">→</span>Built for ACA agents from day one. ACA, STM, Life, Ancillary, Indemnity quoting, and HealthSherpa/EDE enrollment are native. EZLynx has none of these.</li><li><span class="win-icon">→</span>Renewal Autopilot is a full Open Enrollment management system. EZLynx has a retention report.</li><li><span class="win-icon">→</span>SMS is built in at no extra charge. EZLynx routes you to third-party integrations.</li><li><span class="win-icon">→</span>Scheduling syncs to Google Calendar directly from the client record.</li><li><span class="win-icon">→</span>The price: $79 a month for a solo agent versus $150 plus at EZLynx.</li></ul></div></div><div class="walkaway-card" style="margin-top:14px;"><h4>When to walk away</h4><p>If the agency is primarily P&C with commercial lines, EZLynx is genuinely the better tool. Don't fight that fight. Focus on health-first brokers where you win every time.</p></div></div><div class="comp-panel" id="comp-hawksoft"><div class="comp-dark-banner"><h3>The honest truth about HawkSoft</h3><p>HawkSoft is deeply loved by independent P&C agencies. 18-year average customer retention. It's a desktop-first platform that health brokers often inherit, not choose. If someone is on HawkSoft and sells primarily health and ACA, they're working around a tool, not with one.</p></div><div class="comp-two-col"><div class="comp-col"><h4>What they'll say about themselves</h4><div class="comp-quote"><p>"Our customers stay with us for almost two decades on average. We're built for the independent agent and we know this business."</p></div><div class="comp-strength-label">Their Genuine Strengths</div><div class="strength-tags"><span class="strength-tag">18yr avg retention</span><span class="strength-tag">Independent agent focus</span><span class="strength-tag">QuickBooks integration</span></div></div><div class="comp-col"><h4>Where AgentNav wins</h4><div class="win-section-label">You Win When</div><ul class="win-list"><li><span class="win-icon">→</span>Fully cloud-native — any device, anywhere. HawkSoft requires desktop installation.</li><li><span class="win-icon">→</span>ACA, STM, Life, Ancillary, and Indemnity quoting built in. HawkSoft is P&C at heart.</li><li><span class="win-icon">→</span>Renewal Autopilot — no equivalent exists in HawkSoft.</li><li><span class="win-icon">→</span>Built-in SMS messaging with dedicated agent number included.</li><li><span class="win-icon">→</span>HealthSherpa and EDE enrollment sync — no manual entry.</li></ul></div></div></div><div class="comp-panel" id="comp-agencybloc"><div class="comp-dark-banner"><h3>The honest truth about AgencyBloc</h3><p>AgencyBloc is a legitimate competitor. It was designed for health and life agencies — so the audience overlap is real. Their strength is compliance and group benefits. Their weakness is that Renewal Autopilot doesn't exist there, and the workflow for individual ACA is manual compared to ours.</p></div><div class="comp-two-col"><div class="comp-col"><h4>What they'll say about themselves</h4><div class="comp-quote"><p>"We're the number one agency management platform built specifically for health and life insurance agencies. SOC 2 certified with 6,500 plus agencies on the platform."</p></div><div class="comp-strength-label">Their Genuine Strengths</div><div class="strength-tags"><span class="strength-tag">SOC 2 Type II</span><span class="strength-tag">Group benefits</span><span class="strength-tag">Commission reconciliation</span><span class="strength-tag">6,500+ agencies</span></div></div><div class="comp-col"><h4>Where AgentNav wins</h4><div class="win-section-label">You Win When</div><ul class="win-list"><li><span class="win-icon">→</span>Renewal Autopilot is purpose-built for OEP — AgencyBloc has no equivalent.</li><li><span class="win-icon">→</span>Full product quoting: ACA, STM, Life, Ancillary, and Indemnity in one engine.</li><li><span class="win-icon">→</span>Native HealthSherpa and EDE sync cuts manual entry dramatically.</li><li><span class="win-icon">→</span>AI-powered SMS outreach built into the messaging module.</li><li><span class="win-icon">→</span>Simpler, faster onboarding — agents productive same day.</li></ul></div></div></div><div class="comp-panel" id="comp-agentcrm"><div class="comp-dark-banner"><h3>The honest truth about Agent CRM</h3><p>Agent CRM is a marketing and sales CRM for insurance agents. It's good at funnels, landing pages, and outbound campaigns. It is not a quoting tool, not an enrollment tool, and not a policy manager. Agents who use it still need three other platforms to run their health book.</p></div><div class="comp-two-col"><div class="comp-col"><h4>What they'll say about themselves</h4><div class="comp-quote"><p>"We're the all-in-one CRM built for insurance agents with power dialer, automated follow-up, and marketing funnels that actually convert."</p></div><div class="comp-strength-label">Their Genuine Strengths</div><div class="strength-tags"><span class="strength-tag">Power dialer</span><span class="strength-tag">Marketing automation</span><span class="strength-tag">Landing pages</span><span class="strength-tag">~$97/mo starting</span></div></div><div class="comp-col"><h4>Where AgentNav wins</h4><div class="win-section-label">You Win When</div><ul class="win-list"><li><span class="win-icon">→</span>Native quoting for ACA, STM, Life, Ancillary, and Indemnity — Agent CRM has no quoting engine at all.</li><li><span class="win-icon">→</span>Policy management and one-click carrier verification built in.</li><li><span class="win-icon">→</span>HealthSherpa and EDE enrollment sync — no manual entry.</li><li><span class="win-icon">→</span>Renewal Autopilot vs. basic renewal reminders.</li><li><span class="win-icon">→</span>Compliance forms and secure document uploads included.</li></ul></div></div></div><div class="comp-panel" id="comp-lucie"><div class="comp-dark-banner"><h3>The honest truth about Lucie Health</h3><p>Lucie Health is an enrollment tool, not a full platform. It helps agents get clients enrolled on the marketplace. That's its purpose and it does it reasonably well. But it's not a CRM, not a quoting engine, and not a retention or renewal tool. Agents who use Lucie still need everything else.</p></div><div class="comp-two-col"><div class="comp-col"><h4>What they'll say about themselves</h4><div class="comp-quote"><p>"We make ACA enrollment simple and fast. Agents can get clients enrolled in minutes with our streamlined marketplace connection."</p></div><div class="comp-strength-label">Their Genuine Strengths</div><div class="strength-tags"><span class="strength-tag">Simple enrollment UX</span><span class="strength-tag">Marketplace connection</span><span class="strength-tag">Fast onboarding</span></div></div><div class="comp-col"><h4>Where AgentNav wins</h4><div class="win-section-label">You Win When</div><ul class="win-list"><li><span class="win-icon">→</span>Full CRM, quoting for all product lines, policy tracking, and SMS — not just enrollment.</li><li><span class="win-icon">→</span>Renewal Autopilot manages the entire OEP cycle, not just enrollment.</li><li><span class="win-icon">→</span>Compliance forms, secure uploads, and book reconciliation included.</li><li><span class="win-icon">→</span>One platform instead of four — AgentNav replaces Lucie plus everything else they're still using.</li></ul></div></div></div><div class="comp-panel" id="comp-agencyzoom"><div class="comp-dark-banner"><h3>The honest truth about AgencyZoom</h3><p>AgencyZoom is a sales pipeline and CRM tool popular with captive and independent agents who sell multiple lines. It's a solid sales management tool but it was not built around the health and ACA workflow, and it lacks the quoting, enrollment, and OEP automation that health-first agents need.</p></div><div class="comp-two-col"><div class="comp-col"><h4>What they'll say about themselves</h4><div class="comp-quote"><p>"We're the modern sales management platform for insurance agencies. Pipeline, automation, and performance dashboards in one place."</p></div><div class="comp-strength-label">Their Genuine Strengths</div><div class="strength-tags"><span class="strength-tag">Sales pipeline</span><span class="strength-tag">Multi-line support</span><span class="strength-tag">Performance dashboards</span></div></div><div class="comp-col"><h4>Where AgentNav wins</h4><div class="win-section-label">You Win When</div><ul class="win-list"><li><span class="win-icon">→</span>ACA, STM, Life, Ancillary, and Indemnity quoting and enrollment built natively.</li><li><span class="win-icon">→</span>HealthSherpa and EDE integration — AgencyZoom has no enrollment sync.</li><li><span class="win-icon">→</span>Renewal Autopilot manages OEP end-to-end — no equivalent exists.</li><li><span class="win-icon">→</span>Compliance forms and secure document uploads included.</li></ul></div></div></div><div class="comp-panel" id="comp-nowcerts"><div class="comp-dark-banner"><h3>The honest truth about NowCerts</h3><p>NowCerts is a cloud-based AMS built for independent agencies. It handles policy management and client records well. It skews toward P&C and lacks the health-specific workflows, quoting engine, and OEP automation that health brokers need. Pricing is per-policy, which gets expensive as the book grows.</p></div><div class="comp-two-col"><div class="comp-col"><h4>What they'll say about themselves</h4><div class="comp-quote"><p>"NowCerts is the modern cloud AMS that grows with your agency. Policy management, certificates, and automation — all in one place."</p></div><div class="comp-strength-label">Their Genuine Strengths</div><div class="strength-tags"><span class="strength-tag">Cloud-native AMS</span><span class="strength-tag">Certificate generation</span><span class="strength-tag">Per-policy pricing</span></div></div><div class="comp-col"><h4>Where AgentNav wins</h4><div class="win-section-label">You Win When</div><ul class="win-list"><li><span class="win-icon">→</span>Health-native quoting for ACA, STM, Life, Ancillary, and Indemnity — NowCerts has no quoting engine.</li><li><span class="win-icon">→</span>HealthSherpa and EDE enrollment sync built in.</li><li><span class="win-icon">→</span>Renewal Autopilot manages full OEP cycle.</li><li><span class="win-icon">→</span>Flat monthly pricing vs. per-policy fees that grow with the book.</li></ul></div></div></div></div>
@@ -7167,6 +7168,11 @@ window.logCallOutcome = function(outcome) {
   }
 
   dashSave();
+  // Persist the lead's callLog entry (added above) — without this, the call never
+  // syncs to an_leads and the admin's leaderboard/dashboard never sees it.
+  if (csLeadId && typeof AN !== 'undefined' && typeof AN.save === 'function') {
+    AN.save();
+  }
   if (typeof anPushTeamActivityCloud === 'function') {
     var cloudDelta = { calls: 1 };
     if (outcome === 'demo') cloudDelta.demos = 1;
@@ -10961,7 +10967,7 @@ AN.save = function(cb){
       return;
     }
     var payload = AN.leads.filter(function(l){ return !l._repEmail || l._repEmail.toLowerCase() === repEmail; })
-      .map(function(l){ var c = Object.assign({}, l); delete c._repEmail; return c; });
+      .map(function(l){ var c = Object.assign({}, l); c._repEmail = repEmail; return c; });
     sb.from('an_leads').upsert({
       user_id: _currentUser.id,
       rep_email: repEmail,
@@ -11585,7 +11591,14 @@ window.anFilterLeadsForCurrentRep = function(leads) {
   if (typeof AN !== 'undefined' && AN.isAdmin) return leads || [];
   var myEmail = (AN.currentRepEmail || '').toLowerCase();
   return (leads || []).filter(function(l) {
-    return (l._repEmail || '').toLowerCase() === myEmail;
+    var owner = (l._repEmail || '').toLowerCase();
+    // Legacy leads with no _repEmail stamped: if it's in this rep's own local/cloud data,
+    // it belongs to them — stamp it now rather than silently dropping it.
+    if (!owner) {
+      if (l) l._repEmail = myEmail;
+      return true;
+    }
+    return owner === myEmail;
   });
 };
 
@@ -11961,7 +11974,7 @@ function renderLeadsTable(){
       +'<td data-field="state" style="padding:10px 12px;font-size:13px;color:var(--text-secondary);cursor:text;" title="Click to edit">'+anEsc((typeof anResolveLeadState==='function'?anResolveLeadState(lead):lead.state)||'—')+'</td>'
       +'<td data-field="size" style="padding:10px 12px;cursor:text;" title="Click to edit">'+(lead.size?'<span style="background:var(--body-bg);border:1px solid var(--divider);border-radius:5px;padding:2px 8px;font-size:11.5px;font-weight:600;color:var(--text-secondary);">'+anEsc(sz.label)+'</span>':'<span style="color:var(--text-muted);font-size:12px;">—</span>')+'</td>'
       +'<td data-field="phone" style="padding:10px 12px;cursor:text;" title="Click to edit"><a href="tel:'+anEsc(anTelPhone(lead.phone)||'')+'" onclick="event.stopPropagation()" style="color:var(--text-secondary);text-decoration:none;font-size:13px;">'+anEsc(anPhoneDisplay(lead.phone))+'</a></td>'
-      +'<td data-field="status" onclick="event.stopPropagation()" style="padding:10px 12px;cursor:text;" title="Click to edit"><span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap;">'+st.label+'</span></td>'
+      +'<td data-field="status" onclick="event.stopPropagation()" style="padding:10px 12px;cursor:text;" title="Click to edit"><span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap;">'+st.label+'</span>'+(isOppRow?'<span style="margin-left:6px;background:#eef2ff;color:#6366f1;border-radius:20px;padding:3px 8px;font-size:10px;font-weight:700;white-space:nowrap;">💎 Deal</span>':'')+'</td>'
       +(anShowOwnerColumn()?'<td style="padding:10px 12px;" onclick="event.stopPropagation()">'+(repEmail?'<span style="background:'+repCol+'18;color:'+repCol+';border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;" title="Change owner" onclick="anOpenOwnerPicker({leadId:\''+lead.id+'\'})">'+anEsc(repName)+' ▾</span>':'<span style="color:var(--text-muted);font-size:12px;cursor:pointer;" onclick="anOpenOwnerPicker({leadId:\''+lead.id+'\'})">+ Assign ▾</span>')+'</td>':'')
       +'<td data-field="nextFollowUp" style="padding:10px 12px;font-size:12.5px;color:'+(fuDue?'#ef4444':'var(--text-muted)')+';font-weight:'+(fuDue?'700':'400')+';cursor:text;" title="Click to edit">'+(lead.nextFollowUp?anDate(lead.nextFollowUp):'—')+'</td>'
       +'<td style="padding:10px 12px;">'+(function(){
@@ -16194,16 +16207,19 @@ window.anOpenLeadPanel = function(leadId) {
     panel.id = 'an-side-panel';
     // If call session is open, position lead panel to its left
     var callSessionOpen = document.body.classList.contains('call-panel-open') || !!document.getElementById('mcm-panel-wrap');
+    var oppPanelOpen = !!document.getElementById('opp-record-panel');
     var rightOffset = callSessionOpen ? '360px' : '0';
     var panelWidth  = callSessionOpen ? '440px' : '440px';
-    panel.style.cssText = 'position:fixed;top:0;right:' + rightOffset + ';width:' + panelWidth + ';max-width:100vw;height:100vh;background:var(--card-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.15);z-index:' + (callSessionOpen ? '19999' : '8888') + ';display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);box-sizing:border-box;';
+    var panelZ = callSessionOpen ? '19999' : (oppPanelOpen ? '9100' : '8888');
+    panel.style.cssText = 'position:fixed;top:0;right:' + rightOffset + ';width:' + panelWidth + ';max-width:100vw;height:100vh;background:var(--card-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.15);z-index:' + panelZ + ';display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);box-sizing:border-box;';
     document.body.appendChild(panel);
     setTimeout(function(){ panel.style.transform = 'translateX(0)'; }, 10);
   } else if (!sameLead) {
     panel.remove();
     panel = document.createElement('div');
     panel.id = 'an-side-panel';
-    panel.style.cssText = 'position:fixed;top:0;right:0;width:440px;max-width:100vw;height:100vh;background:var(--card-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.15);z-index:8888;display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);box-sizing:border-box;';
+    var oppPanelOpen2 = !!document.getElementById('opp-record-panel');
+    panel.style.cssText = 'position:fixed;top:0;right:0;width:440px;max-width:100vw;height:100vh;background:var(--card-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.15);z-index:' + (oppPanelOpen2 ? '9100' : '8888') + ';display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);box-sizing:border-box;';
     document.body.appendChild(panel);
     setTimeout(function(){ panel.style.transform = 'translateX(0)'; }, 10);
   }
@@ -16602,10 +16618,43 @@ window.anCloseCallSessionCompanyPanel = function() {
     panel.style.transform = 'translateX(100%)';
     setTimeout(function(){ if (panel.parentNode) panel.remove(); }, 260);
   }
+  var pill = document.getElementById('an-cs-company-pill');
+  if (pill) pill.remove();
   document.body.classList.remove('call-company-open', 'call-company-front');
   window._anCsCompanyName = null;
   var btn = document.getElementById('mcm-company-toggle');
   if (btn) btn.style.background = 'rgba(255,255,255,0.08)';
+};
+
+window.anMinimizeCallSessionCompanyPanel = function() {
+  var panel = document.getElementById('an-cs-company-panel');
+  if (!panel) return;
+  var name = panel.dataset.company || window._anCsCompanyName || '';
+  panel.style.transform = 'translateX(100%)';
+  setTimeout(function(){ if (panel.parentNode) panel.remove(); }, 260);
+  document.body.classList.remove('call-company-front');
+
+  var existingPill = document.getElementById('an-cs-company-pill');
+  if (existingPill) existingPill.remove();
+
+  var pill = document.createElement('button');
+  pill.id = 'an-cs-company-pill';
+  pill.type = 'button';
+  pill.title = 'Restore agency profile';
+  pill.onclick = function() { anRestoreCallSessionCompanyPanel(); };
+  pill.style.cssText = 'position:fixed;bottom:18px;right:' + (anGetCsCompanyPanelRight() + 14) + 'px;z-index:19998;display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;border:1px solid rgba(255,255,255,0.15);border-radius:24px;padding:8px 16px 8px 10px;font-size:12.5px;font-weight:700;font-family:var(--sans);cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.25);max-width:240px;';
+  pill.innerHTML = '<span style="font-size:14px;">🏢</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + anEsc(name) + '</span><span style="opacity:0.5;font-size:10px;">▲</span>';
+  document.body.appendChild(pill);
+};
+
+window.anRestoreCallSessionCompanyPanel = function() {
+  var pill = document.getElementById('an-cs-company-pill');
+  var name = pill ? pill.title && window._anCsCompanyName : window._anCsCompanyName;
+  name = window._anCsCompanyName;
+  if (pill) pill.remove();
+  if (name && typeof anOpenCallSessionCompanyPanel === 'function') {
+    anOpenCallSessionCompanyPanel(name);
+  }
 };
 
 window.anRepositionCallSessionCompanyPanel = function() {
@@ -16809,7 +16858,8 @@ window.anOpenCallSessionCompanyPanel = function(name) {
     + '<div style="font-size:16px;font-weight:800;color:#fff;letter-spacing:-0.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + anEsc(name) + '</div>'
     + (cd.industry ? '<div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:2px;">' + anEsc(cd.industry) + '</div>' : '')
     + '</div></div>'
-    + '<button onclick="anCloseCallSessionCompanyPanel()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.55);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;flex-shrink:0;">✕</button>'
+    + '<button onclick="anMinimizeCallSessionCompanyPanel()" title="Minimize" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.55);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:16px;flex-shrink:0;line-height:1;margin-right:4px;">–</button>'
+    + '<button onclick="anCloseCallSessionCompanyPanel()" title="Close" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.55);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;flex-shrink:0;">✕</button>'
     + '</div>'
     + '<div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;">'
     + '<span style="background:' + st.color + '22;color:' + st.color + ';border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;">' + st.label + '</span>'
@@ -16848,6 +16898,11 @@ window.mcmToggleCompanyPanel = function(companyName) {
   if (document.body.classList.contains('call-company-open')) {
     anCloseCallSessionCompanyPanel();
     document.body.classList.remove('call-company-front');
+    return;
+  }
+  var pill = document.getElementById('an-cs-company-pill');
+  if (pill && window._anCsCompanyName) {
+    anRestoreCallSessionCompanyPanel();
     return;
   }
   if (!companyName) {
@@ -28546,6 +28601,625 @@ console.log('[SEQ+FMO] Sequence sessions + Compass FMO referral tracking loaded.
     if (typeof _prevLoginOppMount === 'function') _prevLoginOppMount(user);
     setTimeout(anMaybeMountOpportunitiesOnLoad, 600);
   };
+})();
+</script>
+<script>
+// ════════════════════════════════════════════════════════════════
+//  ACA HEALTH SUMMIT — SPONSOR PIPELINE & DASHBOARD
+//  Fully isolated from AN.leads / _dash / sales_dashboard / leaderboard.
+//  Storage: localStorage 'aca-sponsors' + Supabase admin_content key 'aca_sponsors'
+// ════════════════════════════════════════════════════════════════
+(function() {
+
+var SP_KEY = 'aca-sponsors';
+var SP = { syncStatus: 'local', lastSynced: null, selectedIds: [], stageFilter: '', searchQ: '' };
+var _spData = [];
+var _spSelected = null;
+
+// ── Sponsor tiers (from the rate card) ──
+var SP_TIERS = [
+  { id: 'exhibitor', label: 'Exhibitor', price: 2500 },
+  { id: 'silver',    label: 'Silver',    price: 5000 },
+  { id: 'gold',      label: 'Gold',      price: 7500 },
+  { id: 'platinum',  label: 'Platinum',  price: 10000 },
+  { id: 'custom',    label: 'Custom',    price: 0 }
+];
+function spTier(id) { return SP_TIERS.find(function(t){ return t.id === id; }) || SP_TIERS[4]; }
+
+// ── Pipeline stages ──
+var SP_STAGES = [
+  { id: 'lead',        label: 'Lead',          color: '#6366f1', dot: '#818cf8' },
+  { id: 'contacted',   label: 'Contacted',     color: '#0ea5e9', dot: '#38bdf8' },
+  { id: 'proposal',    label: 'Proposal Sent', color: '#f59e0b', dot: '#fbbf24' },
+  { id: 'negotiating', label: 'Negotiating',   color: '#a855f7', dot: '#c084fc' },
+  { id: 'won',         label: 'Closed Won',    color: '#10b981', dot: '#34d399' },
+  { id: 'lost',        label: 'Closed Lost',   color: '#ef4444', dot: '#f87171' }
+];
+function spStage(id) { return SP_STAGES.find(function(s){ return s.id === id; }) || SP_STAGES[0]; }
+
+function spEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+  });
+}
+
+function spFmtMoney(n) {
+  n = Number(n) || 0;
+  return '$' + n.toLocaleString();
+}
+
+function spOwnerName(email) {
+  if (!email) return 'Unassigned';
+  if (typeof anGetRepName === 'function') return anGetRepName(email);
+  return email.split('@')[0];
+}
+
+// ── Persistence ──
+function spLoad(callback) {
+  var localRaw = localStorage.getItem(SP_KEY) || '[]';
+  var local = [];
+  try { local = JSON.parse(localRaw); } catch(e) { local = []; }
+  _spData = local;
+
+  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
+  if (!sb || typeof _currentUser === 'undefined' || !_currentUser) {
+    SP.syncStatus = 'local';
+    if (callback) callback(_spData);
+    return;
+  }
+  sb.from('admin_content').select('value, updated_at').eq('key', 'aca_sponsors').then(function(r) {
+    if (r.data && r.data.length && r.data[0].value) {
+      var remote = [];
+      try { remote = JSON.parse(r.data[0].value); } catch(e) { remote = []; }
+      // merge by id, prefer newer 'updated'
+      var map = {};
+      local.forEach(function(c){ if (c && c.id) map[c.id] = c; });
+      remote.forEach(function(c) {
+        if (!c || !c.id) return;
+        var existing = map[c.id];
+        if (!existing) { map[c.id] = c; return; }
+        var eT = new Date(existing.updated || existing.created || 0).getTime();
+        var rT = new Date(c.updated || c.created || 0).getTime();
+        map[c.id] = rT >= eT ? Object.assign({}, existing, c) : existing;
+      });
+      _spData = Object.keys(map).map(function(id){ return map[id]; });
+      localStorage.setItem(SP_KEY, JSON.stringify(_spData));
+    }
+    SP.syncStatus = 'synced';
+    SP.lastSynced = new Date().toISOString();
+    if (callback) callback(_spData);
+  }).catch(function() {
+    SP.syncStatus = 'error';
+    if (callback) callback(_spData);
+  });
+}
+
+function spSave(data, callback) {
+  _spData = data;
+  var raw = JSON.stringify(data);
+  localStorage.setItem(SP_KEY, raw);
+  SP.syncStatus = 'saving';
+  spUpdateSyncBadge();
+
+  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
+  if (sb && typeof _currentUser !== 'undefined' && _currentUser) {
+    sb.from('admin_content').upsert(
+      { key: 'aca_sponsors', value: raw, updated_by: _currentUser.email, updated_at: new Date().toISOString() },
+      { onConflict: 'key' }
+    ).then(function(r) {
+      SP.syncStatus = r.error ? 'error' : 'synced';
+      SP.lastSynced = new Date().toISOString();
+      spUpdateSyncBadge();
+      if (r.error && typeof showToast === 'function') showToast('Sponsor save failed — kept locally');
+      if (callback) callback(r);
+    });
+  } else {
+    SP.syncStatus = 'local';
+    spUpdateSyncBadge();
+    if (callback) callback(null);
+  }
+}
+
+function spUpdateSyncBadge() {
+  var el = document.getElementById('sp-sync-badge');
+  if (!el) return;
+  var labels = { synced: '☁️ Synced', saving: '↑ Saving…', local: '💾 Local only', error: '⚠ Sync failed' };
+  el.className = 'sp-sync-badge ' + (SP.syncStatus || 'local');
+  el.textContent = labels[SP.syncStatus] || labels.local;
+}
+
+function spTouch(s) {
+  if (!s) return;
+  s.updated = new Date().toISOString();
+  s.updatedBy = (typeof AN !== 'undefined' && AN.currentRepEmail) || (typeof _currentUser !== 'undefined' && _currentUser ? _currentUser.email : '') || '';
+}
+
+// ── CRUD ──
+window.spNewSponsor = function() {
+  var name = prompt('Sponsor / company name:');
+  if (!name || !name.trim()) return;
+  var s = {
+    id: 'sp-' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
+    company: name.trim(),
+    contactName: '', email: '', phone: '', website: '',
+    tier: '', dealValue: 0,
+    stage: 'lead',
+    ownerEmail: (typeof AN !== 'undefined' ? AN.currentRepEmail : '') || '',
+    notes: '',
+    activityLog: [],
+    created: new Date().toISOString(),
+    updated: new Date().toISOString(),
+    updatedBy: (typeof AN !== 'undefined' ? AN.currentRepEmail : '') || ''
+  };
+  var data = _spData.slice();
+  data.unshift(s);
+  spSave(data, function() {
+    spRender();
+    spOpenPanel(s.id);
+  });
+};
+
+window.spSaveField = function(id, field, value) {
+  var s = _spData.find(function(x){ return x.id === id; });
+  if (!s) return;
+  if (field === 'dealValue') value = Number(String(value).replace(/[^0-9.]/g,'')) || 0;
+  s[field] = value;
+  spTouch(s);
+  // Auto-fill dealValue when tier changes (unless custom)
+  if (field === 'tier' && value && value !== 'custom') {
+    s.dealValue = spTier(value).price;
+  }
+  spSave(_spData.slice(), function() {
+    if (_spSelected === id) spOpenPanel(id);
+    spRender();
+  });
+};
+
+window.spSetStage = function(id, stageId) {
+  var s = _spData.find(function(x){ return x.id === id; });
+  if (!s) return;
+  if (!SP_STAGES.some(function(st){ return st.id === stageId; })) return;
+  var prevStage = s.stage;
+  s.stage = stageId;
+  spTouch(s);
+  if (!s.activityLog) s.activityLog = [];
+  s.activityLog.unshift({
+    type: 'stage', date: new Date().toISOString(),
+    text: 'Moved from "' + spStage(prevStage).label + '" to "' + spStage(stageId).label + '"',
+    by: s.updatedBy
+  });
+  spSave(_spData.slice(), function() {
+    if (_spSelected === id) spOpenPanel(id);
+    spRender();
+    spRenderDash();
+  });
+};
+
+window.spAddNote = function(id) {
+  var ta = document.getElementById('sp-note-input-' + id);
+  if (!ta) return;
+  var text = (ta.value || '').trim();
+  if (!text) return;
+  var s = _spData.find(function(x){ return x.id === id; });
+  if (!s) return;
+  if (!s.activityLog) s.activityLog = [];
+  s.activityLog.unshift({
+    type: 'note', date: new Date().toISOString(), text: text,
+    by: (typeof AN !== 'undefined' ? AN.currentRepEmail : '') || ''
+  });
+  spTouch(s);
+  ta.value = '';
+  spSave(_spData.slice(), function() {
+    if (_spSelected === id) spOpenPanel(id);
+  });
+};
+
+window.spDelete = function(id) {
+  var s = _spData.find(function(x){ return x.id === id; });
+  if (!s) return;
+  if (!confirm('Remove "' + s.company + '" from the sponsor pipeline?')) return;
+  var data = _spData.filter(function(x){ return x.id !== id; });
+  if (_spSelected === id) _spSelected = null;
+  spSave(data, function() {
+    spClosePanel();
+    spRender();
+    spRenderDash();
+  });
+};
+
+window.spClosePanel = function() {
+  _spSelected = null;
+  var p = document.getElementById('sp-panel');
+  var b = document.getElementById('sp-panel-backdrop');
+  if (p) p.classList.remove('open');
+  if (b) b.classList.remove('open');
+  setTimeout(function(){ if(p) p.remove(); if(b) b.remove(); }, 260);
+};
+
+// ── Search / filter ──
+window.spSetSearch = function(q) {
+  SP.searchQ = (q || '').toLowerCase().trim();
+  spRenderList();
+};
+window.spSetStageFilter = function(stageId) {
+  SP.stageFilter = stageId || '';
+  spRenderList();
+  // refresh chip active states
+  document.querySelectorAll('.sp-stage-chip').forEach(function(el) {
+    el.classList.toggle('active', el.getAttribute('data-stage') === SP.stageFilter);
+  });
+};
+function spFiltered() {
+  var q = SP.searchQ;
+  return _spData.filter(function(s) {
+    if (SP.stageFilter && s.stage !== SP.stageFilter) return false;
+    if (q) {
+      var hay = ((s.company||'')+' '+(s.contactName||'')+' '+(s.email||'')+' '+(s.phone||'')).toLowerCase();
+      if (hay.indexOf(q) < 0) return false;
+    }
+    return true;
+  });
+}
+
+// ── List rendering ──
+function spRender() {
+  var root = document.getElementById('sponsors-root');
+  if (!root) return;
+  if (!root.querySelector('#sp-shell')) {
+    root.innerHTML = spBuildShellHTML();
+  }
+  spRenderList();
+  spRenderDash();
+}
+
+function spBuildShellHTML() {
+  return ''
+    + '<div id="sp-shell">'
+    + '<div class="page-header"><div class="page-label">Sponsorships</div><h1>ACA Health Summit — Sponsors</h1></div>'
+    + '<div class="sp-tabs">'
+    + '<button type="button" class="sp-tab active" onclick="spShowTab(\'pipeline\',this)">Pipeline</button>'
+    + '<button type="button" class="sp-tab" onclick="spShowTab(\'dash\',this)">Sponsor Dashboard</button>'
+    + '</div>'
+    + '<div id="sp-pane-pipeline" class="sp-pane active">'
+    + '<div class="sp-toolbar">'
+    + '<input type="text" class="sp-search" placeholder="Search sponsors..." oninput="spSetSearch(this.value)">'
+    + '<span id="sp-sync-badge" class="sp-sync-badge local">💾 Local only</span>'
+    + '<button type="button" class="sp-btn-primary" onclick="spNewSponsor()">+ Add Sponsor</button>'
+    + '</div>'
+    + '<div class="sp-stage-chips" id="sp-stage-chips">'
+    + '<button type="button" class="sp-stage-chip active" data-stage="" onclick="spSetStageFilter(\'\')">All</button>'
+    + SP_STAGES.map(function(st) {
+        return '<button type="button" class="sp-stage-chip" data-stage="'+st.id+'" onclick="spSetStageFilter(\''+st.id+'\')" style="--chip-color:'+st.color+'">'+spEsc(st.label)+'</button>';
+      }).join('')
+    + '</div>'
+    + '<div id="sp-list"></div>'
+    + '</div>'
+    + '<div id="sp-pane-dash" class="sp-pane"></div>'
+    + '</div>';
+}
+
+window.spShowTab = function(tab, btn) {
+  document.querySelectorAll('.sp-tab').forEach(function(el){ el.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  document.querySelectorAll('.sp-pane').forEach(function(el){ el.classList.remove('active'); });
+  var pane = document.getElementById('sp-pane-' + tab);
+  if (pane) pane.classList.add('active');
+  if (tab === 'dash') spRenderDash();
+};
+
+function spRenderList() {
+  var list = document.getElementById('sp-list');
+  if (!list) return;
+  var items = spFiltered();
+  if (!items.length) {
+    list.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-muted);">'
+      + '<div style="font-size:40px;margin-bottom:12px;">🏆</div>'
+      + '<div style="font-weight:700;font-size:14px;margin-bottom:4px;">No sponsors found</div>'
+      + '<div style="font-size:12.5px;">Add a sponsor lead to get started.</div>'
+      + '</div>';
+    return;
+  }
+  // sort: by stage order then newest updated
+  var stageOrder = {}; SP_STAGES.forEach(function(s,i){ stageOrder[s.id] = i; });
+  items = items.slice().sort(function(a,b) {
+    var so = (stageOrder[a.stage]||0) - (stageOrder[b.stage]||0);
+    if (so !== 0) return so;
+    return new Date(b.updated||0) - new Date(a.updated||0);
+  });
+  list.innerHTML = '<table class="sp-table"><thead><tr>'
+    + '<th>Company</th><th>Contact</th><th>Tier</th><th>Value</th><th>Stage</th><th>Owner</th><th>Updated</th>'
+    + '</tr></thead><tbody>'
+    + items.map(function(s) {
+        var st = spStage(s.stage);
+        var tier = s.tier ? spTier(s.tier) : null;
+        var updatedStr = s.updated ? new Date(s.updated).toLocaleDateString() : '';
+        return '<tr class="sp-row" onclick="spOpenPanel(\''+s.id+'\')">'
+          + '<td><div class="sp-co-avatar" style="background:'+spColor(s.company)+'">'+spEsc((s.company||'?').charAt(0).toUpperCase())+'</div><span class="sp-co-name">'+spEsc(s.company||'Unnamed')+'</span></td>'
+          + '<td>'+spEsc(s.contactName||'—')+'</td>'
+          + '<td>'+(tier ? spEsc(tier.label) : '—')+'</td>'
+          + '<td>'+(s.dealValue ? spFmtMoney(s.dealValue) : '—')+'</td>'
+          + '<td><span class="sp-stage-pill" style="--pill-color:'+st.color+'">'+spEsc(st.label)+'</span></td>'
+          + '<td>'+spEsc(spOwnerName(s.ownerEmail))+'</td>'
+          + '<td class="sp-muted">'+updatedStr+'</td>'
+          + '</tr>';
+      }).join('')
+    + '</tbody></table>';
+}
+
+var SP_COLORS = ['#6366f1','#8b5cf6','#f59e0b','#10b981','#06b6d4','#ef4444','#f97316','#84cc16','#ec4899'];
+function spColor(name) { var h=0; name=name||'?'; for(var i=0;i<name.length;i++) h=(h*31+name.charCodeAt(i))&0x7fffffff; return SP_COLORS[h%SP_COLORS.length]; }
+
+// ── Record panel ──
+window.spOpenPanel = function(id) {
+  var s = _spData.find(function(x){ return x.id === id; });
+  if (!s) return;
+  _spSelected = id;
+
+  var existing = document.getElementById('sp-panel');
+  var existingBackdrop = document.getElementById('sp-panel-backdrop');
+  if (existing) {
+    existing.innerHTML = spBuildPanelHTML(s);
+    if (!existing.classList.contains('open')) requestAnimationFrame(function(){ existing.classList.add('open'); });
+    if (existingBackdrop && !existingBackdrop.classList.contains('open')) requestAnimationFrame(function(){ existingBackdrop.classList.add('open'); });
+    return;
+  }
+  var backdrop = document.createElement('div');
+  backdrop.id = 'sp-panel-backdrop';
+  backdrop.className = 'sp-panel-backdrop';
+  backdrop.onclick = spClosePanel;
+  document.body.appendChild(backdrop);
+
+  var panel = document.createElement('div');
+  panel.id = 'sp-panel';
+  panel.className = 'sp-panel';
+  panel.innerHTML = spBuildPanelHTML(s);
+  document.body.appendChild(panel);
+  requestAnimationFrame(function() {
+    backdrop.classList.add('open');
+    panel.classList.add('open');
+  });
+};
+
+function spBuildPanelHTML(s) {
+  var st = spStage(s.stage);
+  var tier = s.tier ? spTier(s.tier) : null;
+  var activity = (s.activityLog || []).slice(0, 50);
+
+  var activityHTML = activity.length ? activity.map(function(a) {
+    var icon = a.type === 'note' ? '📝' : '🔁';
+    var d = a.date ? new Date(a.date).toLocaleString() : '';
+    return '<div class="sp-activity-item">'
+      + '<div class="sp-activity-head"><span>'+icon+'</span><span class="sp-activity-text">'+spEsc(a.text||'')+'</span></div>'
+      + '<div class="sp-activity-meta">'+spEsc(d)+(a.by ? ' · '+spEsc(spOwnerName(a.by)) : '')+'</div>'
+      + '</div>';
+  }).join('') : '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:12.5px;">No activity yet.</div>';
+
+  var tierOptions = '<option value="">No tier set</option>' + SP_TIERS.map(function(t) {
+    return '<option value="'+t.id+'"'+(s.tier===t.id?' selected':'')+'>'+spEsc(t.label)+(t.price?' — $'+t.price.toLocaleString():'')+'</option>';
+  }).join('');
+
+  var stageOptions = SP_STAGES.map(function(stg) {
+    return '<option value="'+stg.id+'"'+(s.stage===stg.id?' selected':'')+'>'+spEsc(stg.label)+'</option>';
+  }).join('');
+
+  return ''
+    + '<div class="sp-panel-layout">'
+    + '<aside class="sp-panel-left">'
+    + '<button type="button" class="sp-back-btn" onclick="spClosePanel()">← Sponsors</button>'
+    + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">'
+    + '<div class="sp-co-avatar" style="background:'+spColor(s.company)+';width:46px;height:46px;font-size:18px;border-radius:10px;">'+spEsc((s.company||'?').charAt(0).toUpperCase())+'</div>'
+    + '<div style="min-width:0;"><div style="font-size:18px;font-weight:800;letter-spacing:-0.3px;">'+spEsc(s.company||'Unnamed')+'</div>'
+    + (s.website ? '<a href="'+(s.website.indexOf('http')===0?s.website:'https://'+s.website)+'" target="_blank" rel="noopener" style="font-size:12px;color:#6366f1;text-decoration:none;">'+spEsc(s.website)+' ↗</a>' : '<div style="font-size:12px;color:var(--text-muted);">No website</div>')
+    + '</div></div>'
+
+    + '<div class="sp-key-info">'
+    + '<div class="sp-key-head">Sponsor details</div>'
+    + '<div class="sp-row"><span>Stage</span><select onchange="spSetStage(\''+s.id+'\',this.value)" style="--pill-color:'+st.color+'">'+stageOptions+'</select></div>'
+    + '<div class="sp-row"><span>Tier</span><select onchange="spSaveField(\''+s.id+'\',\'tier\',this.value)">'+tierOptions+'</select></div>'
+    + '<div class="sp-row"><span>Deal value</span><input type="text" value="'+(s.dealValue?s.dealValue:'')+'" placeholder="$0" onblur="spSaveField(\''+s.id+'\',\'dealValue\',this.value)"></div>'
+    + '<div class="sp-row"><span>Contact name</span><input type="text" value="'+spEsc(s.contactName||'')+'" onblur="spSaveField(\''+s.id+'\',\'contactName\',this.value)"></div>'
+    + '<div class="sp-row"><span>Email</span><input type="text" value="'+spEsc(s.email||'')+'" onblur="spSaveField(\''+s.id+'\',\'email\',this.value)"></div>'
+    + '<div class="sp-row"><span>Phone</span><input type="text" value="'+spEsc(s.phone||'')+'" onblur="spSaveField(\''+s.id+'\',\'phone\',this.value)"></div>'
+    + '<div class="sp-row"><span>Website</span><input type="text" value="'+spEsc(s.website||'')+'" placeholder="website.com" onblur="spSaveField(\''+s.id+'\',\'website\',this.value)"></div>'
+    + '<div class="sp-row"><span>Owner</span><span style="font-weight:700;">'+spEsc(spOwnerName(s.ownerEmail))+'</span></div>'
+    + '</div>'
+
+    + '<div style="margin-top:16px;"><div class="sp-section-label">Notes</div>'
+    + '<textarea rows="5" placeholder="Sponsorship strategy, decision makers, follow-ups..." onblur="spSaveField(\''+s.id+'\',\'notes\',this.value)">'+spEsc(s.notes||'')+'</textarea></div>'
+
+    + '<button type="button" class="sp-danger-btn" onclick="spDelete(\''+s.id+'\')">Remove sponsor</button>'
+    + '</aside>'
+
+    + '<main class="sp-panel-right">'
+    + '<div class="sp-section-label" style="margin-bottom:10px;">Activity</div>'
+    + '<div class="sp-note-add">'
+    + '<textarea id="sp-note-input-'+s.id+'" rows="2" placeholder="Log a call, email, or update..."></textarea>'
+    + '<button type="button" onclick="spAddNote(\''+s.id+'\')">Add</button>'
+    + '</div>'
+    + '<div class="sp-activity-feed">'+activityHTML+'</div>'
+    + '</main>'
+    + '</div>';
+}
+
+// ── Sponsor Dashboard (separate from sales dashboard) ──
+function spRenderDash() {
+  var pane = document.getElementById('sp-pane-dash');
+  if (!pane) return;
+
+  var total = _spData.length;
+  var won = _spData.filter(function(s){ return s.stage === 'won'; });
+  var lost = _spData.filter(function(s){ return s.stage === 'lost'; });
+  var open = _spData.filter(function(s){ return s.stage !== 'won' && s.stage !== 'lost'; });
+
+  var closedRevenue = won.reduce(function(sum,s){ return sum + (Number(s.dealValue)||0); }, 0);
+  var pipelineRevenue = open.reduce(function(sum,s){ return sum + (Number(s.dealValue)||0); }, 0);
+  var winRate = (won.length + lost.length) ? Math.round(won.length / (won.length + lost.length) * 100) : 0;
+
+  // Tier breakdown (won only)
+  var tierCounts = {};
+  SP_TIERS.forEach(function(t){ tierCounts[t.id] = 0; });
+  won.forEach(function(s){ if (s.tier && tierCounts[s.tier] !== undefined) tierCounts[s.tier]++; });
+
+  // Stage funnel counts
+  var stageCounts = {};
+  SP_STAGES.forEach(function(st){ stageCounts[st.id] = 0; });
+  _spData.forEach(function(s){ if (stageCounts[s.stage] !== undefined) stageCounts[s.stage]++; });
+
+  pane.innerHTML = ''
+    + '<div class="sp-dash-tiles">'
+    + spTile('Total Sponsors', total)
+    + spTile('Closed Revenue', spFmtMoney(closedRevenue), '#10b981')
+    + spTile('Pipeline Revenue', spFmtMoney(pipelineRevenue), '#6366f1')
+    + spTile('Win Rate', (won.length+lost.length) ? winRate+'%' : '—', '#f59e0b')
+    + spTile('Closed Won', won.length, '#10b981')
+    + spTile('Closed Lost', lost.length, '#ef4444')
+    + '</div>'
+
+    + '<div class="sp-dash-grid">'
+    + '<div class="sp-dash-card"><div class="sp-dash-card-title">Pipeline by Stage</div>'
+    + '<div class="sp-funnel">'
+    + SP_STAGES.map(function(st) {
+        var n = stageCounts[st.id] || 0;
+        var max = Math.max.apply(null, SP_STAGES.map(function(x){ return stageCounts[x.id] || 0; })) || 1;
+        var pct = Math.round((n/max)*100);
+        return '<div class="sp-funnel-row">'
+          + '<div class="sp-funnel-label">'+spEsc(st.label)+'</div>'
+          + '<div class="sp-funnel-bar-wrap"><div class="sp-funnel-bar" style="width:'+pct+'%;background:'+st.color+';"></div></div>'
+          + '<div class="sp-funnel-count">'+n+'</div>'
+          + '</div>';
+      }).join('')
+    + '</div></div>'
+
+    + '<div class="sp-dash-card"><div class="sp-dash-card-title">Closed Won by Tier</div>'
+    + (won.length ? '<div class="sp-tier-grid">'
+        + SP_TIERS.filter(function(t){ return t.id !== 'custom'; }).map(function(t) {
+            var n = tierCounts[t.id] || 0;
+            return '<div class="sp-tier-cell"><div class="sp-tier-count">'+n+'</div><div class="sp-tier-label">'+spEsc(t.label)+'</div><div class="sp-tier-price">'+spFmtMoney(t.price)+'</div></div>';
+          }).join('')
+        + '</div>'
+      : '<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:12.5px;">No closed sponsors yet.</div>')
+    + '</div>'
+    + '</div>';
+}
+
+function spTile(label, value, color) {
+  return '<div class="sp-tile">'
+    + '<div class="sp-tile-label">'+spEsc(label)+'</div>'
+    + '<div class="sp-tile-value"'+(color?' style="color:'+color+';"':'')+'>'+spEsc(value)+'</div>'
+    + '</div>';
+}
+
+// ── Styles ──
+(function() {
+  if (document.getElementById('sp-styles')) return;
+  var st = document.createElement('style');
+  st.id = 'sp-styles';
+  st.textContent = ''
+    + '#sponsors-root{padding:0 36px 60px;max-width:1280px;margin:0 auto;}'
+    + '.sp-tabs{display:flex;gap:8px;border-bottom:1px solid var(--divider,#e9e9ef);margin-bottom:20px;}'
+    + '.sp-tab{padding:10px 18px;border:none;background:none;font-size:13px;font-weight:700;color:var(--text-muted,#71717a);cursor:pointer;font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-1px;}'
+    + '.sp-tab.active{color:#6366f1;border-bottom-color:#6366f1;}'
+    + '.sp-pane{display:none;}'
+    + '.sp-pane.active{display:block;}'
+    + '.sp-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;}'
+    + '.sp-search{flex:1;max-width:320px;padding:9px 14px;border:1.5px solid var(--divider,#e4e4e7);border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:var(--card-bg,#fff);color:var(--text-primary);}'
+    + '.sp-btn-primary{padding:9px 16px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}'
+    + '.sp-sync-badge{font-size:11px;font-weight:600;padding:4px 10px;border-radius:12px;background:var(--body-bg,#f4f4f6);color:var(--text-muted,#71717a);}'
+    + '.sp-sync-badge.synced{color:#10b981;}'
+    + '.sp-sync-badge.error{color:#ef4444;}'
+    + '.sp-stage-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}'
+    + '.sp-stage-chip{padding:6px 14px;border:1.5px solid var(--divider,#e4e4e7);border-radius:16px;background:var(--card-bg,#fff);font-size:12px;font-weight:700;color:var(--text-secondary,#52525b);cursor:pointer;font-family:inherit;}'
+    + '.sp-stage-chip.active{border-color:var(--chip-color,#6366f1);color:var(--chip-color,#6366f1);background:color-mix(in srgb, var(--chip-color,#6366f1) 10%, transparent);}'
+    + '.sp-table{width:100%;border-collapse:collapse;background:var(--card-bg,#fff);border:1px solid var(--divider,#e9e9ef);border-radius:10px;overflow:hidden;}'
+    + '.sp-table th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted,#71717a);padding:10px 14px;border-bottom:1px solid var(--divider,#e9e9ef);background:var(--body-bg,#f7f7f9);}'
+    + '.sp-table td{padding:12px 14px;border-bottom:1px solid var(--divider,#f0f0f5);font-size:13px;color:var(--text-primary,#09090b);vertical-align:middle;}'
+    + '.sp-row{cursor:pointer;}'
+    + '.sp-row:hover{background:rgba(99,102,241,0.04);}'
+    + '.sp-co-avatar{display:inline-flex;width:28px;height:28px;border-radius:7px;color:#fff;font-weight:800;font-size:12px;align-items:center;justify-content:center;vertical-align:middle;margin-right:10px;}'
+    + '.sp-co-name{font-weight:700;}'
+    + '.sp-stage-pill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;color:var(--pill-color,#6366f1);background:color-mix(in srgb, var(--pill-color,#6366f1) 14%, transparent);white-space:nowrap;}'
+    + '.sp-muted{color:var(--text-muted,#a1a1aa);font-size:12px;}'
+
+    /* Panel */
+    + '.sp-panel-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:8999;opacity:0;pointer-events:none;transition:opacity 0.25s;}'
+    + '.sp-panel-backdrop.open{opacity:1;pointer-events:auto;}'
+    + '.sp-panel{position:fixed;top:0;left:var(--sb-width,228px);right:0;width:auto;height:100vh;background:var(--body-bg,#f7f7f9);border-left:1px solid var(--divider,#e9e9ef);box-shadow:-12px 0 40px rgba(0,0,0,0.14);z-index:9000;display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.28s ease;}'
+    + 'body.sb-collapsed .sp-panel{left:68px;}'
+    + '.sp-panel.open{transform:translateX(0);}'
+    + '.sp-panel-layout{display:grid;grid-template-columns:minmax(280px,360px) minmax(0,1fr);height:100%;min-height:0;overflow:hidden;}'
+    + '.sp-panel-left{border-right:1px solid var(--divider,#e9e9ef);overflow-y:auto;padding:18px 20px 100px;background:var(--card-bg,#fff);}'
+    + '.sp-panel-right{overflow-y:auto;padding:18px 24px 100px;background:var(--body-bg,#f7f7f9);}'
+    + '.sp-back-btn{background:none;border:none;color:#6366f1;font-size:13px;font-weight:600;cursor:pointer;padding:0;margin-bottom:16px;font-family:inherit;}'
+    + '.sp-back-btn:hover{text-decoration:underline;}'
+    + '.sp-key-info{border:1px solid var(--divider,#e9e9ef);border-radius:10px;overflow:hidden;}'
+    + '.sp-key-head{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted,#71717a);padding:10px 14px;background:var(--body-bg,#f7f7f9);border-bottom:1px solid var(--divider,#e9e9ef);}'
+    + '.sp-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--divider,#f0f0f5);gap:12px;}'
+    + '.sp-row:last-child{border-bottom:none;}'
+    + '.sp-row>span:first-child{font-size:12px;color:var(--text-muted,#71717a);flex-shrink:0;}'
+    + '.sp-row input,.sp-row select{font-size:12.5px;font-weight:600;color:var(--text-primary,#09090b);text-align:right;max-width:60%;border:none;border-bottom:1px solid var(--divider);background:transparent;outline:none;font-family:inherit;}'
+    + '.sp-section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted,#71717a);}'
+    + '.sp-panel-left textarea{width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:10px;font-size:12px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;margin-top:8px;}'
+    + '.sp-danger-btn{margin-top:14px;width:100%;padding:9px;border-radius:8px;border:1px solid #fecaca;background:#fef2f2;color:#ef4444;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}'
+    + '.sp-note-add{display:flex;gap:8px;margin-bottom:16px;}'
+    + '.sp-note-add textarea{flex:1;border:1.5px solid var(--divider);border-radius:8px;padding:10px;font-size:12.5px;font-family:inherit;resize:vertical;outline:none;}'
+    + '.sp-note-add button{padding:0 18px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit;}'
+    + '.sp-activity-feed{display:flex;flex-direction:column;gap:10px;}'
+    + '.sp-activity-item{background:var(--card-bg,#fff);border:1px solid var(--divider,#e9e9ef);border-radius:10px;padding:12px;}'
+    + '.sp-activity-head{display:flex;gap:8px;align-items:flex-start;font-size:13px;font-weight:600;color:var(--text-primary);}'
+    + '.sp-activity-text{flex:1;white-space:pre-wrap;}'
+    + '.sp-activity-meta{font-size:11px;color:var(--text-muted);margin-top:4px;margin-left:24px;}'
+
+    /* Dashboard */
+    + '.sp-dash-tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px;}'
+    + '@media(max-width:1100px){.sp-dash-tiles{grid-template-columns:repeat(3,1fr);}}'
+    + '@media(max-width:640px){.sp-dash-tiles{grid-template-columns:repeat(2,1fr);}}'
+    + '.sp-tile{background:var(--card-bg,#fff);border:1px solid var(--divider,#e9e9ef);border-radius:10px;padding:14px;text-align:center;}'
+    + '.sp-tile-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted,#71717a);margin-bottom:6px;}'
+    + '.sp-tile-value{font-size:22px;font-weight:800;color:var(--text-primary,#09090b);}'
+    + '.sp-dash-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;}'
+    + '@media(max-width:900px){.sp-dash-grid{grid-template-columns:1fr;}}'
+    + '.sp-dash-card{background:var(--card-bg,#fff);border:1px solid var(--divider,#e9e9ef);border-radius:10px;padding:18px;}'
+    + '.sp-dash-card-title{font-size:13px;font-weight:800;color:var(--text-primary,#09090b);margin-bottom:14px;}'
+    + '.sp-funnel-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}'
+    + '.sp-funnel-label{width:110px;font-size:12px;font-weight:600;color:var(--text-secondary,#52525b);flex-shrink:0;}'
+    + '.sp-funnel-bar-wrap{flex:1;height:10px;border-radius:6px;background:var(--body-bg,#f4f4f6);overflow:hidden;}'
+    + '.sp-funnel-bar{height:100%;border-radius:6px;}'
+    + '.sp-funnel-count{width:28px;text-align:right;font-size:12px;font-weight:700;color:var(--text-primary,#09090b);}'
+    + '.sp-tier-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}'
+    + '.sp-tier-cell{border:1px solid var(--divider,#e9e9ef);border-radius:8px;padding:12px;text-align:center;}'
+    + '.sp-tier-count{font-size:20px;font-weight:800;color:#6366f1;}'
+    + '.sp-tier-label{font-size:11px;font-weight:700;color:var(--text-secondary,#52525b);margin-top:2px;}'
+    + '.sp-tier-price{font-size:10px;color:var(--text-muted,#a1a1aa);margin-top:2px;}'
+    + '@media(max-width:900px){.sp-panel-layout{grid-template-columns:1fr;}.sp-panel-left{border-right:none;border-bottom:1px solid var(--divider,#e9e9ef);}}';
+  document.head.appendChild(st);
+})();
+
+// ── Mount on section show ──
+window.spMountSection = function() {
+  spLoad(function() {
+    spRender();
+    spUpdateSyncBadge();
+  });
+};
+
+var _prevShowSectionSponsors = window.showSection;
+window.showSection = function(id, btn) {
+  if (typeof _prevShowSectionSponsors === 'function') _prevShowSectionSponsors(id, btn);
+  if (id === 'sponsors') {
+    setTimeout(window.spMountSection, 0);
+  }
+};
+
+function spMaybeMountOnLoad() {
+  var sec = document.getElementById('section-sponsors');
+  if (sec && sec.classList.contains('active')) {
+    window.spMountSection();
+  }
+}
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(spMaybeMountOnLoad, 1300);
+});
+
 })();
 </script>
 </body>
