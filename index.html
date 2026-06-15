@@ -2519,6 +2519,8 @@ console.log('[PATCH 5] Multi-language scripts loaded.');
   var _base = window.showSection;
   window.showSection = function(id, btn) {
     _base(id, btn);
+    // Persist active section so refresh returns to same place
+    try { localStorage.setItem('an-active-section', id); } catch(e) {}
     // Always scroll main content to top on section change
     var mainEl = document.querySelector('.main');
     if (mainEl) mainEl.scrollTop = 0;
@@ -7266,9 +7268,12 @@ window.logCallOutcome = function(outcome, extra) {
     setTimeout(function(){ if(panel.parentNode) panel.remove(); }, 1500);
   }
 
-  // ── Demo Set: capture needs/pain points + assign the AE who'll run the demo ──
-  if (outcome === 'demo' && csLeadId && typeof anOpenDemoSetFollowup === 'function') {
-    setTimeout(function() { anOpenDemoSetFollowup(csLeadId); }, 350);
+  if (outcome === 'not_interested' && csLeadId && typeof anOpenDemoSetFollowup !== 'undefined') {
+    // Already handled by anLogNotInterested reason picker — nothing extra needed
+  }
+  // After a plain pickup (just talked, no demo, no NI), ask what the next step is
+  if (outcome === 'pickup' && csLeadId && typeof anOpenNextStepPrompt === 'function') {
+    setTimeout(function() { anOpenNextStepPrompt(csLeadId); }, 400);
   }
 };
 
@@ -7390,6 +7395,107 @@ window.anTransferOwnershipToAE = function(lead) {
   if (!lead.sdrEmail) lead.sdrEmail = lead._repEmail || ''; // preserve who sourced it
   lead._repEmail = lead.aeEmail.toLowerCase();
 };
+
+// ── Next Step prompt — fires after "Just talked" pickup outcome ──────────
+window.anOpenNextStepPrompt = function(leadId) {
+  var lead = (typeof AN !== 'undefined' && AN.leadById) ? AN.leadById(leadId) : null;
+  if (!lead) return;
+  var existing = document.getElementById('an-next-step-modal');
+  if (existing) existing.remove();
+  var now = new Date();
+  var tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
+  var in3 = new Date(now); in3.setDate(now.getDate() + 3);
+  var nextWeek = new Date(now); nextWeek.setDate(now.getDate() + 7);
+  function fmt(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  var leadName = ((lead.firstName||'')+' '+(lead.lastName||'')).trim() || lead.company || 'this lead';
+  var taskTypes = typeof AN_TASK_TYPES !== 'undefined' ? AN_TASK_TYPES : [
+    {id:'call',icon:'📞',label:'Call Back',color:'#6366f1'},
+    {id:'email',icon:'📧',label:'Send Email',color:'#f59e0b'},
+    {id:'text',icon:'💬',label:'Send Text',color:'#10b981'},
+    {id:'followup',icon:'🔔',label:'Follow Up',color:'#8b5cf6'},
+    {id:'demo',icon:'🎯',label:'Demo Prep',color:'#06b6d4'},
+    {id:'other',icon:'📋',label:'Other',color:'#a1a1aa'}
+  ];
+  var backdrop = document.createElement('div');
+  backdrop.id = 'an-next-step-modal';
+  backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:21500;display:flex;align-items:center;justify-content:center;';
+  backdrop.onclick = function(e) { if (e.target === backdrop) backdrop.remove(); };
+  backdrop.innerHTML = '<div style="background:#fff;border-radius:14px;padding:22px;width:400px;max-width:92vw;font-family:inherit;box-shadow:0 24px 80px rgba(0,0,0,0.3);" onclick="event.stopPropagation()">'
+    + '<div style="font-size:15px;font-weight:800;color:#09090b;margin-bottom:4px;">👋 Good talk — what\'s the next step?</div>'
+    + '<div style="font-size:12px;color:#71717a;margin-bottom:16px;">Set a follow-up so '+anEsc(leadName)+' doesn\'t slip through the cracks.</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:14px;">'
+    + taskTypes.map(function(t) {
+        return '<button type="button" id="nsp-method-'+t.id+'" onclick="anNspSelectMethod(\''+t.id+'\')" '
+          +'style="padding:9px 6px;border:1.5px solid #e4e4e7;border-radius:9px;background:#fff;font-size:12px;font-weight:700;color:#52525b;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;">'
+          +'<span style="font-size:16px;">'+t.icon+'</span>'+t.label+'</button>';
+      }).join('')
+    + '</div>'
+    + '<div style="font-size:11px;font-weight:700;color:#71717a;margin-bottom:6px;letter-spacing:0.08em;">WHEN</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">'
+    + [['Tomorrow',fmt(tomorrow)],['In 3 days',fmt(in3)],['Next week',fmt(nextWeek)]].map(function(opt) {
+        return '<button type="button" id="nsp-when-'+opt[1]+'" onclick="anNspSelectWhen(\''+opt[1]+'\')" '
+          +'style="padding:8px;border:1.5px solid #e4e4e7;border-radius:8px;background:#fff;font-size:12px;font-weight:600;color:#52525b;cursor:pointer;font-family:inherit;">'+opt[0]+'</button>';
+      }).join('')
+    + '</div>'
+    + '<input type="date" id="nsp-date-input" value="'+fmt(tomorrow)+'" '
+      +'style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:8px 12px;font-size:12.5px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:12px;" '
+      +'oninput="anNspSelectWhen(this.value)">'
+    + '<input type="text" id="nsp-note" placeholder="Optional note (e.g. reviewing with her team)" '
+      +'style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 12px;font-size:12.5px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:16px;">'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button type="button" onclick="document.getElementById(\'an-next-step-modal\').remove()" style="flex:1;padding:10px;border:1.5px solid #e4e4e7;border-radius:8px;background:#fff;color:#71717a;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Skip</button>'
+    + '<button type="button" onclick="anSaveNextStep(\''+leadId+'\')" style="flex:2;padding:10px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Set Follow-Up ✓</button>'
+    + '</div>'
+    + '</div>';
+  document.body.appendChild(backdrop);
+  window._anNspState = { method: 'call', when: fmt(tomorrow) };
+  anNspSelectMethod('call');
+  anNspSelectWhen(fmt(tomorrow));
+};
+
+window.anNspSelectMethod = function(id) {
+  if (!window._anNspState) return;
+  window._anNspState.method = id;
+  document.querySelectorAll('[id^="nsp-method-"]').forEach(function(btn) {
+    var active = btn.id === 'nsp-method-' + id;
+    btn.style.borderColor = active ? '#6366f1' : '#e4e4e7';
+    btn.style.background = active ? 'rgba(99,102,241,0.07)' : '#fff';
+    btn.style.color = active ? '#6366f1' : '#52525b';
+  });
+};
+
+window.anNspSelectWhen = function(dateStr) {
+  if (!window._anNspState) return;
+  window._anNspState.when = dateStr;
+  document.querySelectorAll('[id^="nsp-when-"]').forEach(function(btn) {
+    var active = btn.id === 'nsp-when-' + dateStr;
+    btn.style.borderColor = active ? '#6366f1' : '#e4e4e7';
+    btn.style.background = active ? 'rgba(99,102,241,0.07)' : '#fff';
+    btn.style.color = active ? '#6366f1' : '#52525b';
+  });
+  var di = document.getElementById('nsp-date-input');
+  if (di && di.value !== dateStr) di.value = dateStr;
+};
+
+window.anSaveNextStep = function(leadId) {
+  var state = window._anNspState;
+  if (!state || !state.when) return;
+  var lead = (typeof AN !== 'undefined' && AN.leadById) ? AN.leadById(leadId) : null;
+  if (!lead) return;
+  var note = (document.getElementById('nsp-note') || {}).value || '';
+  if (typeof anCreateFollowUpTask === 'function') {
+    anCreateFollowUpTask(lead, state.when, '09:00', state.method, note.trim() || 'Follow-up from call');
+  }
+  var modal = document.getElementById('an-next-step-modal');
+  if (modal) modal.remove();
+  if (typeof showToast === 'function') {
+    var taskTypes = typeof AN_TASK_TYPES !== 'undefined' ? AN_TASK_TYPES : [];
+    var t = taskTypes.find(function(x){return x.id===state.method;});
+    showToast((t ? t.icon+' ' : '') + 'Follow-up set for ' + state.when);
+  }
+  window._anNspState = null;
+};
+
 window.anLogNotInterested = function() {
   anOpenReasonPicker({
     title: 'Why not interested?',
@@ -18522,6 +18628,14 @@ var _origOnUserLoggedIn_repName = window.onUserLoggedIn;
 window.onUserLoggedIn = function(user) {
   if (typeof _origOnUserLoggedIn_repName === 'function') _origOnUserLoggedIn_repName(user);
   setTimeout(function(){ if (typeof anSyncCurrentRepName === 'function') anSyncCurrentRepName(); }, 50);
+  // Restore the section the user was on before refreshing
+  try {
+    var lastSection = localStorage.getItem('an-active-section');
+    if (lastSection && lastSection !== 'home' && typeof showSection === 'function') {
+      var navBtn = document.querySelector('.nav-item[data-section="'+lastSection+'"]');
+      showSection(lastSection, navBtn || null);
+    }
+  } catch(e) {}
 };
 
 // ── 2. PATCH renderLeadsTable to fix: name inline edit, last activity icon, rep name ──
@@ -29399,10 +29513,33 @@ window.spSaveField = function(id, field, value) {
   if (field === 'tier' && value && value !== 'custom') {
     s.dealValue = spTier(value).price;
   }
-  spSave(_spData.slice(), function() {
-    if (_spSelected === id) spOpenPanel(id);
-    spRender();
+  // Debounce save — don't write on every keystroke, but don't wait for blur either
+  clearTimeout(window._spSaveTimer);
+  window._spSaveTimer = setTimeout(function() {
+    spSave(_spData.slice(), function() {
+      if (_spSelected === id) {
+        // Refresh only the sync badge, not full panel (avoids resetting focused input)
+        spUpdateSyncBadge();
+      }
+      spRenderList();
+    });
+  }, 600);
+};
+
+// Save all currently-focused sponsor panel fields before navigating away
+window.spFlushPanel = function() {
+  var panel = document.getElementById('sp-panel');
+  if (!panel || !_spSelected) return;
+  var inputs = panel.querySelectorAll('input, textarea, select');
+  inputs.forEach(function(el) {
+    // Trigger change on any focused or dirty input by reading its value
+    // The oninput handlers will have already called spSaveField, but flush the debounce timer
   });
+  // Force immediate save if timer is pending
+  if (window._spSaveTimer) {
+    clearTimeout(window._spSaveTimer);
+    spSave(_spData.slice(), function(){});
+  }
 };
 
 window.spSetStage = function(id, stageId) {
@@ -29442,6 +29579,10 @@ window.spAddNote = function(id) {
   spSave(_spData.slice(), function() {
     if (_spSelected === id) spOpenPanel(id);
   });
+  // Offer a next step task for sponsors too
+  if (typeof anOpenSpNextStep === 'function') {
+    setTimeout(function() { anOpenSpNextStep(id, s.company || 'sponsor'); }, 300);
+  }
 };
 
 window.spDelete = function(id) {
@@ -29610,16 +29751,68 @@ window.spOpenPanel = function(id) {
   });
 };
 
+function spBuildContactsHTML(s) {
+  var contacts = s.contacts || [];
+  // Migrate legacy single-contact fields into contacts array on first open
+  if (!contacts.length && (s.contactName || s.email || s.phone)) {
+    contacts = [{ id: 'c-0', name: s.contactName || '', email: s.email || '', phone: s.phone || '', role: '' }];
+    s.contacts = contacts;
+  }
+  if (!contacts.length) {
+    return '<div style="font-size:12px;color:#a1a1aa;padding:8px 0;">No contacts yet — click Add to add one.</div>';
+  }
+  return contacts.map(function(c, ci) {
+    return '<div class="sp-contact-card" data-ci="'+ci+'">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
+      + '<div style="font-size:11px;font-weight:700;color:#6366f1;">Contact '+(ci+1)+'</div>'
+      + '<button type="button" onclick="spRemoveContact(\''+s.id+'\','+ci+')" style="background:none;border:none;color:#a1a1aa;cursor:pointer;font-size:12px;padding:0;">✕</button>'
+      + '</div>'
+      + '<input type="text" placeholder="Name" value="'+spEsc(c.name||'')+'" oninput="spUpdateContact(\''+s.id+'\','+ci+',\'name\',this.value)" style="width:100%;border:1px solid #e4e4e7;border-radius:6px;padding:6px 9px;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:5px;">'
+      + '<input type="text" placeholder="Role / Title" value="'+spEsc(c.role||'')+'" oninput="spUpdateContact(\''+s.id+'\','+ci+',\'role\',this.value)" style="width:100%;border:1px solid #e4e4e7;border-radius:6px;padding:6px 9px;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:5px;">'
+      + '<input type="email" placeholder="Email" value="'+spEsc(c.email||'')+'" oninput="spUpdateContact(\''+s.id+'\','+ci+',\'email\',this.value)" style="width:100%;border:1px solid #e4e4e7;border-radius:6px;padding:6px 9px;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:5px;">'
+      + '<input type="tel" placeholder="Phone" value="'+spEsc(c.phone||'')+'" oninput="spUpdateContact(\''+s.id+'\','+ci+',\'phone\',this.value)" style="width:100%;border:1px solid #e4e4e7;border-radius:6px;padding:6px 9px;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box;">'
+      + '</div>';
+  }).join('');
+}
+
+window.spAddContact = function(id) {
+  var s = _spData.find(function(x){ return x.id === id; });
+  if (!s) return;
+  if (!s.contacts) s.contacts = [];
+  s.contacts.push({ id: 'c-'+Date.now(), name: '', email: '', phone: '', role: '' });
+  spTouch(s);
+  spSave(_spData.slice(), function() { if (_spSelected === id) spOpenPanel(id); });
+};
+
+window.spRemoveContact = function(id, ci) {
+  var s = _spData.find(function(x){ return x.id === id; });
+  if (!s || !s.contacts) return;
+  s.contacts.splice(ci, 1);
+  spTouch(s);
+  spSave(_spData.slice(), function() { if (_spSelected === id) spOpenPanel(id); });
+};
+
+window.spUpdateContact = function(id, ci, field, value) {
+  var s = _spData.find(function(x){ return x.id === id; });
+  if (!s || !s.contacts || !s.contacts[ci]) return;
+  s.contacts[ci][field] = value;
+  spTouch(s);
+  clearTimeout(window._spSaveTimer);
+  window._spSaveTimer = setTimeout(function() {
+    spSave(_spData.slice(), function() { spUpdateSyncBadge(); spRenderList(); });
+  }, 600);
+};
+
 function spBuildPanelHTML(s) {
   var st = spStage(s.stage);
   var tier = s.tier ? spTier(s.tier) : null;
   var activity = (s.activityLog || []).slice(0, 50);
-
   var activityHTML = activity.length ? activity.map(function(a) {
-    var icon = a.type === 'note' ? '📝' : '🔁';
+    var icon = a.type === 'nextstep' ? '📅' : a.type === 'note' ? '📝' : '🔁';
     var d = a.date ? new Date(a.date).toLocaleString() : '';
+    var dueBadge = a.dueDate ? ' <span style="background:#eef2ff;color:#6366f1;border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;">Due '+a.dueDate+'</span>' : '';
     return '<div class="sp-activity-item">'
-      + '<div class="sp-activity-head"><span>'+icon+'</span><span class="sp-activity-text">'+spEsc(a.text||'')+'</span></div>'
+      + '<div class="sp-activity-head"><span>'+icon+'</span><span class="sp-activity-text">'+spEsc(a.text||'')+dueBadge+'</span></div>'
       + '<div class="sp-activity-meta">'+spEsc(d)+(a.by ? ' · '+spEsc(spOwnerName(a.by)) : '')+'</div>'
       + '</div>';
   }).join('') : '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:12.5px;">No activity yet.</div>';
@@ -29635,7 +29828,7 @@ function spBuildPanelHTML(s) {
   return ''
     + '<div class="sp-panel-layout">'
     + '<aside class="sp-panel-left">'
-    + '<button type="button" class="sp-back-btn" onclick="spClosePanel()">← Sponsors</button>'
+    + '<button type="button" class="sp-back-btn" onclick="spFlushPanel();spClosePanel()">← Sponsors</button>'
     + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">'
     + '<div class="sp-co-avatar" style="background:'+spColor(s.company)+';width:46px;height:46px;font-size:18px;border-radius:10px;">'+spEsc((s.company||'?').charAt(0).toUpperCase())+'</div>'
     + '<div style="min-width:0;"><div style="font-size:18px;font-weight:800;letter-spacing:-0.3px;">'+spEsc(s.company||'Unnamed')+'</div>'
@@ -29646,16 +29839,22 @@ function spBuildPanelHTML(s) {
     + '<div class="sp-key-head">Sponsor details</div>'
     + '<div class="sp-row"><span>Stage</span><select onchange="spSetStage(\''+s.id+'\',this.value)" style="--pill-color:'+st.color+'">'+stageOptions+'</select></div>'
     + '<div class="sp-row"><span>Tier</span><select onchange="spSaveField(\''+s.id+'\',\'tier\',this.value)">'+tierOptions+'</select></div>'
-    + '<div class="sp-row"><span>Deal value</span><input type="text" value="'+(s.dealValue?s.dealValue:'')+'" placeholder="$0" onblur="spSaveField(\''+s.id+'\',\'dealValue\',this.value)"></div>'
-    + '<div class="sp-row"><span>Contact name</span><input type="text" value="'+spEsc(s.contactName||'')+'" onblur="spSaveField(\''+s.id+'\',\'contactName\',this.value)"></div>'
-    + '<div class="sp-row"><span>Email</span><input type="text" value="'+spEsc(s.email||'')+'" onblur="spSaveField(\''+s.id+'\',\'email\',this.value)"></div>'
-    + '<div class="sp-row"><span>Phone</span><input type="text" value="'+spEsc(s.phone||'')+'" onblur="spSaveField(\''+s.id+'\',\'phone\',this.value)"></div>'
-    + '<div class="sp-row"><span>Website</span><input type="text" value="'+spEsc(s.website||'')+'" placeholder="website.com" onblur="spSaveField(\''+s.id+'\',\'website\',this.value)"></div>'
+    + '<div class="sp-row"><span>Deal value</span><input type="text" value="'+(s.dealValue?s.dealValue:'')+'" placeholder="$0" oninput="spSaveField(\''+s.id+'\',\'dealValue\',this.value)"></div>'
+    + '<div class="sp-row"><span>Website</span><input type="text" value="'+spEsc(s.website||'')+'" placeholder="website.com" oninput="spSaveField(\''+s.id+'\',\'website\',this.value)"></div>'
     + '<div class="sp-row"><span>Owner</span><span style="font-weight:700;">'+spEsc(spOwnerName(s.ownerEmail))+'</span></div>'
+    + '</div>'
+    // ── Contacts section ──
+    + '<div style="margin-top:14px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+    + '<div class="sp-section-label">Contacts</div>'
+    + '<button type="button" onclick="spAddContact(\''+s.id+'\')" style="padding:4px 10px;border:1.5px solid #6366f1;border-radius:7px;background:#eef2ff;color:#6366f1;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">+ Add</button>'
+    + '</div>'
+    + spBuildContactsHTML(s)
+    + '</div>'
     + '</div>'
 
     + '<div style="margin-top:16px;"><div class="sp-section-label">Notes</div>'
-    + '<textarea rows="5" placeholder="Sponsorship strategy, decision makers, follow-ups..." onblur="spSaveField(\''+s.id+'\',\'notes\',this.value)">'+spEsc(s.notes||'')+'</textarea></div>'
+    + '<textarea rows="5" placeholder="Sponsorship strategy, decision makers, follow-ups..." oninput="spSaveField(\''+s.id+'\',\'notes\',this.value)">'+spEsc(s.notes||'')+'</textarea></div>'
 
     + '<button type="button" class="sp-danger-btn" onclick="spDelete(\''+s.id+'\')">Remove sponsor</button>'
     + '</aside>'
@@ -29789,6 +29988,7 @@ function spTile(label, value, color) {
     + '.sp-row input,.sp-row select{font-size:12.5px;font-weight:600;color:var(--text-primary,#09090b);text-align:right;max-width:60%;border:none;border-bottom:1px solid var(--divider);background:transparent;outline:none;font-family:inherit;}'
     + '.sp-section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted,#71717a);}'
     + '.sp-panel-left textarea{width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:10px;font-size:12px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;margin-top:8px;}'
+    + '.sp-contact-card{border:1px solid #e4e4e7;border-radius:9px;padding:10px 12px;margin-bottom:8px;background:#fafafa;}'
     + '.sp-danger-btn{margin-top:14px;width:100%;padding:9px;border-radius:8px;border:1px solid #fecaca;background:#fef2f2;color:#ef4444;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}'
     + '.sp-note-add{display:flex;gap:8px;margin-bottom:16px;}'
     + '.sp-note-add textarea{flex:1;border:1.5px solid var(--divider);border-radius:8px;padding:10px;font-size:12.5px;font-family:inherit;resize:vertical;outline:none;}'
@@ -29825,7 +30025,102 @@ function spTile(label, value, color) {
 })();
 
 // ── Mount on section show ──
+
+// ── Sponsor next step prompt ─────────────────────────────────────────────────
+window.anOpenSpNextStep = function(spId, companyName) {
+  var existing = document.getElementById('an-sp-nextstep-modal');
+  if (existing) existing.remove();
+  var now = new Date();
+  function fmt(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  var tomorrow = new Date(now); tomorrow.setDate(now.getDate()+1);
+  var in3 = new Date(now); in3.setDate(now.getDate()+3);
+  var nextWeek = new Date(now); nextWeek.setDate(now.getDate()+7);
+  var backdrop = document.createElement('div');
+  backdrop.id = 'an-sp-nextstep-modal';
+  backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:21600;display:flex;align-items:center;justify-content:center;';
+  backdrop.onclick = function(e){ if(e.target===backdrop) backdrop.remove(); };
+  backdrop.innerHTML = '<div style="background:#fff;border-radius:14px;padding:20px;width:360px;max-width:92vw;font-family:inherit;box-shadow:0 24px 80px rgba(0,0,0,0.3);" onclick="event.stopPropagation()">'
+    + '<div style="font-size:14px;font-weight:800;color:#09090b;margin-bottom:4px;">Next step with '+spEsc(companyName||'sponsor')+'?</div>'
+    + '<div style="font-size:11.5px;color:#71717a;margin-bottom:14px;">Adds a reminder to the activity log.</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px;">'
+    + ['📞 Call Back','📧 Email','📄 Send Proposal','🤝 Schedule Meeting','📋 Follow Up','🏆 Close'].map(function(label) {
+        return '<button type="button" class="sp-nsp-method" onclick="anSpNspSelectMethod(this)" '
+          +'style="padding:8px 4px;border:1.5px solid #e4e4e7;border-radius:8px;background:#fff;font-size:11px;font-weight:700;color:#52525b;cursor:pointer;font-family:inherit;">'+label+'</button>';
+      }).join('')
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">'
+    + [['Tomorrow',fmt(tomorrow)],['In 3 days',fmt(in3)],['Next week',fmt(nextWeek)]].map(function(opt){
+        return '<button type="button" class="sp-nsp-when" onclick="anSpNspSelectWhen(this,\''+opt[1]+'\')" '
+          +'style="padding:7px;border:1.5px solid #e4e4e7;border-radius:7px;background:#fff;font-size:11px;font-weight:600;color:#52525b;cursor:pointer;font-family:inherit;">'+opt[0]+'</button>';
+      }).join('')
+    + '</div>'
+    + '<input type="date" id="sp-nsp-date" value="'+fmt(tomorrow)+'" style="width:100%;border:1.5px solid #e4e4e7;border-radius:7px;padding:7px 10px;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:10px;" oninput="anSpNspSelectWhen(null,this.value)">'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button type="button" onclick="document.getElementById(\'an-sp-nextstep-modal\').remove()" style="flex:1;padding:9px;border:1.5px solid #e4e4e7;border-radius:8px;background:#fff;color:#71717a;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Skip</button>'
+    + '<button type="button" onclick="anSaveSpNextStep(\''+spId+'\')" style="flex:2;padding:9px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Log Next Step ✓</button>'
+    + '</div></div>';
+  document.body.appendChild(backdrop);
+  window._anSpNspState = { method: '📞 Call Back', when: fmt(tomorrow) };
+  var firstBtn = document.querySelector('.sp-nsp-method');
+  if (firstBtn) anSpNspSelectMethod(firstBtn);
+  anSpNspSelectWhen(null, fmt(tomorrow));
+};
+
+window.anSpNspSelectMethod = function(btn) {
+  document.querySelectorAll('.sp-nsp-method').forEach(function(b) {
+    b.style.borderColor='#e4e4e7'; b.style.background='#fff'; b.style.color='#52525b';
+  });
+  if (btn) {
+    btn.style.borderColor='#6366f1'; btn.style.background='rgba(99,102,241,0.07)'; btn.style.color='#6366f1';
+    if (window._anSpNspState) window._anSpNspState.method = btn.textContent.trim();
+  }
+};
+
+window.anSpNspSelectWhen = function(btn, dateStr) {
+  document.querySelectorAll('.sp-nsp-when').forEach(function(b) {
+    b.style.borderColor='#e4e4e7'; b.style.background='#fff'; b.style.color='#52525b';
+  });
+  if (btn) { btn.style.borderColor='#6366f1'; btn.style.background='rgba(99,102,241,0.07)'; btn.style.color='#6366f1'; }
+  if (window._anSpNspState) window._anSpNspState.when = dateStr;
+  var di = document.getElementById('sp-nsp-date');
+  if (di && di.value !== dateStr) di.value = dateStr;
+};
+
+window.anSaveSpNextStep = function(spId) {
+  var state = window._anSpNspState;
+  if (!state) return;
+  var s = _spData.find(function(x){ return x.id === spId; });
+  if (!s) return;
+  if (!s.activityLog) s.activityLog = [];
+  s.activityLog.unshift({
+    type: 'nextstep',
+    date: new Date().toISOString(),
+    text: (state.method||'Follow up') + (state.when ? ' — scheduled for ' + state.when : ''),
+    dueDate: state.when,
+    by: (typeof AN !== 'undefined' ? AN.currentRepEmail : '') || ''
+  });
+  spTouch(s);
+  spSave(_spData.slice(), function() {
+    if (_spSelected === spId) spOpenPanel(spId);
+  });
+  var modal = document.getElementById('an-sp-nextstep-modal');
+  if (modal) modal.remove();
+  if (typeof showToast === 'function') showToast('Next step logged: '+(state.method||'')+' on '+(state.when||''));
+  window._anSpNspState = null;
+};
+
 window.spMountSection = function() {
+  if (_spData && _spData.length) {
+    spRender();
+    spUpdateSyncBadge();
+  } else {
+    // First load — show a minimal shell so it doesn't look broken
+    var root = document.getElementById('sponsors-root');
+    if (root && !root.querySelector('#sp-shell')) {
+      root.innerHTML = spBuildShellHTML();
+    }
+  }
+  // Sync from Supabase in background, refresh list when done
   spLoad(function() {
     spRender();
     spUpdateSyncBadge();
