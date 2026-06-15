@@ -5008,11 +5008,18 @@ function dashGetDemosBookedCount() {
 }
 
 function dashBuildTopStatTilesHTML() {
-  var deals = dashGetScopedPipeline();
+  // Total Deals & Pipeline MRR reflect the CURRENT pipeline as a whole — they are
+  // point-in-time snapshots, not "deals added in this period". Filtering them by
+  // date caused already-existing deals to appear/disappear from the count whenever
+  // their `updated` timestamp changed (e.g. from a call logged today).
+  var allOpenDeals = (_dash.pipeline || []).filter(function(d){ return d.stage !== 'Closed Lost'; });
+  // Win Rate, Demos Booked, Show Rate ARE period-scoped — they represent activity
+  // that happened during the selected period.
+  var periodDeals = dashGetScopedPipeline();
   return ''
-    + buildStatTile('Total Deals', deals.length, '#6366f1', 'deals')
-    + buildStatTile('Pipeline MRR', getPipelineValue(deals), '#10b981', 'mrr')
-    + buildStatTile('Win Rate', getWinRate(deals), '#f59e0b', 'deals')
+    + buildStatTile('Total Deals', allOpenDeals.length, '#6366f1', 'deals')
+    + buildStatTile('Pipeline MRR', getPipelineValue(allOpenDeals), '#10b981', 'mrr')
+    + buildStatTile('Win Rate', getWinRate(periodDeals), '#f59e0b', 'deals')
     + buildStatTile('Demos Booked', dashGetDemosBookedCount(), '#8b5cf6', 'demos')
     + buildStatTile('Show Rate', getShowRate(dashGetScopedDemos('scheduledDate')), '#06b6d4', 'showrate');
 }
@@ -5119,9 +5126,9 @@ window.dashOpenDrilldown = function(type, focusId) {
   var title = '', body = '';
   var rangeLbl = typeof dashRangeLabel === 'function' ? dashRangeLabel() : '';
   if (type === 'deals' || type === 'pipeline') {
-    var deals = typeof dashGetScopedPipeline === 'function' ? dashGetScopedPipeline() : (_dash.pipeline || []);
-    title = 'Pipeline Deals — ' + rangeLbl + ' (' + deals.length + ')';
-    if (!deals.length) body = '<div style="padding:24px;text-align:center;color:#71717a;">No deals in this period.</div>';
+    var deals = (_dash.pipeline || []).filter(function(d){ return d.stage !== 'Closed Lost'; });
+    title = 'Pipeline Deals (' + deals.length + ')';
+    if (!deals.length) body = '<div style="padding:24px;text-align:center;color:#71717a;">No open deals.</div>';
     else body = deals.map(function(d) {
       var idx = (_dash.pipeline || []).indexOf(d);
       var sz = (typeof SIZES !== 'undefined' ? SIZES : []).find(function(s){ return s.id === d.size; }) || { label: d.size || '—', price: '' };
@@ -5149,14 +5156,14 @@ window.dashOpenDrilldown = function(type, focusId) {
         +'</div></div>';
     }).join('');
   } else if (type === 'mrr') {
-    title = 'Pipeline MRR — ' + rangeLbl;
-    var activeDeals = (typeof dashGetScopedPipeline === 'function' ? dashGetScopedPipeline() : (_dash.pipeline || [])).filter(function(d){ return d.stage !== 'Closed Lost'; });
+    title = 'Pipeline MRR';
+    var activeDeals = (_dash.pipeline || []).filter(function(d){ return d.stage !== 'Closed Lost'; });
     body = activeDeals.map(function(d) {
       var mp = { solo:79, small:247, large:597 };
       var mrr = mp[d.size] || 79;
       var idx = (_dash.pipeline || []).indexOf(d);
       return '<div onclick="dashOpenDeal('+idx+')" style="padding:10px 12px;border:1px solid #e4e4e7;border-radius:8px;margin-bottom:6px;cursor:pointer;"><span style="font-weight:700;">'+anEsc(d.name)+'</span> <span style="color:#71717a;">— $'+mrr+'/mo</span></div>';
-    }).join('') || '<div style="padding:20px;color:#71717a;">No active pipeline in this period.</div>';
+    }).join('') || '<div style="padding:20px;color:#71717a;">No active pipeline.</div>';
   } else if (type === 'showrate') {
     title = 'Show Rate — ' + rangeLbl;
     var showDemos = typeof dashGetScopedDemos === 'function' ? dashGetScopedDemos('scheduledDate') : (_dash.demos || []);
@@ -5993,7 +6000,67 @@ function buildDemoListHTML() {
   }).join('')+'</div>';
 }
 
-window.updDemoStatus=function(id,status){ var d=(_dash.demos||[]).filter(function(x){return x.id===id;})[0]; if(!d) return; d.status=status; d.completedDate=new Date().toISOString().split('T')[0]; dashSave(); var w=document.getElementById('demo-list-wrap'); if(w) w.innerHTML=buildDemoListHTML(); if(typeof showToast==='function') showToast('Updated to '+status); };
+window.updDemoStatus=function(id,status){
+  var d=(_dash.demos||[]).filter(function(x){return x.id===id;})[0];
+  if(!d) return;
+  d.status=status;
+  d.completedDate=new Date().toISOString().split('T')[0];
+  dashSave();
+  var w=document.getElementById('demo-list-wrap');
+  if(w) w.innerHTML=buildDemoListHTML();
+  if(typeof showToast==='function') showToast('Updated to '+status);
+  // When demo showed — ask what pain points/needs came up (feeds Field Insights)
+  if (status === 'showed' && typeof anOpenDemoShowedCapture === 'function') {
+    setTimeout(function() { anOpenDemoShowedCapture(d); }, 350);
+  }
+};
+
+window.anOpenDemoShowedCapture = function(demo) {
+  var existing = document.getElementById('an-demo-showed-modal');
+  if (existing) existing.remove();
+  var backdrop = document.createElement('div');
+  backdrop.id = 'an-demo-showed-modal';
+  backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:21500;display:flex;align-items:center;justify-content:center;';
+  backdrop.onclick = function(e) { if (e.target === backdrop) backdrop.remove(); };
+  backdrop.innerHTML = '<div style="background:#fff;border-radius:14px;padding:22px;width:420px;max-width:92vw;font-family:inherit;box-shadow:0 24px 80px rgba(0,0,0,0.3);" onclick="event.stopPropagation()">'
+    + '<div style="font-size:15px;font-weight:800;color:#09090b;margin-bottom:4px;">✅ Demo Showed — what came up?</div>'
+    + '<div style="font-size:12px;color:#71717a;margin-bottom:16px;">Capture pain points and needs for Field Insights and the deal record.</div>'
+    + '<label style="font-size:11px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">Pain points, needs, or key takeaways</label>'
+    + '<textarea id="an-ds-notes" rows="4" placeholder="e.g. struggling with OEP renewals, want to automate quoting, concerned about migration from EZLynx..." style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:10px;font-size:12.5px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;margin-bottom:14px;"></textarea>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button type="button" onclick="document.getElementById(\'an-demo-showed-modal\').remove()" style="flex:1;padding:10px;border:1.5px solid #e4e4e7;border-radius:8px;background:#fff;color:#71717a;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Skip</button>'
+    + '<button type="button" onclick="anSaveDemoShowedCapture(\''+anEsc(demo.id)+'\',\''+anEsc(demo.leadId||'')+'\')" style="flex:1;padding:10px;border:none;border-radius:8px;background:#10b981;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Save Notes</button>'
+    + '</div></div>';
+  document.body.appendChild(backdrop);
+};
+
+window.anSaveDemoShowedCapture = function(demoId, leadId) {
+  var notes = (document.getElementById('an-ds-notes') ? document.getElementById('an-ds-notes').value : '').trim();
+  var modal = document.getElementById('an-demo-showed-modal');
+  if (modal) modal.remove();
+  if (!notes) return;
+  // Save onto the lead's callLog so it surfaces in Field Insights
+  var lead = leadId && typeof AN !== 'undefined' && AN.leadById ? AN.leadById(leadId) : null;
+  if (lead) {
+    if (!lead.callLog) lead.callLog = [];
+    var now = new Date();
+    lead.callLog.push({
+      id: 'act-' + Date.now(),
+      type: 'note',
+      outcome: 'showed',
+      date: typeof anLocalDateStr === 'function' ? anLocalDateStr() : now.toISOString().split('T')[0],
+      time: String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0'),
+      rep: (typeof AN !== 'undefined' && AN.currentRepEmail) || '',
+      loggedAt: now.toISOString(),
+      notes: notes,
+      category: 'pain'
+    });
+    lead.demoFollowUpNotes = notes;
+    lead.updated = now.toISOString();
+    if (typeof AN !== 'undefined' && AN.save) AN.save();
+  }
+  if (typeof showToast === 'function') showToast('Demo notes saved to Field Insights');
+};
 window.deleteDemo=window.delDemo=function(id){ if(!confirm('Remove this demo?')) return; _dash.demos=(_dash.demos||[]).filter(function(x){return x.id!==id;}); dashSave(); var w=document.getElementById('demo-list-wrap'); if(w) w.innerHTML=buildDemoListHTML(); };
 window.editDemo=function(id){ openAddDemo(id); };
 window.updateDemoStatus=window.updDemoStatus;
@@ -7105,7 +7172,8 @@ window.openQuickCallLog = function() {
   }, 8000);
 };
 
-window.logCallOutcome = function(outcome) {
+window.logCallOutcome = function(outcome, extra) {
+  extra = extra || {};
   var hour  = new Date().getHours();
   var today = typeof anLocalDateStr === 'function' ? anLocalDateStr() : new Date().toISOString().split('T')[0];
   if (!_dash.activityLog) _dash.activityLog = [];
@@ -7117,6 +7185,7 @@ window.logCallOutcome = function(outcome) {
   if (!entry.demos_by_hour)     entry.demos_by_hour     = {};
   if (!entry.noanswer_by_hour)  entry.noanswer_by_hour  = {};
   if (!entry.calls_by_hour)     entry.calls_by_hour     = {};
+  if (!entry.notinterested_by_hour) entry.notinterested_by_hour = {};
 
   entry.calls = (entry.calls || 0) + 1;
   _dash.activity.calls = (_dash.activity.calls || 0) + 1;
@@ -7128,6 +7197,9 @@ window.logCallOutcome = function(outcome) {
     entry.voicemails_by_hour[hour] = (entry.voicemails_by_hour[hour] || 0) + 1;
   } else if (outcome === 'noanswer') {
     entry.noanswer_by_hour[hour]  = (entry.noanswer_by_hour[hour]  || 0) + 1;
+  } else if (outcome === 'not_interested') {
+    entry.pickups_by_hour[hour] = (entry.pickups_by_hour[hour] || 0) + 1;
+    entry.notinterested_by_hour[hour] = (entry.notinterested_by_hour[hour] || 0) + 1;
   } else if (outcome === 'demo') {
     entry.pickups_by_hour[hour]   = (entry.pickups_by_hour[hour]   || 0) + 1;
     entry.demos_by_hour[hour]     = (entry.demos_by_hour[hour]     || 0) + 1;
@@ -7152,7 +7224,7 @@ window.logCallOutcome = function(outcome) {
         return c.date === today && c.time === timeStr && c.outcome === outcome && c.rep === repEmail;
       });
       if (!alreadyLogged) {
-        csLead.callLog.push({
+        var callEntry = {
           id: 'act-' + Date.now(),
           type: 'call',
           outcome: outcome,
@@ -7161,8 +7233,14 @@ window.logCallOutcome = function(outcome) {
           rep: repEmail,
           loggedAt: now.toISOString(),
           _fromSession: true
-        });
+        };
+        if (extra.category) callEntry.category = extra.category;
+        if (extra.note) callEntry.notes = extra.note;
+        csLead.callLog.push(callEntry);
         csLead.updated = now.toISOString();
+      }
+      if (outcome === 'not_interested') {
+        csLead.status = 'not_interested';
       }
     }
   }
@@ -7180,13 +7258,150 @@ window.logCallOutcome = function(outcome) {
   }
   var panel = document.getElementById('quick-call-log');
   if (panel) {
-    var labels = { pickup:'✓ Logged', voicemail:'📬 Logged', noanswer:'📵 Logged', demo:'🎯 Demo set!' };
+    var labels = { pickup:'✓ Logged', voicemail:'📬 Logged', noanswer:'📵 Logged', demo:'🎯 Demo set!', not_interested:'🚫 Logged' };
     panel.innerHTML = '<div style="text-align:center;padding:16px;">'
-      + '<div style="font-size:24px;margin-bottom:8px;">'+(outcome==='demo'?'🎯':'✓')+'</div>'
+      + '<div style="font-size:24px;margin-bottom:8px;">'+(outcome==='demo'?'🎯':outcome==='not_interested'?'🚫':'✓')+'</div>'
       + '<div style="font-size:14px;font-weight:700;color:#fff;">'+(labels[outcome]||'Logged')+'</div>'
       + '</div>';
     setTimeout(function(){ if(panel.parentNode) panel.remove(); }, 1500);
   }
+
+  // ── Demo Set: capture needs/pain points + assign the AE who'll run the demo ──
+  if (outcome === 'demo' && csLeadId && typeof anOpenDemoSetFollowup === 'function') {
+    setTimeout(function() { anOpenDemoSetFollowup(csLeadId); }, 350);
+  }
+};
+
+// ── Demo Set follow-up: needs/pain points note + AE assignment ──
+window.anOpenDemoSetFollowup = function(leadId) {
+  var lead = (typeof AN !== 'undefined' && AN.leadById) ? AN.leadById(leadId) : null;
+  if (!lead) return;
+  var existing = document.getElementById('an-demo-followup-modal');
+  if (existing) existing.remove();
+
+  var reps = typeof anGetKnownRepEmails === 'function' ? anGetKnownRepEmails() : [];
+  var myEmail = (typeof AN !== 'undefined' && AN.currentRepEmail) || '';
+  var aeOptions = '<option value="">— Select AE —</option>' + reps.map(function(em) {
+    var label = typeof anGetRepName === 'function' ? anGetRepName(em) : em.split('@')[0];
+    var sel = (lead.aeEmail || '') === em ? ' selected' : '';
+    return '<option value="'+anEsc(em)+'"'+sel+'>'+anEsc(label)+(em===myEmail?' (me)':'')+'</option>';
+  }).join('');
+
+  var backdrop = document.createElement('div');
+  backdrop.id = 'an-demo-followup-modal';
+  backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:21500;display:flex;align-items:center;justify-content:center;';
+  backdrop.onclick = function(e) { if (e.target === backdrop) backdrop.remove(); };
+
+  backdrop.innerHTML = '<div style="background:#fff;border-radius:14px;padding:22px;width:420px;max-width:92vw;font-family:inherit;box-shadow:0 24px 80px rgba(0,0,0,0.3);" onclick="event.stopPropagation()">'
+    + '<div style="font-size:15px;font-weight:800;color:#09090b;margin-bottom:4px;">🎯 Demo Set — quick details</div>'
+    + '<div style="font-size:12px;color:#71717a;margin-bottom:16px;">Helps the AE prep, and feeds the Field Insights board.</div>'
+    + '<label style="font-size:11px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">What needs / pain points came up?</label>'
+    + '<textarea id="an-df-notes" rows="3" placeholder="e.g. struggling with OEP renewals, currently using spreadsheets, wants to automate quoting..." style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:10px;font-size:12.5px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;margin-bottom:14px;">'+anEsc(lead.demoNotes||'')+'</textarea>'
+    + '<label style="font-size:11px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">Who\'s running this demo? (AE)</label>'
+    + '<select id="an-df-ae" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:16px;">'+aeOptions+'</select>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button type="button" onclick="document.getElementById(\'an-demo-followup-modal\').remove()" style="flex:1;padding:10px;border:1.5px solid #e4e4e7;border-radius:8px;background:#fff;color:#71717a;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Skip</button>'
+    + '<button type="button" onclick="anSaveDemoSetFollowup(\''+leadId+'\')" style="flex:1;padding:10px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Save</button>'
+    + '</div>'
+    + '</div>';
+  document.body.appendChild(backdrop);
+};
+
+window.anSaveDemoSetFollowup = function(leadId) {
+  var lead = (typeof AN !== 'undefined' && AN.leadById) ? AN.leadById(leadId) : null;
+  if (!lead) return;
+  var notes = (document.getElementById('an-df-notes').value || '').trim();
+  var aeEmail = (document.getElementById('an-df-ae').value || '').trim().toLowerCase();
+
+  if (notes) {
+    lead.demoNotes = notes;
+    // Surface this as a Field Insight too — tagged "pain" so it lands in Pain/OEP
+    if (!lead.callLog) lead.callLog = [];
+    var now = new Date();
+    lead.callLog.push({
+      id: 'act-' + Date.now(),
+      type: 'note',
+      outcome: 'demo',
+      date: typeof anLocalDateStr === 'function' ? anLocalDateStr() : now.toISOString().split('T')[0],
+      time: String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0'),
+      rep: (typeof AN !== 'undefined' && AN.currentRepEmail) || '',
+      loggedAt: now.toISOString(),
+      notes: notes,
+      category: 'pain'
+    });
+  }
+
+  if (aeEmail) {
+    anAssignAE(lead, aeEmail);
+  }
+
+  lead.updated = new Date().toISOString();
+  if (typeof AN !== 'undefined' && AN.save) AN.save();
+  var modal = document.getElementById('an-demo-followup-modal');
+  if (modal) modal.remove();
+  if (typeof showToast === 'function') showToast(aeEmail ? 'Demo details saved — AE assigned' : 'Demo details saved');
+};
+
+// ── AE Assignment ──────────────────────────────────────────────
+// While a lead is still being worked by an SDR, _repEmail = SDR (owner).
+// aeEmail = the AE who will run/own the demo, until the lead converts to
+// an Opportunity, at which point ownership (_repEmail) transfers to the AE.
+window.anAssignAE = function(lead, aeEmail) {
+  if (!lead || !aeEmail) return;
+  var prevAE = lead.aeEmail;
+  lead.aeEmail = aeEmail.toLowerCase();
+  if (prevAE !== lead.aeEmail) {
+    lead.aeNotified = false;
+    lead.aeAssignedAt = new Date().toISOString();
+    lead.aeAssignedBy = (typeof AN !== 'undefined' && AN.currentRepEmail) || '';
+  }
+};
+
+// Called once when an AE views a lead assigned to them, to clear the notification badge
+window.anMarkAENotified = function(lead) {
+  if (!lead || lead.aeNotified) return;
+  lead.aeNotified = true;
+  if (typeof AN !== 'undefined' && AN.save) AN.save();
+};
+
+// Get all leads where the current user is the assigned AE and hasn't seen it yet
+window.anGetUnseenAEAssignments = function() {
+  if (typeof AN === 'undefined' || !AN.leads) return [];
+  var myEmail = (AN.currentRepEmail || '').toLowerCase();
+  if (!myEmail) return [];
+  return AN.leads.filter(function(l) {
+    return l && (l.aeEmail || '').toLowerCase() === myEmail && !l.aeNotified && !l.isOpportunity;
+  });
+};
+
+// Get all leads where the current user is the assigned AE (seen or not), demo not yet converted
+window.anGetMyAEAssignments = function() {
+  if (typeof AN === 'undefined' || !AN.leads) return [];
+  var myEmail = (AN.currentRepEmail || '').toLowerCase();
+  if (!myEmail) return [];
+  return AN.leads.filter(function(l) {
+    return l && (l.aeEmail || '').toLowerCase() === myEmail && !l.isOpportunity;
+  });
+};
+
+// When a lead converts to an Opportunity, ownership transfers from the SDR to the AE
+window.anTransferOwnershipToAE = function(lead) {
+  if (!lead || !lead.aeEmail) return;
+  if (!lead.sdrEmail) lead.sdrEmail = lead._repEmail || ''; // preserve who sourced it
+  lead._repEmail = lead.aeEmail.toLowerCase();
+};
+window.anLogNotInterested = function() {
+  anOpenReasonPicker({
+    title: 'Why not interested?',
+    subtitle: 'Quick tag for the Field Insights board — helps marketing & product.',
+    onConfirm: function(category, note) {
+      logCallOutcome('not_interested', { category: category, note: note });
+    },
+    onSkip: function() {
+      // Still log the outcome even if they skip the reason
+      logCallOutcome('not_interested', {});
+    }
+  });
 };
 
 // ── Enhanced hotzone with pickup rate ────────────────────────
@@ -7533,6 +7748,156 @@ function getMyConversionRates() {
   };
 }
 
+// ── COMMISSION LEDGER ─────────────────────────────────────────
+// Tracks individual closed deals (from CRM or manual entry) so the
+// Commission Plan reflects real closed business, not just an aggregate count.
+function anEnsureCommissionLedger() {
+  if (typeof _dash === 'undefined') return [];
+  if (!Array.isArray(_dash.commissionDeals)) _dash.commissionDeals = [];
+  return _dash.commissionDeals;
+}
+
+// Per-close commission amounts based on current rate inputs
+function anCommissionPerClose(size, contractType) {
+  var r = (typeof getRates === 'function') ? getRates() : { solo: 0.11, small: 0.10, large: 0.08 };
+  var base = { solo: 79, small: 247, large: 597 }[size] || 79;
+  var rate = (r[size] != null ? r[size] : (r.solo != null ? r.solo : 0.11));
+  var monthly = base * rate;
+  return contractType === 'arr' ? monthly * 12 : monthly;
+}
+
+window.anAddCommissionDeal = function(deal, opts) {
+  opts = opts || {};
+  var ledger = anEnsureCommissionLedger();
+  // De-dupe by leadId — re-syncing the same CRM deal shouldn't double-count
+  if (deal.leadId) {
+    var existing = ledger.find(function(d){ return d.leadId === deal.leadId; });
+    if (existing) {
+      // Update in place (e.g. size/contract type changed) but keep original closedDate
+      existing.name = deal.name || existing.name;
+      existing.size = deal.size || existing.size;
+      existing.contractType = deal.contractType || existing.contractType;
+      if (!opts.skipSave && typeof dashSave === 'function') dashSave();
+      if (typeof anRefreshCommissionLedgerUI === 'function') anRefreshCommissionLedgerUI();
+      return existing;
+    }
+  }
+  var entry = {
+    id: 'cd-' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
+    leadId: deal.leadId || null,
+    name: deal.name || 'Deal',
+    size: deal.size || 'solo',
+    contractType: deal.contractType || 'mrr',
+    closedDate: deal.closedDate || new Date().toISOString(),
+    source: deal.source || 'manual',
+    notes: deal.notes || ''
+  };
+  ledger.unshift(entry);
+  if (!opts.skipSave && typeof dashSave === 'function') dashSave();
+  if (typeof anRefreshCommissionLedgerUI === 'function') anRefreshCommissionLedgerUI();
+  return entry;
+};
+
+window.anRemoveCommissionDeal = function(id) {
+  var ledger = anEnsureCommissionLedger();
+  var idx = ledger.findIndex(function(d){ return d.id === id; });
+  if (idx < 0) return;
+  if (!confirm('Remove "' + (ledger[idx].name || 'this deal') + '" from your commission ledger?')) return;
+  ledger.splice(idx, 1);
+  if (typeof dashSave === 'function') dashSave();
+  if (typeof anRefreshCommissionLedgerUI === 'function') anRefreshCommissionLedgerUI();
+};
+
+// Closes logged this month (from ledger), and total commission this month
+window.anCommissionThisMonthStats = function() {
+  var ledger = anEnsureCommissionLedger();
+  var now = new Date();
+  var ym = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  var monthDeals = ledger.filter(function(d) {
+    return String(d.closedDate || '').slice(0,7) === ym;
+  });
+  var totalComm = monthDeals.reduce(function(s, d) {
+    return s + anCommissionPerClose(d.size, d.contractType);
+  }, 0);
+  return { closes: monthDeals.length, commission: totalComm, deals: monthDeals };
+};
+
+window.anOpenManualDealModal = function() {
+  var existing = document.getElementById('manual-deal-modal');
+  if (existing) existing.remove();
+  var backdrop = document.createElement('div');
+  backdrop.id = 'manual-deal-modal';
+  backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:21000;display:flex;align-items:center;justify-content:center;';
+  backdrop.onclick = function(e) { if (e.target === backdrop) backdrop.remove(); };
+  var today = new Date().toISOString().slice(0,10);
+  backdrop.innerHTML = '<div style="background:#fff;border-radius:14px;padding:24px;width:380px;max-width:92vw;font-family:inherit;" onclick="event.stopPropagation()">'
+    + '<div style="font-size:16px;font-weight:800;color:#09090b;margin-bottom:4px;">Add a Closed Deal</div>'
+    + '<div style="font-size:12px;color:#71717a;margin-bottom:16px;">For deals closed outside the CRM — referrals, side deals, etc.</div>'
+    + '<label style="font-size:11px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">Deal / Client Name</label>'
+    + '<input id="md-name" type="text" placeholder="e.g. Smith Insurance Agency" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:12px;">'
+    + '<label style="font-size:11px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">Plan Size</label>'
+    + '<select id="md-size" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:12px;">'
+    + '<option value="solo">Solo Agent ($79/mo)</option>'
+    + '<option value="small">Small Agency ($247/mo)</option>'
+    + '<option value="large">Large Agency ($597/mo)</option>'
+    + '</select>'
+    + '<label style="font-size:11px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">Contract Type</label>'
+    + '<div style="display:flex;gap:8px;margin-bottom:12px;">'
+    + '<label style="flex:1;display:flex;align-items:center;gap:6px;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 12px;cursor:pointer;font-size:13px;"><input type="radio" name="md-ct" value="mrr" checked> Monthly (MRR)</label>'
+    + '<label style="flex:1;display:flex;align-items:center;gap:6px;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 12px;cursor:pointer;font-size:13px;"><input type="radio" name="md-ct" value="arr"> Annual (ARR)</label>'
+    + '</div>'
+    + '<label style="font-size:11px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">Close Date</label>'
+    + '<input id="md-date" type="date" value="'+today+'" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:16px;">'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button onclick="document.getElementById(\'manual-deal-modal\').remove()" style="flex:1;padding:10px;border:1.5px solid #e4e4e7;border-radius:8px;background:#fff;color:#71717a;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Cancel</button>'
+    + '<button onclick="anSubmitManualDeal()" style="flex:1;padding:10px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Add Deal</button>'
+    + '</div>'
+    + '</div>';
+  document.body.appendChild(backdrop);
+};
+
+window.anSubmitManualDeal = function() {
+  var name = (document.getElementById('md-name').value || '').trim();
+  if (!name) { if (typeof showToast === 'function') showToast('Enter a deal name'); return; }
+  var size = document.getElementById('md-size').value;
+  var ct = document.querySelector('input[name="md-ct"]:checked').value;
+  var date = document.getElementById('md-date').value || new Date().toISOString().slice(0,10);
+  anAddCommissionDeal({ name: name, size: size, contractType: ct, closedDate: date + 'T12:00:00.000Z', source: 'manual' });
+  var modal = document.getElementById('manual-deal-modal');
+  if (modal) modal.remove();
+  if (typeof showToast === 'function') showToast('Deal added to commission ledger');
+};
+
+window.anRefreshCommissionLedgerUI = function() {
+  var list = document.getElementById('commission-ledger-list');
+  if (list) list.innerHTML = anBuildCommissionLedgerHTML();
+  if (typeof renderPlanner === 'function') renderPlanner();
+};
+
+function anBuildCommissionLedgerHTML() {
+  var ledger = anEnsureCommissionLedger();
+  if (!ledger.length) {
+    return '<div style="text-align:center;padding:24px;color:#a1a1aa;font-size:12.5px;">No closed deals logged yet. Deals closed in the CRM appear here automatically.</div>';
+  }
+  var sizeLabel = { solo: 'Solo Agent', small: 'Small Agency', large: 'Large Agency' };
+  return ledger.slice(0, 50).map(function(d) {
+    var comm = anCommissionPerClose(d.size, d.contractType);
+    var dateStr = d.closedDate ? String(d.closedDate).slice(0,10) : '';
+    var sourceTag = d.source === 'crm'
+      ? '<span style="background:#eef2ff;color:#6366f1;border-radius:10px;padding:1px 7px;font-size:9px;font-weight:700;">CRM</span>'
+      : '<span style="background:#f3f4f6;color:#71717a;border-radius:10px;padding:1px 7px;font-size:9px;font-weight:700;">MANUAL</span>';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid #e4e4e7;border-radius:8px;margin-bottom:6px;">'
+      + '<div style="min-width:0;">'
+      + '<div style="font-size:13px;font-weight:700;color:#09090b;display:flex;align-items:center;gap:6px;">'+anEsc(d.name)+sourceTag+'</div>'
+      + '<div style="font-size:11px;color:#71717a;margin-top:2px;">'+(sizeLabel[d.size]||d.size)+' · '+(d.contractType==='arr'?'Annual':'Monthly')+' · '+dateStr+'</div>'
+      + '</div>'
+      + '<div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">'
+      + '<div style="font-size:13px;font-weight:800;color:#10b981;">+'+fmtDol(comm)+(d.contractType==='arr'?'':'/mo')+'</div>'
+      + '<button onclick="anRemoveCommissionDeal(\''+d.id+'\')" style="background:none;border:none;color:#a1a1aa;cursor:pointer;font-size:13px;padding:4px;" title="Remove">✕</button>'
+      + '</div></div>';
+  }).join('');
+}
+
 // ── 3. COMMISSION PLANNER (replaces goal calculator) ─────────
 window.buildCommissionHTML = function() {
   return '<div class="page-header">'
@@ -7583,6 +7948,16 @@ window.buildCommissionHTML = function() {
     // Planner output
     + '<div id="planner-output"></div>'
     + '</div></div>'
+
+    // ── COMMISSION LEDGER ──
+    + '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;margin-bottom:20px;">'
+    + '<div style="padding:16px 20px;border-bottom:1px solid #e4e4e7;background:linear-gradient(135deg,rgba(16,185,129,0.06),rgba(99,102,241,0.04));display:flex;align-items:center;justify-content:space-between;gap:12px;">'
+    + '<div><div style="font-size:10px;font-weight:700;color:#10b981;letter-spacing:0.14em;text-transform:uppercase;">Commission Ledger</div>'
+    + '<div style="font-size:12px;color:#71717a;margin-top:2px;">Deals you\'ve closed — synced automatically from the Opportunities pipeline, or added manually.</div></div>'
+    + '<button onclick="anOpenManualDealModal()" style="flex-shrink:0;padding:9px 16px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">+ Add Deal</button>'
+    + '</div>'
+    + '<div id="commission-ledger-list" style="padding:16px 20px;">' + anBuildCommissionLedgerHTML() + '</div>'
+    + '</div>'
 
     // Pipeline builder (existing)
     + '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;margin-bottom:20px;">'
@@ -7745,9 +8120,10 @@ window.renderPlanner = function() {
   function callsNeeded(closes) { return closes === '∞' ? '∞' : Math.ceil(closes * conv.callsPerClose); }
   function callsPerDay(calls, days) { return calls === '∞' || days <= 0 ? '∞' : Math.ceil(calls/days); }
 
-  // Already closed this month from dashboard
-  var alreadyClosed = (_dash && _dash.activity) ? (_dash.activity.closes||0) : 0;
-  var commAlready = alreadyClosed * soloPerClose; // rough estimate
+  // Already closed this month — from the commission ledger (real per-deal data)
+  var commStats = typeof anCommissionThisMonthStats === 'function' ? anCommissionThisMonthStats() : { closes: (_dash && _dash.activity ? _dash.activity.closes||0 : 0), commission: 0 };
+  var alreadyClosed = commStats.closes;
+  var commAlready = commStats.commission || (alreadyClosed * soloPerClose);
   var remainingGoal = Math.max(0, monthlyGoal - commAlready);
   var onTrack = commAlready >= monthlyGoal;
 
@@ -7934,7 +8310,7 @@ window.updateGoalPlanner = function() {
   if (cpd && typeof demosNeeded==='number' && typeof callsNeeded==='number')
     cpd.textContent = demosNeeded > 0 ? Math.round(callsNeeded/demosNeeded) : '—';
 
-  var alreadyClosed = (_dash && _dash.activity) ? (_dash.activity.closes||0) : 0;
+  var alreadyClosed = typeof anCommissionThisMonthStats === 'function' ? anCommissionThisMonthStats().closes : ((_dash && _dash.activity) ? (_dash.activity.closes||0) : 0);
   var remaining = Math.max(0, closeTarget - alreadyClosed);
   var remainDemos = demoCloseRate>0&&remaining>0 ? Math.ceil(remaining/demoCloseRate) : 0;
   var remainCalls = callDemoRate>0&&remainDemos>0 ? Math.ceil(remainDemos/callDemoRate) : 0;
@@ -8321,6 +8697,8 @@ window.showCallStep2Pickup = function() {
     + '<span style="font-size:16px;">👋</span><div><div>Just talked — no demo set</div><div style="font-size:10px;opacity:0.6;font-weight:400;margin-top:1px;">Logs a pickup, conversation happened</div></div></button>'
     + '<button onclick="logCallOutcome(\'demo\')" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:9px;padding:11px 14px;font-size:12px;font-weight:700;color:#fcd34d;cursor:pointer;font-family:inherit;text-align:left;display:flex;align-items:center;gap:10px;">'
     + '<span style="font-size:16px;">🎯</span><div><div>Demo Set!</div><div style="font-size:10px;opacity:0.6;font-weight:400;margin-top:1px;">Logs pickup + books a demo</div></div></button>'
+    + '<button onclick="anLogNotInterested()" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);border-radius:9px;padding:11px 14px;font-size:12px;font-weight:700;color:#fca5a5;cursor:pointer;font-family:inherit;text-align:left;display:flex;align-items:center;gap:10px;">'
+    + '<span style="font-size:16px;">🚫</span><div><div>Not Interested</div><div style="font-size:10px;opacity:0.6;font-weight:400;margin-top:1px;">Logs pickup + asks why (for insights)</div></div></button>'
     + '</div>'
     + '<button onclick="document.getElementById(\'quick-call-log\').remove()" style="width:100%;background:none;border:none;color:rgba(255,255,255,0.25);font-size:11px;cursor:pointer;font-family:inherit;padding:4px;">Skip logging</button>';
 };
@@ -9380,6 +9758,7 @@ window.anSyncOpportunityToPipeline = function(lead, opts) {
   if (typeof _dash === 'undefined') return;
   opts = opts || {};
   if (!_dash.pipeline) _dash.pipeline = [];
+  var isFirstConversion = !lead.convertedAt;
   var name = (lead.company || '').trim() || ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || 'Deal';
   var stage = anOppStageToPipelineStage(lead.status || 'demo');
   var entry = {
@@ -9389,16 +9768,37 @@ window.anSyncOpportunityToPipeline = function(lead, opts) {
     size: lead.size || 'solo',
     stage: stage,
     notes: lead.oppNotes || lead.notes || '',
-    added: lead.convertedAt || lead.updated || new Date().toISOString(),
+    added: lead.convertedAt || (lead.convertedAt = new Date().toISOString()),
     mrr: lead.oppMRR || 0
   };
+  // First time converting to an Opportunity: if an AE was assigned during the demo
+  // booking, ownership transfers from the SDR to the AE.
+  if (isFirstConversion && lead.aeEmail && typeof anTransferOwnershipToAE === 'function') {
+    anTransferOwnershipToAE(lead);
+  }
   var idx = -1;
   for (var i = 0; i < _dash.pipeline.length; i++) {
     var d = _dash.pipeline[i];
     if ((d.leadId && d.leadId === lead.id) || (d.name && name && d.name.toLowerCase() === name.toLowerCase())) { idx = i; break; }
   }
-  if (idx >= 0) _dash.pipeline[idx] = Object.assign({}, _dash.pipeline[idx], entry);
+  if (idx >= 0) {
+    var preservedAdded = _dash.pipeline[idx].added;
+    _dash.pipeline[idx] = Object.assign({}, _dash.pipeline[idx], entry);
+    if (preservedAdded) _dash.pipeline[idx].added = preservedAdded;
+  }
   else _dash.pipeline.unshift(entry);
+
+  // ── Sync to Commission Ledger when a deal becomes Closed Won ──
+  if (stage === 'Closed Won' && typeof anAddCommissionDeal === 'function') {
+    anAddCommissionDeal({
+      leadId: lead.id,
+      name: name,
+      size: lead.size || 'solo',
+      contractType: (lead.oppContractType || 'mrr'),
+      closedDate: lead.closedAt || lead.updated || new Date().toISOString(),
+      source: 'crm'
+    }, { skipSave: true });
+  }
   if (!opts.skipSave && typeof dashSave === 'function') dashSave();
   if (!opts.skipRefresh) {
     var list = document.getElementById('dash-pipeline-list');
@@ -12411,6 +12811,21 @@ window.anBuildLeadOwnerCardHtml = function(lead, opts) {
   var changeBtn = canChange
     ? '<button type="button" onclick="anOpenOwnerPicker({leadId:\''+lead.id+'\'})" style="flex-shrink:0;background:'+ownerCol+'14;color:'+ownerCol+';border:1px solid '+ownerCol+'44;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">Change</button>'
     : '';
+  var aeHtml = '';
+  if (lead.aeEmail && !lead.isOpportunity) {
+    var aeName = typeof anGetRepName === 'function' ? anGetRepName(lead.aeEmail) : lead.aeEmail.split('@')[0];
+    var aeCol = typeof anColor === 'function' ? anColor(lead.aeEmail) : '#6366f1';
+    var aeInitials = aeName ? aeName.charAt(0).toUpperCase() : '?';
+    var seenBadge = lead.aeNotified ? '' : '<span style="background:#fef3c7;color:#92400e;border-radius:10px;padding:2px 8px;font-size:9px;font-weight:700;margin-left:6px;">NEW</span>';
+    aeHtml = '<div style="background:var(--body-bg);border:1.5px solid #6366f133;border-radius:10px;padding:12px 14px;margin-bottom:12px;">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Assigned AE'+seenBadge+'</div>'
+      +'<div style="display:flex;align-items:center;gap:10px;">'
+      +'<div style="width:38px;height:38px;border-radius:50%;background:'+aeCol+'22;border:2px solid '+aeCol+'55;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:'+aeCol+';flex-shrink:0;">'+aeInitials+'</div>'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:14px;font-weight:800;color:var(--text-primary);line-height:1.2;">'+anEsc(aeName)+'</div>'
+      +'<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Will own this once it becomes an opportunity</div>'
+      +'</div></div></div>';
+  }
   if (!ownerEmail) {
     return '<div style="background:var(--body-bg);border:1.5px solid var(--divider);border-radius:10px;padding:12px 14px;margin-bottom:12px;">'
       +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Lead Owner</div>'
@@ -12420,10 +12835,11 @@ window.anBuildLeadOwnerCardHtml = function(lead, opts) {
       +'<div style="min-width:0;"><div style="font-size:14px;font-weight:700;color:var(--text-secondary);">Unassigned</div>'
       +'<div style="font-size:11px;color:var(--text-muted);">No rep owns this lead yet</div></div></div>'
       +(canChange ? '<button type="button" onclick="anOpenOwnerPicker({leadId:\''+lead.id+'\'})" style="flex-shrink:0;background:#eef2ff;color:#6366f1;border:1px solid #c7d2fe;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);">Assign</button>' : '')
-      +'</div></div>';
+      +'</div></div>'
+      + aeHtml;
   }
   return '<div style="background:var(--body-bg);border:1.5px solid '+ownerCol+'33;border-radius:10px;padding:12px 14px;margin-bottom:12px;">'
-    +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Lead Owner</div>'
+    +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Lead Owner'+(lead.isOpportunity?'':' (SDR)')+'</div>'
     +'<div style="display:flex;align-items:center;gap:10px;">'
     +'<div style="width:38px;height:38px;border-radius:50%;background:'+ownerCol+'22;border:2px solid '+ownerCol+'55;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:'+ownerCol+';flex-shrink:0;">'+initials+'</div>'
     +'<div style="flex:1;min-width:0;">'
@@ -12431,7 +12847,8 @@ window.anBuildLeadOwnerCardHtml = function(lead, opts) {
     +'<div style="font-size:11px;color:var(--text-muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+anEsc(ownerEmail)+'</div>'
     +'</div>'
     +changeBtn
-    +'</div></div>';
+    +'</div></div>'
+    + aeHtml;
 };
 
 window.anUpdateLeadPreferredLang = function(leadId, lang) {
@@ -12706,11 +13123,18 @@ window.anSaveCall = window.anSaveActivity = function(leadId) {
   // Auto-advance status for calls
   if (type==='call') {
     if (outcome==='demo' && lead.status==='new') lead.status = 'demo';
-    if (outcome==='won')  lead.status = 'won';
+    if (outcome==='won') {
+      lead.status = 'won';
+      lead.isOpportunity = true;
+      if (!lead.closedAt) lead.closedAt = new Date().toISOString();
+    }
     if (outcome==='pickup' && lead.status==='new') lead.status = 'contacted';
   }
 
   lead.updated = new Date().toISOString();
+  if (outcome==='won' && typeof anSyncOpportunityToPipeline === 'function') {
+    anSyncOpportunityToPipeline(lead, { skipSave: true, skipRefresh: true });
+  }
   AN.save();
 
   // Sync to dashboard
@@ -17960,14 +18384,56 @@ window.anOpenOppDetail = function(leadId) {
 window.anMoveOppStage = function(leadId, newStage) {
   var lead = AN.leads.find(function(l){ return l.id===leadId; });
   if (!lead) return;
+  var prevStage = lead.status;
   lead.status = newStage;
   lead.isOpportunity = true;
   lead.updated = new Date().toISOString();
-  if (newStage==='won') syncActivityFromCRM('closes',1);
+  if (newStage==='won') {
+    syncActivityFromCRM('closes',1);
+    if (!lead.closedAt) lead.closedAt = lead.updated;
+    if (typeof anSyncOpportunityToPipeline === 'function') anSyncOpportunityToPipeline(lead, { skipSave: true, skipRefresh: true });
+  }
   AN.save();
   if (typeof renderOpportunities === 'function') renderOpportunities();
   if (document.getElementById('opp-record-panel') && typeof anOpenOppRecord === 'function') anOpenOppRecord(leadId);
   if (typeof showToast==='function') showToast('Stage updated');
+
+  // Newly marked Closed Lost — ask why, feeds Field Insights
+  if (newStage === 'lost' && prevStage !== 'lost') {
+    anOpenReasonPicker({
+      title: 'Why was this deal lost?',
+      subtitle: 'Quick tag for the Field Insights board — helps marketing & product.',
+      onConfirm: function(category, note) {
+        anRecordOppLossReason(lead, category, note);
+      },
+      onSkip: function() {
+        anRecordOppLossReason(lead, '', '');
+      }
+    });
+  }
+};
+
+// Records the loss reason as a callLog entry so it surfaces in Field Insights,
+// and tags the lead's status as not_interested-equivalent for classification.
+window.anRecordOppLossReason = function(lead, category, note) {
+  if (!lead) return;
+  if (!lead.callLog) lead.callLog = [];
+  var now = new Date();
+  var repEmail = (typeof AN !== 'undefined' && AN.currentRepEmail) || (typeof _currentUser !== 'undefined' && _currentUser && _currentUser.email) || '';
+  var entry = {
+    id: 'act-' + Date.now(),
+    type: 'call',
+    outcome: 'lost',
+    date: typeof anLocalDateStr === 'function' ? anLocalDateStr() : now.toISOString().split('T')[0],
+    time: String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0'),
+    rep: repEmail,
+    loggedAt: now.toISOString(),
+    notes: note || ('Deal closed lost' + (category ? ' (' + (AN_INSIGHT_CATEGORIES[category] ? AN_INSIGHT_CATEGORIES[category].label : category) + ')' : ''))
+  };
+  if (category) entry.category = category;
+  lead.callLog.push(entry);
+  lead.updated = now.toISOString();
+  AN.save();
 };
 
 // ── 7. COMPANY VIEW ───────────────────────────────────────────
@@ -19081,6 +19547,10 @@ window.scSaveToLead = function() {
   lead.updated  = new Date().toISOString();
   if (typeof AN !== 'undefined' && AN.save) AN.save();
   if (typeof showToast === 'function') showToast('Demo saved to lead!');
+  // Open the needs/AE assignment followup after a short delay so the save completes first
+  if (typeof anOpenDemoSetFollowup === 'function') {
+    setTimeout(function() { anOpenDemoSetFollowup(SC.leadId); }, 400);
+  }
 };
 
 window.scCopyCalText = function() {
@@ -20685,6 +21155,34 @@ window.hdOpenHotDeal = function(leadId) {
   }, 280);
 };
 
+function hdBuildAEAssignmentsCard() {
+  if (typeof anGetMyAEAssignments !== 'function') return '';
+  var assignments = anGetMyAEAssignments();
+  if (!assignments.length) return '';
+  assignments.sort(function(a,b) {
+    return (a.demoDate||'9999').localeCompare(b.demoDate||'9999');
+  });
+  var rows = assignments.slice(0, 6).map(function(lead) {
+    var name = ((lead.firstName||'')+' '+(lead.lastName||'')).trim() || lead.company || 'Lead';
+    var when = lead.demoDate ? (anDate ? anDate(lead.demoDate) : lead.demoDate) + (lead.demoTime ? ' · ' + lead.demoTime : '') : 'Not scheduled';
+    var isNew = !lead.aeNotified;
+    var painLine = lead.demoNotes ? '<div style="font-size:11px;color:#71717a;margin-top:3px;line-height:1.4;">"'+anEsc(lead.demoNotes.slice(0,120))+(lead.demoNotes.length>120?'…':'')+'"</div>' : '';
+    var sdrName = lead.sdrEmail || lead._repEmail ? (typeof anGetRepName === 'function' ? anGetRepName(lead.sdrEmail||lead._repEmail) : '') : '';
+    return '<div onclick="anOpenLeadPanel(\''+lead.id+'\')" style="padding:12px 14px;border:1.5px solid '+(isNew?'#10b981':'var(--divider)')+';border-radius:10px;cursor:pointer;background:'+(isNew?'rgba(16,185,129,0.04)':'var(--card-bg)')+';">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">'
+      + '<div style="font-size:13.5px;font-weight:700;color:var(--text-primary);">'+anEsc(name)+(isNew?' <span style="background:#10b981;color:#fff;border-radius:8px;padding:1px 7px;font-size:9px;font-weight:800;margin-left:6px;">NEW</span>':'')+'</div>'
+      + '<div style="font-size:11.5px;color:#6366f1;font-weight:700;white-space:nowrap;">'+anEsc(when)+'</div>'
+      + '</div>'
+      + (lead.company ? '<div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">'+anEsc(lead.company)+(sdrName?' · sourced by '+anEsc(sdrName):'')+'</div>' : (sdrName ? '<div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">sourced by '+anEsc(sdrName)+'</div>' : ''))
+      + painLine
+      + '</div>';
+  }).join('');
+  return '<div class="hd-card" id="hd-ae-assignments-card" style="grid-column:1/-1;">'
+    + '<div class="hd-card-header"><span class="hd-card-title">🎯 My Assigned Demos</span>'
+    + '<span style="font-size:11px;color:#9999aa;">'+assignments.length+' upcoming</span></div>'
+    + '<div class="hd-card-body" style="display:flex;flex-direction:column;gap:8px;">' + rows + '</div></div>';
+}
+
 function hdBuildShoutCardSection() {
   var shouts = (typeof anGetTeamShouts === 'function') ? anGetTeamShouts() : [];
   var stats = hdGetTodayDashStats();
@@ -20850,6 +21348,9 @@ function hdRenderCore() {
 
     // Body grid
     +'<div class="hd-body">'
+
+    // ── My Assigned Demos (AE view) — only shown if I have assignments ──
+    + hdBuildAEAssignmentsCard()
 
     // ── Team Shout-Outs (fixed first — no async insert layout jump) ──
     + hdBuildShoutCardSection()
@@ -21111,7 +21612,90 @@ window.AN_INSIGHT_CATEGORIES = {
   general: { label: 'Other', icon: '💬', color: '#71717a' }
 };
 
-window.anClassifyInsight = function(text, leadStatus, outcome) {
+// ── Shared "Why not interested / Why lost" reason picker ──────
+// Used by: call session "Not Interested" outcome, and Opportunities "Closed Lost" stage.
+// Captures a category tag + optional note, feeding the Field Insights board.
+window.AN_LOSS_REASONS = [
+  { id: 'pricing',    icon: '💰', label: 'Price / Budget' },
+  { id: 'competitor', icon: '🎯', label: 'Competitor' },
+  { id: 'pain',       icon: '🔥', label: 'Timing / Not a priority' },
+  { id: 'objection',  icon: '🛡️', label: 'Objection / Concern' },
+  { id: 'general',    icon: '💬', label: 'Other' }
+];
+
+// onConfirm(category, noteText) is called when the user submits.
+// onSkip() is called if they dismiss without tagging (still allowed).
+window.anOpenReasonPicker = function(opts) {
+  opts = opts || {};
+  var title = opts.title || 'Why not interested?';
+  var subtitle = opts.subtitle || 'Helps build the Field Insights board for marketing & product.';
+  var existing = document.getElementById('an-reason-picker');
+  if (existing) existing.remove();
+
+  var backdrop = document.createElement('div');
+  backdrop.id = 'an-reason-picker';
+  backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:21500;display:flex;align-items:center;justify-content:center;';
+
+  var reasonsHTML = AN_LOSS_REASONS.map(function(r) {
+    return '<button type="button" class="an-rp-reason" data-id="'+r.id+'" onclick="anSelectReasonPickerCategory(\''+r.id+'\')" '
+      + 'style="display:flex;align-items:center;gap:10px;padding:11px 14px;border:1.5px solid #e4e4e7;border-radius:9px;background:#fff;font-size:13px;font-weight:600;color:#27272a;cursor:pointer;font-family:inherit;text-align:left;width:100%;margin-bottom:7px;transition:border-color 0.12s,background 0.12s;">'
+      + '<span style="font-size:16px;">'+r.icon+'</span>'+r.label+'</button>';
+  }).join('');
+
+  backdrop.innerHTML = '<div style="background:#fff;border-radius:14px;padding:22px;width:380px;max-width:92vw;font-family:inherit;box-shadow:0 24px 80px rgba(0,0,0,0.3);" onclick="event.stopPropagation()">'
+    + '<div style="font-size:15px;font-weight:800;color:#09090b;margin-bottom:4px;">' + anEsc(title) + '</div>'
+    + '<div style="font-size:12px;color:#71717a;margin-bottom:16px;">' + anEsc(subtitle) + '</div>'
+    + '<div id="an-rp-reasons">' + reasonsHTML + '</div>'
+    + '<textarea id="an-rp-note" rows="2" placeholder="Optional: what did they say? (e.g. \'already using HawkSoft\')" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:10px;font-size:12.5px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;margin-top:6px;margin-bottom:14px;"></textarea>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button type="button" onclick="anReasonPickerSkip()" style="flex:1;padding:10px;border:1.5px solid #e4e4e7;border-radius:8px;background:#fff;color:#71717a;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Skip</button>'
+    + '<button type="button" id="an-rp-save" onclick="anReasonPickerSave()" disabled style="flex:1;padding:10px;border:none;border-radius:8px;background:#d4d4d8;color:#fff;font-size:13px;font-weight:700;cursor:not-allowed;font-family:inherit;">Save</button>'
+    + '</div>'
+    + '</div>';
+
+  backdrop.onclick = function() { anReasonPickerSkip(); };
+  document.body.appendChild(backdrop);
+  window._anReasonPickerState = { category: '', onConfirm: opts.onConfirm, onSkip: opts.onSkip };
+};
+
+window.anSelectReasonPickerCategory = function(id) {
+  if (!window._anReasonPickerState) return;
+  window._anReasonPickerState.category = id;
+  document.querySelectorAll('.an-rp-reason').forEach(function(btn) {
+    var active = btn.dataset.id === id;
+    btn.style.borderColor = active ? '#6366f1' : '#e4e4e7';
+    btn.style.background = active ? 'rgba(99,102,241,0.06)' : '#fff';
+  });
+  var saveBtn = document.getElementById('an-rp-save');
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.style.background = '#6366f1';
+    saveBtn.style.cursor = 'pointer';
+  }
+};
+
+window.anReasonPickerSave = function() {
+  var state = window._anReasonPickerState;
+  if (!state || !state.category) return;
+  var noteEl = document.getElementById('an-rp-note');
+  var note = noteEl ? noteEl.value.trim() : '';
+  var picker = document.getElementById('an-reason-picker');
+  if (picker) picker.remove();
+  if (typeof state.onConfirm === 'function') state.onConfirm(state.category, note);
+  window._anReasonPickerState = null;
+};
+
+window.anReasonPickerSkip = function() {
+  var state = window._anReasonPickerState;
+  var picker = document.getElementById('an-reason-picker');
+  if (picker) picker.remove();
+  if (state && typeof state.onSkip === 'function') state.onSkip();
+  window._anReasonPickerState = null;
+};
+
+window.anClassifyInsight = function(text, leadStatus, outcome, explicitCategory) {
+  // If the rep explicitly tagged a reason (via the Not Interested / Closed Lost prompt), trust it.
+  if (explicitCategory && AN_INSIGHT_CATEGORIES[explicitCategory]) return explicitCategory;
   var t = (text || '').toLowerCase();
   if (leadStatus === 'not_interested' || outcome === 'not_interested') return 'not_interested';
   if (/not interested|no thanks|don't need|not looking|happy with|all set|we're good|pass for now|not right now/i.test(t)) return 'not_interested';
@@ -21119,7 +21703,9 @@ window.anClassifyInsight = function(text, leadStatus, outcome) {
   if (/ezlynx|hawksoft|agencybloc|agency zoom|nowcerts|agent crm|lucie|healthsherpa|already use|using [a-z]|competitor|current platform|current system/i.test(t)) return 'competitor';
   if (/oep|open enrollment|renewal|manual|spreadsheet|chaos|overwhelm|pain|struggle|problem|fall through|bottleneck/i.test(t)) return 'pain';
   if (outcome === 'objection' || /objection|push back|pushback|concern about/i.test(t)) return 'objection';
-  if (leadStatus === 'booked_demo' || outcome === 'demo' || outcome === 'pickup' || /interested|sounds good|love to|let's schedule|book a demo/i.test(t)) return 'positive';
+  // Note: a pickup/connect alone is NOT "interested" — only classify positive when the
+  // text itself signals genuine interest, or the lead is in an active opportunity stage.
+  if (leadStatus === 'booked_demo' || outcome === 'demo' || /interested|sounds good|love to|let's schedule|book a demo/i.test(t)) return 'positive';
   return 'general';
 };
 
@@ -21155,7 +21741,7 @@ window.anCollectFieldInsights = function(opts) {
     var key = obj.leadId + '|' + text.slice(0, 80);
     if (seen[key]) return;
     seen[key] = true;
-    obj.category = anClassifyInsight(text, obj.leadStatus, obj.outcome);
+    obj.category = anClassifyInsight(text, obj.leadStatus, obj.outcome, obj.explicitCategory);
     items.push(obj);
   }
 
@@ -21178,7 +21764,8 @@ window.anCollectFieldInsights = function(opts) {
           date: c.date || '',
           time: c.time || '',
           text: c.notes.trim(),
-          source: 'call'
+          source: 'call',
+          explicitCategory: c.category || ''
         });
       }
     });
@@ -26947,6 +27534,44 @@ function checkDueTasks() {
       new Notification('AgentNav Task Due 🔔', { body: msg, icon: '/favicon.ico' });
     }
   });
+
+  // ── AE demo assignment notifications ──
+  if (typeof anGetUnseenAEAssignments === 'function') {
+    anGetUnseenAEAssignments().forEach(function(lead) {
+      var id = 'ae-' + lead.id;
+      if (_notifiedTaskIds[id]) return;
+      _notifiedTaskIds[id] = true;
+      var leadName = ((lead.firstName||'')+' '+(lead.lastName||'')).trim() || lead.company || 'a lead';
+      var demoWhen = lead.demoDate ? (lead.demoDate + (lead.demoTime ? ' at ' + lead.demoTime : '')) : 'unscheduled';
+      showAEAssignmentNotification(lead, leadName, demoWhen);
+      if (window.Notification && Notification.permission === 'granted') {
+        new Notification('AgentNav — Demo Assigned 🔔', { body: leadName + ' · ' + demoWhen, icon: '/favicon.ico' });
+      }
+    });
+  }
+}
+
+function showAEAssignmentNotification(lead, leadName, demoWhen) {
+  var old = document.getElementById('ae-notif-'+lead.id); if(old) return;
+  var n = document.createElement('div');
+  n.id = 'ae-notif-'+lead.id;
+  n.style.cssText = 'position:fixed;bottom:80px;right:24px;background:var(--card-bg);border:1.5px solid #10b981;border-radius:12px;padding:14px 16px;box-shadow:0 8px 32px rgba(16,185,129,0.25);z-index:9990;max-width:320px;animation:sectionIn 0.25s ease;';
+  var painLine = lead.demoNotes ? '<div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;font-style:italic;">"'+anEsc(lead.demoNotes.slice(0,90))+(lead.demoNotes.length>90?'…':'')+'"</div>' : '';
+  n.innerHTML =
+    '<div style="display:flex;align-items:flex-start;gap:10px;">'
+    +'<div style="font-size:20px;">🎯</div>'
+    +'<div style="flex:1;">'
+    +'<div style="font-size:13px;font-weight:800;color:var(--text-primary);margin-bottom:2px;">Demo Assigned to You 🔔</div>'
+    +'<div style="font-size:12.5px;color:var(--text-secondary);">'+anEsc(leadName)+' · '+anEsc(demoWhen)+'</div>'
+    + painLine
+    +'<div style="display:flex;gap:6px;margin-top:8px;">'
+    +'<button onclick="anMarkAENotified(AN.leadById(\''+lead.id+'\'));anOpenLeadPanel(\''+lead.id+'\');document.getElementById(\'ae-notif-'+lead.id+'\').remove();" '
+      +'style="padding:5px 11px;border-radius:6px;background:#10b981;border:none;color:#fff;font-size:11.5px;font-weight:700;cursor:pointer;font-family:var(--sans);">Open Lead</button>'
+    +'<button onclick="anMarkAENotified(AN.leadById(\''+lead.id+'\'));document.getElementById(\'ae-notif-'+lead.id+'\').remove();" '
+      +'style="padding:5px 11px;border-radius:6px;background:var(--body-bg);border:1px solid var(--divider);color:var(--text-secondary);font-size:11.5px;font-weight:600;cursor:pointer;font-family:var(--sans);">Got it</button>'
+    +'</div></div></div>';
+  document.body.appendChild(n);
+  setTimeout(function(){ if(n.parentElement) n.remove(); }, 30000);
 }
 
 function showTaskNotification(task, msg) {
@@ -27031,6 +27656,11 @@ window.anOpenLeadPanel = function(leadId) {
 
     var lead = AN.leads.find(function(l){ return l.id === leadId; });
     if (!lead) return;
+
+    // Mark this lead's AE assignment as seen by the assigned AE
+    if (lead.aeEmail && (lead.aeEmail || '').toLowerCase() === (AN.currentRepEmail||'').toLowerCase() && !lead.aeNotified) {
+      if (typeof anMarkAENotified === 'function') anMarkAENotified(lead);
+    }
 
     // Find the gradient header
     var header = panel.querySelector('div[style*="linear-gradient(135deg,#0a0a14"]');
