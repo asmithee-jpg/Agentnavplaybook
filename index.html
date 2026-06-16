@@ -29903,18 +29903,14 @@ function spRenderList() {
     var row = document.createElement('div');
     row.style.cssText = cols + 'padding:12px 14px;border-bottom:1px solid var(--divider,#f0f0f5);cursor:pointer;align-items:center;';
     row.setAttribute('data-spid', s.id);
-    row.onmouseover = function(){ this.style.background = 'rgba(99,102,241,0.04)'; var b=this.querySelector('.sp-rename-btn'); if(b) b.style.opacity='1'; };
-    row.onmouseout  = function(){ this.style.background = ''; var b=this.querySelector('.sp-rename-btn'); if(b) b.style.opacity='0'; };
-    row.onclick = function(e){ if(!e.target.closest('.sp-rename-btn') && !e.target.closest('input')) spOpenPanel(this.getAttribute('data-spid')); };
+    row.onmouseover = function(){ this.style.background = 'rgba(99,102,241,0.04)'; };
+    row.onmouseout  = function(){ this.style.background = ''; };
+    row.onclick = function(){ spOpenPanel(this.getAttribute('data-spid')); };
     row.innerHTML = ''
-      // Company — single click opens panel, double click renames
+      // Company
       + '<div style="display:flex;align-items:center;gap:10px;min-width:0;">'
       + '<div style="width:32px;height:32px;border-radius:8px;background:'+avatarColor+';color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+initial+'</div>'
-      + '<div style="min-width:0;flex:1;">'
-      + '<div class="sp-name-text" data-spid="'+s.id+'" style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;" title="Click to open · Double-click to rename">'+coName+'</div>'
-      + website
-      + '</div>'
-      + '<span class="sp-rename-btn" data-spid="'+s.id+'" title="Rename company" style="font-size:11px;cursor:pointer;opacity:0;flex-shrink:0;padding:2px 4px;border-radius:4px;transition:opacity .15s;" >✏️</span>'
+      + '<div style="min-width:0;"><div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+coName+'</div>'+website+'</div>'
       + '</div>'
       // Contact
       + '<div style="min-width:0;">'+contactHtml+'</div>'
@@ -29935,27 +29931,6 @@ function spRenderList() {
   list.innerHTML = '<div style="border:1px solid var(--divider,#e9e9ef);border-radius:10px;overflow:hidden;background:var(--card-bg,#fff);">'
     + header + rows + '</div>';
 
-  // Wire inline rename and navigation
-  list.querySelectorAll('.sp-name-text').forEach(function(el) {
-    el.onclick = function(e) {
-      e.stopPropagation();
-      spOpenPanel(el.getAttribute('data-spid'));
-    };
-    el.ondblclick = function(e) {
-      e.stopPropagation();
-      spInlineEditName(el.getAttribute('data-spid'), el);
-    };
-  });
-  list.querySelectorAll('.sp-rename-btn').forEach(function(btn) {
-    btn.onclick = function(e) {
-      e.stopPropagation();
-      var id = btn.getAttribute('data-spid');
-      var nameEl = btn.closest('div[data-spid]') ? btn.closest('[style*="flex"]').querySelector('.sp-name-text') : null;
-      if (!nameEl) nameEl = btn.parentElement.querySelector('.sp-name-text');
-      spInlineEditName(id, nameEl);
-    };
-  });
-
   // Delegate clicks on "+ Set" next-step buttons
   list.querySelectorAll('.sp-ns-set-btn').forEach(function(btn) {
     btn.onclick = function(e) {
@@ -29972,29 +29947,38 @@ function spTierColor(id) {
 }
 
 // ── Inline company name edit ───────────────────────────────────
-window.spInlineEditName = function(id, nameEl) {
+window.spInlineEditName = function(id, td) {
   var s = _spData.find(function(x){ return x.id === id; });
-  if (!s || !nameEl) return;
-  if (nameEl.tagName === 'INPUT') return;
-  if (document.querySelector('#sp-list input.sp-inline-input')) return;
+  if (!s) return;
+  // Find the name div inside the row
+  var row = td ? td.closest('[onclick]') : null;
+  if (!row) {
+    // Fallback: find via data
+    var rows = document.querySelectorAll('#sp-list [onclick]');
+    for (var i=0; i<rows.length; i++) {
+      if (rows[i].getAttribute('onclick') && rows[i].getAttribute('onclick').indexOf(id) >= 0) { row = rows[i]; break; }
+    }
+  }
+  if (!row || row.querySelector('input.sp-inline-input')) return;
+  var nameDiv = row.querySelector('[style*="font-weight:700;font-size:13px"]');
+  if (!nameDiv) return;
   var old = s.company || '';
   var inp = document.createElement('input');
   inp.className = 'sp-inline-input';
   inp.value = old;
   inp.style.cssText = 'font-size:13px;font-weight:700;color:var(--text-primary);border:none;border-bottom:2px solid #6366f1;background:transparent;outline:none;width:160px;font-family:inherit;padding:1px 0;';
   inp.onclick = function(e){ e.stopPropagation(); };
-  inp.ondblclick = function(e){ e.stopPropagation(); };
-  nameEl.replaceWith(inp);
+  nameDiv.replaceWith(inp);
   inp.focus(); inp.select();
   function save() {
     var val = inp.value.trim() || old;
     s.company = val;
     spTouch(s);
-    spSave(_spData.slice(), function(){ spRenderList(); });
+    spSave(_spData.slice(), function(){ spRenderList(); spRenderDash(); });
   }
   inp.onblur = save;
   inp.onkeydown = function(e) {
-    if (e.key === 'Enter') { e.preventDefault(); inp.blur(); }
+    if (e.key === 'Enter') { inp.blur(); }
     if (e.key === 'Escape') { inp.value = old; inp.blur(); }
     e.stopPropagation();
   };
@@ -30016,7 +30000,7 @@ window.spOpenImport = function() {
     + '<div style="font-size:13px;font-weight:700;color:#6366f1;">Drop your Excel or CSV file here</div>'
     + '<div style="font-size:11.5px;color:#818cf8;margin-top:4px;">or click to browse · .xlsx, .xls, .csv supported</div>'
     + '</div>'
-    + '<input type="file" id="sp-import-file" accept=".csv,.xlsx,.xls" style="display:none">'
+    + '<input type="file" id="sp-import-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="spHandleImportFile(this.files[0])">'
     + '<div id="sp-import-preview" style="display:none">'
     + '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:6px;">Column Mapping</div>'
     + '<div id="sp-import-mapping" style="margin-bottom:12px;"></div>'
@@ -30028,30 +30012,6 @@ window.spOpenImport = function() {
     + '</div>'
     + '</div>';
   document.body.appendChild(bd);
-  // Wire file input via JS — inline onchange can fail when set through innerHTML
-  var fileInput = document.getElementById('sp-import-file');
-  console.log('[SP Import] Modal opened, file input found:', !!fileInput);
-  if (fileInput) {
-    fileInput.onchange = function() {
-      console.log('[SP Import] File input changed, files:', this.files ? this.files.length : 0);
-      if (this.files && this.files[0]) {
-        console.log('[SP Import] File selected:', this.files[0].name, this.files[0].size, 'bytes');
-        spHandleImportFile(this.files[0]);
-      } else {
-        console.warn('[SP Import] No file in input');
-      }
-    };
-  } else {
-    console.error('[SP Import] Could not find #sp-import-file input!');
-  }
-  // Also wire the drop zone click
-  var dropZone = document.getElementById('sp-import-drop');
-  if (dropZone) {
-    dropZone.onclick = function() {
-      console.log('[SP Import] Drop zone clicked, triggering file input');
-      fileInput && fileInput.click();
-    };
-  }
 };
 
 window.spHandleImportDrop = function(e) {
@@ -30064,17 +30024,11 @@ window.spHandleImportDrop = function(e) {
 var _spImportRows = [];
 
 window.spHandleImportFile = function(file) {
-  console.log('[SP Import] spHandleImportFile called with:', file ? file.name : 'null');
-  if (!file) { console.error('[SP Import] No file passed'); return; }
+  if (!file) return;
   var name = file.name.toLowerCase();
   var reader = new FileReader();
-  if (name.endsWith('.csv') || name.endsWith('.txt')) {
-    console.log('[SP Import] Reading as CSV text');
-    reader.onload = function(e){
-      console.log('[SP Import] File read complete, length:', e.target.result ? e.target.result.length : 0);
-      spParseImportCSV(e.target.result);
-    };
-    reader.onerror = function(e){ console.error('[SP Import] FileReader error:', e); };
+  if (name.endsWith('.csv')) {
+    reader.onload = function(e){ spParseImportCSV(e.target.result); };
     reader.readAsText(file);
   } else {
     // Excel — use SheetJS if available, else guide user to save as CSV
@@ -30102,106 +30056,32 @@ window.spHandleImportFile = function(file) {
 };
 
 function spParseImportCSV(csv) {
-  console.log('[SP Import] spParseImportCSV called, input length:', csv ? csv.length : 0);
-  if (!csv || !csv.trim()) { spImportError('File is empty.'); return; }
-  var lines = csv.split(/\r?\n/).filter(function(l){ return l.trim(); });
-  console.log('[SP Import] Lines found:', lines.length, '| First line:', lines[0] ? lines[0].slice(0,100) : 'NONE');
-  if (lines.length < 2) { spImportError('File needs at least a header row and one data row.'); return; }
-
-  // Strip BOM if present
-  if (lines[0].charCodeAt(0) === 0xFEFF) lines[0] = lines[0].slice(1);
-
-  var rawHeaders = spCSVSplit(lines[0]);
-  // Normalize: strip quotes, whitespace, lowercase, replace non-alphanumeric with underscore
-  var headers = rawHeaders.map(function(h){
-    return h.trim().replace(/^["']|["']$/g,'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
-  });
-
+  var lines = csv.split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) { spImportError('File appears empty or has only a header row.'); return; }
+  var headers = spCSVSplit(lines[0]).map(function(h){ return h.trim().toLowerCase().replace(/[^a-z0-9]/g,'_'); });
   var rows = lines.slice(1).map(function(l){ return spCSVSplit(l); });
-
-  // Auto-map columns — try exact match first, then partial match
+  // Auto-map columns
   var MAP_KEYS = {
-    company:     ['company','company_name','organization','name','org','account','business','sponsor','sponsor_name'],
-    contactName: ['contact','contact_name','full_name','person','first_name','firstname','primary_contact','contact_person'],
-    email:       ['email','email_address','e_mail','mail'],
-    phone:       ['phone','phone_number','telephone','tel','mobile','cell','direct'],
-    website:     ['website','web','url','site','domain','web_address'],
-    tier:        ['tier','level','package','sponsorship_level','sponsorship_tier','category'],
-    notes:       ['notes','note','description','comments','comment','details']
+    company:     ['company','company_name','organization','name','org','account','business'],
+    contactName: ['contact','contact_name','full_name','name','person','first_name','firstname','last_name'],
+    email:       ['email','email_address','e_mail'],
+    phone:       ['phone','phone_number','telephone','tel','mobile','cell'],
+    website:     ['website','web','url','site','domain'],
+    tier:        ['tier','level','package','sponsorship_level','sponsorship_tier'],
+    notes:       ['notes','note','description','comments','comment']
   };
-
   var colMap = {};
   Object.keys(MAP_KEYS).forEach(function(field) {
-    // Exact match first
     MAP_KEYS[field].forEach(function(alias) {
-      if (colMap[field] === undefined) {
-        var idx = headers.indexOf(alias);
-        if (idx >= 0) colMap[field] = idx;
-      }
+      var idx = headers.indexOf(alias);
+      if (idx >= 0 && colMap[field] === undefined) colMap[field] = idx;
     });
-    // Partial match fallback — if header contains the alias word
-    if (colMap[field] === undefined) {
-      MAP_KEYS[field].forEach(function(alias) {
-        if (colMap[field] === undefined) {
-          for (var i = 0; i < headers.length; i++) {
-            if (headers[i].indexOf(alias) >= 0 || alias.indexOf(headers[i]) >= 0) {
-              colMap[field] = i; break;
-            }
-          }
-        }
-      });
-    }
   });
-
-  // If we still have no company column, try column 0 as company
-  if (colMap.company === undefined && headers.length > 0) colMap.company = 0;
-
-  console.log('[SP Import] Headers detected:', headers);
-  console.log('[SP Import] Column map:', JSON.stringify(colMap));
-
-  // If company still not mapped, try combining first+last name, or use any name-like column
-  if (colMap.company === undefined) {
-    var firstIdx = headers.indexOf('first_name') >= 0 ? headers.indexOf('first_name') : headers.indexOf('firstname');
-    var lastIdx  = headers.indexOf('last_name')  >= 0 ? headers.indexOf('last_name')  : headers.indexOf('lastname');
-    var orgIdx   = headers.indexOf('organization') >= 0 ? headers.indexOf('organization') :
-                   headers.indexOf('org') >= 0 ? headers.indexOf('org') :
-                   headers.indexOf('account') >= 0 ? headers.indexOf('account') :
-                   headers.indexOf('employer') >= 0 ? headers.indexOf('employer') : -1;
-    if (orgIdx >= 0) {
-      colMap.company = orgIdx;
-    } else if (firstIdx >= 0) {
-      colMap._firstIdx = firstIdx;
-      colMap._lastIdx  = lastIdx >= 0 ? lastIdx : -1;
-      colMap.company   = firstIdx; // fallback, will combine below
-    } else {
-      // Last resort: column 0
-      colMap.company = 0;
-    }
-  }
-
   _spImportRows = rows.map(function(r) {
     var obj = {};
-    Object.keys(colMap).forEach(function(f){
-      if (f.startsWith('_')) return;
-      obj[f] = (r[colMap[f]] || '').replace(/^["']|["']$/g,'').trim();
-    });
-    // Combine first+last name into company if that was the fallback
-    if (colMap._firstIdx !== undefined && colMap._firstIdx >= 0) {
-      var first = (r[colMap._firstIdx] || '').replace(/^["']|["']$/g,'').trim();
-      var last  = colMap._lastIdx >= 0 ? (r[colMap._lastIdx] || '').replace(/^["']|["']$/g,'').trim() : '';
-      obj.company = (first + ' ' + last).trim() || obj.company;
-      // If contactName wasn't separately mapped, use the combined name
-      if (!obj.contactName) obj.contactName = obj.company;
-    }
+    Object.keys(colMap).forEach(function(f){ obj[f] = (r[colMap[f]] || '').trim(); });
     return obj;
   }).filter(function(r){ return r.company && r.company.length > 1; });
-
-  if (!_spImportRows.length) {
-    console.error('[SP Import] Zero valid rows after filtering. Raw rows sample:', rows.slice(0,3));
-    spImportError('No valid rows found. Make sure your CSV has a "company" or "organization" column with data.');
-    return;
-  }
-  console.log('[SP Import] Valid rows:', _spImportRows.length, '| Sample:', JSON.stringify(_spImportRows[0]));
 
   // Detect duplicates
   var existingNorms = _spData.map(function(s){ return spNorm(s.company); });
@@ -30215,42 +30095,22 @@ function spParseImportCSV(csv) {
   var preview = document.getElementById('sp-import-preview');
   var mapping = document.getElementById('sp-import-mapping');
   var summary = document.getElementById('sp-import-summary');
-  if (!preview) { console.warn('[SP Import] Preview element not found'); return; }
-
+  if (!preview) return;
   preview.style.display = '';
-
-  var mappedFields = Object.keys(colMap).filter(function(f){ return !f.startsWith('_'); });
-  mapping.innerHTML = '<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Columns found in your file:</div>'
-    + '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;">'
-    + rawHeaders.map(function(h,i){
-        var norm = headers[i];
-        var isMapped = Object.keys(colMap).some(function(f){ return !f.startsWith('_') && colMap[f] === i; });
-        return '<span style="background:'+(isMapped?'#eef2ff':'var(--body-bg)')+';border:1px solid '+(isMapped?'#6366f1':'var(--divider)')+';border-radius:6px;padding:2px 8px;font-size:11px;color:'+(isMapped?'#6366f1':'var(--text-muted)')+';">'+h.trim()+(isMapped?' ✓':'')+'</span>';
+  mapping.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:6px;">'
+    + Object.keys(colMap).map(function(f){
+        return '<span style="background:var(--body-bg);border:1px solid var(--divider);border-radius:6px;padding:3px 9px;font-size:11.5px;"><strong>'+f+'</strong> ← <span style="color:#6366f1">'+headers[colMap[f]]+'</span></span>';
       }).join('')
-    + '</div>'
-    + (mappedFields.length ? '<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Mapped to sponsor fields:</div>'
-      + '<div style="display:flex;flex-wrap:wrap;gap:5px;">'
-      + mappedFields.map(function(f){
-          return '<span style="background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:2px 8px;font-size:11px;"><strong>'+f+'</strong> ← '+rawHeaders[colMap[f]].trim()+'</span>';
-        }).join('')
-      + '</div>' : '<div style="color:#ef4444;font-size:12px;">Could not detect any sponsor fields.</div>');
-
-  summary.innerHTML = '<div style="margin-top:8px;">'
-    + '<span style="color:#10b981;font-weight:700;font-size:13px;">✓ '+news+' new sponsors ready to import</span>'
-    + (dupes ? ' &nbsp;·&nbsp; <span style="color:#f59e0b;font-weight:700;">⚠ '+dupes+' already exist (will be skipped)</span>' : '')
-    + '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">'+_spImportRows.length+' total rows found in file</div>'
     + '</div>';
+  summary.innerHTML = '<span style="color:#10b981;font-weight:700;">✓ '+news+' new sponsors</span>'
+    + (dupes ? ' &nbsp;·&nbsp; <span style="color:#f59e0b;font-weight:700;">⚠ '+dupes+' duplicates (will be skipped)</span>' : '')
+    + ' &nbsp;·&nbsp; <span style="color:var(--text-muted)">'+_spImportRows.length+' total rows</span>';
 
   var btn = document.getElementById('sp-import-btn');
-  if (btn) {
-    if (news > 0) {
-      btn.disabled = false;
-      btn.style.background = '#6366f1';
-      btn.style.cursor = 'pointer';
-      btn.textContent = 'Import ' + news + ' Sponsors';
-    } else {
-      btn.textContent = 'All duplicates — nothing new';
-    }
+  if (btn && news > 0) {
+    btn.disabled = false;
+    btn.style.background = '#6366f1';
+    btn.style.cursor = 'pointer';
   }
 }
 
