@@ -4307,8 +4307,9 @@ window.buildPipelineHTML = function() {
       + (deal.notes ? '<div style="font-size:10px;color:#a1a1aa;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + deal.notes + '</div>' : '')
       + '</div>'
       + '<span style="font-size:10px;font-weight:700;color:' + stageColor + ';background:' + stageColor + '18;padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0;">' + stageLabel + '</span>'
-      + '<button onclick="dashAddDeal(' + i + ')" style="background:none;border:1px solid #e4e4e7;border-radius:5px;color:#6366f1;cursor:pointer;font-size:10px;font-weight:600;padding:2px 7px;font-family:inherit;flex-shrink:0;">Edit</button>'
-      + '<button onclick="dashDeleteDeal(' + i + ')" style="background:none;border:none;color:#d4d4d8;cursor:pointer;font-size:11px;padding:2px 4px;flex-shrink:0;">&#x2715;</button>'
+      + '<button onclick="event.stopPropagation();dashAddDeal(' + i + ')" style="background:none;border:1px solid #e4e4e7;border-radius:5px;color:#6366f1;cursor:pointer;font-size:10px;font-weight:600;padding:2px 7px;font-family:inherit;flex-shrink:0;">Edit</button>'
+      + '<button onclick="event.stopPropagation();dashDemoteDealToLead(' + i + ')" style="background:none;border:1px solid #fde68a;border-radius:5px;color:#b45309;cursor:pointer;font-size:10px;font-weight:600;padding:2px 7px;font-family:inherit;flex-shrink:0;">To Lead</button>'
+      + '<button onclick="event.stopPropagation();dashDeleteDeal(' + i + ')" style="background:none;border:none;color:#d4d4d8;cursor:pointer;font-size:11px;padding:2px 4px;flex-shrink:0;" title="Remove deal">&#x2715;</button>'
       + '</div>'
       + '</div>';
   });
@@ -4655,6 +4656,9 @@ document.addEventListener('DOMContentLoaded', function() {
       sec.innerHTML = window.buildCommissionHTML();
       _commBuilt = true;
       if (typeof loadRates === 'function') loadRates();
+      if (typeof anSetCommissionPlanTab === 'function' && typeof anGetDefaultCommissionPlanTab === 'function') {
+        anSetCommissionPlanTab(anGetDefaultCommissionPlanTab());
+      }
     }
   }, 800);
 });
@@ -5402,14 +5406,23 @@ window.dashOpenDrilldown = function(type, focusId) {
       var idx = (_dash.pipeline || []).indexOf(d);
       var sz = (typeof SIZES !== 'undefined' ? SIZES : []).find(function(s){ return s.id === d.size; }) || { label: d.size || '—', price: '' };
       var added = d.added ? String(d.added).slice(0, 10) : '';
-      return '<div style="padding:12px 14px;border:1px solid #e4e4e7;border-radius:10px;margin-bottom:8px;display:flex;align-items:center;gap:10px;" onmouseover="this.querySelector(\'.deal-row-inner\').style.borderColor=\'#6366f1\'" onmouseout="this.querySelector(\'.deal-row-inner\').style.borderColor=\'transparent\'">'
+      var sdrLbl = d.sdrName || (d.sdrEmail && typeof anGetRepName === 'function' ? anGetRepName(d.sdrEmail) : '');
+      var aeLbl = d.aeName || (d.aeEmail && typeof anGetRepName === 'function' ? anGetRepName(d.aeEmail) : '');
+      return '<div style="padding:12px 14px;border:1px solid #e4e4e7;border-radius:10px;margin-bottom:8px;display:flex;align-items:center;gap:8px;" onmouseover="this.querySelector(\'.deal-row-inner\').style.borderColor=\'#6366f1\'" onmouseout="this.querySelector(\'.deal-row-inner\').style.borderColor=\'transparent\'">'
         +'<div class="deal-row-inner" onclick="dashOpenDeal('+idx+')" style="flex:1;min-width:0;cursor:pointer;border:1.5px solid transparent;border-radius:8px;padding:2px 4px;transition:border-color .15s;">'
         +'<div style="font-size:14px;font-weight:800;color:#09090b;">'+anEsc(d.name || 'Deal')+'</div>'
         +'<div style="font-size:11px;color:#71717a;margin-top:4px;">'+(d.stage||'—')+' · '+(d.state||'—')+' · '+sz.label+(sz.price?(' · '+sz.price):'')+(added?' · '+added:'')+'</div>'
         +(d.leadId ? '<div style="font-size:10px;color:#6366f1;margin-top:3px;">🔗 Linked to CRM lead</div>' : '')
-        +(d.sdrName||d.aeName ? '<div style="font-size:10px;color:#10b981;margin-top:2px;">'+(d.sdrName?'SDR: '+d.sdrName:'')+(d.sdrName&&d.aeName?' · ':'')+(d.aeName?'AE: '+d.aeName:'')+'</div>' : '')
+        +((sdrLbl || aeLbl) ? '<div style="font-size:10px;margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;">'
+          +(sdrLbl ? '<span style="background:#f0fdf4;color:#15803d;border-radius:6px;padding:1px 6px;font-weight:600;">SDR: '+anEsc(sdrLbl)+'</span>' : '')
+          +(aeLbl ? '<span style="background:#eef2ff;color:#4f46e5;border-radius:6px;padding:1px 6px;font-weight:600;">AE: '+anEsc(aeLbl)+'</span>' : '')
+          +'</div>' : '')
         +'</div>'
-        +'<button onclick="if(confirm(\'Remove '+anEsc(d.name||'this deal')+'?\'))dashDeleteDeal('+idx+')" style="flex-shrink:0;padding:6px 10px;border-radius:7px;border:1px solid #fecaca;background:#fef2f2;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Remove</button>'
+        +'<div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;">'
+        +'<button onclick="event.stopPropagation();document.getElementById(\'dash-drilldown-modal\').remove();dashAddDeal('+idx+')" style="padding:5px 10px;border-radius:7px;border:1px solid #c7d2fe;background:#eef2ff;color:#6366f1;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Edit</button>'
+        +'<button onclick="event.stopPropagation();dashDemoteDealToLead('+idx+')" style="padding:5px 10px;border-radius:7px;border:1px solid #fde68a;background:#fffbeb;color:#b45309;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">To Lead</button>'
+        +'<button onclick="event.stopPropagation();dashDeleteDeal('+idx+')" style="padding:5px 10px;border-radius:7px;border:1px solid #fecaca;background:#fef2f2;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Remove</button>'
+        +'</div>'
         +'</div>';
     }).join('');
     body = '<div style="margin-bottom:12px;"><button onclick="document.getElementById(\'dash-drilldown-modal\').remove();dashAddDeal();" style="padding:8px 14px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ Add Deal</button></div>' + body;
@@ -5456,6 +5469,7 @@ window.dashOpenDrilldown = function(type, focusId) {
   if (old) old.remove();
   var ov = document.createElement('div');
   ov.id = 'dash-drilldown-modal';
+  ov._dashDrillType = type;
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10050;display:flex;align-items:center;justify-content:center;padding:20px;';
   ov.onclick = function(e) { if (e.target === ov) ov.remove(); };
   ov.innerHTML = '<div style="background:#fff;border-radius:14px;width:520px;max-width:95vw;max-height:80vh;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.25);">'
@@ -5466,6 +5480,44 @@ window.dashOpenDrilldown = function(type, focusId) {
     +'<div style="padding:16px 20px;overflow-y:auto;max-height:calc(80vh - 70px);">'+body+'</div>'
     +'</div>';
   document.body.appendChild(ov);
+};
+
+window.dashRefreshPipelineUI = function(reopenDrilldown) {
+  var pipeList = document.getElementById('dash-pipeline-list');
+  if (pipeList && typeof buildPipelineHTML === 'function') pipeList.innerHTML = buildPipelineHTML();
+  if (typeof renderOpportunities === 'function') renderOpportunities();
+  if (typeof renderLeadsTable === 'function') renderLeadsTable();
+  if (typeof dashRefreshTopStatTiles === 'function') dashRefreshTopStatTiles();
+  if (typeof refreshActiveCharts === 'function') refreshActiveCharts();
+  var modal = document.getElementById('dash-drilldown-modal');
+  if (reopenDrilldown && modal && typeof dashOpenDrilldown === 'function') {
+    dashOpenDrilldown(reopenDrilldown);
+  }
+};
+
+window.dashDemoteDealToLead = function(idx) {
+  var deal = (_dash.pipeline || [])[idx];
+  if (!deal) return;
+  var name = deal.name || 'this deal';
+  if (!confirm('Send "' + name + '" back to Lead Pipeline?\n\nThey will be removed from Deals/Opportunities but kept as a lead in CRM.')) return;
+
+  if (deal.leadId && typeof AN !== 'undefined' && AN.leads) {
+    var lead = AN.leads.find(function(l) { return l.id === deal.leadId; });
+    if (lead && typeof anDemoteOpportunityToLead === 'function') {
+      anDemoteOpportunityToLead(lead, {
+        fromPipelineStage: deal.stage,
+        sdrEmail: deal.sdrEmail,
+        aeEmail: deal.aeEmail,
+        save: false
+      });
+    }
+  }
+
+  _dash.pipeline.splice(idx, 1);
+  if (typeof dashSave === 'function') dashSave();
+  if (typeof AN !== 'undefined' && AN.save) AN.save();
+  dashRefreshPipelineUI('pipeline');
+  if (typeof showToast === 'function') showToast('Moved to Lead Pipeline');
 };
 
 window.dashOpenDeal = function(idx) {
@@ -6483,6 +6535,8 @@ window.updDemoStatus=function(id,status){
   dashSave();
   var w=document.getElementById('demo-list-wrap');
   if(w) w.innerHTML=buildDemoListHTML();
+  if (typeof anRefreshSdrCommissionAfterDemo === 'function') anRefreshSdrCommissionAfterDemo(d.sdrEmail || d._repEmail);
+  else if (typeof anRefreshCommissionTrackerUI === 'function') anRefreshCommissionTrackerUI();
   if(typeof showToast==='function') showToast('Updated to '+status);
 };
 
@@ -7463,7 +7517,7 @@ window.anSaveDemoShowedCapture = function(demoId, leadId) {
   }
   if (typeof showToast === 'function') showToast('Demo notes saved to Field Insights');
 };
-window.deleteDemo=window.delDemo=function(id){ if(!confirm('Remove this demo?')) return; _dash.demos=(_dash.demos||[]).filter(function(x){return x.id!==id;}); dashSave(); var w=document.getElementById('demo-list-wrap'); if(w) w.innerHTML=buildDemoListHTML(); };
+window.deleteDemo=window.delDemo=function(id){ if(!confirm('Remove this demo?')) return; _dash.demos=(_dash.demos||[]).filter(function(x){return x.id!==id;}); dashSave(); var w=document.getElementById('demo-list-wrap'); if(w) w.innerHTML=buildDemoListHTML(); if(typeof anRefreshCommissionTrackerUI==='function') anRefreshCommissionTrackerUI(); };
 window.editDemo=function(id){ openAddDemo(id); };
 window.updateDemoStatus=window.updDemoStatus;
 
@@ -7573,8 +7627,75 @@ function buildShowRateHTML() {
 }
 
 // ── Demo modal (add/edit) ─────────────────────────────────────
+window.anOnDemoProspectNameInput = function(el) {
+  var q = el ? el.value.trim() : '';
+  var list = document.getElementById('dm-prospect-suggest');
+  var leadIdEl = document.getElementById('dm-lead-id');
+  if (!list) return;
+  if (q.length < 1) {
+    list.style.display = 'none';
+    list.innerHTML = '';
+    if (leadIdEl) leadIdEl.value = '';
+    return;
+  }
+  if (leadIdEl && leadIdEl.value) {
+    var linked = typeof AN !== 'undefined' && AN.leads ? AN.leads.find(function(l) { return l.id === leadIdEl.value; }) : null;
+    if (linked) {
+      var linkedName = ((linked.firstName || '') + ' ' + (linked.lastName || '')).trim();
+      var linkedDisplay = linkedName + (linked.company ? ' @ ' + linked.company : '');
+      if (linkedDisplay.toLowerCase() === q.toLowerCase() || linkedName.toLowerCase() === q.toLowerCase()) {
+        list.style.display = 'none';
+        list.innerHTML = '';
+        return;
+      }
+    }
+    leadIdEl.value = '';
+  }
+  var suggestions = typeof anGetContactNameSuggestions === 'function' ? anGetContactNameSuggestions(q, '', 10) : [];
+  var suggestStyle = 'display:block;width:100%;text-align:left;padding:9px 12px;border:none;background:transparent;font-size:13px;font-family:inherit;cursor:pointer;color:#09090b;';
+  var html = suggestions.map(function(s) {
+    var safeId = (s.id || '').replace(/'/g, "\\'");
+    return '<button type="button" onmousedown="event.preventDefault();anSelectDemoProspectLead(\'' + safeId + '\')" style="' + suggestStyle + '" onmouseover="this.style.background=\'#f5f3ff\'" onmouseout="this.style.background=\'transparent\'">'
+      + '<span style="font-weight:700;">' + anEsc(s.name) + '</span>'
+      + '<span style="display:block;font-size:11px;color:#71717a;margin-top:2px;">' + anEsc(s.summary) + '</span>'
+      + '</button>';
+  }).join('');
+  var safeQ = q.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  html += '<button type="button" onmousedown="event.preventDefault();anSelectDemoProspectLead(\'\',\'' + safeQ + '\')" style="' + suggestStyle + 'border-top:1px solid #f0f0f5;color:#6366f1;font-weight:700;" onmouseover="this.style.background=\'#f5f3ff\'" onmouseout="this.style.background=\'transparent\'">'
+    + '➕ New prospect: <span style="font-weight:800;">' + anEsc(q) + '</span>'
+    + '</button>';
+  list.innerHTML = html;
+  list.style.display = suggestions.length || q ? 'block' : 'none';
+};
+
+window.anSelectDemoProspectLead = function(leadId, typedName) {
+  var list = document.getElementById('dm-prospect-suggest');
+  if (list) { list.style.display = 'none'; list.innerHTML = ''; }
+  var nameEl = document.getElementById('dm-n');
+  var leadIdEl = document.getElementById('dm-lead-id');
+  if (leadId && typeof AN !== 'undefined' && AN.leads) {
+    var lead = AN.leads.find(function(l) { return l.id === leadId; });
+    if (lead) {
+      var fullName = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim();
+      var display = fullName + (lead.company ? ' @ ' + lead.company : '');
+      if (nameEl) nameEl.value = display || fullName;
+      if (leadIdEl) leadIdEl.value = lead.id;
+      var stateEl = document.getElementById('dm-s');
+      var sizeEl = document.getElementById('dm-z');
+      if (stateEl && lead.state) stateEl.value = lead.state;
+      if (sizeEl && lead.size) sizeEl.value = lead.size;
+      return;
+    }
+  }
+  if (leadIdEl) leadIdEl.value = '';
+  if (nameEl && typedName) nameEl.value = typedName;
+};
+
 window.openAddDemo=function(editId){
+  var dmOpts = window._dmOpenOpts || {};
+  window._dmOpenOpts = null;
   var ex=editId?(_dash.demos||[]).filter(function(d){return d.id===editId;})[0]:null;
+  if (ex && dmOpts.sdrEmail && !ex.sdrEmail) ex = Object.assign({}, ex, { sdrEmail: dmOpts.sdrEmail });
   var old=document.getElementById('dm-modal'); if(old) old.remove();
   var STAGES=['booked','showed','noshow','rescheduled'], SLABELS={booked:'Booked',showed:'Demo Completed',noshow:'No Show',rescheduled:'Rescheduled'};
   var stateOpts='<option value="">State...</option>'+(typeof US_STATES!=='undefined'?US_STATES:[]).map(function(s){return '<option value="'+s+'"'+(ex&&ex.state===s?' selected':'')+'>'+s+'</option>';}).join('');
@@ -7583,6 +7704,9 @@ window.openAddDemo=function(editId){
   var isComplete = ex && ex.status === 'showed';
   var initContacts = (ex && ex.contacts && ex.contacts.length) ? ex.contacts.slice() : [{ name: (ex && ex.name) ? ex.name : '', title: '', phone: '', email: '' }];
   var initCompany = (ex && ex.company) ? ex.company : '';
+  var defaultDate = (ex && ex.scheduledDate) ? ex.scheduledDate : (dmOpts.scheduledDate || (typeof anLocalDateStr==='function'?anLocalDateStr():new Date().toISOString().substring(0,10)));
+  var presetSdr = (ex && ex.sdrEmail) || dmOpts.sdrEmail || '';
+  var presetLeadId = (ex && ex.leadId) || '';
   if (!initCompany && ex && ex.name && ex.name.indexOf(' @ ') >= 0) {
     initCompany = ex.name.split(' @ ').slice(1).join(' @ ').trim();
     if (!ex.contacts || !ex.contacts.length) initContacts[0].name = ex.name.split(' @ ')[0].trim();
@@ -7591,15 +7715,21 @@ window.openAddDemo=function(editId){
     ? anBuildDemoContactsFieldsHTML('dm', initContacts, initCompany) : '';
   var ov=document.createElement('div'); ov.id='dm-modal'; ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
   ov.innerHTML='<div style="background:#fff;border-radius:14px;padding:24px;width:540px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
+    +'<input type="hidden" id="dm-lead-id" value="'+anEsc(presetLeadId)+'">'
+    +'<input type="hidden" id="dm-sdr-email" value="'+anEsc(presetSdr)+'">'
+    +'<input type="hidden" id="dm-booked-date-preset" value="'+anEsc(dmOpts.bookedDate || (ex && ex.bookedDate ? String(ex.bookedDate).slice(0,10) : ''))+'">'
+    +'<input type="hidden" id="dm-from-commission" value="'+(dmOpts.fromCommission ? '1' : '')+'">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;"><div style="font-size:16px;font-weight:800;">'+(editId?'Edit Demo':'Log Demo')+'</div>'
     +'<button onclick="document.getElementById(\'dm-modal\').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#a1a1aa;">&#x2715;</button></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">'
-    +'<div id="dm-simple-prospect" style="grid-column:1/-1;'+(isComplete?'display:none;':'')+'"><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Prospect Name *</label>'
-    +'<input id="dm-n" type="text" value="'+(ex?anEsc(ex.name):'')+'" placeholder="Company or person" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"></div>'
+    +'<div id="dm-simple-prospect" style="grid-column:1/-1;'+(isComplete?'display:none;':'')+'"><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Prospect / Lead *</label>'
+    +'<div style="position:relative;"><input id="dm-n" type="text" value="'+(ex?anEsc(ex.name):'')+'" placeholder="Search existing leads or type new name…" autocomplete="off" oninput="anOnDemoProspectNameInput(this)" onfocus="anOnDemoProspectNameInput(this)" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">'
+    +'<div id="dm-prospect-suggest" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1.5px solid #e4e4e7;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);max-height:220px;overflow-y:auto;z-index:10050;"></div></div>'
+    +'<div style="font-size:10px;color:#a1a1aa;margin-top:4px;">Start typing to link an existing CRM lead, or enter a new prospect.</div></div>'
     +contactsPanelHTML
     +'<div><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">State</label><select id="dm-s" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;cursor:pointer;">'+stateOpts+'</select></div>'
     +'<div><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Size</label><select id="dm-z" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;cursor:pointer;">'+sizeOpts+'</select></div>'
-    +'<div><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Scheduled Date</label><input id="dm-d" type="date" value="'+(ex&&ex.scheduledDate?ex.scheduledDate:new Date().toISOString().substring(0,10))+'" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"></div>'
+    +'<div><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Scheduled Date</label><input id="dm-d" type="date" value="'+defaultDate+'" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"></div>'
     +'<div><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Status</label><select id="dm-st" onchange="anToggleDemoContactsUI()" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;cursor:pointer;">'+statusOpts+'</select></div>'
     +'<div style="grid-column:1/-1;"><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Notes</label>'
     +'<textarea id="dm-nt" rows="2" placeholder="Pain points, outcome, next step..." style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;">'+(ex&&ex.notes?anEsc(ex.notes):'')+'</textarea></div>'
@@ -7666,6 +7796,16 @@ window.saveDemoEntry=function(editId,addPipeline){
   var prevDemo = editId ? (_dash.demos || []).filter(function(x){ return x.id === editId; })[0] : null;
   var prevStatus = prevDemo ? prevDemo.status : '';
   var myEmail = (typeof AN !== 'undefined' && AN.currentRepEmail) ? AN.currentRepEmail.toLowerCase() : '';
+  var presetSdrEl = document.getElementById('dm-sdr-email');
+  var presetBookedEl = document.getElementById('dm-booked-date-preset');
+  var leadIdPresetEl = document.getElementById('dm-lead-id');
+  var fromCommissionEl = document.getElementById('dm-from-commission');
+  var assignedSdr = presetSdrEl && presetSdrEl.value ? presetSdrEl.value.toLowerCase() : '';
+  if (!assignedSdr && window._dmPendingSdrRefresh) assignedSdr = String(window._dmPendingSdrRefresh).toLowerCase();
+  if (!assignedSdr) assignedSdr = myEmail;
+  var bookedPreset = presetBookedEl && presetBookedEl.value ? presetBookedEl.value : '';
+  var linkedLeadId = leadIdPresetEl ? leadIdPresetEl.value.trim() : '';
+  var fromCommission = fromCommissionEl && fromCommissionEl.value === '1';
   var displayName = isCompleteForm
     ? (typeof anDemoDisplayName === 'function' ? anDemoDisplayName(collected.company, collected.contacts, '') : collected.contacts[0].name)
     : n.value.trim();
@@ -7679,12 +7819,13 @@ window.saveDemoEntry=function(editId,addPipeline){
     status:newStatus,
     notes:nt?nt.value.trim():'',
     id:editId||('demo-'+Date.now()),
-    bookedDate:prevDemo && prevDemo.bookedDate ? prevDemo.bookedDate : (typeof anLocalDateStr==='function'?anLocalDateStr():new Date().toISOString().split('T')[0]),
-    sdrEmail: (prevDemo && prevDemo.sdrEmail) || myEmail,
-    aeEmail: (prevDemo && prevDemo.aeEmail) || ''
+    bookedDate: prevDemo && prevDemo.bookedDate ? prevDemo.bookedDate : (bookedPreset || (typeof anLocalDateStr==='function'?anLocalDateStr():new Date().toISOString().split('T')[0])),
+    sdrEmail: (prevDemo && prevDemo.sdrEmail) || assignedSdr,
+    aeEmail: (prevDemo && prevDemo.aeEmail) || '',
+    leadId: linkedLeadId || (prevDemo && prevDemo.leadId) || null
   };
   if (prevDemo) {
-    demo.leadId = prevDemo.leadId;
+    demo.leadId = demo.leadId || prevDemo.leadId;
     demo.completedDate = prevDemo.completedDate;
     demo.sdrName = prevDemo.sdrName;
     demo.aeName = prevDemo.aeName;
@@ -7706,6 +7847,10 @@ window.saveDemoEntry=function(editId,addPipeline){
       var saved = (_dash.demos || []).filter(function(x){ return x.id === demo.id; })[0] || demo;
       anOpenDemoCompleteOwnersModal(saved, { createOpp: true });
     }
+    if (typeof anRefreshSdrCommissionAfterDemo === 'function') {
+      anRefreshSdrCommissionAfterDemo(assignedSdr || window._dmPendingSdrRefresh);
+    }
+    window._dmPendingSdrRefresh = null;
     return;
   }
 
@@ -7718,7 +7863,9 @@ window.saveDemoEntry=function(editId,addPipeline){
   }
   dashSave();
   var m2=document.getElementById('dm-modal');if(m2) m2.remove();
-  switchChartPane('demos');
+  if (!fromCommission) {
+    if (typeof switchChartPane === 'function') switchChartPane('demos');
+  }
   if(typeof dashRefreshTopStatTiles==='function') dashRefreshTopStatTiles();
   var w=document.getElementById('demo-list-wrap');
   if(w&&typeof buildDemoListHTML==='function') w.innerHTML=buildDemoListHTML();
@@ -7733,6 +7880,14 @@ window.saveDemoEntry=function(editId,addPipeline){
   if (typeof renderLeadsTable === 'function') renderLeadsTable();
 
   if(typeof showToast==='function') showToast(editId?'Demo updated!':'Demo logged!');
+  if (fromCommission || assignedSdr || window._dmPendingSdrRefresh || document.querySelector('[id^="sdr-monthly-tracker-"]')) {
+    if (typeof anRefreshSdrCommissionAfterDemo === 'function') {
+      anRefreshSdrCommissionAfterDemo(assignedSdr || window._dmPendingSdrRefresh);
+    } else if (typeof anRefreshCommissionTrackerUI === 'function') {
+      anRefreshCommissionTrackerUI();
+    }
+  }
+  window._dmPendingSdrRefresh = null;
 };
 
 // ── Reset activity ────────────────────────────────────────────
@@ -7877,7 +8032,7 @@ function buildPipelineHTML() {
     var stageLabel = typeof anDisplayPipelineStage === 'function' ? anDisplayPipelineStage(deal.stage) : deal.stage;
     var sc = SC[deal.stage] || SC[stageLabel] || '#a1a1aa';
     var clickAttr = deal.leadId
-      ? ' onclick="showSection(\'opportunities\',null);setTimeout(function(){anOpenOppRecord(\''+String(deal.leadId).replace(/'/g, "\\'")+'\')},200)"'
+      ? ' onclick="anOpenTrackerDealRef(\'opp\',\''+String(deal.leadId).replace(/'/g, "\\'")+'\')"'
       : '';
     return '<div'+clickAttr+' style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f4f4f5;'+(deal.leadId?'cursor:pointer;':'')+'">'
       +'<div style="flex:1;min-width:0;">'
@@ -7891,8 +8046,9 @@ function buildPipelineHTML() {
       +(deal.notes?'<div style="font-size:10px;color:#a1a1aa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+deal.notes+'</div>':'')
       +'</div>'
       +'<span style="font-size:10px;font-weight:700;color:'+sc+';background:'+sc+'18;padding:2px 8px;border-radius:10px;white-space:nowrap;">'+stageLabel+'</span>'
-      +'<button onclick="dashAddDeal('+i+')" style="background:none;border:1px solid #e4e4e7;color:#6366f1;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;">Edit</button>'
-      +'<button onclick="dashDeleteDeal('+i+')" style="background:none;border:none;color:#d4d4d8;cursor:pointer;font-size:11px;padding:2px 4px;">&#x2715;</button>'
+      +'<button onclick="event.stopPropagation();dashAddDeal('+i+')" style="background:none;border:1px solid #e4e4e7;color:#6366f1;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;">Edit</button>'
+      +'<button onclick="event.stopPropagation();dashDemoteDealToLead('+i+')" style="background:none;border:1px solid #fde68a;color:#b45309;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;">To Lead</button>'
+      +'<button onclick="event.stopPropagation();dashDeleteDeal('+i+')" style="background:none;border:none;color:#d4d4d8;cursor:pointer;font-size:11px;padding:2px 4px;flex-shrink:0;" title="Remove deal">&#x2715;</button>'
       +'</div>';
   }).join('') + '</div>';
 }
@@ -7996,9 +8152,33 @@ window.dashAskAI = function() {
   }).catch(function(e){ var el=document.getElementById(tid); if(el){el.style.color='#fca5a5';el.textContent='Error: '+e.message;} });
 };
 
-window.dashDeleteDeal = function(idx) {
-  if (!confirm('Remove this deal?')) return;
-  _dash.pipeline.splice(idx, 1); dashSave(); renderSalesDashboard();
+window.dashDeleteDeal = function(idx, opts) {
+  if (typeof _dash === 'undefined' || !_dash.pipeline) return;
+  opts = opts || {};
+  var deal = _dash.pipeline[idx];
+  if (!deal) return;
+  if (!opts.skipConfirm && !confirm('Remove "' + (deal.name || 'this deal') + '" from pipeline?\n\nThe linked contact will be sent back to Lead Pipeline (not deleted).')) return;
+
+  var leadId = deal.leadId;
+  _dash.pipeline.splice(idx, 1);
+
+  if (leadId && typeof AN !== 'undefined' && AN.leads) {
+    var lead = AN.leads.find(function(l) { return l.id === leadId; });
+    if (lead && typeof anDemoteOpportunityToLead === 'function') {
+      anDemoteOpportunityToLead(lead, {
+        fromPipelineStage: deal.stage,
+        sdrEmail: deal.sdrEmail,
+        aeEmail: deal.aeEmail,
+        save: false
+      });
+    }
+  }
+
+  if (typeof dashSave === 'function') dashSave();
+  if (typeof AN !== 'undefined' && AN.save) AN.save();
+  if (typeof dashRefreshPipelineUI === 'function') dashRefreshPipelineUI('pipeline');
+  else if (typeof renderSalesDashboard === 'function') renderSalesDashboard();
+  if (typeof showToast === 'function') showToast('Deal removed — contact is back in Lead Pipeline');
 };
 
 </script>
@@ -9489,8 +9669,8 @@ function anEnsureCommissionLedger() {
 // Per-close commission amounts based on current rate inputs
 function anCommissionPerClose(size, contractType) {
   var r = (typeof getRates === 'function') ? getRates() : { solo: 0.11, small: 0.10, large: 0.08 };
-  var base = { solo: 79, small: 247, large: 597 }[size] || 79;
-  var rate = (r[size] != null ? r[size] : (r.solo != null ? r.solo : 0.11));
+  var base = { solo: 79, small: 247, large: 597, enterprise: 800 }[size] || 79;
+  var rate = (r[size] != null ? r[size] : (size === 'enterprise' ? (r.large != null ? r.large : 0.08) : (r.solo != null ? r.solo : 0.11)));
   var monthly = base * rate;
   return contractType === 'arr' ? monthly * 12 : monthly;
 }
@@ -9498,16 +9678,18 @@ function anCommissionPerClose(size, contractType) {
 window.anAddCommissionDeal = function(deal, opts) {
   opts = opts || {};
   var ledger = anEnsureCommissionLedger();
-  // De-dupe by leadId — re-syncing the same CRM deal shouldn't double-count
   if (deal.leadId) {
     var existing = ledger.find(function(d){ return d.leadId === deal.leadId; });
     if (existing) {
-      // Update in place (e.g. size/contract type changed) but keep original closedDate
       existing.name = deal.name || existing.name;
       existing.size = deal.size || existing.size;
-      existing.contractType = deal.contractType || existing.contractType;
+      existing.contractType = anNormalizeContractType(deal.contractType || existing.contractType);
+      if (deal.status) existing.status = deal.status;
+      if (deal.closedDate) existing.closedDate = deal.closedDate;
+      existing.source = deal.source || existing.source;
       if (!opts.skipSave && typeof dashSave === 'function') dashSave();
-      if (typeof anRefreshCommissionLedgerUI === 'function') anRefreshCommissionLedgerUI();
+      if (typeof anRefreshCommissionTrackerUI === 'function') anRefreshCommissionTrackerUI();
+      else if (typeof anRefreshCommissionLedgerUI === 'function') anRefreshCommissionLedgerUI();
       return existing;
     }
   }
@@ -9516,14 +9698,16 @@ window.anAddCommissionDeal = function(deal, opts) {
     leadId: deal.leadId || null,
     name: deal.name || 'Deal',
     size: deal.size || 'solo',
-    contractType: deal.contractType || 'mrr',
+    contractType: anNormalizeContractType(deal.contractType || 'mrr'),
     closedDate: deal.closedDate || new Date().toISOString(),
+    status: deal.status || 'closed',
     source: deal.source || 'manual',
     notes: deal.notes || ''
   };
   ledger.unshift(entry);
   if (!opts.skipSave && typeof dashSave === 'function') dashSave();
-  if (typeof anRefreshCommissionLedgerUI === 'function') anRefreshCommissionLedgerUI();
+  if (typeof anRefreshCommissionTrackerUI === 'function') anRefreshCommissionTrackerUI();
+  else if (typeof anRefreshCommissionLedgerUI === 'function') anRefreshCommissionLedgerUI();
   return entry;
 };
 
@@ -9534,7 +9718,8 @@ window.anRemoveCommissionDeal = function(id) {
   if (!confirm('Remove "' + (ledger[idx].name || 'this deal') + '" from your commission ledger?')) return;
   ledger.splice(idx, 1);
   if (typeof dashSave === 'function') dashSave();
-  if (typeof anRefreshCommissionLedgerUI === 'function') anRefreshCommissionLedgerUI();
+  if (typeof anRefreshCommissionTrackerUI === 'function') anRefreshCommissionTrackerUI();
+  else if (typeof anRefreshCommissionLedgerUI === 'function') anRefreshCommissionLedgerUI();
 };
 
 // Closes logged this month (from ledger), and total commission this month
@@ -9543,7 +9728,7 @@ window.anCommissionThisMonthStats = function() {
   var now = new Date();
   var ym = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
   var monthDeals = ledger.filter(function(d) {
-    return String(d.closedDate || '').slice(0,7) === ym;
+    return String(d.closedDate || '').slice(0,7) === ym && (d.status || 'closed') === 'closed';
   });
   var totalComm = monthDeals.reduce(function(s, d) {
     return s + anCommissionPerClose(d.size, d.contractType);
@@ -9569,6 +9754,7 @@ window.anOpenManualDealModal = function() {
     + '<option value="solo">Solo Agent ($79/mo)</option>'
     + '<option value="small">Small Agency ($247/mo)</option>'
     + '<option value="large">Large Agency ($597/mo)</option>'
+    + '<option value="enterprise">Enterprise Account</option>'
     + '</select>'
     + '<label style="font-size:11px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">Contract Type</label>'
     + '<div style="display:flex;gap:8px;margin-bottom:12px;">'
@@ -9603,39 +9789,1474 @@ window.anRefreshCommissionLedgerUI = function() {
   if (typeof renderPlanner === 'function') renderPlanner();
 };
 
+window.anRefreshCommissionTrackerUI = function() {
+  if (document.getElementById('ae-monthly-tracker') && typeof anRenderAeMonthlyTracker === 'function') {
+    anRenderAeMonthlyTracker();
+  }
+  if (typeof anRenderSdrMonthlyTracker === 'function') anRenderSdrMonthlyTracker();
+  var list = document.getElementById('commission-ledger-list');
+  if (list && typeof anBuildCommissionLedgerHTML === 'function') list.innerHTML = anBuildCommissionLedgerHTML();
+  if (typeof renderPlanner === 'function') renderPlanner();
+};
+
+window.anRefreshSdrCommissionAfterDemo = function(sdrEmail) {
+  if (typeof anRefreshCommissionTrackerUI === 'function') anRefreshCommissionTrackerUI();
+  var em = (sdrEmail || '').toLowerCase();
+  if (em && typeof anRenderOneSdrMonthlyTracker === 'function' && document.getElementById(anSdrTrackerWrapId(em))) {
+    anRenderOneSdrMonthlyTracker(em);
+  }
+};
+
 function anBuildCommissionLedgerHTML() {
   var ledger = anEnsureCommissionLedger();
   if (!ledger.length) {
     return '<div style="text-align:center;padding:24px;color:#a1a1aa;font-size:12.5px;">No closed deals logged yet. Deals closed in the CRM appear here automatically.</div>';
   }
-  var sizeLabel = { solo: 'Solo Agent', small: 'Small Agency', large: 'Large Agency' };
-  return ledger.slice(0, 50).map(function(d) {
+  var sizeLabel = { solo: 'Solo Agent', small: 'Small Agency', large: 'Large Agency', enterprise: 'Enterprise' };
+  return ledger.filter(function(d) { return (d.status || 'closed') === 'closed'; }).slice(0, 50).map(function(d) {
     var comm = anCommissionPerClose(d.size, d.contractType);
     var dateStr = d.closedDate ? String(d.closedDate).slice(0,10) : '';
     var sourceTag = d.source === 'crm'
       ? '<span style="background:#eef2ff;color:#6366f1;border-radius:10px;padding:1px 7px;font-size:9px;font-weight:700;">CRM</span>'
       : '<span style="background:#f3f4f6;color:#71717a;border-radius:10px;padding:1px 7px;font-size:9px;font-weight:700;">MANUAL</span>';
-    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid #e4e4e7;border-radius:8px;margin-bottom:6px;">'
+    return '<div onclick="anOpenTrackerDealRef(\'' + (d.leadId ? 'opp' : 'comm-ae') + '\',\'' + (d.leadId || d.id).replace(/'/g, "\\'") + '\')" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid #e4e4e7;border-radius:8px;margin-bottom:6px;cursor:pointer;" onmouseover="this.style.borderColor=\'#6366f1\'" onmouseout="this.style.borderColor=\'#e4e4e7\'">'
       + '<div style="min-width:0;">'
-      + '<div style="font-size:13px;font-weight:700;color:#09090b;display:flex;align-items:center;gap:6px;">'+anEsc(d.name)+sourceTag+'</div>'
+      + '<div style="font-size:13px;font-weight:700;color:#09090b;display:flex;align-items:center;gap:6px;">'+anEsc(d.name)+sourceTag+' <span style="font-size:10px;color:#a1a1aa;font-weight:600;">↗ open</span></div>'
       + '<div style="font-size:11px;color:#71717a;margin-top:2px;">'+(sizeLabel[d.size]||d.size)+' · '+(d.contractType==='arr'?'Annual':'Monthly')+' · '+dateStr+'</div>'
       + '</div>'
-      + '<div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">'
+      + '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">'
       + '<div style="font-size:13px;font-weight:800;color:#10b981;">+'+fmtDol(comm)+(d.contractType==='arr'?'':'/mo')+'</div>'
-      + '<button onclick="anRemoveCommissionDeal(\''+d.id+'\')" style="background:none;border:none;color:#a1a1aa;cursor:pointer;font-size:13px;padding:4px;" title="Remove">✕</button>'
+      + anBuildTrackerDealActionButtons({ leadId: d.leadId, commissionDealId: d.id, refKind: d.leadId ? 'opp' : 'comm-ae', refId: d.leadId || d.id, name: d.name }, 'ae')
       + '</div></div>';
   }).join('');
 }
 
-// ── 3. COMMISSION PLANNER (replaces goal calculator) ─────────
-window.buildCommissionHTML = function() {
-  return '<div class="page-header">'
-    + '<div class="page-label" style="color:#10b981;">Private \u00b7 You Only</div>'
-    + '<h1>Commission Plan</h1>'
-    + '</div>'
-    + '<div class="content" style="max-width:1100px;">'
+// ── MONTHLY COMMISSION TRACKER + SDR BONUSES ─────────────────
+window.SDR_COMMISSION_REPS = [
+  { email: 'joel@insurewithcompass.com', name: 'Joel', firstName: 'Joel', lastName: '', title: 'SDR' },
+  { email: 'andy@insurewithcompass.com', name: 'Andy', firstName: 'Andy', lastName: '', title: 'SDR' }
+];
+window.COMMISSION_AE_EMAILS = ['asmithee@insurewithcompass.com'];
+window.COMMISSION_AE_REPS = [
+  { email: 'asmithee@insurewithcompass.com', firstName: 'Adrian', lastName: 'Smithee', title: 'AE / Admin' }
+];
 
-    // Contract type toggle
+window.anIsAdminCommissionView = function() {
+  return typeof AN !== 'undefined' && !!AN.isAdmin;
+};
+
+window.isAeCommissionUser = function() {
+  if (anIsAdminCommissionView()) return true;
+  var em = (typeof _currentUser !== 'undefined' && _currentUser && _currentUser.email || '').toLowerCase();
+  return (window.COMMISSION_AE_EMAILS || []).some(function(e) { return String(e).toLowerCase() === em; });
+};
+window.isSdrCommissionUser = function() {
+  var em = (typeof _currentUser !== 'undefined' && _currentUser && _currentUser.email || '').toLowerCase();
+  return (window.SDR_COMMISSION_REPS || []).some(function(r) {
+    return String(r.email).toLowerCase() === em || em.split('@')[0].indexOf(String(r.name).toLowerCase()) >= 0;
+  });
+};
+window.isCommissionUser = function() {
+  if (anIsAdminCommissionView()) return true;
+  return isAeCommissionUser() || isSdrCommissionUser();
+};
+window.checkCommissionAccess = function() {
+  var wrap = document.getElementById('nav-commission-wrap');
+  if (wrap) wrap.style.display = isCommissionUser() ? 'block' : 'none';
+};
+
+window.anIsSdrCommissionRep = function(email) {
+  if (!email) return false;
+  var em = String(email).toLowerCase();
+  return (window.SDR_COMMISSION_REPS || []).some(function(r) {
+    return String(r.email).toLowerCase() === em || em.split('@')[0].indexOf(String(r.name).toLowerCase()) >= 0;
+  });
+};
+
+window.anDateInMonth = function(dateStr, monthKey) {
+  if (!dateStr || !monthKey) return false;
+  return String(dateStr).slice(0, 7) === monthKey;
+};
+
+window.anSplitRepProfile = function(email) {
+  var em = (email || '').toLowerCase();
+  var rep = (window.SDR_COMMISSION_REPS || []).find(function(r) {
+    return String(r.email).toLowerCase() === em;
+  });
+  if (rep && (rep.firstName || rep.lastName)) {
+    return {
+      firstName: rep.firstName || rep.name || '',
+      lastName: rep.lastName || '',
+      title: rep.title || 'SDR'
+    };
+  }
+  var full = typeof anGetRepName === 'function' ? anGetRepName(email) : (email || '').split('@')[0];
+  var parts = String(full || '').trim().split(/\s+/);
+  return {
+    firstName: parts[0] || full || '—',
+    lastName: parts.slice(1).join(' ') || '',
+    title: (rep && rep.title) || 'SDR'
+  };
+};
+
+window.anGetSdrRepsForTracker = function(filterRep) {
+  var reps = (window.SDR_COMMISSION_REPS || []).slice();
+  if (typeof isSdrCommissionUser === 'function' && isSdrCommissionUser() && typeof isAeCommissionUser === 'function' && !isAeCommissionUser()) {
+    var em = (typeof _currentUser !== 'undefined' && _currentUser && _currentUser.email || '').toLowerCase();
+    reps = reps.filter(function(r) {
+      return String(r.email).toLowerCase() === em || em.split('@')[0].indexOf(String(r.name).toLowerCase()) >= 0;
+    });
+    if (!reps.length) reps = [{ email: em, name: typeof anGetRepName === 'function' ? anGetRepName(em) : em.split('@')[0], title: 'SDR' }];
+  } else if (filterRep && filterRep !== 'all') {
+    reps = reps.filter(function(r) { return String(r.email).toLowerCase() === String(filterRep).toLowerCase(); });
+  }
+  return reps;
+};
+
+window.anGetSdrDemosSetForMonth = function(sdrEmail, monthKey) {
+  var em = (sdrEmail || '').toLowerCase();
+  var demos = (typeof _dash !== 'undefined' && _dash.demos) ? _dash.demos.filter(function(d) { return d.source !== 'backfill'; }) : [];
+  return demos.filter(function(d) {
+    if ((d.sdrEmail || d._repEmail || '').toLowerCase() !== em) return false;
+    var booked = typeof dashDemoDate === 'function' ? dashDemoDate(d, 'bookedDate') : (d.bookedDate ? String(d.bookedDate).slice(0, 10) : '');
+    return anDateInMonth(booked, monthKey);
+  });
+};
+
+window.anOpenAddDemoForSdr = function(sdrEmail, monthKey, editId) {
+  var mk = monthKey || (typeof anGetTrackerMonthInfo === 'function' ? anGetTrackerMonthInfo(window._commTrackerMonthOffset || 0).key : '');
+  var defaultDate = mk ? (mk + '-15') : (typeof anLocalDateStr === 'function' ? anLocalDateStr() : new Date().toISOString().slice(0, 10));
+  var em = (sdrEmail || '').toLowerCase();
+  window._dmPendingSdrRefresh = em;
+  window._dmOpenOpts = {
+    sdrEmail: em,
+    bookedDate: defaultDate,
+    scheduledDate: defaultDate,
+    fromCommission: true
+  };
+  if (typeof openAddDemo === 'function') openAddDemo(editId || null);
+};
+
+window.anOpenSdrDemosSetModal = function(sdrEmail, monthKey) {
+  var em = (sdrEmail || '').toLowerCase();
+  var mk = monthKey || (typeof anGetTrackerMonthInfo === 'function' ? anGetTrackerMonthInfo(window._commTrackerMonthOffset || 0).key : '');
+  var month = typeof anGetTrackerMonthInfo === 'function' ? anGetTrackerMonthInfo(window._commTrackerMonthOffset || 0) : { label: mk };
+  var profile = typeof anSplitRepProfile === 'function' ? anSplitRepProfile(em) : { firstName: em.split('@')[0] };
+  var demos = anGetSdrDemosSetForMonth(em, mk);
+  var statusLbl = { booked: 'Booked', showed: 'Demo Completed', noshow: 'No Show', rescheduled: 'Rescheduled' };
+  var esc = function(v) { return String(v == null ? '' : v).replace(/'/g, "\\'"); };
+  var rows = demos.length ? demos.map(function(d) {
+    var booked = d.bookedDate ? String(d.bookedDate).slice(0, 10) : '—';
+    var sched = d.scheduledDate ? String(d.scheduledDate).slice(0, 10) : '—';
+    var st = statusLbl[d.status] || d.status || 'Booked';
+    var linked = d.leadId ? '<span style="font-size:9px;background:#eef2ff;color:#6366f1;border-radius:8px;padding:1px 6px;font-weight:700;margin-left:6px;">CRM</span>' : '';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid #e4e4e7;border-radius:8px;margin-bottom:8px;background:#fafafa;">'
+      + '<div style="flex:1;min-width:0;cursor:pointer;" onclick="document.getElementById(\'sdr-demos-set-modal\').remove();anOpenAddDemoForSdr(\'' + esc(em) + '\',\'' + esc(mk) + '\',\'' + esc(d.id) + '\')">'
+      + '<div style="font-size:13px;font-weight:700;color:#09090b;">' + anEsc(d.name) + linked + '</div>'
+      + '<div style="font-size:11px;color:#71717a;margin-top:2px;">Set ' + booked + ' · Scheduled ' + sched + ' · ' + st + '</div>'
+      + '</div>'
+      + '<div style="display:flex;gap:6px;flex-shrink:0;">'
+      + '<button onclick="anOpenAddDemoForSdr(\'' + esc(em) + '\',\'' + esc(mk) + '\',\'' + esc(d.id) + '\')" style="padding:5px 10px;border-radius:6px;border:1px solid #c7d2fe;background:#eef2ff;color:#6366f1;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">Edit</button>'
+      + '<button onclick="anDeleteDemoFromTracker(\'' + esc(d.id) + '\',\'' + esc(em) + '\',\'' + esc(mk) + '\')" style="padding:5px 10px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;color:#ef4444;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">Delete</button>'
+      + '</div></div>';
+  }).join('') : '<div style="text-align:center;padding:28px;color:#a1a1aa;font-size:12px;">No demos set this month yet.</div>';
+
+  var old = document.getElementById('sdr-demos-set-modal');
+  if (old) old.remove();
+  var ov = document.createElement('div');
+  ov.id = 'sdr-demos-set-modal';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:22000;display:flex;align-items:center;justify-content:center;';
+  ov.onclick = function(e) { if (e.target === ov) ov.remove(); };
+  ov.innerHTML = '<div style="background:#fff;border-radius:14px;padding:24px;width:520px;max-width:94vw;max-height:85vh;overflow-y:auto;font-family:inherit;" onclick="event.stopPropagation()">'
+    + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px;">'
+    + '<div><div style="font-size:16px;font-weight:800;color:#09090b;">Demos Set — ' + anEsc(profile.firstName || 'SDR') + '</div>'
+    + '<div style="font-size:12px;color:#71717a;margin-top:4px;">' + anEsc(month.label) + ' · ' + demos.length + ' demo' + (demos.length === 1 ? '' : 's') + '</div></div>'
+    + '<button onclick="document.getElementById(\'sdr-demos-set-modal\').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#a1a1aa;">✕</button>'
+    + '</div>'
+    + '<button onclick="document.getElementById(\'sdr-demos-set-modal\').remove();anOpenAddDemoForSdr(\'' + esc(em) + '\',\'' + esc(mk) + '\')" style="width:100%;padding:10px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:14px;">+ Log Demo</button>'
+    + rows
+    + '</div>';
+  document.body.appendChild(ov);
+};
+
+window.anDeleteDemoFromTracker = function(demoId, sdrEmail, monthKey) {
+  if (!confirm('Remove this demo from the tracker?')) return;
+  _dash.demos = (_dash.demos || []).filter(function(x) { return x.id !== demoId; });
+  if (typeof dashSave === 'function') dashSave();
+  if (typeof anRefreshSdrCommissionAfterDemo === 'function') anRefreshSdrCommissionAfterDemo(sdrEmail);
+  else if (typeof anRefreshCommissionTrackerUI === 'function') anRefreshCommissionTrackerUI();
+  var modal = document.getElementById('sdr-demos-set-modal');
+  if (modal) modal.remove();
+  if (sdrEmail && monthKey && typeof anOpenSdrDemosSetModal === 'function') anOpenSdrDemosSetModal(sdrEmail, monthKey);
+  if (typeof showToast === 'function') showToast('Demo removed');
+};
+
+window.anMarkSdrDemoCompleted = function(demoId, sdrEmail, opts) {
+  opts = opts || {};
+  var demo = (_dash.demos || []).find(function(d) { return d.id === demoId; });
+  if (!demo) return;
+  if (demo.status === 'showed') return;
+  var today = typeof anLocalDateStr === 'function' ? anLocalDateStr() : new Date().toISOString().slice(0, 10);
+  demo.status = 'showed';
+  demo.completedDate = today;
+  if (!demo.scheduledDate) {
+    demo.scheduledDate = demo.bookedDate ? String(demo.bookedDate).slice(0, 10) : today;
+  }
+  if (typeof dashSave === 'function') dashSave();
+  if (typeof anSyncDemoToOpportunity === 'function') {
+    anSyncDemoToOpportunity(demo);
+    if (typeof AN !== 'undefined' && AN.save) AN.save();
+    if (typeof dashSave === 'function') dashSave();
+  }
+  if (typeof renderOpportunities === 'function') renderOpportunities();
+  if (typeof anRefreshSdrCommissionAfterDemo === 'function') anRefreshSdrCommissionAfterDemo(sdrEmail);
+  if (typeof showToast === 'function') showToast('Demo completed — still counts toward demos set');
+};
+
+window.anMarkSdrDemoNoShow = function(demoId, sdrEmail) {
+  var demo = (_dash.demos || []).find(function(d) { return d.id === demoId; });
+  if (!demo) return;
+  var today = typeof anLocalDateStr === 'function' ? anLocalDateStr() : new Date().toISOString().slice(0, 10);
+  demo.status = 'noshow';
+  demo.completedDate = today;
+  if (!demo.scheduledDate) {
+    demo.scheduledDate = demo.bookedDate ? String(demo.bookedDate).slice(0, 10) : today;
+  }
+  if (typeof dashSave === 'function') dashSave();
+  if (typeof anRefreshSdrCommissionAfterDemo === 'function') anRefreshSdrCommissionAfterDemo(sdrEmail);
+  if (typeof showToast === 'function') showToast('Marked no show');
+};
+
+window.anSdrDemoDragStart = function(e, demoId) {
+  if (!e || !e.dataTransfer) return;
+  e.dataTransfer.setData('text/sdr-demo-id', demoId);
+  e.dataTransfer.effectAllowed = 'move';
+};
+
+window.anSdrDemoDragOver = function(e) {
+  if (e) { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'; }
+};
+
+window.anSdrDemoDropComplete = function(e, sdrEmail) {
+  if (e) e.preventDefault();
+  var demoId = e && e.dataTransfer ? e.dataTransfer.getData('text/sdr-demo-id') : '';
+  if (!demoId) return;
+  anMarkSdrDemoCompleted(demoId, sdrEmail);
+};
+
+window.anAgencySizeMeta = function(size) {
+  var map = {
+    solo: { id: 'solo', label: 'Solo Agent', short: 'Solo', color: '#6366f1', bg: '#eef2ff', border: '#c7d2fe' },
+    small: { id: 'small', label: 'Small Agency', short: 'Small', color: '#10b981', bg: '#ecfdf5', border: '#a7f3d0' },
+    large: { id: 'large', label: 'Large Agency', short: 'Large', color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
+    enterprise: { id: 'enterprise', label: 'Enterprise', short: 'Enterprise', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' }
+  };
+  return map[size] || map.solo;
+};
+
+window.anDemoAgencySize = function(d) {
+  if (d && d.size) return d.size;
+  if (d && d.leadId && typeof AN !== 'undefined' && Array.isArray(AN.leads)) {
+    var lead = AN.leads.find(function(l) { return l.id === d.leadId; });
+    if (lead && lead.size) return lead.size;
+  }
+  return 'solo';
+};
+
+window.anBuildSdrDemoFlowCardHTML = function(d, sdrEmail, monthKey, zone) {
+  var esc = function(v) { return String(v == null ? '' : v).replace(/'/g, "\\'"); };
+  var em = esc(sdrEmail);
+  var mk = esc(monthKey);
+  var st = d.status || 'booked';
+  var statusLbl = { booked: 'Booked', showed: 'Completed', noshow: 'No Show', rescheduled: 'Rescheduled' };
+  var badgeColor = st === 'showed' ? '#10b981' : (st === 'noshow' ? '#ef4444' : '#8b5cf6');
+  var szMeta = anAgencySizeMeta(anDemoAgencySize(d));
+  var booked = d.bookedDate ? String(d.bookedDate).slice(0, 10) : '—';
+  var sched = d.scheduledDate ? String(d.scheduledDate).slice(0, 10) : '—';
+  var linked = d.leadId ? '<span style="font-size:9px;background:#eef2ff;color:#6366f1;border-radius:8px;padding:1px 6px;font-weight:700;margin-left:6px;">CRM</span>' : '';
+  var sizeBadge = '<span style="font-size:9px;font-weight:700;color:' + szMeta.color + ';background:' + szMeta.bg + ';border:1px solid ' + szMeta.border + ';border-radius:8px;padding:1px 6px;margin-left:6px;">' + szMeta.short + '</span>';
+  var draggable = (zone === 'set' && st !== 'showed' && st !== 'noshow');
+  var actions = zone === 'set' && st !== 'showed' && st !== 'noshow'
+    ? '<button onclick="event.stopPropagation();anMarkSdrDemoCompleted(\'' + esc(d.id) + '\',\'' + em + '\')" style="padding:4px 8px;border-radius:6px;border:none;background:#10b981;color:#fff;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">Complete</button>'
+      + '<button onclick="event.stopPropagation();anMarkSdrDemoNoShow(\'' + esc(d.id) + '\',\'' + em + '\')" style="padding:4px 8px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;color:#ef4444;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">No Show</button>'
+    : '';
+  if (zone === 'set') {
+    actions += '<button onclick="event.stopPropagation();anOpenAddDemoForSdr(\'' + em + '\',\'' + mk + '\',\'' + esc(d.id) + '\')" style="padding:4px 8px;border-radius:6px;border:1px solid #c7d2fe;background:#eef2ff;color:#6366f1;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">Edit</button>';
+  }
+  return '<div class="sdr-demo-flow-card" data-demo-id="' + anEsc(d.id) + '"'
+    + ' style="padding:10px 12px;border:1px solid ' + szMeta.border + ';border-left:3px solid ' + szMeta.color + ';border-radius:8px;background:' + szMeta.bg + ';' + (draggable ? 'cursor:grab;' : 'cursor:default;') + '"'
+    + (draggable ? ' draggable="true" ondragstart="anSdrDemoDragStart(event,\'' + esc(d.id) + '\')"' : '')
+    + ' onmouseover="this.style.borderColor=\'' + szMeta.color + '\'" onmouseout="this.style.borderColor=\'' + szMeta.border + '\';this.style.borderLeftColor=\'' + szMeta.color + '\'">'
+    + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">'
+    + '<div style="flex:1;min-width:0;">'
+    + '<div style="font-size:12px;font-weight:700;color:#09090b;">' + anEsc(d.name) + sizeBadge + linked + '</div>'
+    + '<div style="font-size:10px;color:#71717a;margin-top:3px;">Set ' + booked + ' · Scheduled ' + sched + '</div>'
+    + '<span style="display:inline-block;margin-top:6px;font-size:9px;font-weight:700;color:' + badgeColor + ';background:' + badgeColor + '18;border-radius:8px;padding:2px 8px;">' + (statusLbl[st] || st) + '</span>'
+    + (st === 'showed' ? '<span style="display:inline-block;margin-top:6px;margin-left:6px;font-size:9px;color:#71717a;">Still counts as set</span>' : '')
+    + '</div>'
+    + '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">' + actions + '</div>'
+    + '</div></div>';
+};
+
+window.anBuildSdrDemoFlowBoardHTML = function(sdrEmail, monthKey, opts) {
+  opts = opts || {};
+  var stats = anComputeSdrMonthStats(sdrEmail, monthKey);
+  var profile = typeof anSplitRepProfile === 'function' ? anSplitRepProfile(sdrEmail) : { firstName: 'SDR' };
+  var list = stats.demosSetList || [];
+  var completed = stats.demosCompletedList || [];
+  var pending = list.filter(function(d) { return d.status !== 'showed' && d.status !== 'noshow'; });
+  var esc = function(v) { return String(v == null ? '' : v).replace(/'/g, "\\'"); };
+  var em = esc(sdrEmail);
+  var setCards = list.length
+    ? list.map(function(d) { return anBuildSdrDemoFlowCardHTML(d, sdrEmail, monthKey, 'set'); }).join('')
+    : '<div style="text-align:center;padding:20px 12px;color:#a1a1aa;font-size:11px;border:1px dashed #e4e4e7;border-radius:8px;">No demos set this month.<br><span style="color:#6366f1;cursor:pointer;text-decoration:underline;" onclick="anOpenAddDemoForSdr(\'' + em + '\',\'' + esc(monthKey) + '\')">+ Log Demo</span></div>';
+  var completedCards = completed.length
+    ? completed.map(function(d) { return anBuildSdrDemoFlowCardHTML(d, sdrEmail, monthKey, 'done'); }).join('')
+    : '<div style="text-align:center;padding:20px 12px;color:#a1a1aa;font-size:11px;">Drag a demo here or click Complete</div>';
+  return '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:10px;padding:14px 16px;' + (opts.compact ? '' : 'margin-bottom:16px;') + '">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap;">'
+    + '<div><div style="font-size:10px;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:0.1em;">Demo Flow</div>'
+    + '<div style="font-size:11px;color:#71717a;margin-top:2px;">' + anEsc(profile.firstName) + ' — drag demos set → demo complete. Completed demos still count toward set.</div></div>'
+    + '<div style="font-size:11px;color:#71717a;">Show rate: <strong style="color:#06b6d4;">' + stats.showRate + '</strong></div>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 36px 1fr;gap:10px;align-items:stretch;">'
+    + '<div style="background:#faf5ff;border:1px solid #ddd6fe;border-radius:10px;padding:10px;min-height:120px;">'
+    + '<div style="font-size:10px;font-weight:700;color:#8b5cf6;text-transform:uppercase;margin-bottom:8px;">Demos Set (' + stats.demosSet + ')</div>'
+    + '<div style="display:flex;flex-direction:column;gap:8px;">' + setCards + '</div>'
+    + '</div>'
+    + '<div style="display:flex;align-items:center;justify-content:center;color:#c4b5fd;font-size:22px;font-weight:800;">→</div>'
+    + '<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:10px;min-height:120px;" ondragover="anSdrDemoDragOver(event)" ondrop="anSdrDemoDropComplete(event,\'' + em + '\')">'
+    + '<div style="font-size:10px;font-weight:700;color:#10b981;text-transform:uppercase;margin-bottom:8px;">Demo Completed (' + stats.demosCompleted + ')</div>'
+    + '<div style="display:flex;flex-direction:column;gap:8px;">' + completedCards + '</div>'
+    + '</div>'
+    + '</div></div>';
+};
+
+window.anComputeSdrMonthStats = function(sdrEmail, monthKey) {
+  var em = (sdrEmail || '').toLowerCase();
+  var demos = (typeof _dash !== 'undefined' && _dash.demos) ? _dash.demos.filter(function(d) { return d.source !== 'backfill'; }) : [];
+  var demosForRep = demos.filter(function(d) {
+    return (d.sdrEmail || d._repEmail || '').toLowerCase() === em;
+  });
+
+  var demosSetList = typeof anGetSdrDemosSetForMonth === 'function' ? anGetSdrDemosSetForMonth(em, monthKey) : [];
+  var demosSet = demosSetList.length;
+  var demosCompletedList = demosSetList.filter(function(d) { return d.status === 'showed'; });
+  var demosCompleted = demosCompletedList.length;
+  var decidedSet = demosSetList.filter(function(d) { return d.status === 'showed' || d.status === 'noshow'; });
+  var showedCount = decidedSet.filter(function(d) { return d.status === 'showed'; }).length;
+  var showRate = decidedSet.length ? Math.round(showedCount / decidedSet.length * 100) + '%' : '—';
+
+  var sizeIds = ['solo', 'small', 'large', 'enterprise'];
+  var demosSetBySize = {};
+  var demosCompletedBySize = {};
+  sizeIds.forEach(function(sz) {
+    demosSetBySize[sz] = demosSetList.filter(function(d) { return anDemoAgencySize(d) === sz; }).length;
+    demosCompletedBySize[sz] = demosCompletedList.filter(function(d) { return anDemoAgencySize(d) === sz; }).length;
+  });
+
+  var closedDeals = typeof anSdrDealsForMonth === 'function' ? anSdrDealsForMonth(monthKey, em, { status: 'closed' }) : [];
+  var projectedDeals = typeof anSdrDealsForMonth === 'function' ? anSdrDealsForMonth(monthKey, em, { status: 'projected' }) : [];
+  var moneyEarned = closedDeals.reduce(function(s, d) {
+    return s + (typeof anSdrBonusAmount === 'function' ? anSdrBonusAmount(d.size, d.contractType) : 0);
+  }, 0);
+  var pipelineValue = projectedDeals.reduce(function(s, d) {
+    return s + (typeof anSdrBonusAmount === 'function' ? anSdrBonusAmount(d.size, d.contractType) : 0);
+  }, 0);
+
+  var pipelineItems = [];
+  if (typeof AN !== 'undefined' && Array.isArray(AN.leads)) {
+    AN.leads.forEach(function(lead) {
+      if (typeof anIsOpportunityRecord !== 'function' || !anIsOpportunityRecord(lead)) return;
+      if ((lead.sdrEmail || lead._repEmail || '').toLowerCase() !== em) return;
+      if (lead.status === 'won' || lead.status === 'lost') return;
+      var closeMo = typeof anMonthKeyFromDate === 'function' ? anMonthKeyFromDate(lead.oppCloseDate || '') : '';
+      if (closeMo && closeMo !== monthKey) return;
+      var nm = (lead.company || '').trim() || ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || 'Opportunity';
+      var stageLbl = typeof anOppPipelineStage === 'function' ? anOppPipelineStage(lead) : (lead.status || 'demo');
+      pipelineItems.push({
+        name: nm,
+        stage: stageLbl,
+        closeDate: lead.oppCloseDate || '',
+        type: 'opportunity',
+        bonus: typeof anSdrBonusAmount === 'function' ? anSdrBonusAmount(lead.size || 'solo', typeof anNormalizeContractType === 'function' ? anNormalizeContractType(lead.oppContract || 'mrr') : 'mrr') : 0,
+        leadId: lead.id,
+        refKind: 'opp',
+        refId: lead.id,
+        size: lead.size || 'solo'
+      });
+    });
+  }
+  projectedDeals.forEach(function(d) {
+    if (d.leadId && pipelineItems.some(function(p) { return p.leadId === d.leadId; })) return;
+    if (d.id && pipelineItems.some(function(p) { return p.commissionDealId === d.id; })) return;
+    pipelineItems.push({
+      name: d.name,
+      stage: 'Projected close',
+      closeDate: d.closedDate ? String(d.closedDate).slice(0, 10) : '',
+      type: 'projected',
+      bonus: typeof anSdrBonusAmount === 'function' ? anSdrBonusAmount(d.size, d.contractType) : 0,
+      leadId: d.leadId || null,
+      commissionDealId: d.id,
+      refKind: d.leadId ? 'opp' : 'comm-sdr',
+      refId: d.leadId || d.id,
+      size: d.size || 'solo',
+      contractType: d.contractType || 'mrr'
+    });
+  });
+  if (typeof _dash !== 'undefined' && Array.isArray(_dash.pipeline)) {
+    _dash.pipeline.forEach(function(d, pIdx) {
+      if ((d.sdrEmail || '').toLowerCase() !== em) return;
+      if (d.stage === 'Closed Won' || d.stage === 'Closed Lost') return;
+      var addedMo = typeof anMonthKeyFromDate === 'function' ? anMonthKeyFromDate(d.added || '') : '';
+      if (addedMo && addedMo !== monthKey && !projectedDeals.some(function(p) { return p.leadId && p.leadId === d.leadId; })) return;
+      if (d.leadId && pipelineItems.some(function(p) { return p.leadId === d.leadId; })) return;
+      if (!d.leadId && pipelineItems.some(function(p) { return p.name === d.name && p.refKind === 'pipe'; })) return;
+      pipelineItems.push({
+        name: d.name || 'Deal',
+        stage: d.stage || 'Pipeline',
+        closeDate: '',
+        type: 'pipeline',
+        bonus: typeof anSdrBonusAmount === 'function' ? anSdrBonusAmount(d.size || 'solo', 'mrr') : 0,
+        leadId: d.leadId || null,
+        pipelineIdx: pIdx,
+        refKind: d.leadId ? 'opp' : 'pipe',
+        refId: d.leadId || String(pIdx),
+        size: d.size || 'solo'
+      });
+    });
+  }
+
+  return {
+    demosSet: demosSet,
+    demosSetList: demosSetList,
+    demosCompleted: demosCompleted,
+    demosCompletedList: demosCompletedList,
+    demosSetBySize: demosSetBySize,
+    demosCompletedBySize: demosCompletedBySize,
+    showRate: showRate,
+    dealsClosed: closedDeals.length,
+    moneyEarned: moneyEarned,
+    pipelineCount: pipelineItems.length,
+    pipelineValue: pipelineValue,
+    pipelineItems: pipelineItems,
+    closedDeals: closedDeals,
+    projectedDeals: projectedDeals
+  };
+};
+
+window.anBuildSdrPerformanceTableHTML = function(monthKey, filterRep) {
+  var month = typeof anGetTrackerMonthInfo === 'function' ? anGetTrackerMonthInfo(window._commTrackerMonthOffset || 0) : { label: monthKey };
+  var reps = anGetSdrRepsForTracker(filterRep);
+  if (!reps.length) {
+    return '<div style="text-align:center;padding:20px;color:#a1a1aa;font-size:12px;">No SDR reps configured.</div>';
+  }
+  var sizeIds = ['solo', 'small', 'large', 'enterprise'];
+  var sizeHdr = function(label, color) {
+    return sizeIds.map(function(sz) {
+      var meta = anAgencySizeMeta(sz);
+      return '<th style="padding:6px 4px;text-align:center;font-size:9px;color:' + meta.color + ';text-transform:uppercase;white-space:nowrap;">' + meta.short + '</th>';
+    }).join('');
+  };
+  var sizeCells = function(bySize) {
+    return sizeIds.map(function(sz) {
+      var meta = anAgencySizeMeta(sz);
+      var n = (bySize && bySize[sz]) || 0;
+      return '<td style="padding:8px 4px;text-align:center;font-weight:700;color:' + meta.color + ';font-size:11px;">' + (n || '<span style="color:#d4d4d8;">—</span>') + '</td>';
+    }).join('');
+  };
+
+  var rows = reps.map(function(r) {
+    var stats = anComputeSdrMonthStats(r.email, monthKey);
+    var profile = anSplitRepProfile(r.email);
+    var escEm = String(r.email).replace(/'/g, "\\'");
+    var escMk = String(monthKey).replace(/'/g, "\\'");
+    return '<tr style="border-bottom:1px solid #f4f4f5;">'
+      + '<td style="padding:10px 8px;font-weight:700;color:#09090b;white-space:nowrap;">' + anEsc(profile.firstName) + '</td>'
+      + '<td style="padding:10px 8px;font-weight:600;color:#09090b;white-space:nowrap;">' + anEsc(profile.lastName || '—') + '</td>'
+      + '<td style="padding:10px 8px;color:#71717a;font-size:12px;">' + anEsc(profile.title) + '</td>'
+      + '<td style="padding:10px 8px;color:#6366f1;font-weight:700;font-size:12px;white-space:nowrap;">' + anEsc(month.label) + '</td>'
+      + '<td style="padding:10px 8px;text-align:center;">'
+      + '<button onclick="anOpenSdrDemosSetModal(\'' + escEm + '\',\'' + escMk + '\')" title="View and edit demos set" style="min-width:44px;padding:6px 10px;border-radius:8px;border:1.5px solid #ddd6fe;background:#f5f3ff;color:#8b5cf6;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">' + stats.demosSet + '</button>'
+      + '<div style="font-size:9px;color:#a1a1aa;margin-top:3px;"><span style="cursor:pointer;text-decoration:underline;" onclick="anOpenAddDemoForSdr(\'' + escEm + '\',\'' + escMk + '\')">+ add</span></div>'
+      + '</td>'
+      + sizeCells(stats.demosSetBySize)
+      + '<td style="padding:10px 8px;text-align:center;font-weight:800;color:#10b981;">' + stats.demosCompleted + '</td>'
+      + sizeCells(stats.demosCompletedBySize)
+      + '<td style="padding:10px 8px;text-align:center;font-weight:700;color:#06b6d4;">' + stats.showRate + '</td>'
+      + '<td style="padding:10px 8px;text-align:center;font-weight:800;color:#6366f1;">' + stats.dealsClosed + '</td>'
+      + '<td style="padding:10px 8px;text-align:center;font-weight:800;color:#10b981;white-space:nowrap;">' + fmtDol(stats.moneyEarned) + '</td>'
+      + '<td style="padding:10px 8px;text-align:center;font-weight:700;color:#f59e0b;">' + stats.pipelineCount + '</td>'
+      + '</tr>';
+  }).join('');
+
+  var pipelineSections = reps.map(function(r) {
+    var stats = anComputeSdrMonthStats(r.email, monthKey);
+    if (!stats.pipelineItems.length) return '';
+    var profile = anSplitRepProfile(r.email);
+    var items = stats.pipelineItems.map(function(p) {
+      return anBuildTrackerPipelineRowHTML(p, 'sdr');
+    }).join('');
+    return '<div style="margin-bottom:14px;"><div style="font-size:11px;font-weight:700;color:#6366f1;margin-bottom:8px;">'
+      + anEsc(profile.firstName + (profile.lastName ? ' ' + profile.lastName : '')) + ' — Pipeline (' + stats.pipelineItems.length + ')</div>' + items + '</div>';
+  }).join('');
+
+  var flowCalcGrid = '';
+  if (filterRep && reps.length === 1) {
+    var rep = reps[0];
+    flowCalcGrid = '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,320px);gap:16px;margin-bottom:16px;align-items:start;">'
+      + anBuildSdrDemoFlowBoardHTML(rep.email, monthKey, { compact: true })
+      + anBuildSdrDemoCalculatorHTML(rep.email, monthKey)
+      + '</div>';
+  }
+
+  return '<div style="overflow-x:auto;margin-bottom:16px;">'
+    + '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:1200px;">'
+    + '<thead>'
+    + '<tr style="background:#fafafa;">'
+    + '<th rowspan="2" style="padding:8px;text-align:left;font-size:10px;color:#a1a1aa;text-transform:uppercase;vertical-align:bottom;">First Name</th>'
+    + '<th rowspan="2" style="padding:8px;text-align:left;font-size:10px;color:#a1a1aa;text-transform:uppercase;vertical-align:bottom;">Last Name</th>'
+    + '<th rowspan="2" style="padding:8px;text-align:left;font-size:10px;color:#a1a1aa;text-transform:uppercase;vertical-align:bottom;">Title</th>'
+    + '<th rowspan="2" style="padding:8px;text-align:left;font-size:10px;color:#a1a1aa;text-transform:uppercase;vertical-align:bottom;">Month</th>'
+    + '<th rowspan="2" style="padding:8px;text-align:center;font-size:10px;color:#a1a1aa;text-transform:uppercase;vertical-align:bottom;">Demos Set</th>'
+    + '<th colspan="4" style="padding:6px;text-align:center;font-size:10px;color:#8b5cf6;text-transform:uppercase;border-bottom:1px solid #f4f4f5;">Set by Size</th>'
+    + '<th rowspan="2" style="padding:8px;text-align:center;font-size:10px;color:#a1a1aa;text-transform:uppercase;vertical-align:bottom;">Demos Completed</th>'
+    + '<th colspan="4" style="padding:6px;text-align:center;font-size:10px;color:#10b981;text-transform:uppercase;border-bottom:1px solid #f4f4f5;">Completed by Size</th>'
+    + '<th rowspan="2" style="padding:8px;text-align:center;font-size:10px;color:#a1a1aa;text-transform:uppercase;vertical-align:bottom;">Show Rate</th>'
+    + '<th rowspan="2" style="padding:8px;text-align:center;font-size:10px;color:#a1a1aa;text-transform:uppercase;vertical-align:bottom;">Deals Closed</th>'
+    + '<th rowspan="2" style="padding:8px;text-align:center;font-size:10px;color:#a1a1aa;text-transform:uppercase;vertical-align:bottom;">Money Earned</th>'
+    + '<th rowspan="2" style="padding:8px;text-align:center;font-size:10px;color:#a1a1aa;text-transform:uppercase;vertical-align:bottom;">In Pipeline</th>'
+    + '</tr>'
+    + '<tr style="background:#fafafa;">' + sizeHdr('set') + sizeHdr('done') + '</tr>'
+    + '</thead><tbody>' + rows + '</tbody></table></div>'
+    + flowCalcGrid
+    + (pipelineSections ? '<div style="background:#f8f8fa;border:1px solid #e4e4e7;border-radius:10px;padding:14px 16px;margin-bottom:16px;">'
+      + '<div style="font-size:10px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px;">Their Pipeline This Month</div>'
+      + pipelineSections + '</div>' : '');
+};
+
+window.anSdrBonusRates = function() {
+  return {
+    mrr: { solo: 25, small: 100, large: 250, enterprise: 750 },
+    arr: { solo: 75, small: 200, large: 500, enterprise: 1500 }
+  };
+};
+
+window.anSdrDemoCalcId = function(sdrEmail, monthKey) {
+  return 'sdr-demo-calc-' + String(sdrEmail || '').replace(/[^a-z0-9]/g, '-') + '-' + String(monthKey || '').replace(/[^a-z0-9]/g, '-');
+};
+
+window.anUpdateSdrDemoCalculator = function(sdrEmail, monthKey) {
+  var wrap = document.getElementById(anSdrDemoCalcId(sdrEmail, monthKey));
+  if (!wrap) return;
+  var sizes = ['solo', 'small', 'large', 'enterprise'];
+  var monthlyTotal = 0;
+  var annualTotal = 0;
+  sizes.forEach(function(sz) {
+    var monthlyEl = wrap.querySelector('[data-sdc-monthly="' + sz + '"]');
+    var annualEl = wrap.querySelector('[data-sdc-annual="' + sz + '"]');
+    var monthlyN = monthlyEl ? (parseInt(monthlyEl.value, 10) || 0) : 0;
+    var annualN = annualEl ? (parseInt(annualEl.value, 10) || 0) : 0;
+    var monthlyBonus = anSdrBonusAmount(sz, 'mrr');
+    var annualBonus = anSdrBonusAmount(sz, 'arr');
+    var rowMonthlyTotal = monthlyN * monthlyBonus;
+    var rowAnnualTotal = annualN * annualBonus;
+    monthlyTotal += rowMonthlyTotal;
+    annualTotal += rowAnnualTotal;
+    var rowEl = wrap.querySelector('[data-sdc-row="' + sz + '"]');
+    if (rowEl) {
+      var totalCell = rowEl.querySelector('[data-sdc-row-total]');
+      if (totalCell) totalCell.textContent = fmtDol(rowMonthlyTotal + rowAnnualTotal);
+    }
+  });
+  var totalMonthlyEl = wrap.querySelector('[data-sdc-total-monthly]');
+  var totalAnnualEl = wrap.querySelector('[data-sdc-total-annual]');
+  var grandTotalEl = wrap.querySelector('[data-sdc-total-grand]');
+  if (totalMonthlyEl) totalMonthlyEl.textContent = fmtDol(monthlyTotal);
+  if (totalAnnualEl) totalAnnualEl.textContent = fmtDol(annualTotal);
+  if (grandTotalEl) grandTotalEl.textContent = fmtDol(monthlyTotal + annualTotal);
+};
+
+window.anBuildSdrDemoCalculatorHTML = function(sdrEmail, monthKey) {
+  var sizes = ['solo', 'small', 'large', 'enterprise'];
+  var rates = anSdrBonusRates();
+  var calcId = anSdrDemoCalcId(sdrEmail, monthKey);
+  var escEm = String(sdrEmail).replace(/'/g, "\\'");
+  var escMk = String(monthKey).replace(/'/g, "\\'");
+  var rows = sizes.map(function(sz) {
+    var meta = anAgencySizeMeta(sz);
+    var mrrBonus = rates.mrr[sz] || 0;
+    var arrBonus = rates.arr[sz] || 0;
+    return '<tr data-sdc-row="' + sz + '" style="border-bottom:1px solid #f4f4f5;">'
+      + '<td style="padding:8px 6px;"><span style="display:inline-block;font-size:10px;font-weight:700;color:' + meta.color + ';background:' + meta.bg + ';border:1px solid ' + meta.border + ';border-radius:6px;padding:2px 8px;">' + meta.short + '</span></td>'
+      + '<td style="padding:8px 4px;text-align:center;"><input type="number" min="0" data-sdc-monthly="' + sz + '" value="0" oninput="anUpdateSdrDemoCalculator(\'' + escEm + '\',\'' + escMk + '\')" style="width:42px;padding:4px;border:1px solid #e4e4e7;border-radius:6px;text-align:center;font-size:12px;font-weight:700;color:#6366f1;font-family:inherit;"></td>'
+      + '<td style="padding:8px 4px;text-align:center;"><input type="number" min="0" data-sdc-annual="' + sz + '" value="0" oninput="anUpdateSdrDemoCalculator(\'' + escEm + '\',\'' + escMk + '\')" style="width:42px;padding:4px;border:1px solid #e4e4e7;border-radius:6px;text-align:center;font-size:12px;font-weight:700;color:#d97706;font-family:inherit;"></td>'
+      + '<td style="padding:8px 4px;text-align:right;font-size:10px;color:#71717a;white-space:nowrap;">$' + mrrBonus + ' / $' + arrBonus + '</td>'
+      + '<td style="padding:8px 4px;text-align:right;font-size:11px;font-weight:700;color:#10b981;" data-sdc-row-total>—</td>'
+      + '</tr>';
+  }).join('');
+  return '<div id="' + calcId + '" style="background:#fff;border:1px solid #e4e4e7;border-radius:10px;padding:14px 16px;position:sticky;top:12px;">'
+    + '<div style="font-size:10px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Demo Calculator</div>'
+    + '<div style="font-size:11px;color:#71717a;margin-bottom:12px;">Model commission from closed deals by agency size and contract type.</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;font-size:10px;">'
+    + '<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:#eef2ff;color:#6366f1;font-weight:700;">Monthly</span>'
+    + '<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:#fffbeb;color:#d97706;font-weight:700;">Annual / Prepaid</span>'
+    + '<span style="color:#a1a1aa;">Enter closed deals only.</span>'
+    + '</div>'
+    + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:280px;">'
+    + '<thead><tr style="background:#fafafa;">'
+    + '<th style="padding:6px;text-align:left;font-size:9px;color:#a1a1aa;text-transform:uppercase;">Size</th>'
+    + '<th style="padding:6px;text-align:center;font-size:9px;color:#a1a1aa;text-transform:uppercase;">Monthly</th>'
+    + '<th style="padding:6px;text-align:center;font-size:9px;color:#a1a1aa;text-transform:uppercase;">Annual</th>'
+    + '<th style="padding:6px;text-align:right;font-size:9px;color:#a1a1aa;text-transform:uppercase;">Rate</th>'
+    + '<th style="padding:6px;text-align:right;font-size:9px;color:#a1a1aa;text-transform:uppercase;">Total</th>'
+    + '</tr></thead><tbody>' + rows + '</tbody></table></div>'
+    + '<div style="margin-top:14px;padding-top:12px;border-top:1px solid #f4f4f5;display:grid;gap:8px;">'
+    + '<div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;font-size:13px;padding-top:8px;border-top:1px dashed #e4e4e7;">'
+    + '<span style="color:#71717a;">Monthly subtotal</span>'
+    + '<strong data-sdc-total-monthly style="color:#6366f1;font-size:15px;">—</strong>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;font-size:13px;">'
+    + '<span style="color:#71717a;">Annual subtotal</span>'
+    + '<strong data-sdc-total-annual style="color:#d97706;font-size:15px;">—</strong>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;font-size:13px;padding-top:8px;border-top:1px dashed #e4e4e7;">'
+    + '<span style="font-weight:700;color:#09090b;">What-if total</span>'
+    + '<strong data-sdc-total-grand style="color:#10b981;font-size:16px;">—</strong>'
+    + '</div>'
+    + '</div></div>';
+};
+
+window.anSdrBonusAmount = function(size, contractType) {
+  var rates = anSdrBonusRates();
+  var bucket = (contractType === 'mrr') ? 'mrr' : 'arr';
+  var sz = size || 'solo';
+  return (rates[bucket] && rates[bucket][sz]) || rates[bucket].solo || 0;
+};
+
+window._commTrackerMonthOffset = 0;
+window._sdrTrackerRep = 'all';
+window._aeTrackerRep = 'all';
+
+window.anSplitAeProfile = function(email) {
+  var em = (email || '').toLowerCase();
+  var rep = (window.COMMISSION_AE_REPS || []).find(function(r) {
+    return String(r.email).toLowerCase() === em;
+  });
+  if (rep) {
+    return {
+      firstName: rep.firstName || rep.name || '',
+      lastName: rep.lastName || '',
+      title: rep.title || 'AE'
+    };
+  }
+  var base = typeof anSplitRepProfile === 'function' ? anSplitRepProfile(email) : { firstName: email.split('@')[0], lastName: '', title: 'AE' };
+  base.title = 'AE';
+  return base;
+};
+
+window.anGetAeRepsForTracker = function(filterRep) {
+  var reps = (window.COMMISSION_AE_REPS || []).slice();
+  if (!reps.length) {
+    reps = (window.COMMISSION_AE_EMAILS || []).map(function(em) {
+      var p = anSplitAeProfile(em);
+      return { email: em, firstName: p.firstName, lastName: p.lastName, title: p.title || 'AE' };
+    });
+  }
+  if (anIsAdminCommissionView() && typeof AN !== 'undefined' && Array.isArray(AN.leads)) {
+    var seen = {};
+    reps.forEach(function(r) { seen[String(r.email).toLowerCase()] = true; });
+    AN.leads.forEach(function(lead) {
+      if (typeof anIsOpportunityRecord !== 'function' || !anIsOpportunityRecord(lead)) return;
+      var ae = (lead.aeEmail || '').toLowerCase();
+      if (!ae || seen[ae]) return;
+      seen[ae] = true;
+      var p = anSplitAeProfile(ae);
+      reps.push({ email: ae, firstName: p.firstName, lastName: p.lastName, title: 'AE' });
+    });
+  }
+  if (!anIsAdminCommissionView()) {
+    var mine = (typeof _currentUser !== 'undefined' && _currentUser && _currentUser.email || '').toLowerCase();
+    reps = reps.filter(function(r) { return String(r.email).toLowerCase() === mine; });
+    if (!reps.length) {
+      var p = anSplitAeProfile(mine);
+      reps = [{ email: mine, firstName: p.firstName, lastName: p.lastName, title: p.title || 'AE' }];
+    }
+  } else if (filterRep && filterRep !== 'all') {
+    reps = reps.filter(function(r) { return String(r.email).toLowerCase() === String(filterRep).toLowerCase(); });
+  }
+  return reps;
+};
+
+window.anAeDealMatchesRep = function(deal, aeEmail) {
+  if (!aeEmail || aeEmail === 'all') return true;
+  var em = String(aeEmail).toLowerCase();
+  if (deal.aeEmail && String(deal.aeEmail).toLowerCase() === em) return true;
+  if (deal.leadId && typeof AN !== 'undefined' && Array.isArray(AN.leads)) {
+    var lead = AN.leads.find(function(l) { return l.id === deal.leadId; });
+    if (lead && (lead.aeEmail || lead._repEmail || '').toLowerCase() === em) return true;
+  }
+  var primary = ((window.COMMISSION_AE_EMAILS || [])[0] || '').toLowerCase();
+  if (em === primary && !deal.leadId && !deal.aeEmail) return true;
+  return false;
+};
+
+window.anComputeAeMonthStats = function(aeEmail, monthKey) {
+  var em = (aeEmail || '').toLowerCase();
+  var pipelineItems = [];
+  var stageCounts = { demo: 0, showed: 0, proposal: 0, negotiation: 0 };
+  var pipelineMRR = 0;
+  var pipelineARR = 0;
+
+  if (typeof AN !== 'undefined' && Array.isArray(AN.leads)) {
+    AN.leads.forEach(function(lead) {
+      if (typeof anIsOpportunityRecord !== 'function' || !anIsOpportunityRecord(lead)) return;
+      if ((lead.aeEmail || lead._repEmail || '').toLowerCase() !== em) return;
+      if (lead.status === 'won' || lead.status === 'lost') return;
+      var closeMo = typeof anMonthKeyFromDate === 'function' ? anMonthKeyFromDate(lead.oppCloseDate || '') : '';
+      if (closeMo && closeMo !== monthKey) return;
+      var ct = typeof anNormalizeContractType === 'function' ? anNormalizeContractType(lead.oppContract || 'mrr') : 'mrr';
+      var sz = (typeof AN_SIZES !== 'undefined' ? AN_SIZES : []).find(function(s) { return s.id === lead.size; }) || { price: 79 };
+      var mrr = lead.oppMRR || sz.price || 79;
+      var nm = (lead.company || '').trim() || ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || 'Opportunity';
+      var stageId = typeof anOppPipelineStage === 'function' ? anOppPipelineStage(lead) : (lead.status || 'demo');
+      var stageLbl = { demo: 'Demo Set', showed: 'Demo Completed', proposal: 'Proposal', negotiation: 'Negotiating', won: 'Closed Won', lost: 'Closed Lost' }[stageId] || stageId;
+      if (stageCounts[stageId] != null) stageCounts[stageId]++;
+      else stageCounts.demo++;
+      if (ct === 'mrr') pipelineMRR += mrr;
+      else pipelineARR++;
+      pipelineItems.push({
+        name: nm,
+        stage: stageLbl,
+        contractType: ct,
+        mrr: mrr,
+        closeDate: lead.oppCloseDate || '',
+        commission: typeof anCommissionPerClose === 'function' ? anCommissionPerClose(lead.size || 'solo', ct) : 0,
+        leadId: lead.id,
+        refKind: 'opp',
+        refId: lead.id,
+        size: lead.size || 'solo'
+      });
+    });
+  }
+
+  if (typeof _dash !== 'undefined' && Array.isArray(_dash.pipeline)) {
+    _dash.pipeline.forEach(function(d, pIdx) {
+      if ((d.aeEmail || '').toLowerCase() !== em) return;
+      if (d.stage === 'Closed Won' || d.stage === 'Closed Lost') return;
+      if (pipelineItems.some(function(p) { return p.leadId && d.leadId && p.leadId === d.leadId; })) return;
+      if (!d.leadId && pipelineItems.some(function(p) { return p.name === d.name && p.refKind === 'pipe'; })) return;
+      pipelineItems.push({
+        name: d.name || 'Deal',
+        stage: d.stage || 'Pipeline',
+        contractType: 'mrr',
+        mrr: d.mrr || 79,
+        closeDate: '',
+        commission: typeof anCommissionPerClose === 'function' ? anCommissionPerClose(d.size || 'solo', 'mrr') : 0,
+        leadId: d.leadId || null,
+        pipelineIdx: pIdx,
+        refKind: d.leadId ? 'opp' : 'pipe',
+        refId: d.leadId || String(pIdx),
+        size: d.size || 'solo'
+      });
+      pipelineMRR += d.mrr || 79;
+    });
+  }
+
+  var allClosed = typeof anCommissionDealsForMonth === 'function' ? anCommissionDealsForMonth(monthKey, { status: 'closed' }) : [];
+  var allProjected = typeof anCommissionDealsForMonth === 'function' ? anCommissionDealsForMonth(monthKey, { status: 'projected' }) : [];
+  var closed = allClosed.filter(function(d) { return anAeDealMatchesRep(d, em); });
+  var projected = allProjected.filter(function(d) { return anAeDealMatchesRep(d, em); });
+
+  projected.forEach(function(d) {
+    if (d.leadId && pipelineItems.some(function(p) { return p.leadId === d.leadId; })) return;
+    if (d.id && pipelineItems.some(function(p) { return p.commissionDealId === d.id; })) return;
+    var ct = d.contractType || 'mrr';
+    pipelineItems.push({
+      name: d.name,
+      stage: 'Projected close',
+      contractType: ct,
+      mrr: { solo: 79, small: 247, large: 597, enterprise: 800 }[d.size] || 79,
+      closeDate: d.closedDate ? String(d.closedDate).slice(0, 10) : '',
+      commission: typeof anCommissionPerClose === 'function' ? anCommissionPerClose(d.size, ct) : 0,
+      leadId: d.leadId || null,
+      commissionDealId: d.id,
+      refKind: d.leadId ? 'opp' : 'comm-ae',
+      refId: d.leadId || d.id,
+      size: d.size || 'solo'
+    });
+    if (ct === 'mrr') pipelineMRR += { solo: 79, small: 247, large: 597, enterprise: 800 }[d.size] || 79;
+    else pipelineARR++;
+  });
+
+  var mrrClosed = closed.filter(function(d) { return (d.contractType || 'mrr') === 'mrr'; });
+  var arrClosed = closed.filter(function(d) { return (d.contractType || 'mrr') !== 'mrr'; });
+  var moneyMRR = mrrClosed.reduce(function(s, d) { return s + anCommissionPerClose(d.size, 'mrr'); }, 0);
+  var moneyARR = arrClosed.reduce(function(s, d) { return s + anCommissionPerClose(d.size, 'arr'); }, 0);
+
+  return {
+    pipelineCount: pipelineItems.length,
+    stageCounts: stageCounts,
+    pipelineMRR: pipelineMRR,
+    pipelineARR: pipelineARR,
+    dealsClosed: closed.length,
+    mrrClosedCount: mrrClosed.length,
+    arrClosedCount: arrClosed.length,
+    moneyMRR: moneyMRR,
+    moneyARR: moneyARR,
+    moneyEarned: moneyMRR + moneyARR,
+    pipelineItems: pipelineItems,
+    closedDeals: closed,
+    projectedDeals: projected
+  };
+};
+
+window.anBuildAePerformanceTableHTML = function(monthKey, filterRep) {
+  var month = typeof anGetTrackerMonthInfo === 'function' ? anGetTrackerMonthInfo(window._commTrackerMonthOffset || 0) : { label: monthKey };
+  var reps = anGetAeRepsForTracker(filterRep);
+  if (!reps.length) {
+    return '<div style="text-align:center;padding:20px;color:#a1a1aa;font-size:12px;">No AE reps configured.</div>';
+  }
+
+  var rows = reps.map(function(r) {
+    var stats = anComputeAeMonthStats(r.email, monthKey);
+    var profile = anSplitAeProfile(r.email);
+    var stageSummary = stats.stageCounts.demo + ' demo · ' + stats.stageCounts.showed + ' done · '
+      + (stats.stageCounts.proposal + stats.stageCounts.negotiation) + ' late stage';
+    return '<tr style="border-bottom:1px solid #f4f4f5;">'
+      + '<td style="padding:10px 8px;font-weight:700;color:#09090b;white-space:nowrap;">' + anEsc(profile.firstName) + '</td>'
+      + '<td style="padding:10px 8px;font-weight:600;color:#09090b;white-space:nowrap;">' + anEsc(profile.lastName || '—') + '</td>'
+      + '<td style="padding:10px 8px;color:#71717a;font-size:12px;">' + anEsc(profile.title) + '</td>'
+      + '<td style="padding:10px 8px;color:#6366f1;font-weight:700;font-size:12px;white-space:nowrap;">' + anEsc(month.label) + '</td>'
+      + '<td style="padding:10px 8px;text-align:center;font-weight:800;color:#8b5cf6;">' + stats.pipelineCount + '</td>'
+      + '<td style="padding:10px 8px;font-size:11px;color:#52525b;min-width:120px;">' + stageSummary + '</td>'
+      + '<td style="padding:10px 8px;text-align:center;font-weight:700;color:#6366f1;">' + stats.mrrClosedCount + '</td>'
+      + '<td style="padding:10px 8px;text-align:center;font-weight:700;color:#f59e0b;">' + stats.arrClosedCount + '</td>'
+      + '<td style="padding:10px 8px;text-align:center;font-weight:800;color:#10b981;">' + stats.dealsClosed + '</td>'
+      + '<td style="padding:10px 8px;text-align:center;font-weight:800;color:#10b981;white-space:nowrap;">' + fmtDol(stats.moneyMRR) + '/mo</td>'
+      + '<td style="padding:10px 8px;text-align:center;font-weight:800;color:#f59e0b;white-space:nowrap;">' + fmtDol(stats.moneyARR) + ' ARR</td>'
+      + '<td style="padding:10px 8px;text-align:center;font-weight:700;color:#6366f1;white-space:nowrap;">$' + Math.round(stats.pipelineMRR).toLocaleString() + '/mo</td>'
+      + '</tr>';
+  }).join('');
+
+  var pipelineSections = reps.map(function(r) {
+    var stats = anComputeAeMonthStats(r.email, monthKey);
+    if (!stats.pipelineItems.length) return '';
+    var profile = anSplitAeProfile(r.email);
+    var items = stats.pipelineItems.map(function(p) {
+      return anBuildTrackerPipelineRowHTML(p, 'ae');
+    }).join('');
+    return '<div style="margin-bottom:14px;"><div style="font-size:11px;font-weight:700;color:#6366f1;margin-bottom:8px;">'
+      + anEsc(profile.firstName + (profile.lastName ? ' ' + profile.lastName : '')) + ' — Deal Pipeline (' + stats.pipelineItems.length + ')</div>' + items + '</div>';
+  }).join('');
+
+  return '<div style="overflow-x:auto;margin-bottom:16px;">'
+    + '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:1040px;">'
+    + '<thead><tr style="background:#fafafa;">'
+    + '<th style="padding:8px;text-align:left;font-size:10px;color:#a1a1aa;text-transform:uppercase;">First Name</th>'
+    + '<th style="padding:8px;text-align:left;font-size:10px;color:#a1a1aa;text-transform:uppercase;">Last Name</th>'
+    + '<th style="padding:8px;text-align:left;font-size:10px;color:#a1a1aa;text-transform:uppercase;">Title</th>'
+    + '<th style="padding:8px;text-align:left;font-size:10px;color:#a1a1aa;text-transform:uppercase;">Month</th>'
+    + '<th style="padding:8px;text-align:center;font-size:10px;color:#a1a1aa;text-transform:uppercase;">In Pipeline</th>'
+    + '<th style="padding:8px;text-align:left;font-size:10px;color:#a1a1aa;text-transform:uppercase;">Deal Stages</th>'
+    + '<th style="padding:8px;text-align:center;font-size:10px;color:#a1a1aa;text-transform:uppercase;">MRR Won</th>'
+    + '<th style="padding:8px;text-align:center;font-size:10px;color:#a1a1aa;text-transform:uppercase;">ARR Won</th>'
+    + '<th style="padding:8px;text-align:center;font-size:10px;color:#a1a1aa;text-transform:uppercase;">Deals Closed</th>'
+    + '<th style="padding:8px;text-align:center;font-size:10px;color:#a1a1aa;text-transform:uppercase;">MRR Comm.</th>'
+    + '<th style="padding:8px;text-align:center;font-size:10px;color:#a1a1aa;text-transform:uppercase;">ARR Comm.</th>'
+    + '<th style="padding:8px;text-align:center;font-size:10px;color:#a1a1aa;text-transform:uppercase;">Pipeline MRR</th>'
+    + '</tr></thead><tbody>' + rows + '</tbody></table></div>'
+    + (pipelineSections ? '<div style="background:#f8f8fa;border:1px solid #e4e4e7;border-radius:10px;padding:14px 16px;margin-bottom:16px;">'
+      + '<div style="font-size:10px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px;">Deal Pipeline — Stage, MRR vs ARR</div>'
+      + pipelineSections + '</div>' : '');
+};
+
+window.anSetAeTrackerRep = function(email) {
+  window._aeTrackerRep = email;
+  anRenderAeMonthlyTracker();
+};
+
+window.anMonthKeyFromDate = function(dateStr) {
+  if (!dateStr) return '';
+  return String(dateStr).slice(0, 7);
+};
+
+window.anGetTrackerMonthInfo = function(offset) {
+  var d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + (offset || 0));
+  var y = d.getFullYear();
+  var m = d.getMonth() + 1;
+  var key = y + '-' + String(m).padStart(2, '0');
+  var label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  var now = new Date();
+  var rel = offset === 0 ? 'This Month' : (offset === 1 ? 'Next Month' : '');
+  return { key: key, label: label, rel: rel, offset: offset || 0 };
+};
+
+function anEnsureSdrCommissionLedger() {
+  if (typeof _dash === 'undefined') return [];
+  if (!Array.isArray(_dash.sdrCommissionDeals)) _dash.sdrCommissionDeals = [];
+  return _dash.sdrCommissionDeals;
+}
+
+window.anNormalizeContractType = function(ct) {
+  var c = (ct || 'mrr').toLowerCase();
+  return c === 'mrr' ? 'mrr' : 'arr';
+};
+
+window.anAddSdrCommissionDeal = function(deal, opts) {
+  opts = opts || {};
+  var ledger = anEnsureSdrCommissionLedger();
+  var sdrEmail = (deal.sdrEmail || '').toLowerCase();
+  if (!sdrEmail) return null;
+  if (deal.leadId) {
+    var existing = ledger.find(function(d) { return d.leadId === deal.leadId && (d.sdrEmail || '').toLowerCase() === sdrEmail; });
+    if (existing) {
+      existing.name = deal.name || existing.name;
+      existing.size = deal.size || existing.size;
+      existing.contractType = deal.contractType || existing.contractType;
+      existing.status = deal.status || existing.status;
+      if (deal.closedDate) existing.closedDate = deal.closedDate;
+      existing.source = deal.source || existing.source;
+      if (!opts.skipSave && typeof dashSave === 'function') dashSave();
+      if (typeof anRefreshCommissionTrackerUI === 'function') anRefreshCommissionTrackerUI();
+      return existing;
+    }
+  }
+  var entry = {
+    id: 'sdr-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    leadId: deal.leadId || null,
+    name: deal.name || 'Deal',
+    size: deal.size || 'solo',
+    contractType: anNormalizeContractType(deal.contractType),
+    closedDate: deal.closedDate || new Date().toISOString(),
+    status: deal.status || 'closed',
+    sdrEmail: sdrEmail,
+    source: deal.source || 'manual',
+    notes: deal.notes || ''
+  };
+  ledger.unshift(entry);
+  if (!opts.skipSave && typeof dashSave === 'function') dashSave();
+  if (typeof anRefreshCommissionTrackerUI === 'function') anRefreshCommissionTrackerUI();
+  return entry;
+};
+
+window.anRemoveSdrCommissionDeal = function(id) {
+  var ledger = anEnsureSdrCommissionLedger();
+  var idx = ledger.findIndex(function(d) { return d.id === id; });
+  if (idx < 0) return;
+  if (!confirm('Remove "' + (ledger[idx].name || 'this deal') + '" from the SDR tracker?')) return;
+  ledger.splice(idx, 1);
+  if (typeof dashSave === 'function') dashSave();
+  if (typeof anRefreshCommissionTrackerUI === 'function') anRefreshCommissionTrackerUI();
+};
+
+window.anSyncOpportunitiesToCommissionTrackers = function(opts) {
+  opts = opts || {};
+  if (typeof AN === 'undefined' || !Array.isArray(AN.leads)) return;
+
+  AN.leads.forEach(function(lead) {
+    if (typeof anIsOpportunityRecord !== 'function' || !anIsOpportunityRecord(lead)) return;
+    var name = (lead.company || '').trim() || ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || 'Deal';
+    var size = lead.size || 'solo';
+    var contractType = anNormalizeContractType(lead.oppContract || lead.oppContractType || 'mrr');
+    var closeDate = lead.oppCloseDate || lead.closedAt || '';
+    var sdrEmail = (lead.sdrEmail || lead._repEmail || '').toLowerCase();
+    var base = { leadId: lead.id, name: name, size: size, contractType: contractType, source: 'crm' };
+
+    if (lead.status === 'won') {
+      if (typeof isAeCommissionUser === 'function' && isAeCommissionUser()) {
+        anAddCommissionDeal(Object.assign({}, base, {
+          closedDate: closeDate || lead.updated || new Date().toISOString(),
+          status: 'closed'
+        }), { skipSave: true });
+      }
+      if (sdrEmail && anIsSdrCommissionRep(sdrEmail)) {
+        anAddSdrCommissionDeal(Object.assign({}, base, {
+          sdrEmail: sdrEmail,
+          closedDate: closeDate || lead.updated || new Date().toISOString(),
+          status: 'closed'
+        }), { skipSave: true });
+      }
+    } else if (lead.status !== 'lost' && closeDate) {
+      if (typeof isAeCommissionUser === 'function' && isAeCommissionUser()) {
+        anAddCommissionDeal(Object.assign({}, base, {
+          closedDate: closeDate + (String(closeDate).length === 10 ? 'T12:00:00.000Z' : ''),
+          status: 'projected'
+        }), { skipSave: true, allowProjected: true });
+      }
+      if (sdrEmail && anIsSdrCommissionRep(sdrEmail)) {
+        anAddSdrCommissionDeal(Object.assign({}, base, {
+          sdrEmail: sdrEmail,
+          closedDate: closeDate + (String(closeDate).length === 10 ? 'T12:00:00.000Z' : ''),
+          status: 'projected'
+        }), { skipSave: true, allowProjected: true });
+      }
+    }
+  });
+
+  if (!opts.skipSave && typeof dashSave === 'function') dashSave();
+  if (typeof anRefreshCommissionTrackerUI === 'function') anRefreshCommissionTrackerUI();
+};
+
+window.anCommissionDealsForMonth = function(monthKey, opts) {
+  opts = opts || {};
+  var ledger = anEnsureCommissionLedger().filter(function(d) {
+    return anMonthKeyFromDate(d.closedDate) === monthKey;
+  });
+  if (opts.status) ledger = ledger.filter(function(d) { return (d.status || 'closed') === opts.status; });
+  return ledger;
+};
+
+window.anSdrDealsForMonth = function(monthKey, sdrFilter, opts) {
+  opts = opts || {};
+  var ledger = anEnsureSdrCommissionLedger().filter(function(d) {
+    if (anMonthKeyFromDate(d.closedDate) !== monthKey) return false;
+    if (sdrFilter && sdrFilter !== 'all') {
+      return (d.sdrEmail || '').toLowerCase() === String(sdrFilter).toLowerCase();
+    }
+    return true;
+  });
+  if (opts.status) ledger = ledger.filter(function(d) { return (d.status || 'closed') === opts.status; });
+  return ledger;
+};
+
+window.anGetActiveSectionId = function() {
+  var nav = document.querySelector('.nav-item.active[data-section]');
+  if (nav) return nav.getAttribute('data-section') || '';
+  var sec = document.querySelector('.section.active');
+  if (sec && sec.id) return sec.id.replace(/^section-/, '');
+  try {
+    return localStorage.getItem('an-active-section') || '';
+  } catch (e) {
+    return '';
+  }
+};
+
+window.anCaptureSectionReturn = function() {
+  var section = anGetActiveSectionId();
+  if (!section || section === 'opportunities') return null;
+  var labels = {
+    commission: 'Commission Plan',
+    crm: 'Lead Pipeline',
+    dashboard: 'Sales Dashboard',
+    companies: 'Companies',
+    home: 'Home'
+  };
+  var ctx = { section: section, label: labels[section] || section };
+  if (section === 'commission') {
+    ctx.tab = typeof anGetDefaultCommissionPlanTab === 'function' ? anGetDefaultCommissionPlanTab() : (window._commissionPlanTab || '');
+    var tabs = typeof anGetCommissionPlanTabs === 'function' ? anGetCommissionPlanTabs() : [];
+    var tab = tabs.find(function(t) { return t.id === ctx.tab; });
+    if (tab) ctx.label = (tab.label || tab.id) + (tab.subtitle ? ' — ' + tab.subtitle : '');
+  }
+  return ctx;
+};
+
+window.anGetSectionReturn = function() {
+  return window._anSectionReturn || null;
+};
+
+window.anClearSectionReturn = function() {
+  window._anSectionReturn = null;
+};
+
+window.anNavigateSectionReturn = function() {
+  var ctx = window._anSectionReturn;
+  window._anSectionReturn = null;
+  if (typeof anCloseOppRecord === 'function') anCloseOppRecord();
+  if (!ctx || !ctx.section) return;
+  setTimeout(function() {
+    if (typeof showSection === 'function') showSection(ctx.section, null);
+    if (ctx.section === 'commission' && ctx.tab && typeof anSetCommissionPlanTab === 'function') {
+      setTimeout(function() { anSetCommissionPlanTab(ctx.tab); }, 80);
+    }
+    if (ctx.section === 'commission' && typeof anRefreshCommissionTrackerUI === 'function') {
+      setTimeout(function() { anRefreshCommissionTrackerUI(); }, 180);
+    }
+  }, 280);
+};
+
+window.anOpenTrackerDealRef = function(kind, id) {
+  if (!id && id !== 0) return;
+  var sid = String(id).replace(/'/g, "\\'");
+  if (kind === 'opp') {
+    var ret = typeof anCaptureSectionReturn === 'function' ? anCaptureSectionReturn() : null;
+    window._anSectionReturn = ret || null;
+    if (typeof showSection === 'function') showSection('opportunities', null);
+    setTimeout(function() {
+      if (typeof anOpenOppRecord === 'function') anOpenOppRecord(id, { preserveReturn: true });
+    }, 220);
+    return;
+  }
+  if (kind === 'pipe') {
+    if (typeof dashAddDeal === 'function') dashAddDeal(parseInt(id, 10));
+    return;
+  }
+  if (kind === 'comm-ae') {
+    if (typeof anOpenTrackerDealModal === 'function') anOpenTrackerDealModal({ tracker: 'ae', editId: id });
+    return;
+  }
+  if (kind === 'comm-sdr') {
+    if (typeof anOpenTrackerDealModal === 'function') anOpenTrackerDealModal({ tracker: 'sdr', editId: id });
+  }
+};
+
+window.anDeleteTrackerDealRef = function(kind, id) {
+  if (!id && id !== 0) return;
+  if (kind === 'opp') {
+    if (typeof anDeleteOpportunity === 'function') anDeleteOpportunity(id);
+    setTimeout(function() {
+      if (typeof anSyncOpportunitiesToCommissionTrackers === 'function') anSyncOpportunitiesToCommissionTrackers({ skipSave: false });
+      if (typeof anRefreshCommissionTrackerUI === 'function') anRefreshCommissionTrackerUI();
+    }, 350);
+    return;
+  }
+  if (kind === 'pipe') {
+    if (typeof dashDeleteDeal === 'function') dashDeleteDeal(parseInt(id, 10));
+    setTimeout(function() {
+      if (typeof anRefreshCommissionTrackerUI === 'function') anRefreshCommissionTrackerUI();
+    }, 350);
+    return;
+  }
+  if (kind === 'comm-ae' && typeof anRemoveCommissionDeal === 'function') anRemoveCommissionDeal(id);
+  if (kind === 'comm-sdr' && typeof anRemoveSdrCommissionDeal === 'function') anRemoveSdrCommissionDeal(id);
+};
+
+window.anBuildTrackerDealActionButtons = function(p, trackerType) {
+  var openKind = p.refKind || (p.leadId ? 'opp' : 'comm-ae');
+  var openId = p.refId || p.leadId || p.commissionDealId || '';
+  if (p.leadId) { openKind = 'opp'; openId = p.leadId; }
+  var editKind = openKind;
+  var editId = openId;
+  if (openKind === 'pipe') { editKind = 'pipe'; editId = p.pipelineIdx != null ? p.pipelineIdx : openId; }
+  if (p.commissionDealId && !p.leadId) {
+    editKind = trackerType === 'sdr' ? 'comm-sdr' : 'comm-ae';
+    editId = p.commissionDealId;
+  }
+  var delKind = editKind;
+  var delId = editId;
+  if (p.leadId) delKind = 'opp';
+  var esc = function(v) { return String(v == null ? '' : v).replace(/'/g, "\\'"); };
+  return '<div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">'
+    + '<button onclick="event.stopPropagation();anOpenTrackerDealRef(\'' + esc(editKind) + '\',\'' + esc(editId) + '\')" style="padding:4px 8px;border-radius:6px;border:1px solid #c7d2fe;background:#eef2ff;color:#6366f1;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">Edit</button>'
+    + '<button onclick="event.stopPropagation();anDeleteTrackerDealRef(\'' + esc(delKind) + '\',\'' + esc(delId) + '\')" style="padding:4px 8px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;color:#ef4444;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">Delete</button>'
+    + '</div>';
+};
+
+window.anBuildTrackerPipelineRowHTML = function(p, trackerType) {
+  var openKind = p.leadId ? 'opp' : (p.refKind || 'pipe');
+  var openId = p.leadId || p.refId || (p.pipelineIdx != null ? p.pipelineIdx : '');
+  var ctLbl = (p.contractType === 'arr') ? 'ARR' : 'MRR';
+  var amount = p.commission != null ? p.commission : (p.bonus != null ? p.bonus : 0);
+  var amountSuffix = (p.contractType === 'arr' || trackerType === 'sdr') && p.contractType !== 'mrr' ? '' : '/mo';
+  var esc = function(v) { return String(v == null ? '' : v).replace(/'/g, "\\'"); };
+  var szMeta = typeof anAgencySizeMeta === 'function' ? anAgencySizeMeta(p.size || 'solo') : { color: '#6366f1', bg: '#fafaff', border: '#c7d2fe', short: 'Solo' };
+  return '<div onclick="anOpenTrackerDealRef(\'' + esc(openKind) + '\',\'' + esc(openId) + '\')" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px dashed ' + szMeta.border + ';border-left:3px solid ' + szMeta.color + ';border-radius:8px;margin-bottom:6px;background:' + szMeta.bg + ';cursor:pointer;" onmouseover="this.style.borderColor=\'' + szMeta.color + '\'" onmouseout="this.style.borderColor=\'' + szMeta.border + '\';this.style.borderLeftColor=\'' + szMeta.color + '\'">'
+    + '<div style="flex:1;min-width:0;">'
+    + '<div style="font-size:12px;font-weight:700;color:#09090b;">' + anEsc(p.name) + ' <span style="font-size:9px;font-weight:700;color:' + szMeta.color + ';background:#fff;border:1px solid ' + szMeta.border + ';border-radius:6px;padding:1px 6px;margin-left:4px;">' + szMeta.short + '</span> <span style="font-size:10px;color:#a1a1aa;font-weight:600;">↗ open</span></div>'
+    + '<div style="font-size:10px;color:#71717a;margin-top:2px;">' + anEsc(p.stage)
+    + (p.contractType ? ' · ' + ctLbl : '')
+    + (p.mrr ? ' · $' + Math.round(p.mrr) + '/mo' : '')
+    + (p.closeDate ? ' · Close ' + String(p.closeDate).slice(0, 10) : '') + '</div></div>'
+    + '<div style="font-size:12px;font-weight:800;color:#6366f1;flex-shrink:0;margin-right:8px;">~' + fmtDol(amount) + amountSuffix + '</div>'
+    + anBuildTrackerDealActionButtons(p, trackerType)
+    + '</div>';
+};
+
+window.anBuildMonthlyTrackerDealsHTML = function(deals, type, removeFn) {
+  if (!deals.length) {
+    return '<div style="text-align:center;padding:16px;color:#a1a1aa;font-size:12px;">No deals for this month yet.</div>';
+  }
+  var sizeLabel = { solo: 'Solo', small: 'Small', large: 'Large', enterprise: 'Enterprise' };
+  return deals.map(function(d) {
+    var comm = type === 'sdr'
+      ? anSdrBonusAmount(d.size, d.contractType)
+      : anCommissionPerClose(d.size, d.contractType);
+    var isProjected = (d.status || 'closed') === 'projected';
+    var dateStr = d.closedDate ? String(d.closedDate).slice(0, 10) : '';
+    var border = isProjected ? 'border-style:dashed;border-color:#c7d2fe;background:#fafaff;' : 'border-color:#e4e4e7;background:#fff;';
+    var statusTag = isProjected
+      ? '<span style="background:#eef2ff;color:#6366f1;border-radius:10px;padding:1px 7px;font-size:9px;font-weight:700;">PROJECTED</span>'
+      : '<span style="background:#ecfdf5;color:#10b981;border-radius:10px;padding:1px 7px;font-size:9px;font-weight:700;">CLOSED</span>';
+    var srcTag = d.source === 'crm'
+      ? '<span style="background:#f3f4f6;color:#71717a;border-radius:10px;padding:1px 7px;font-size:9px;font-weight:700;">CRM</span>'
+      : '<span style="background:#f3f4f6;color:#71717a;border-radius:10px;padding:1px 7px;font-size:9px;font-weight:700;">MANUAL</span>';
+    var sdrTag = (type === 'sdr' && d.sdrEmail && typeof anGetRepName === 'function')
+      ? '<span style="font-size:10px;color:#71717a;"> · ' + anEsc(anGetRepName(d.sdrEmail)) + '</span>' : '';
+    var pRef = {
+      leadId: d.leadId || null,
+      commissionDealId: d.id,
+      refKind: d.leadId ? 'opp' : (type === 'sdr' ? 'comm-sdr' : 'comm-ae'),
+      refId: d.leadId || d.id,
+      name: d.name,
+      contractType: d.contractType
+    };
+    var openKind = pRef.leadId ? 'opp' : pRef.refKind;
+    var openId = pRef.leadId || pRef.commissionDealId;
+    var esc = function(v) { return String(v == null ? '' : v).replace(/'/g, "\\'"); };
+    return '<div onclick="anOpenTrackerDealRef(\'' + esc(openKind) + '\',\'' + esc(openId) + '\')" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid;border-radius:8px;margin-bottom:6px;cursor:pointer;'+border+'" onmouseover="this.style.borderColor=\'#6366f1\'" onmouseout="this.style.borderColor=\''+(isProjected?'#c7d2fe':'#e4e4e7')+'\'">'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:13px;font-weight:700;color:#09090b;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' + anEsc(d.name) + statusTag + srcTag + '</div>'
+      + '<div style="font-size:11px;color:#71717a;margin-top:2px;">' + (sizeLabel[d.size] || d.size) + ' · ' + (d.contractType === 'arr' ? 'Annual/Prepaid' : 'Monthly') + ' · ' + dateStr + sdrTag + '</div>'
+      + '</div>'
+      + '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">'
+      + '<div style="font-size:13px;font-weight:800;color:' + (isProjected ? '#6366f1' : '#10b981') + ';">' + (isProjected ? '~' : '+') + fmtDol(comm) + (d.contractType === 'arr' || type === 'sdr' ? '' : '/mo') + '</div>'
+      + anBuildTrackerDealActionButtons(pRef, type)
+      + '</div></div>';
+  }).join('');
+};
+
+window.anBuildMonthOverviewStrip = function(type, sdrFilter) {
+  var chips = '';
+  for (var idx = 0; idx < 12; idx++) {
+    var off = idx - 3;
+    var m = anGetTrackerMonthInfo(off);
+    var closed, projected, total;
+    if (type === 'sdr') {
+      closed = anSdrDealsForMonth(m.key, sdrFilter, { status: 'closed' });
+      projected = anSdrDealsForMonth(m.key, sdrFilter, { status: 'projected' });
+      total = closed.reduce(function(s, d) { return s + anSdrBonusAmount(d.size, d.contractType); }, 0);
+    } else {
+      closed = anCommissionDealsForMonth(m.key, { status: 'closed' });
+      projected = anCommissionDealsForMonth(m.key, { status: 'projected' });
+      total = closed.reduce(function(s, d) { return s + anCommissionPerClose(d.size, d.contractType); }, 0);
+    }
+    var active = (window._commTrackerMonthOffset || 0) === off;
+    chips += '<button onclick="window._commTrackerMonthOffset=' + off + ';' + (type === 'sdr' ? 'anRenderSdrMonthlyTracker()' : 'anRenderAeMonthlyTracker()') + '" '
+      + 'style="flex:1;min-width:72px;padding:8px 6px;border-radius:8px;border:1.5px solid ' + (active ? '#6366f1' : '#e4e4e7') + ';background:' + (active ? '#eef2ff' : '#fff') + ';cursor:pointer;font-family:inherit;text-align:center;">'
+      + '<div style="font-size:10px;font-weight:700;color:' + (active ? '#6366f1' : '#71717a') + ';">' + m.label.split(' ')[0] + '</div>'
+      + '<div style="font-size:14px;font-weight:800;color:#09090b;">' + closed.length + '</div>'
+      + '<div style="font-size:9px;color:#a1a1aa;">' + (projected.length ? '+' + projected.length + ' proj' : fmtDol(total)) + '</div>'
+      + '</button>';
+  }
+  return '<div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:16px;padding-bottom:4px;">' + chips + '</div>';
+};
+
+window.anRenderAeMonthlyTracker = function() {
+  var wrap = document.getElementById('ae-monthly-tracker');
+  if (!wrap) return;
+  var rep = (window.COMMISSION_AE_REPS && window.COMMISSION_AE_REPS[0] && window.COMMISSION_AE_REPS[0].email)
+    || (window.COMMISSION_AE_EMAILS && window.COMMISSION_AE_EMAILS[0]) || '';
+  if (!anIsAdminCommissionView()) {
+    rep = (typeof _currentUser !== 'undefined' && _currentUser && _currentUser.email || '').toLowerCase();
+  }
+  window._aeTrackerRep = rep;
+  var month = anGetTrackerMonthInfo(window._commTrackerMonthOffset || 0);
+  var closed = anCommissionDealsForMonth(month.key, { status: 'closed' });
+  var projected = anCommissionDealsForMonth(month.key, { status: 'projected' });
+  if (rep) {
+    closed = closed.filter(function(d) { return anAeDealMatchesRep(d, rep); });
+    projected = projected.filter(function(d) { return anAeDealMatchesRep(d, rep); });
+  }
+  var closedTotal = closed.reduce(function(s, d) { return s + anCommissionPerClose(d.size, d.contractType); }, 0);
+  var projectedTotal = projected.reduce(function(s, d) { return s + anCommissionPerClose(d.size, d.contractType); }, 0);
+  var allDeals = projected.concat(closed).sort(function(a, b) {
+    return String(a.closedDate || '').localeCompare(String(b.closedDate || ''));
+  });
+
+  var performanceTable = typeof anBuildAePerformanceTableHTML === 'function'
+    ? anBuildAePerformanceTableHTML(month.key, rep) : '';
+
+  wrap.innerHTML = performanceTable + anBuildMonthOverviewStrip('ae')
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;">'
+    + '<div style="display:flex;align-items:center;gap:8px;">'
+    + '<button onclick="anShiftTrackerMonth(-1,\'ae\')" style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:8px;background:#fff;cursor:pointer;font-family:inherit;">◀</button>'
+    + '<div><div style="font-size:15px;font-weight:800;color:#09090b;">' + month.label + (month.rel ? ' <span style="color:#6366f1;font-size:12px;">(' + month.rel + ')</span>' : '') + '</div>'
+    + '<div style="font-size:11px;color:#71717a;margin-top:2px;">' + closed.length + ' closed · ' + fmtDol(closedTotal) + ' earned'
+    + (projected.length ? ' · ' + projected.length + ' projected · ~' + fmtDol(projectedTotal) : '') + '</div></div>'
+    + '<button onclick="anShiftTrackerMonth(1,\'ae\')" style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:8px;background:#fff;cursor:pointer;font-family:inherit;">▶</button>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+    + '<button onclick="anOpenTrackerDealModal({tracker:\'ae\',monthKey:\'' + month.key + '\',status:\'closed\'})" style="padding:8px 14px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ Add Closed Deal</button>'
+    + '<button onclick="anSyncOpportunitiesToCommissionTrackers()" style="padding:8px 14px;border:1px solid #c7d2fe;border-radius:8px;background:#eef2ff;color:#6366f1;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">↻ Sync from Opportunities</button>'
+    + '</div></div>'
+    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">'
+    + anTrackerStatCard('Closed', closed.length, fmtDol(closedTotal), '#10b981')
+    + anTrackerStatCard('Projected', projected.length, '~' + fmtDol(projectedTotal), '#6366f1')
+    + anTrackerStatCard('Solo', closed.filter(function(d){return d.size==='solo';}).length + projected.filter(function(d){return d.size==='solo';}).length, '', '#6366f1')
+    + anTrackerStatCard('Agency', closed.filter(function(d){return d.size!=='solo';}).length + projected.filter(function(d){return d.size!=='solo';}).length, '', '#f59e0b')
+    + '</div>'
+    + anBuildMonthlyTrackerDealsHTML(allDeals, 'ae', 'anRemoveCommissionDeal');
+};
+
+function anTrackerStatCard(label, count, amount, color) {
+  return '<div style="background:#f8f8fa;border:1px solid #e4e4e7;border-radius:10px;padding:12px;text-align:center;">'
+    + '<div style="font-size:9px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.08em;">' + label + '</div>'
+    + '<div style="font-size:22px;font-weight:800;color:' + color + ';margin-top:4px;">' + count + '</div>'
+    + (amount ? '<div style="font-size:11px;color:#71717a;margin-top:2px;">' + amount + '</div>' : '')
+    + '</div>';
+}
+
+window.anRenderOneSdrMonthlyTracker = function(repEmail) {
+  var wrapId = anSdrTrackerWrapId(repEmail);
+  var wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  var rep = String(repEmail || '').toLowerCase();
+  window._sdrTrackerRep = rep;
+  var month = anGetTrackerMonthInfo(window._commTrackerMonthOffset || 0);
+  var closed = anSdrDealsForMonth(month.key, rep, { status: 'closed' });
+  var projected = anSdrDealsForMonth(month.key, rep, { status: 'projected' });
+  var closedTotal = closed.reduce(function(s, d) { return s + anSdrBonusAmount(d.size, d.contractType); }, 0);
+  var projectedTotal = projected.reduce(function(s, d) { return s + anSdrBonusAmount(d.size, d.contractType); }, 0);
+  var allDeals = projected.concat(closed);
+  var repName = typeof anGetRepName === 'function' ? anGetRepName(rep) : rep.split('@')[0];
+
+  var performanceTable = typeof anBuildSdrPerformanceTableHTML === 'function'
+    ? anBuildSdrPerformanceTableHTML(month.key, rep) : '';
+
+  wrap.innerHTML = performanceTable + anBuildMonthOverviewStrip('sdr', rep)
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;">'
+    + '<div style="display:flex;align-items:center;gap:8px;">'
+    + '<button onclick="anShiftTrackerMonth(-1,\'sdr\')" style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:8px;background:#fff;cursor:pointer;font-family:inherit;">◀</button>'
+    + '<div><div style="font-size:15px;font-weight:800;color:#09090b;">' + month.label + (month.rel ? ' <span style="color:#6366f1;font-size:12px;">(' + month.rel + ')</span>' : '') + '</div>'
+    + '<div style="font-size:11px;color:#71717a;margin-top:2px;">' + closed.length + ' closed · ' + fmtDol(closedTotal) + ' bonus'
+    + (projected.length ? ' · ' + projected.length + ' projected · ~' + fmtDol(projectedTotal) : '') + '</div></div>'
+    + '<button onclick="anShiftTrackerMonth(1,\'sdr\')" style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:8px;background:#fff;cursor:pointer;font-family:inherit;">▶</button>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+    + '<button onclick="anOpenAddDemoForSdr(\'' + rep + '\',\'' + month.key + '\')" style="padding:8px 14px;border:none;border-radius:8px;background:#8b5cf6;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ Log Demo</button>'
+    + '<button onclick="anOpenTrackerDealModal({tracker:\'sdr\',monthKey:\'' + month.key + '\',status:\'closed\',sdrEmail:\'' + rep + '\'})" style="padding:8px 14px;border:none;border-radius:8px;background:#10b981;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ Add SDR Deal</button>'
+    + '<button onclick="anSyncOpportunitiesToCommissionTrackers()" style="padding:8px 14px;border:1px solid #a7f3d0;border-radius:8px;background:#ecfdf5;color:#059669;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">↻ Sync from Opportunities</button>'
+    + '</div></div>'
+    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">'
+    + anTrackerStatCard('Closed', closed.length, fmtDol(closedTotal), '#10b981')
+    + anTrackerStatCard('Projected', projected.length, '~' + fmtDol(projectedTotal), '#6366f1')
+    + anTrackerStatCard('Monthly', closed.filter(function(d){return d.contractType==='mrr';}).length, '', '#6366f1')
+    + anTrackerStatCard('Annual', closed.filter(function(d){return d.contractType!=='mrr';}).length, '', '#f59e0b')
+    + '</div>'
+    + anBuildMonthlyTrackerDealsHTML(allDeals, 'sdr', 'anRemoveSdrCommissionDeal');
+  setTimeout(function() {
+    if (typeof anUpdateSdrDemoCalculator === 'function') anUpdateSdrDemoCalculator(rep, month.key);
+  }, 0);
+};
+
+window.anRenderSdrMonthlyTracker = function() {
+  var legacy = document.getElementById('sdr-monthly-tracker');
+  if (legacy) {
+    var rep = window._sdrTrackerRep || 'all';
+    if (isSdrCommissionUser() && !isAeCommissionUser()) {
+      rep = (_currentUser && _currentUser.email || '').toLowerCase();
+    }
+    if (rep && rep !== 'all') {
+      anRenderOneSdrMonthlyTracker(rep);
+      return;
+    }
+  }
+  (window.SDR_COMMISSION_REPS || []).forEach(function(r) {
+    if (document.getElementById(anSdrTrackerWrapId(r.email))) {
+      anRenderOneSdrMonthlyTracker(r.email);
+    }
+  });
+};
+
+window.anShiftTrackerMonth = function(delta, which) {
+  window._commTrackerMonthOffset = (window._commTrackerMonthOffset || 0) + delta;
+  if (which === 'sdr') anRenderSdrMonthlyTracker();
+  else anRenderAeMonthlyTracker();
+};
+
+window.anSetSdrTrackerRep = function(email) {
+  window._sdrTrackerRep = email;
+  anRenderSdrMonthlyTracker();
+};
+
+window.anSdrTrackerWrapId = function(email) {
+  var em = (email || '').toLowerCase();
+  var rep = (window.SDR_COMMISSION_REPS || []).find(function(r) {
+    return String(r.email).toLowerCase() === em;
+  });
+  return 'sdr-monthly-tracker-' + (rep ? String(rep.name).toLowerCase() : em.split('@')[0] || 'all');
+};
+
+window.anGetCommissionPlanTabs = function() {
+  var tabs = [];
+  var admin = typeof anIsAdminCommissionView === 'function' && anIsAdminCommissionView();
+  var ae = typeof isAeCommissionUser === 'function' && isAeCommissionUser();
+  var sdr = typeof isSdrCommissionUser === 'function' && isSdrCommissionUser();
+  var em = (typeof _currentUser !== 'undefined' && _currentUser && _currentUser.email || '').toLowerCase();
+  if (admin || ae) {
+    var aeRep = (window.COMMISSION_AE_REPS && window.COMMISSION_AE_REPS[0])
+      || { firstName: 'Adrian', lastName: 'Smithee', email: (window.COMMISSION_AE_EMAILS && window.COMMISSION_AE_EMAILS[0]) || 'asmithee@insurewithcompass.com' };
+    tabs.push({ id: 'adrian', label: aeRep.firstName || 'Adrian', subtitle: 'AE', email: aeRep.email });
+  }
+  var sdrOrder = ['andy', 'joel'];
+  sdrOrder.forEach(function(name) {
+    var r = (window.SDR_COMMISSION_REPS || []).find(function(rep) {
+      return String(rep.name).toLowerCase() === name;
+    });
+    if (!r) return;
+    if (admin || (sdr && em === String(r.email).toLowerCase())) {
+      tabs.push({ id: name, label: r.name, subtitle: 'SDR', email: r.email });
+    }
+  });
+  (window.SDR_COMMISSION_REPS || []).forEach(function(r) {
+    var id = String(r.name).toLowerCase();
+    if (sdrOrder.indexOf(id) >= 0) return;
+    if (admin || (sdr && em === String(r.email).toLowerCase())) {
+      tabs.push({ id: id, label: r.name, subtitle: 'SDR', email: r.email });
+    }
+  });
+  return tabs;
+};
+
+window.anGetDefaultCommissionPlanTab = function() {
+  var tabs = anGetCommissionPlanTabs();
+  if (window._commissionPlanTab && tabs.some(function(t) { return t.id === window._commissionPlanTab; })) {
+    return window._commissionPlanTab;
+  }
+  return tabs.length ? tabs[0].id : 'adrian';
+};
+
+window.anSetCommissionPlanTab = function(tabId) {
+  window._commissionPlanTab = tabId;
+  var tabs = anGetCommissionPlanTabs();
+  tabs.forEach(function(t) {
+    var panel = document.getElementById('comm-tab-' + t.id);
+    var btn = document.getElementById('comm-tab-btn-' + t.id);
+    var active = t.id === tabId;
+    if (panel) panel.style.display = active ? 'block' : 'none';
+    if (btn) {
+      btn.style.color = active ? '#6366f1' : '#71717a';
+      btn.style.borderBottomColor = active ? '#6366f1' : 'transparent';
+      btn.style.background = active ? 'rgba(99,102,241,0.06)' : 'transparent';
+    }
+  });
+  if (tabId === 'adrian') {
+    var aeEmail = (window.COMMISSION_AE_REPS && window.COMMISSION_AE_REPS[0] && window.COMMISSION_AE_REPS[0].email)
+      || (window.COMMISSION_AE_EMAILS && window.COMMISSION_AE_EMAILS[0]) || '';
+    window._aeTrackerRep = aeEmail;
+    if (typeof anRenderAeMonthlyTracker === 'function') anRenderAeMonthlyTracker();
+    if (typeof loadRates === 'function') loadRates();
+    if (typeof calcCommission === 'function') calcCommission();
+    if (typeof renderPlanner === 'function') renderPlanner();
+  } else {
+    var tab = tabs.find(function(t) { return t.id === tabId; });
+    if (tab && tab.email && typeof anRenderOneSdrMonthlyTracker === 'function') {
+      anRenderOneSdrMonthlyTracker(tab.email);
+    }
+  }
+};
+
+window.anBuildCommissionPlanTabBarHTML = function(tabs, activeId) {
+  if (!tabs || tabs.length < 2) return '';
+  var btns = tabs.map(function(t) {
+    var active = t.id === activeId;
+    return '<button id="comm-tab-btn-' + t.id + '" onclick="anSetCommissionPlanTab(\'' + t.id + '\')" '
+      + 'style="padding:10px 20px;border:none;border-bottom:3px solid ' + (active ? '#6366f1' : 'transparent') + ';'
+      + 'background:' + (active ? 'rgba(99,102,241,0.06)' : 'transparent') + ';color:' + (active ? '#6366f1' : '#71717a') + ';'
+      + 'font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:-2px;white-space:nowrap;">'
+      + anEsc(t.label) + ' <span style="font-size:10px;font-weight:600;opacity:0.75;">' + anEsc(t.subtitle) + '</span></button>';
+  }).join('');
+  return '<div style="display:flex;gap:2px;border-bottom:2px solid #e4e4e7;margin-bottom:20px;overflow-x:auto;">' + btns + '</div>';
+};
+
+window.anBuildAdrianCommissionTabHTML = function() {
+  return ''
+    + '<div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:#4338ca;line-height:1.5;">'
+    + '<strong>AE Commission</strong> — Monthly scorecard, income planner, closed deals, and pipeline modeling for Adrian.'
+    + '</div>'
     + '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">'
     + '<div style="font-size:13px;font-weight:700;color:#09090b;">Contract Type:</div>'
     + '<div style="display:flex;background:#f4f4f5;border-radius:8px;padding:3px;gap:2px;">'
@@ -9645,23 +11266,24 @@ window.buildCommissionHTML = function() {
     + '<div id="comm-contract-note" style="font-size:12px;color:#71717a;">Recurring monthly commission</div>'
     + '<div id="comm-arr-badge" style="display:none;background:#10b981;color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;margin-left:auto;">\uD83D\uDCB0 Full year paid upfront</div>'
     + '</div>'
-
-    // Rate cards
     + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">'
     + buildRateCard('solo',  '#6366f1', 'Solo Agent Rate',   11, '$79/mo per agent')
     + buildRateCard('small', '#10b981', 'Small Agency Rate', 10, 'of monthly plan price')
     + buildRateCard('large', '#f59e0b', 'Large Agency Rate',  8, 'of monthly plan price')
     + '</div>'
-
-    // ── INCOME PLANNER ──
+    + '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;margin-bottom:20px;">'
+    + '<div style="padding:16px 20px;border-bottom:1px solid #e4e4e7;background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(99,102,241,0.06));">'
+    + '<div style="font-size:10px;font-weight:700;color:#10b981;letter-spacing:0.14em;text-transform:uppercase;">AE Commission Tracker</div>'
+    + '<div style="font-size:12px;color:#71717a;margin-top:2px;">Pipeline deals by stage, MRR vs ARR closes, and commission earned.</div>'
+    + '</div>'
+    + '<div id="ae-monthly-tracker" style="padding:16px 20px;"></div>'
+    + '</div>'
     + '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;margin-bottom:20px;">'
     + '<div style="padding:16px 20px;border-bottom:1px solid #e4e4e7;background:linear-gradient(135deg,rgba(99,102,241,0.06),rgba(16,185,129,0.04));">'
     + '<div style="font-size:10px;font-weight:700;color:#6366f1;letter-spacing:0.14em;text-transform:uppercase;">Income Planner</div>'
     + '<div style="font-size:12px;color:#71717a;margin-top:2px;">Set your income goal — see exactly what you need to close across every time period</div>'
     + '</div>'
     + '<div style="padding:20px;">'
-
-    // Goal input
     + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding:16px;background:#f8f8fa;border-radius:10px;">'
     + '<div style="font-size:13px;font-weight:700;color:#09090b;">Monthly Income Goal</div>'
     + '<div style="display:flex;align-items:center;gap:6px;margin-left:auto;">'
@@ -9670,28 +11292,21 @@ window.buildCommissionHTML = function() {
     + 'style="width:120px;border:1.5px solid #e4e4e7;border-radius:8px;padding:8px 12px;font-size:20px;font-weight:700;color:#09090b;font-family:inherit;outline:none;text-align:center;" '
     + 'onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'#e4e4e7\'">'
     + '<span style="font-size:13px;color:#71717a;">/mo</span>'
-    + '</div>'
-    + '</div>'
-
-    // Planner output
+    + '</div></div>'
     + '<div id="planner-output"></div>'
     + '</div></div>'
-
-    // ── COMMISSION LEDGER ──
     + '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;margin-bottom:20px;">'
     + '<div style="padding:16px 20px;border-bottom:1px solid #e4e4e7;background:linear-gradient(135deg,rgba(16,185,129,0.06),rgba(99,102,241,0.04));display:flex;align-items:center;justify-content:space-between;gap:12px;">'
-    + '<div><div style="font-size:10px;font-weight:700;color:#10b981;letter-spacing:0.14em;text-transform:uppercase;">Commission Ledger</div>'
-    + '<div style="font-size:12px;color:#71717a;margin-top:2px;">Deals you\'ve closed — synced automatically from the Opportunities pipeline, or added manually.</div></div>'
+    + '<div><div style="font-size:10px;font-weight:700;color:#10b981;letter-spacing:0.14em;text-transform:uppercase;">All Closed Deals</div>'
+    + '<div style="font-size:12px;color:#71717a;margin-top:2px;">Full history — synced from CRM or added manually.</div></div>'
     + '<button onclick="anOpenManualDealModal()" style="flex-shrink:0;padding:9px 16px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">+ Add Deal</button>'
     + '</div>'
     + '<div id="commission-ledger-list" style="padding:16px 20px;">' + anBuildCommissionLedgerHTML() + '</div>'
     + '</div>'
-
-    // Pipeline builder (existing)
     + '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;margin-bottom:20px;">'
     + '<div style="padding:16px 20px;border-bottom:1px solid #e4e4e7;background:linear-gradient(135deg,rgba(16,185,129,0.06),rgba(99,102,241,0.04));">'
     + '<div style="font-size:10px;font-weight:700;color:#10b981;letter-spacing:0.14em;text-transform:uppercase;">Pipeline Builder</div>'
-    + '<div style="font-size:12px;color:#71717a;margin-top:2px;">Enter how many of each you expect to close.</div>'
+    + '<div style="font-size:12px;color:#71717a;margin-top:2px;">Model how many closes you expect.</div>'
     + '</div>'
     + '<div style="padding:20px;">'
     + '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:14px;">'
@@ -9703,8 +11318,6 @@ window.buildCommissionHTML = function() {
     + buildEnterpriseInput()
     + '</div>'
     + buildAnnualContractSection()
-
-    // Results
     + '<div id="comm-results" style="background:linear-gradient(135deg,#0f0f17,#141424);border-radius:12px;padding:20px;">'
     + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">'
     + commResultCell('Solo Comm.',  'comm-solo-out',  'comm-solo-label',  '#6366f1')
@@ -9717,9 +11330,162 @@ window.buildCommissionHTML = function() {
     + '<span style="font-size:11px;color:rgba(255,255,255,0.4);" id="comm-projection-label">Annual projection (monthly billing)</span>'
     + '<span id="comm-annual-proj" style="font-size:16px;font-weight:700;color:#6ee7b7;">$0/yr</span>'
     + '</div></div>'
-    + '</div></div>'
+    + '</div></div>';
+};
 
-    + '</div>'; // end .content
+window.anBuildSdrRepCommissionTabHTML = function(rep) {
+  var wrapId = anSdrTrackerWrapId(rep.email);
+  return '<div id="' + wrapId + '"></div>';
+};
+
+window.anBuildSdrRateCardsHTML = function() {
+  var rates = anSdrBonusRates();
+  function card(title, color, monthly, annual) {
+    return '<div style="background:linear-gradient(135deg,#0f0f17,#1a1a2e);border:1px solid '+color+'44;border-radius:12px;padding:16px;">'
+      + '<div style="font-size:9px;font-weight:700;color:'+color+';letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;">'+title+'</div>'
+      + '<div style="font-size:11px;color:rgba(255,255,255,0.5);">Monthly contract</div><div style="font-size:20px;font-weight:800;color:#fff;">'+fmtDol(monthly)+'</div>'
+      + '<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:8px;">Annual / prepaid</div><div style="font-size:16px;font-weight:700;color:'+color+';">'+fmtDol(annual)+'</div>'
+      + '</div>';
+  }
+  return '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">'
+    + card('Solo Agent', '#6366f1', rates.mrr.solo, rates.arr.solo)
+    + card('Small Agency', '#10b981', rates.mrr.small, rates.arr.small)
+    + card('Large Agency', '#f59e0b', rates.mrr.large, rates.arr.large)
+    + card('Enterprise', '#7c3aed', rates.mrr.enterprise, rates.arr.enterprise)
+    + '</div>';
+};
+
+window.anOpenTrackerDealModal = function(opts) {
+  opts = opts || {};
+  var existing = document.getElementById('tracker-deal-modal');
+  if (existing) existing.remove();
+  var isSdr = opts.tracker === 'sdr';
+  var editId = opts.editId || '';
+  var editDeal = null;
+  if (editId) {
+    var ledger = isSdr ? anEnsureSdrCommissionLedger() : anEnsureCommissionLedger();
+    editDeal = ledger.find(function(d) { return d.id === editId; });
+  }
+  var monthKey = opts.monthKey || (editDeal && editDeal.closedDate ? String(editDeal.closedDate).slice(0, 7) : anGetTrackerMonthInfo(0).key);
+  var defaultDate = editDeal && editDeal.closedDate ? String(editDeal.closedDate).slice(0, 10) : (monthKey + '-15');
+  var defaultStatus = editDeal ? (editDeal.status || 'closed') : (opts.status || 'closed');
+  var defaultName = editDeal ? (editDeal.name || '') : '';
+  var defaultSize = editDeal ? (editDeal.size || 'solo') : 'solo';
+  var defaultCt = editDeal ? (editDeal.contractType || 'mrr') : 'mrr';
+  var sdrOptions = (window.SDR_COMMISSION_REPS || []).map(function(r) {
+    var selEmail = (editDeal && editDeal.sdrEmail) || opts.sdrEmail || '';
+    var sel = selEmail.toLowerCase() === r.email.toLowerCase() ? ' selected' : '';
+    return '<option value="'+r.email+'"'+sel+'>'+r.name+'</option>';
+  }).join('');
+  var backdrop = document.createElement('div');
+  backdrop.id = 'tracker-deal-modal';
+  backdrop.setAttribute('data-edit-id', editId || '');
+  backdrop.setAttribute('data-tracker', isSdr ? 'sdr' : 'ae');
+  backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:21000;display:flex;align-items:center;justify-content:center;';
+  backdrop.onclick = function(e) { if (e.target === backdrop) backdrop.remove(); };
+  backdrop.innerHTML = '<div style="background:#fff;border-radius:14px;padding:24px;width:400px;max-width:92vw;font-family:inherit;" onclick="event.stopPropagation()">'
+    + '<div style="font-size:16px;font-weight:800;color:#09090b;margin-bottom:4px;">' + (editId ? (isSdr ? 'Edit SDR Commission Deal' : 'Edit Commission Deal') : (isSdr ? 'Add SDR Commission Deal' : 'Add Commission Deal')) + '</div>'
+    + '<div style="font-size:12px;color:#71717a;margin-bottom:16px;">' + (editId ? 'Update deal details' : ('Log a ' + (opts.status === 'projected' ? 'projected' : 'closed') + ' deal for ' + monthKey)) + '</div>'
+    + '<label style="font-size:11px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">Deal / Client Name</label>'
+    + '<input id="td-name" type="text" value="'+anEsc(defaultName)+'" placeholder="Client name" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:12px;">'
+    + (isSdr ? '<label style="font-size:11px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">SDR</label><select id="td-sdr" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;margin-bottom:12px;">'+sdrOptions+'</select>' : '')
+    + '<label style="font-size:11px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">Plan Size</label>'
+    + '<select id="td-size" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;margin-bottom:12px;">'
+    + '<option value="solo"'+(defaultSize==='solo'?' selected':'')+'>Solo Agent</option><option value="small"'+(defaultSize==='small'?' selected':'')+'>Small Agency</option><option value="large"'+(defaultSize==='large'?' selected':'')+'>Large Agency</option><option value="enterprise"'+(defaultSize==='enterprise'?' selected':'')+'>Enterprise</option>'
+    + '</select>'
+    + '<label style="font-size:11px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">Contract Type</label>'
+    + '<select id="td-ct" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;margin-bottom:12px;">'
+    + '<option value="mrr"'+(defaultCt==='mrr'?' selected':'')+'>Monthly (MRR)</option><option value="arr"'+(defaultCt==='arr'?' selected':'')+'>Annual / Prepaid</option>'
+    + '</select>'
+    + '<label style="font-size:11px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">Close Date</label>'
+    + '<input id="td-date" type="date" value="'+defaultDate+'" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;margin-bottom:12px;">'
+    + '<label style="font-size:11px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">Status</label>'
+    + '<select id="td-status" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;margin-bottom:16px;">'
+    + '<option value="closed"'+(defaultStatus==='closed'?' selected':'')+'>Closed (earned)</option>'
+    + '<option value="projected"'+(defaultStatus==='projected'?' selected':'')+'>Projected (pipeline)</option>'
+    + '</select>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button onclick="document.getElementById(\'tracker-deal-modal\').remove()" style="flex:1;padding:10px;border:1.5px solid #e4e4e7;border-radius:8px;background:#fff;color:#71717a;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Cancel</button>'
+    + '<button onclick="anSubmitTrackerDeal(\''+(isSdr?'sdr':'ae')+'\')" style="flex:1;padding:10px;border:none;border-radius:8px;background:'+(isSdr?'#10b981':'#6366f1')+';color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Save</button>'
+    + '</div></div>';
+  document.body.appendChild(backdrop);
+};
+
+window.anSubmitTrackerDeal = function(tracker) {
+  var name = (document.getElementById('td-name').value || '').trim();
+  if (!name) { if (typeof showToast === 'function') showToast('Enter a deal name'); return; }
+  var size = document.getElementById('td-size').value;
+  var ct = document.getElementById('td-ct').value;
+  var date = document.getElementById('td-date').value;
+  var status = document.getElementById('td-status').value || 'closed';
+  var modal = document.getElementById('tracker-deal-modal');
+  var editId = modal ? modal.getAttribute('data-edit-id') : '';
+  var payload = { name: name, size: size, contractType: ct, closedDate: date + 'T12:00:00.000Z', source: 'manual', status: status };
+  if (tracker === 'sdr') {
+    var sdrEl = document.getElementById('td-sdr');
+    payload.sdrEmail = sdrEl ? sdrEl.value : (_currentUser && _currentUser.email);
+    if (editId) {
+      var sdrLedger = anEnsureSdrCommissionLedger();
+      var sdrIdx = sdrLedger.findIndex(function(d) { return d.id === editId; });
+      if (sdrIdx >= 0) {
+        Object.assign(sdrLedger[sdrIdx], payload);
+        if (typeof dashSave === 'function') dashSave();
+        if (typeof anRefreshCommissionTrackerUI === 'function') anRefreshCommissionTrackerUI();
+        modal && modal.remove();
+        if (typeof showToast === 'function') showToast('Deal updated');
+        return;
+      }
+    }
+    anAddSdrCommissionDeal(payload);
+  } else {
+    if (editId) {
+      var aeLedger = anEnsureCommissionLedger();
+      var aeIdx = aeLedger.findIndex(function(d) { return d.id === editId; });
+      if (aeIdx >= 0) {
+        Object.assign(aeLedger[aeIdx], payload);
+        if (typeof dashSave === 'function') dashSave();
+        if (typeof anRefreshCommissionTrackerUI === 'function') anRefreshCommissionTrackerUI();
+        else if (typeof anRefreshCommissionLedgerUI === 'function') anRefreshCommissionLedgerUI();
+        modal && modal.remove();
+        if (typeof showToast === 'function') showToast('Deal updated');
+        return;
+      }
+    }
+    anAddCommissionDeal(payload);
+  }
+  document.getElementById('tracker-deal-modal') && document.getElementById('tracker-deal-modal').remove();
+  if (typeof showToast === 'function') showToast('Deal added to tracker');
+};
+
+// ── 3. COMMISSION PLANNER (replaces goal calculator) ─────────
+window.buildCommissionHTML = function() {
+  var tabs = typeof anGetCommissionPlanTabs === 'function' ? anGetCommissionPlanTabs() : [];
+  var defaultTab = typeof anGetDefaultCommissionPlanTab === 'function' ? anGetDefaultCommissionPlanTab() : 'adrian';
+  var adminView = typeof anIsAdminCommissionView === 'function' && anIsAdminCommissionView();
+  var title = 'Commission Plan';
+  var label = adminView ? 'Admin \u00b7 Team Commission View' : 'Commission Tracker';
+
+  var html = '<div class="page-header">'
+    + '<div class="page-label" style="color:#10b981;">' + label + '</div>'
+    + '<h1>' + title + '</h1>'
+    + '<p style="font-size:13px;color:#71717a;margin-top:8px;max-width:720px;">Select a rep below to view their commission scorecard, pipeline, and earnings.</p>'
+    + '</div>'
+    + '<div class="content" style="max-width:1100px;">';
+
+  if (!tabs.length) {
+    html += '<div style="text-align:center;padding:40px;color:#a1a1aa;font-size:13px;">No commission access configured for this account.</div>';
+  } else {
+    html += anBuildCommissionPlanTabBarHTML(tabs, defaultTab);
+    tabs.forEach(function(t) {
+      html += '<div id="comm-tab-' + t.id + '" class="comm-plan-tab-panel" style="display:none;">';
+      if (t.id === 'adrian') html += anBuildAdrianCommissionTabHTML();
+      else html += anBuildSdrRepCommissionTabHTML(t);
+      html += '</div>';
+    });
+  }
+
+  html += '</div>';
+  return html;
 };
 
 function buildRateCard(key, color, label, defaultRate, sub) {
@@ -10079,7 +11845,18 @@ window.showSection = function(id, btn) {
       if (sec && typeof buildCommissionHTML === 'function') {
         sec.innerHTML = buildCommissionHTML();
         if (typeof loadRates === 'function') loadRates();
-        setTimeout(renderPlanner, 100);
+        if (typeof anSyncOpportunitiesToCommissionTrackers === 'function') {
+          anSyncOpportunitiesToCommissionTrackers({ skipSave: true });
+        }
+        setTimeout(function() {
+          if (typeof anSetCommissionPlanTab === 'function') {
+            anSetCommissionPlanTab(anGetDefaultCommissionPlanTab());
+          } else {
+            if (typeof renderPlanner === 'function') renderPlanner();
+            if (typeof anRenderAeMonthlyTracker === 'function') anRenderAeMonthlyTracker();
+            if (typeof anRenderSdrMonthlyTracker === 'function') anRenderSdrMonthlyTracker();
+          }
+        }, 100);
       }
     }, 50);
   }
@@ -11558,14 +13335,30 @@ window.anSyncOpportunityToPipeline = function(lead, opts) {
 
   // ── Sync to Commission Ledger when a deal becomes Closed Won ──
   if (stage === 'Closed Won' && typeof anAddCommissionDeal === 'function') {
+    var ct = typeof anNormalizeContractType === 'function'
+      ? anNormalizeContractType(lead.oppContract || lead.oppContractType || 'mrr') : 'mrr';
     anAddCommissionDeal({
       leadId: lead.id,
       name: name,
       size: lead.size || 'solo',
-      contractType: (lead.oppContractType || 'mrr'),
-      closedDate: lead.closedAt || lead.updated || new Date().toISOString(),
-      source: 'crm'
+      contractType: ct,
+      closedDate: lead.closedAt || lead.oppCloseDate || lead.updated || new Date().toISOString(),
+      source: 'crm',
+      status: 'closed'
     }, { skipSave: true });
+    var sdrEm = (lead.sdrEmail || '').toLowerCase();
+    if (sdrEm && typeof anIsSdrCommissionRep === 'function' && anIsSdrCommissionRep(sdrEm) && typeof anAddSdrCommissionDeal === 'function') {
+      anAddSdrCommissionDeal({
+        leadId: lead.id,
+        name: name,
+        size: lead.size || 'solo',
+        contractType: ct,
+        closedDate: lead.closedAt || lead.oppCloseDate || lead.updated || new Date().toISOString(),
+        source: 'crm',
+        status: 'closed',
+        sdrEmail: sdrEm
+      }, { skipSave: true });
+    }
   }
   if (!opts.skipSave && typeof dashSave === 'function') dashSave();
   if (!opts.skipRefresh) {
@@ -11796,6 +13589,36 @@ window.anSyncAllDemosToOpportunities = function(opts) {
     if (typeof dashSave === 'function') dashSave();
   }
   if (!opts.skipRefresh && typeof renderOpportunities === 'function') renderOpportunities();
+};
+
+window.anDemoteOpportunityToLead = function(lead, opts) {
+  if (!lead || typeof AN === 'undefined') return lead;
+  opts = opts || {};
+  var fromStage = opts.fromStage || lead.status || '';
+  var targetStatus = opts.status;
+  if (!targetStatus) {
+    if (fromStage === 'showed' || fromStage === 'demo_complete' || opts.fromPipelineStage === 'Demo Completed') {
+      targetStatus = 'demo_complete';
+    } else if (fromStage === 'demo' || fromStage === 'booked_demo' || opts.fromPipelineStage === 'Demo Booked') {
+      targetStatus = 'booked_demo';
+    } else if (['proposal', 'negotiation', 'won', 'lost'].indexOf(fromStage) >= 0) {
+      targetStatus = 'contacted';
+    } else {
+      targetStatus = 'booked_demo';
+    }
+  }
+  lead.isOpportunity = false;
+  lead.status = targetStatus;
+  delete lead.convertedAt;
+  if (opts.keepOwners !== false) {
+    if (opts.sdrEmail) lead.sdrEmail = opts.sdrEmail;
+    if (opts.aeEmail) lead.aeEmail = opts.aeEmail;
+  }
+  if (!lead._repEmail && lead.sdrEmail) lead._repEmail = lead.sdrEmail;
+  lead.updated = new Date().toISOString();
+  if (typeof AN.invalidateLeadCaches === 'function') AN.invalidateLeadCaches();
+  if (opts.save !== false && typeof AN.save === 'function') AN.save();
+  return lead;
 };
 
 window.anGetTeamViewScope = function() {
@@ -14357,7 +16180,7 @@ function renderLeadsTable(){
 
     var isOppRow = typeof anIsOpportunityRecord === 'function' && anIsOpportunityRecord(lead);
     var rowOpen = isOppRow
-      ? 'showSection(\'opportunities\',null);setTimeout(function(){anOpenOppRecord(\''+lead.id+'\')},200)'
+      ? 'anOpenTrackerDealRef(\'opp\',\''+lead.id+'\')'
       : 'anOpenLead(\''+lead.id+'\')';
     var demoBadge = (lead.demoDate ? '<div style="font-size:10px;color:#10b981;margin-top:2px;">🎯 '+anEsc(lead.demoDate)+(lead.demoTime ? ' '+lead.demoTime : '')+(isOppRow ? ' · Deal' : '')+'</div>' : (isOppRow ? '<div style="font-size:10px;color:#6366f1;margin-top:2px;">💎 Converted to deal</div>' : ''));
     return '<tr data-lead-id="'+lead.id+'" style="border-bottom:1px solid var(--divider);background:'+rowBg+';cursor:pointer;" '
@@ -15233,14 +17056,34 @@ window.anDeleteOpportunity = function(id) {
   if (!lead) return;
   var name = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || lead.company || 'this opportunity';
   if (!confirm('Delete opportunity for ' + name + '? This cannot be undone.')) return;
+
   AN.leads = AN.leads.filter(function(l) { return l.id !== id; });
   AN.selectedIds = (AN.selectedIds || []).filter(function(sid) { return sid !== id; });
+  if (typeof AN.invalidateLeadCaches === 'function') AN.invalidateLeadCaches();
+
+  if (typeof _dash !== 'undefined' && Array.isArray(_dash.pipeline)) {
+    var pipeBefore = _dash.pipeline.length;
+    _dash.pipeline = _dash.pipeline.filter(function(d) { return d.leadId !== id; });
+    if (_dash.pipeline.length !== pipeBefore && typeof dashSave === 'function') dashSave();
+  }
+
   var modal = document.getElementById('an-opp-detail-modal');
   if (modal) modal.remove();
   if (typeof anCloseOppRecord === 'function') anCloseOppRecord();
-  AN.save(function() {
+
+  var card = document.querySelector('.opp-card[data-lead-id="' + id + '"]');
+  if (card && card.parentNode) card.parentNode.removeChild(card);
+
+  function refreshOppUI() {
     if (typeof renderOpportunities === 'function') renderOpportunities();
     if (typeof renderLeadsTable === 'function') renderLeadsTable();
+    var list = document.getElementById('dash-pipeline-list');
+    if (list && typeof buildPipelineHTML === 'function') list.innerHTML = buildPipelineHTML();
+  }
+  refreshOppUI();
+
+  AN.save(function() {
+    refreshOppUI();
     if (typeof showToast === 'function') showToast('Opportunity deleted');
   });
 };
@@ -17651,6 +19494,7 @@ window.onUserLoggedIn = function(user){
     AN.currentRepEmail = user.email;
     AN.isAdmin = user.email === AN_CRM_ADMIN_EMAIL;
     AN.currentRep = (user.user_metadata&&user.user_metadata.full_name)||user.email.split('@')[0];
+    if (typeof checkCommissionAccess === 'function') checkCommissionAccess();
     if (!AN.isAdmin && Array.isArray(AN.leads) && AN.leads.length && typeof anEnforceRepLeadScope === 'function') {
       anEnforceRepLeadScope();
     }
@@ -20056,6 +21900,43 @@ function anFilterOppsForSearch(opps) {
   });
 }
 
+window.anResolveOppSdrEmail = function(opp) {
+  if (!opp) return '';
+  var sdr = (opp.sdrEmail || '').toLowerCase().trim();
+  if (sdr) return sdr;
+  if (typeof _dash !== 'undefined' && Array.isArray(_dash.pipeline) && opp.id) {
+    var deal = _dash.pipeline.find(function(d) { return d.leadId === opp.id; });
+    if (deal && deal.sdrEmail) return String(deal.sdrEmail).toLowerCase().trim();
+  }
+  return '';
+};
+
+window.anResolveOppAeEmail = function(opp) {
+  if (!opp) return '';
+  var ae = (opp.aeEmail || '').toLowerCase().trim();
+  if (ae) return ae;
+  if (typeof _dash !== 'undefined' && Array.isArray(_dash.pipeline) && opp.id) {
+    var deal = _dash.pipeline.find(function(d) { return d.leadId === opp.id; });
+    if (deal && deal.aeEmail) return String(deal.aeEmail).toLowerCase().trim();
+  }
+  var rep = (opp._repEmail || '').toLowerCase().trim();
+  var sdr = typeof anResolveOppSdrEmail === 'function' ? anResolveOppSdrEmail(opp) : '';
+  if (rep && (!sdr || rep !== sdr)) return rep;
+  return '';
+};
+
+window.anBuildOppOwnerChipsHTML = function(opp) {
+  if (!opp) return '';
+  var sdrEm = typeof anResolveOppSdrEmail === 'function' ? anResolveOppSdrEmail(opp) : '';
+  var aeEm = typeof anResolveOppAeEmail === 'function' ? anResolveOppAeEmail(opp) : '';
+  var sdrName = sdrEm && typeof anGetRepName === 'function' ? anGetRepName(sdrEm) : '';
+  var aeName = aeEm && typeof anGetRepName === 'function' ? anGetRepName(aeEm) : '';
+  return '<div style="font-size:10px;color:var(--text-muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--divider);display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
+    + '<span style="background:#f0fdf4;color:#15803d;border-radius:6px;padding:2px 8px;font-weight:600;">SDR: ' + anEsc(sdrName || '—') + '</span>'
+    + '<span style="background:#eef2ff;color:#4f46e5;border-radius:6px;padding:2px 8px;font-weight:600;">AE: ' + anEsc(aeName || '—') + '</span>'
+    + '</div>';
+};
+
 function anBuildOppTableHTML(opps, stages) {
   if (!opps.length) return '<div style="text-align:center;padding:48px;color:var(--text-muted);">No deals match your search.</div>';
   var stageMap = {};
@@ -20064,25 +21945,32 @@ function anBuildOppTableHTML(opps, stages) {
     var stageId = typeof anOppPipelineStage === 'function' ? anOppPipelineStage(o) : o.status;
     var st = stageMap[stageId] || { label: stageId, color: '#6366f1' };
     var mrr = o.oppMRR || (AN_SIZES.find(function(s){ return s.id === o.size; }) || { price: 79 }).price;
-    var owner = o._repEmail && typeof anGetRepName === 'function' ? anGetRepName(o._repEmail) : (o._repEmail || '—');
+    var szMeta = typeof anAgencySizeMeta === 'function' ? anAgencySizeMeta(o.size || 'solo') : { label: 'Solo Agent', short: 'Solo', color: '#6366f1', bg: '#eef2ff' };
+    var szLabel = (AN_SIZES.find(function(s){ return s.id === o.size; }) || { label: szMeta.label }).label;
+    var sdrEm = typeof anResolveOppSdrEmail === 'function' ? anResolveOppSdrEmail(o) : '';
+    var aeEm = typeof anResolveOppAeEmail === 'function' ? anResolveOppAeEmail(o) : '';
+    var owners = (sdrEm ? 'SDR: ' + anGetRepName(sdrEm) : 'SDR: —')
+      + (aeEm ? ' · AE: ' + anGetRepName(aeEm) : ' · AE: —');
     var name = ((o.firstName||'')+' '+(o.lastName||'')).trim() || o.company || 'Deal';
     return '<tr onclick="anOpenOppRecord(\''+o.id+'\')" style="border-bottom:1px solid var(--divider);cursor:pointer;" onmouseover="this.style.background=\'rgba(99,102,241,0.04)\'" onmouseout="this.style.background=\'transparent\'">'
       +'<td style="padding:12px 14px;font-weight:700;color:var(--text-primary);">'+anEsc(name)+'</td>'
       +'<td style="padding:12px 14px;color:var(--text-secondary);">'+anEsc(o.company||'—')+'</td>'
+      +'<td style="padding:12px 14px;"><span style="background:'+szMeta.bg+';color:'+szMeta.color+';border:1px solid '+szMeta.color+'33;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">'+anEsc(szLabel)+'</span></td>'
       +'<td style="padding:12px 14px;"><span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">'+anEsc(st.label)+'</span></td>'
       +'<td style="padding:12px 14px;font-weight:800;color:#6366f1;">$'+mrr+'/mo</td>'
       +'<td style="padding:12px 14px;color:var(--text-muted);">'+(o.oppCloseDate ? anDate(o.oppCloseDate) : '—')+'</td>'
-      +'<td style="padding:12px 14px;color:var(--text-muted);font-size:12px;">'+anEsc(owner)+'</td>'
+      +'<td style="padding:12px 14px;color:var(--text-muted);font-size:12px;">'+anEsc(owners)+'</td>'
       +'</tr>';
   }).join('');
-  return '<div class="opp-table-wrap"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:720px;">'
+  return '<div class="opp-table-wrap"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:820px;">'
     +'<thead><tr style="background:var(--body-bg);">'
     +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Deal</th>'
     +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Company</th>'
+    +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Agency Size</th>'
     +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Stage</th>'
     +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Value</th>'
     +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Close Date</th>'
-    +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Owner</th>'
+    +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">SDR / AE</th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
@@ -20170,7 +22058,12 @@ function oppBuildRecordHTML(lead) {
   return ''
     +'<div class="co-record-layout">'
     +'<aside class="co-record-left">'
-    +'<button type="button" class="co-record-back" onclick="anCloseOppRecord()">← Deals</button>'
+    +(function() {
+      var ret = typeof anGetSectionReturn === 'function' ? anGetSectionReturn() : null;
+      var backLabel = ret ? ('← ' + ret.label) : '← Deals';
+      var backAction = ret ? 'anNavigateSectionReturn()' : 'anCloseOppRecord()';
+      return '<button type="button" class="co-record-back" onclick="'+backAction+'">'+anEsc(backLabel)+'</button>';
+    })()
     +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">'
     +'<div style="width:48px;height:48px;border-radius:12px;background:'+st.color+'22;color:'+st.color+';display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;">💎</div>'
     +'<div style="min-width:0;"><div style="font-size:20px;font-weight:800;color:var(--text-primary);line-height:1.2;">'+anEsc(name)+'</div>'
@@ -20217,8 +22110,15 @@ function oppBuildRecordHTML(lead) {
     +'</aside></div>';
 }
 
-window.anOpenOppRecord = function(leadId) {
+window.anOpenOppRecord = function(leadId, opts) {
+  opts = opts || {};
   window._anOppDetailLeadId = leadId;
+  if (!opts.preserveReturn) {
+    var activeSection = typeof anGetActiveSectionId === 'function' ? anGetActiveSectionId() : '';
+    if (activeSection === 'opportunities') {
+      anClearSectionReturn();
+    }
+  }
   var lead = AN.leads.find(function(l) { return l.id === leadId; });
   if (!lead) return;
   var existing = document.getElementById('opp-record-panel');
@@ -20440,6 +22340,9 @@ window.anOppSaveField = function(leadId, field, value) {
   if (field === 'oppNotes') lead.notes = value;
   lead.updated = new Date().toISOString();
   AN.save();
+  if (typeof anSyncOpportunitiesToCommissionTrackers === 'function') {
+    anSyncOpportunitiesToCommissionTrackers({ skipSave: true });
+  }
   if (typeof renderOpportunities === 'function') renderOpportunities();
 };
 
@@ -20504,27 +22407,24 @@ window.renderOpportunities = function() {
       var cards = stageLead.map(function(opp){
         var mrr    = opp.oppMRR||( AN_SIZES.find(function(s){return s.id===opp.size;})||{price:79}).price;
         var sz     = opp.size ? (AN_SIZES.find(function(s){return s.id===opp.size;})||{label:opp.size}) : {label:'Solo'};
+        var szMeta = typeof anAgencySizeMeta === 'function' ? anAgencySizeMeta(opp.size || 'solo') : { color: stage.color, bg: '#fff', border: '#e4e4e7', short: 'Solo' };
+        var cardBorder = szMeta.color;
         var ctLabel= {mrr:'Monthly',arr:'Annual','2yr':'2-Year','3yr':'3-Year'}[opp.oppContract||'mrr']||'Monthly';
         return '<div class="opp-card" data-lead-id="'+opp.id+'" draggable="true" '
           +'onclick="anOpenOppRecord(\''+opp.id+'\')" '
-          +'style="background:var(--card-bg);border:1px solid var(--divider);border-radius:10px;padding:14px;margin-bottom:8px;cursor:pointer;border-left:3px solid '+stage.color+';transition:box-shadow 0.15s,transform 0.15s;position:relative;" '
+          +'style="background:'+szMeta.bg+';border:1px solid '+szMeta.border+';border-radius:10px;padding:14px;margin-bottom:8px;cursor:pointer;border-left:3px solid '+cardBorder+';transition:box-shadow 0.15s,transform 0.15s;position:relative;" '
           +'onmouseover="this.style.boxShadow=\'0 4px 16px rgba(0,0,0,0.1)\';this.style.transform=\'translateY(-1px)\'" '
           +'onmouseout="this.style.boxShadow=\'none\';this.style.transform=\'none\'">'
           +'<button type="button" onclick="event.stopPropagation();anDeleteOpportunity(\''+opp.id+'\')" title="Delete opportunity" style="position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;color:#ef4444;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;">🗑</button>'
           +'<div style="font-size:13.5px;font-weight:700;color:var(--text-primary);margin-bottom:2px;padding-right:28px;">'+anEsc((opp.firstName||'')+' '+(opp.lastName||''))+'</div>'
           +(opp.company?'<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">'+anEsc(opp.company)+'</div>':'<div style="margin-bottom:8px;"></div>')
           +'<div style="display:flex;justify-content:space-between;align-items:center;">'
-          +'<div><div style="font-size:14px;font-weight:800;color:'+stage.color+';">$'+mrr+'/mo</div>'
-          +'<div style="font-size:10px;color:var(--text-muted);">'+anEsc(sz.label)+' · '+ctLabel+'</div>'
+          +'<div><div style="font-size:14px;font-weight:800;color:'+szMeta.color+';">$'+mrr+'/mo</div>'
+          +'<div style="font-size:10px;color:var(--text-muted);"><span style="font-weight:700;color:'+szMeta.color+';">'+anEsc(sz.label)+'</span> · '+ctLabel+'</div>'
           +'</div>'
           +(opp.oppCloseDate?'<div style="font-size:10.5px;color:#6366f1;text-align:right;">📅<br>'+anDate(opp.oppCloseDate)+'</div>':'')
           +'</div>'
-          +(anShowOwnerColumn()?'<div onclick="event.stopPropagation();anOpenOwnerPicker({leadId:\''+opp.id+'\'})" style="font-size:10px;color:var(--text-muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--divider);cursor:pointer;" title="Change owner">👤 '+anEsc(opp._repEmail?anGetRepName(opp._repEmail):'Assign owner')+' ▾</div>':'')
-          // SDR / AE credit line
-          +(opp.sdrEmail||opp.aeEmail?'<div style="font-size:10px;color:var(--text-muted);margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;">'
-            +(opp.sdrEmail?'<span style="background:#f0fdf4;color:#15803d;border-radius:6px;padding:1px 6px;font-weight:600;">SDR: '+anEsc(anGetRepName(opp.sdrEmail).split(' ')[0])+'</span>':'')
-            +(opp.aeEmail?'<span style="background:#eef2ff;color:#4f46e5;border-radius:6px;padding:1px 6px;font-weight:600;">AE: '+anEsc(anGetRepName(opp.aeEmail).split(' ')[0])+'</span>':'')
-            +'</div>':'')
+          +(typeof anBuildOppOwnerChipsHTML === 'function' ? anBuildOppOwnerChipsHTML(opp) : '')
           +'</div>';
       }).join('');
 
@@ -20570,6 +22470,9 @@ window.renderOpportunities = function() {
     +'</div><div class="content">'+statsHTML+viewToggle+mainView+'</div>';
 
   if (oppView === 'board') setTimeout(initOppDragDrop, 80);
+  if (typeof anSyncOpportunitiesToCommissionTrackers === 'function') {
+    anSyncOpportunitiesToCommissionTrackers({ skipSave: true });
+  }
   } catch (err) {
     console.error('[CRM] renderOpportunities failed:', err);
     sec.innerHTML = '<div class="content" style="padding:48px 20px;text-align:center;">'
@@ -23415,11 +25318,7 @@ window.hdOpenHotLead = function(leadId) {
 };
 
 window.hdOpenHotDeal = function(leadId) {
-  if (typeof showSection === 'function') showSection('opportunities', null);
-  setTimeout(function() {
-    if (typeof anOpenOppRecord === 'function') anOpenOppRecord(leadId);
-    else if (typeof anOpenOppDetail === 'function') anOpenOppDetail(leadId);
-  }, 280);
+  if (typeof anOpenTrackerDealRef === 'function') anOpenTrackerDealRef('opp', leadId);
 };
 
 // ── Home global search ─────────────────────────────────────
@@ -26078,10 +27977,13 @@ window.coOpenContact = function(leadId) {
     if (companyOpen) {
       if (typeof anOpenOppRecord === 'function') anOpenOppRecord(leadId);
     } else {
-      if (typeof showSection === 'function') showSection('opportunities', null);
-      setTimeout(function() {
-        if (typeof anOpenOppRecord === 'function') anOpenOppRecord(leadId);
-      }, 200);
+      if (typeof anOpenTrackerDealRef === 'function') anOpenTrackerDealRef('opp', leadId);
+      else if (typeof showSection === 'function') {
+        showSection('opportunities', null);
+        setTimeout(function() {
+          if (typeof anOpenOppRecord === 'function') anOpenOppRecord(leadId);
+        }, 200);
+      }
     }
     return;
   }
