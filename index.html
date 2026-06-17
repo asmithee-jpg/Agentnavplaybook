@@ -5167,10 +5167,14 @@ window.dashOpenDrilldown = function(type, focusId) {
       var idx = (_dash.pipeline || []).indexOf(d);
       var sz = (typeof SIZES !== 'undefined' ? SIZES : []).find(function(s){ return s.id === d.size; }) || { label: d.size || '—', price: '' };
       var added = d.added ? String(d.added).slice(0, 10) : '';
-      return '<div onclick="dashOpenDeal('+idx+')" style="padding:12px 14px;border:1px solid #e4e4e7;border-radius:10px;margin-bottom:8px;cursor:pointer;" onmouseover="this.style.borderColor=\'#6366f1\'" onmouseout="this.style.borderColor=\'#e4e4e7\'">'
+      return '<div style="padding:12px 14px;border:1px solid #e4e4e7;border-radius:10px;margin-bottom:8px;display:flex;align-items:center;gap:10px;" onmouseover="this.querySelector(\'.deal-row-inner\').style.borderColor=\'#6366f1\'" onmouseout="this.querySelector(\'.deal-row-inner\').style.borderColor=\'transparent\'">'
+        +'<div class="deal-row-inner" onclick="dashOpenDeal('+idx+')" style="flex:1;min-width:0;cursor:pointer;border:1.5px solid transparent;border-radius:8px;padding:2px 4px;transition:border-color .15s;">'
         +'<div style="font-size:14px;font-weight:800;color:#09090b;">'+anEsc(d.name || 'Deal')+'</div>'
         +'<div style="font-size:11px;color:#71717a;margin-top:4px;">'+(d.stage||'—')+' · '+(d.state||'—')+' · '+sz.label+(sz.price?(' · '+sz.price):'')+(added?' · '+added:'')+'</div>'
-        +(d.leadId ? '<div style="font-size:10px;color:#6366f1;margin-top:4px;">Linked to CRM lead</div>' : '')
+        +(d.leadId ? '<div style="font-size:10px;color:#6366f1;margin-top:3px;">🔗 Linked to CRM lead</div>' : '')
+        +(d.sdrName||d.aeName ? '<div style="font-size:10px;color:#10b981;margin-top:2px;">'+(d.sdrName?'SDR: '+d.sdrName:'')+(d.sdrName&&d.aeName?' · ':'')+(d.aeName?'AE: '+d.aeName:'')+'</div>' : '')
+        +'</div>'
+        +'<button onclick="if(confirm(\'Remove '+anEsc(d.name||'this deal')+'?\'))dashDeleteDeal('+idx+')" style="flex-shrink:0;padding:6px 10px;border-radius:7px;border:1px solid #fecaca;background:#fef2f2;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Remove</button>'
         +'</div>';
     }).join('');
   } else if (type === 'demos') {
@@ -5266,6 +5270,7 @@ window.dashActivateTab = function(i) {
   pane0.style.display = i === 0 ? 'block' : 'none';
   pane1.style.display = i === 1 ? 'block' : 'none';
 
+  // AE/Deals tab: load charts & reports (Activity | Deals | Demo Tracker | Show Rate)
   if (i === 1 && typeof buildAndShowCharts === 'function') {
     if (!pane1.querySelector('#cp-activity')) {
       buildAndShowCharts();
@@ -5285,7 +5290,7 @@ window.renderSalesDashboard = function() {
   var savedTab = window._dashActiveTab || 0;
   var alreadyBuilt = !!document.getElementById('dash-tab-bar');
 
-  // If Charts & Reports is open, never wipe the DOM — only sync data
+  // If AE/Deals tab is open, never wipe the DOM — only sync data
   if (alreadyBuilt && savedTab === 1) {
     try {
       var cached = JSON.parse(localStorage.getItem('sales-dashboard') || '{}');
@@ -5308,24 +5313,24 @@ window.renderSalesDashboard = function() {
   var pane0 = document.createElement('div'); pane0.id = 'dash-pane-0';
   var pane1 = document.createElement('div'); pane1.id = 'dash-pane-1'; pane1.style.display = 'none';
 
-  ['Overview','Charts & Reports'].forEach(function(label, i) {
+  ['📞 SDR', '💎 AE / Deals'].forEach(function(label, i) {
     var btn = document.createElement('button');
     btn.textContent = label;
     btn.type = 'button';
-    btn.style.cssText = 'padding:8px 20px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.12s;'
+    btn.style.cssText = 'padding:8px 22px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.12s;'
       +(i===0?'background:#fff;color:#09090b;box-shadow:0 1px 4px rgba(0,0,0,0.08);':'background:transparent;color:#71717a;');
     btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); dashActivateTab(i); };
     tabBar.appendChild(btn);
   });
 
-  // Pane 0: Overview
+  // Pane 0: SDR — prospect context, goals, pipeline overview (was "Overview")
   pane0.appendChild(buildProspectCard());
   var midGrid = document.createElement('div');
   midGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;';
   midGrid.appendChild(buildGoalsCard());
   midGrid.appendChild(buildPipelineCard());
   pane0.appendChild(midGrid);
-  if ((_dash.pipeline||[]).length > 0) {
+  if ((_dash.pipeline||[]).filter(function(d){return !d._fromHubSpot;}).length > 0) {
     var sg = document.createElement('div');
     sg.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;';
     sg.appendChild(buildByStateCardEl());
@@ -5333,6 +5338,8 @@ window.renderSalesDashboard = function() {
     pane0.appendChild(sg);
   }
 
+  // Pane 1: AE/Deals — full charts with Activity | Deals | Demo Tracker | Show Rate sub-tabs
+  // (was "Charts & Reports") — buildAndShowCharts() populates this lazily on first click
 
   container.appendChild(tabBar);
   container.appendChild(pane0);
@@ -6228,13 +6235,28 @@ window.openAddDemo=function(editId){
     +'</div>'
     +'<div style="display:flex;gap:8px;justify-content:flex-end;">'
     +'<button onclick="document.getElementById(\'dm-modal\').remove()" style="padding:9px 18px;border-radius:8px;border:1.5px solid #e4e4e7;background:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#71717a;">Cancel</button>'
-    +'<button onclick="saveDemoEntry(\''+(editId||'')+'\',false)" style="padding:9px 18px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+(editId?'Save Changes':'Log Demo')+'</button>'
-    +(!editId?'<button onclick="saveDemoEntry(\'\',true)" style="padding:9px 18px;border-radius:8px;border:none;background:#10b981;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Log + Add Pipeline</button>':'')
+    +'<button onclick="saveDemoEntry(\''+(editId||'')+'\')" style="padding:9px 18px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+(editId?'Save Changes':'Log Demo')+'</button>'
     +'</div></div>';
   document.body.appendChild(ov);
   ov.onclick=function(e){if(e.target===ov) ov.remove();};
   setTimeout(function(){var n=document.getElementById('dm-n');if(n) n.focus();},50);
 };
+
+// ── Remove Demo Booked entries from pipeline (demos are not deals) ──
+(function cleanDemosFromPipeline() {
+  try {
+    var stored = JSON.parse(localStorage.getItem('sales-dashboard') || '{}');
+    if (stored.pipeline && Array.isArray(stored.pipeline)) {
+      var before = stored.pipeline.length;
+      stored.pipeline = stored.pipeline.filter(function(d) {
+        return d.stage !== 'Demo Booked' && d.stage !== 'Demo Booked (from demo log)';
+      });
+      if (stored.pipeline.length < before) {
+        localStorage.setItem('sales-dashboard', JSON.stringify(stored));
+      }
+    }
+  } catch(e) {}
+})();
 
 window.saveDemoEntry=function(editId,addPipeline){
   var n=document.getElementById('dm-n'),s=document.getElementById('dm-s'),z=document.getElementById('dm-z'),d=document.getElementById('dm-d'),st=document.getElementById('dm-st'),nt=document.getElementById('dm-nt');
@@ -6242,7 +6264,8 @@ window.saveDemoEntry=function(editId,addPipeline){
   if(!_dash.demos) _dash.demos=[];
   var demo={name:n.value.trim(),state:s?s.value:'',size:z?z.value:'',scheduledDate:d?d.value:'',status:st?st.value:'booked',notes:nt?nt.value.trim():'',id:editId||('demo-'+Date.now()),bookedDate:new Date().toISOString().split('T')[0]};
   if(editId){var idx=-1;_dash.demos.forEach(function(x,i){if(x.id===editId) idx=i;});if(idx>=0){demo.id=editId;demo.bookedDate=_dash.demos[idx].bookedDate||demo.bookedDate;_dash.demos[idx]=demo;}}
-  else{_dash.demos.push(demo);if(addPipeline){if(!_dash.pipeline) _dash.pipeline=[];_dash.pipeline.push({name:demo.name,state:demo.state,size:demo.size,stage:'Demo Booked',notes:demo.notes,added:new Date().toISOString()});}}
+  else{_dash.demos.push(demo);}
+  // NOTE: demos are NOT added to _dash.pipeline — a Demo Booked is not a deal
   dashSave();
   var m=document.getElementById('dm-modal');if(m) m.remove();
   switchChartPane('demos');
@@ -11505,12 +11528,23 @@ AN.save = function(cb){
       return;
     }
 
-    if(AN.leads.length > AN_LARGE_LEAD_SKIP_CLOUD){
-      if(cb) cb(true, null, where || 'idb');
-      return;
-    }
-    var payload = AN.leads.filter(function(l){ return !l._repEmail || l._repEmail.toLowerCase() === repEmail; })
-      .map(function(l){ var c = Object.assign({}, l); c._repEmail = repEmail; return c; });
+    // For reps with large lead sets: always save changed/active leads to Supabase
+    // so admin can see their work. We save the full row but only leads with activity.
+    var hasChanged = AN.leads.filter(function(l){
+      return !l._repEmail || l._repEmail.toLowerCase() === repEmail;
+    });
+    // For very large sets, only push leads that have been touched (have callLog, status change, or recent update)
+    var cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    var payload = (hasChanged.length > AN_LARGE_LEAD_SKIP_CLOUD)
+      ? hasChanged.filter(function(l){
+          return (l.callLog && l.callLog.length > 0)
+            || (l.status && l.status !== 'new')
+            || (l.updated && l.updated > cutoff)
+            || l.isOpportunity;
+        })
+      : hasChanged;
+    payload = payload.map(function(l){ var c = Object.assign({}, l); c._repEmail = repEmail; return c; });
+    if (!payload.length) { if(cb) cb(true, null, where || 'idb'); return; }
     sb.from('an_leads').upsert({
       user_id: _currentUser.id,
       rep_email: repEmail,
@@ -23282,7 +23316,9 @@ function coComputeStats(leads, co) {
   var lifecycle = coDeriveLifecycleFromLeads(leads, co);
   var reps = {};
   leads.forEach(function(l){ if (l._repEmail) reps[l._repEmail] = true; });
-  var ownerEmail = (co && co.ownerEmail) || Object.keys(reps)[0] || '';
+  // Owner = whoever closed a deal, else AgentNav (unowned until won)
+  var wonOwner = won.length > 0 ? (won[0]._repEmail || '') : '';
+  var ownerEmail = (co && co.ownerEmail) || wonOwner || '';
   var lastActivity = '';
   var nextFollowUp = '';
   var states = {};
@@ -23483,7 +23519,7 @@ function coTableView(companies, statsMap) {
   var rows = items.map(function(item, i) {
     var co = item.co;
     var stats = item.stats;
-    var owner = stats.ownerEmail && typeof anGetRepName === 'function' ? anGetRepName(stats.ownerEmail) : (stats.ownerEmail ? stats.ownerEmail.split('@')[0] : 'No owner');
+    var owner = stats.ownerEmail && typeof anGetRepName === 'function' ? anGetRepName(stats.ownerEmail) : (stats.ownerEmail ? stats.ownerEmail.split('@')[0] : 'AgentNav');
     var stage = CO_STAGES.find(function(s) { return s.id === (coNormalizeLifecycleStage(stats.lifecycle) || 'prospecting'); }) || CO_STAGES[0];
     var lastAct = stats.lastActivity ? (typeof anTimeAgo === 'function' ? anTimeAgo(stats.lastActivity) : stats.lastActivity) : '—';
     var created = co.created ? (typeof anDate === 'function' ? anDate(co.created) : String(co.created).slice(0, 10)) : '—';
@@ -23805,7 +23841,7 @@ window.coSyncFromLeads = function(){
 function coBuildCompanyPanelHTML(co, stats) {
   var leads = stats.leads.slice();
   var opps = stats.pipeline;
-  var ownerName = stats.ownerEmail && typeof anGetRepName === 'function' ? anGetRepName(stats.ownerEmail) : (stats.ownerEmail ? stats.ownerEmail.split('@')[0] : 'Unassigned');
+  var ownerName = stats.ownerEmail && typeof anGetRepName === 'function' ? anGetRepName(stats.ownerEmail) : (stats.ownerEmail ? stats.ownerEmail.split('@')[0] : 'AgentNav');
   var mrr = stats.activeMRR || stats.pipelineMRR || 0;
   var stageCol = (CO_STAGES.find(function(s){ return s.id === stats.lifecycle; }) || { color: '#6366f1' }).color;
   var statusOrder = { won:0, proposal:1, showed:2, demo:3, contacted:4, new:5, nurture:6, lost:7 };
