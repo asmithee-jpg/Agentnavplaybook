@@ -3917,6 +3917,11 @@ window.dashLoad = function(callback) {
   } catch(e) {}
 
   if (typeof anSyncAllOpportunitiesToPipeline === 'function') anSyncAllOpportunitiesToPipeline({ skipSave: true });
+  if (typeof anSyncAllPipelineDealsToOpportunities === 'function') anSyncAllPipelineDealsToOpportunities({ skipSave: true, skipRefresh: true });
+  if (typeof anSyncAllDemosToOpportunities === 'function') anSyncAllDemosToOpportunities({ skipSave: true, skipRefresh: true });
+  if (typeof anMigratePipelineStages === 'function' && anMigratePipelineStages()) {
+    try { localStorage.setItem('sales-dashboard', JSON.stringify(_dash)); } catch(e) {}
+  }
   if (typeof callback === 'function') callback();
 
   // Then overlay with Supabase if logged in
@@ -3975,6 +3980,7 @@ window.dashLoad = function(callback) {
         }
       });
       if (d.updated_at) _dash._updatedAt = d.updated_at;
+      if (typeof anMigratePipelineStages === 'function') anMigratePipelineStages();
       localStorage.setItem('sales-dashboard', JSON.stringify(_dash));
       // Light refresh only — never wipe Charts & Reports tab
       if (typeof dashRefreshVisiblePanes === 'function') dashRefreshVisiblePanes();
@@ -4030,6 +4036,73 @@ window.onUserLoggedIn = function(user) {
   }, 500);
 };
 
+// ── Pipeline stage helpers (Demo Completed — not "Demo Done") ─
+window.DASH_PIPELINE_STAGES = ['Prospecting', 'Demo Booked', 'Demo Completed', 'Proposal Sent', 'Closed Won', 'Closed Lost'];
+
+window.anDisplayPipelineStage = function(stage) {
+  if (stage === 'Demo Done') return 'Demo Completed';
+  return stage || 'Prospecting';
+};
+
+window.anNormalizePipelineStageValue = function(stage) {
+  if (stage === 'Demo Done') return 'Demo Completed';
+  return stage || 'Prospecting';
+};
+
+window.anIsDemoCompletedStage = function(stage) {
+  return stage === 'Demo Completed' || stage === 'Demo Done';
+};
+
+window.anMigratePipelineStages = function() {
+  if (typeof _dash === 'undefined' || !_dash.pipeline) return false;
+  var changed = false;
+  _dash.pipeline.forEach(function(d) {
+    if (d && d.stage === 'Demo Done') { d.stage = 'Demo Completed'; changed = true; }
+  });
+  return changed;
+};
+
+window.anCountPipelineByStage = function(stageLabel) {
+  return (_dash.pipeline || []).filter(function(d) {
+    if (!d) return false;
+    if (d.stage === stageLabel) return true;
+    if (stageLabel === 'Demo Completed' && d.stage === 'Demo Done') return true;
+    return false;
+  }).length;
+};
+
+window.dashRunDealDemoCompleteFlow = function(pipelineIdx) {
+  if (typeof _dash === 'undefined' || !_dash.pipeline) return;
+  var deal = _dash.pipeline[pipelineIdx];
+  if (!deal) return;
+  var demo = deal.demoId ? (_dash.demos || []).find(function(d) { return d.id === deal.demoId; }) : null;
+  if (!demo) {
+    demo = {
+      id: 'demo-pipe-' + pipelineIdx + '-' + Date.now(),
+      name: deal.name,
+      company: deal.company || deal.name,
+      contacts: deal.contacts && deal.contacts.length ? deal.contacts.slice() : [{ name: deal.name, title: '', phone: '', email: '' }],
+      state: deal.state || '',
+      size: deal.size || 'solo',
+      scheduledDate: typeof anLocalDateStr === 'function' ? anLocalDateStr() : new Date().toISOString().split('T')[0],
+      status: 'booked',
+      notes: deal.notes || '',
+      bookedDate: (deal.added ? String(deal.added).slice(0, 10) : '') || (typeof anLocalDateStr === 'function' ? anLocalDateStr() : ''),
+      leadId: deal.leadId || '',
+      sdrEmail: deal.sdrEmail || '',
+      aeEmail: deal.aeEmail || ''
+    };
+    if (!_dash.demos) _dash.demos = [];
+    _dash.demos.push(demo);
+    deal.demoId = demo.id;
+    if (typeof dashSave === 'function') dashSave();
+  }
+  demo._pipelineIdx = pipelineIdx;
+  if (typeof anOpenDemoCompleteOwnersModal === 'function') {
+    anOpenDemoCompleteOwnersModal(demo, { createOpp: true, fromPipeline: true });
+  }
+};
+
 // ── REPLACE dashAddDeal with inline modal form ───────────────
 window.dashAddDeal = function(editIdx) {
   var isEdit = typeof editIdx === 'number';
@@ -4046,7 +4119,9 @@ window.dashAddDeal = function(editIdx) {
   var modal = document.createElement('div');
   modal.style.cssText = 'background:#fff;border-radius:14px;padding:24px;width:480px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
 
-  var STAGES = ['Prospecting', 'Demo Booked', 'Demo Done', 'Proposal Sent', 'Closed Won', 'Closed Lost'];
+  var STAGES = window.DASH_PIPELINE_STAGES || ['Prospecting', 'Demo Booked', 'Demo Completed', 'Proposal Sent', 'Closed Won', 'Closed Lost'];
+  var existingStage = existing ? (typeof anNormalizePipelineStageValue === 'function' ? anNormalizePipelineStageValue(existing.stage) : existing.stage) : 'Prospecting';
+  var showCompleteHint = typeof anIsDemoCompletedStage === 'function' && anIsDemoCompletedStage(existingStage);
 
   modal.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">'
     + '<div style="font-size:16px;font-weight:800;color:#09090b;">' + (isEdit ? 'Edit Deal' : 'Add Deal') + '</div>'
@@ -4089,10 +4164,11 @@ window.dashAddDeal = function(editIdx) {
     + '<label style="font-size:11px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Stage</label>'
     + '<select id="dd-stage" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;cursor:pointer;">'
     + STAGES.map(function(s) {
-        return '<option value="' + s + '"' + (existing && existing.stage === s ? ' selected' : '') + '>' + s + '</option>';
+        return '<option value="' + s + '"' + (existingStage === s ? ' selected' : '') + '>' + s + '</option>';
       }).join('')
     + '</select>'
     + '</div>'
+    + (showCompleteHint ? '<div style="grid-column:1/-1;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:10px 12px;font-size:12px;color:#047857;line-height:1.45;">Saving at <strong>Demo Completed</strong> will prompt for SDR/AE owners, add contacts to CRM, and create the opportunity.</div>' : '')
 
     // Notes
     + '<div style="grid-column:1/-1;">'
@@ -4142,21 +4218,41 @@ window.dashSaveDeal = function(editIdx) {
     return;
   }
 
+  var stageVal = typeof anNormalizePipelineStageValue === 'function'
+    ? anNormalizePipelineStageValue(stage ? stage.value : 'Prospecting')
+    : (stage ? stage.value : 'Prospecting');
+  var prev = (typeof editIdx === 'number' && editIdx !== null && _dash.pipeline[editIdx]) ? _dash.pipeline[editIdx] : null;
+  var wasComplete = prev && typeof anIsDemoCompletedStage === 'function' && anIsDemoCompletedStage(prev.stage);
+  var becomingComplete = typeof anIsDemoCompletedStage === 'function' && anIsDemoCompletedStage(stageVal);
+  var needsCompleteFlow = becomingComplete && (!prev || !wasComplete || !prev.sdrEmail || !prev.aeEmail || !prev.leadId);
+
   var deal = {
     name:  name.value.trim(),
     state: state ? state.value : '',
     size:  size  ? size.value  : 'solo',
-    stage: stage ? stage.value : 'Prospecting',
+    stage: stageVal,
     notes: notes ? notes.value.trim() : '',
     updated: new Date().toISOString()
   };
 
-  if (typeof editIdx === 'number' && editIdx !== null && _dash.pipeline[editIdx]) {
-    deal.added = _dash.pipeline[editIdx].added || deal.updated;
-    _dash.pipeline[editIdx] = deal;
+  var pipeIdx;
+  if (prev) {
+    deal.added = prev.added || deal.updated;
+    deal.leadId = prev.leadId;
+    deal.demoId = prev.demoId;
+    deal.sdrEmail = prev.sdrEmail;
+    deal.aeEmail = prev.aeEmail;
+    deal.sdrName = prev.sdrName;
+    deal.aeName = prev.aeName;
+    deal.company = prev.company;
+    deal.contacts = prev.contacts;
+    deal.contactLeadIds = prev.contactLeadIds;
+    _dash.pipeline[editIdx] = Object.assign({}, prev, deal);
+    pipeIdx = editIdx;
   } else {
     deal.added = deal.updated;
     _dash.pipeline.push(deal);
+    pipeIdx = _dash.pipeline.length - 1;
   }
 
   dashSave();
@@ -4164,7 +4260,21 @@ window.dashSaveDeal = function(editIdx) {
   var modal = document.getElementById('dash-deal-modal');
   if (modal) modal.remove();
 
-  renderSalesDashboard();
+  if (needsCompleteFlow && typeof dashRunDealDemoCompleteFlow === 'function') {
+    dashRunDealDemoCompleteFlow(pipeIdx);
+    if (typeof showToast === 'function') showToast('Assign owners and contacts to finish Demo Completed');
+    return;
+  }
+
+  if (typeof anSyncPipelineDealToOpportunity === 'function') {
+    var savedDeal = _dash.pipeline[pipeIdx];
+    if (savedDeal) anSyncPipelineDealToOpportunity(savedDeal);
+    if (typeof AN !== 'undefined' && AN.save) AN.save();
+    dashSave();
+  }
+
+  if (typeof renderSalesDashboard === 'function') renderSalesDashboard();
+  if (typeof renderOpportunities === 'function') renderOpportunities();
   if (typeof showToast === 'function') showToast(typeof editIdx === 'number' ? 'Deal updated!' : 'Deal added!');
 };
 
@@ -4179,6 +4289,7 @@ window.buildPipelineHTML = function() {
     'Closed Won':    '#10b981',
     'Closed Lost':   '#ef4444',
     'Demo Booked':   '#6366f1',
+    'Demo Completed':'#8b5cf6',
     'Demo Done':     '#8b5cf6',
     'Proposal Sent': '#f59e0b',
     'Prospecting':   '#a1a1aa'
@@ -4186,7 +4297,8 @@ window.buildPipelineHTML = function() {
   var html = '';
   _dash.pipeline.forEach(function(deal, i) {
     var sz = SIZES.filter(function(x){ return x.id === deal.size; })[0] || { label: deal.size, color: '#a1a1aa', price: '' };
-    var stageColor = STAGE_COLORS[deal.stage] || '#a1a1aa';
+    var stageLabel = typeof anDisplayPipelineStage === 'function' ? anDisplayPipelineStage(deal.stage) : deal.stage;
+    var stageColor = STAGE_COLORS[deal.stage] || STAGE_COLORS[stageLabel] || '#a1a1aa';
     html += '<div style="padding:8px 0;border-bottom:1px solid #f4f4f5;">'
       + '<div style="display:flex;align-items:center;gap:8px;">'
       + '<div style="flex:1;min-width:0;">'
@@ -4194,7 +4306,7 @@ window.buildPipelineHTML = function() {
       + '<div style="font-size:10px;color:#71717a;margin-top:1px;">' + (deal.state || '—') + ' &middot; ' + sz.label + ' &middot; ' + sz.price + '</div>'
       + (deal.notes ? '<div style="font-size:10px;color:#a1a1aa;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + deal.notes + '</div>' : '')
       + '</div>'
-      + '<span style="font-size:10px;font-weight:700;color:' + stageColor + ';background:' + stageColor + '18;padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0;">' + deal.stage + '</span>'
+      + '<span style="font-size:10px;font-weight:700;color:' + stageColor + ';background:' + stageColor + '18;padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0;">' + stageLabel + '</span>'
       + '<button onclick="dashAddDeal(' + i + ')" style="background:none;border:1px solid #e4e4e7;border-radius:5px;color:#6366f1;cursor:pointer;font-size:10px;font-weight:600;padding:2px 7px;font-family:inherit;flex-shrink:0;">Edit</button>'
       + '<button onclick="dashDeleteDeal(' + i + ')" style="background:none;border:none;color:#d4d4d8;cursor:pointer;font-size:11px;padding:2px 4px;flex-shrink:0;">&#x2715;</button>'
       + '</div>'
@@ -4757,6 +4869,7 @@ window.loadAdminRepsDashboard = function() {
       // Show rate
       var decided = demos.filter(function(d){ return d.status==='showed'||d.status==='noshow'; });
       var showed  = demos.filter(function(d){ return d.status==='showed'; }).length;
+      var completedBySdr = demos.filter(function(d){ return d.status==='showed' && (d.sdrEmail || d._repEmail); }).length;
       var showRate = decided.length > 0 ? Math.round((showed/decided.length)*100) + '%' : '—';
 
       // Pipeline value
@@ -4784,9 +4897,10 @@ window.loadAdminRepsDashboard = function() {
         + '</div>'
 
         // Stat grid
-        + '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;">'
+        + '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;">'
         + adminStatCell('Calls', calls, '#6366f1')
         + adminStatCell('Demos Booked', demosB, '#8b5cf6')
+        + adminStatCell('Completed', completedBySdr || showed, '#10b981')
         + adminStatCell('Closes', closes, '#f59e0b')
         + adminStatCell('Show Rate', showRate, '#06b6d4')
         + adminStatCell('Pipeline $', pipeVal > 0 ? '$'+pipeVal+'/mo' : '—', '#10b981')
@@ -5002,9 +5116,31 @@ function dashDemoDate(d, field) {
   return '';
 }
 
+function dashDemoMatchesRepScope(d) {
+  if (!d) return false;
+  if (typeof AN === 'undefined') return true;
+  var demoSdr = (d.sdrEmail || d._repEmail || '').toLowerCase();
+  var demoAe = (d.aeEmail || '').toLowerCase();
+  if (!AN.isAdmin) {
+    var mine = (AN.currentRepEmail || '').toLowerCase();
+    if (!demoSdr && !demoAe) return true;
+    return demoSdr === mine || demoAe === mine;
+  }
+  var scope = typeof anGetTeamViewScope === 'function' ? anGetTeamViewScope() : '';
+  if (!scope || scope === '') return true;
+  if (scope === '__mine__') {
+    var myEmail = (AN.currentRepEmail || '').toLowerCase();
+    if (!demoSdr && !demoAe) return true;
+    return demoSdr === myEmail || demoAe === myEmail;
+  }
+  var scoped = scope.toLowerCase();
+  return demoSdr === scoped || demoAe === scoped;
+}
+
 function dashGetScopedDemos(dateField) {
   var demos = (_dash.demos || []).filter(function(d) { return d.source !== 'backfill'; });
   return demos.filter(function(d) {
+    if (!dashDemoMatchesRepScope(d)) return false;
     return dashDateInRange(dashDemoDate(d, dateField || 'bookedDate'));
   });
 }
@@ -5019,13 +5155,37 @@ function dashDemoInRange(d) {
 }
 
 function dashGetScopedDemosAnyDate() {
-  return (_dash.demos || []).filter(function(d) { return d.source !== 'backfill' && dashDemoInRange(d); });
+  return (_dash.demos || []).filter(function(d) {
+    return d.source !== 'backfill' && dashDemoInRange(d) && dashDemoMatchesRepScope(d);
+  });
+}
+
+function dashDealMatchesRepScope(d) {
+  if (!d) return false;
+  if (typeof AN === 'undefined') return true;
+  var sdr = (d.sdrEmail || '').toLowerCase();
+  var ae = (d.aeEmail || '').toLowerCase();
+  if (!AN.isAdmin) {
+    var mine = (AN.currentRepEmail || '').toLowerCase();
+    if (!sdr && !ae) return true;
+    return sdr === mine || ae === mine;
+  }
+  var scope = typeof anGetTeamViewScope === 'function' ? anGetTeamViewScope() : '';
+  if (!scope || scope === '') return true;
+  if (scope === '__mine__') {
+    var myEmail = (AN.currentRepEmail || '').toLowerCase();
+    if (!sdr && !ae) return true;
+    return sdr === myEmail || ae === myEmail;
+  }
+  var scoped = scope.toLowerCase();
+  return sdr === scoped || ae === scoped;
 }
 
 function dashGetScopedPipeline() {
   // Only include AgentNav-native deals, not HubSpot-synced ones
   var deals = (_dash.pipeline || []).filter(function(d){ return !d._fromHubSpot; });
   return deals.filter(function(d) {
+    if (!dashDealMatchesRepScope(d)) return false;
     var raw = d.added || d.updated || d.closedDate || d.closeDate || '';
     if (!raw) return false;
     var dt = String(raw).slice(0, 10);
@@ -5040,27 +5200,72 @@ function dashGetDemosBookedCount() {
   return dashGetScopedDemos('bookedDate').length;
 }
 
-function dashBuildTopStatTilesHTML() {
-  // Total Deals & Pipeline MRR reflect the CURRENT pipeline as a whole — they are
-  // point-in-time snapshots, not "deals added in this period". Filtering them by
-  // date caused already-existing deals to appear/disappear from the count whenever
-  // their `updated` timestamp changed (e.g. from a call logged today).
-  // Only count deals created IN AgentNav — not HubSpot-synced ones
-  var allOpenDeals = (_dash.pipeline || []).filter(function(d){ return d.stage !== 'Closed Lost' && !d._fromHubSpot; });
-  // Win Rate, Demos Booked, Show Rate ARE period-scoped — they represent activity
-  // that happened during the selected period.
+function dashGetScopedActivityTotals() {
+  var log = typeof anGetScopedActivityLog === 'function' ? anGetScopedActivityLog() : (_dash.activityLog || []);
+  var t = { calls: 0, demos: 0, closes: 0 };
+  (log || []).forEach(function(e) {
+    t.calls += e.calls || 0;
+    t.demos += e.demos || 0;
+    t.closes += e.closes || 0;
+  });
+  return t;
+}
+
+function dashGetDemosCompletedCount() {
+  var demos = typeof dashGetScopedDemos === 'function' ? dashGetScopedDemos('scheduledDate') : (_dash.demos || []);
+  return demos.filter(function(d) { return d.status === 'showed'; }).length;
+}
+
+function dashBuildActivityStatTilesHTML() {
+  var act = dashGetScopedActivityTotals();
+  var booked = Math.max(act.demos, dashGetDemosBookedCount());
+  var completed = dashGetDemosCompletedCount();
+  var showRate = getShowRate(dashGetScopedDemos('scheduledDate'));
+  return ''
+    + buildStatTile('Calls Made', act.calls, '#6366f1', 'calls')
+    + buildStatTile('Demos Booked', booked, '#8b5cf6', 'demos')
+    + buildStatTile('Demos Completed', completed, '#10b981', 'demos-completed')
+    + buildStatTile('Show Rate', showRate, '#06b6d4', 'showrate');
+}
+
+function dashBuildDealsStatTilesHTML() {
+  var scopedPipe = typeof dashGetScopedPipeline === 'function'
+    ? (_dash.pipeline || []).filter(function(d) { return !d._fromHubSpot && dashDealMatchesRepScope(d); })
+    : (_dash.pipeline || []).filter(function(d){ return d.stage !== 'Closed Lost' && !d._fromHubSpot; });
+  var allOpenDeals = scopedPipe.filter(function(d){ return d.stage !== 'Closed Lost'; });
   var periodDeals = dashGetScopedPipeline();
+  var closedWon = periodDeals.filter(function(d){ return d.stage === 'Closed Won'; }).length;
   return ''
     + buildStatTile('Total Deals', allOpenDeals.length, '#6366f1', 'deals')
     + buildStatTile('Pipeline MRR', getPipelineValue(allOpenDeals), '#10b981', 'mrr')
     + buildStatTile('Win Rate', getWinRate(periodDeals), '#f59e0b', 'deals')
-    + buildStatTile('Demos Booked', dashGetDemosBookedCount(), '#8b5cf6', 'demos')
-    + buildStatTile('Show Rate', getShowRate(dashGetScopedDemos('scheduledDate')), '#06b6d4', 'showrate');
+    + buildStatTile('Closed Won', closedWon, '#10b981', 'deals');
+}
+
+function dashBuildTopStatTilesHTML(pane) {
+  pane = pane || window._dashChartPane || 'activity';
+  if (pane === 'deals') return dashBuildDealsStatTilesHTML();
+  return dashBuildActivityStatTilesHTML();
 }
 
 function dashRefreshTopStatTiles() {
+  var mainTab = window._dashActiveTab || 0;
+  var aeEl = document.getElementById('dash-ae-stat-tiles');
+  if (mainTab === 1 && aeEl) {
+    aeEl.style.gridTemplateColumns = 'repeat(4,1fr)';
+    aeEl.innerHTML = dashBuildDealsStatTilesHTML();
+    return;
+  }
   var el = document.getElementById('dash-stat-tiles');
-  if (el) el.innerHTML = dashBuildTopStatTilesHTML();
+  if (!el) return;
+  var pane = window._dashChartPane || 'activity';
+  ['activity','demos','showrate'].forEach(function(k) {
+    var p = document.getElementById('cp-'+k);
+    if (p && p.style.display !== 'none') pane = k;
+  });
+  window._dashChartPane = pane;
+  el.style.gridTemplateColumns = 'repeat(4,1fr)';
+  el.innerHTML = dashBuildActivityStatTilesHTML();
 }
 
 function getActivityForPeriod(period) {
@@ -5159,7 +5364,37 @@ function buildStatTile(label, value, color, drillType) {
 window.dashOpenDrilldown = function(type, focusId) {
   var title = '', body = '';
   var rangeLbl = typeof dashRangeLabel === 'function' ? dashRangeLabel() : '';
-  if (type === 'deals' || type === 'pipeline') {
+  if (type === 'calls' || type === 'activity') {
+    var log = typeof anGetScopedActivityLog === 'function' ? anGetScopedActivityLog() : (_dash.activityLog || []);
+    title = 'Calls Made — ' + rangeLbl;
+    if (!log.length || !log.some(function(e){ return (e.calls||0) > 0; })) {
+      body = '<div style="padding:24px;text-align:center;color:#71717a;">No calls logged in this period.</div>';
+    } else {
+      body = log.filter(function(e){ return (e.calls||0) > 0; }).map(function(e) {
+        var d = new Date(e.date+'T12:00:00');
+        var lbl = d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+        return '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid #e4e4e7;border-radius:8px;margin-bottom:6px;">'
+          +'<div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#09090b;">'+lbl+'</div>'
+          +'<div style="font-size:11px;color:#71717a;">'+(e.calls||0)+' calls · '+(e.demos||0)+' demos set · '+(e.closes||0)+' closes</div></div>'
+          +'<button onclick="editActivityDay(\''+e.date+'\')" style="padding:5px 10px;border-radius:6px;border:1px solid #e4e4e7;background:#fff;color:#6366f1;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Edit</button>'
+          +'</div>';
+      }).join('');
+    }
+    body = '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">'
+      +'<button onclick="document.getElementById(\'dash-drilldown-modal\').remove();openActivityHistory();" style="padding:8px 14px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ Log / Edit Activity</button>'
+      +'</div>' + body;
+  } else if (type === 'demos-completed') {
+    var showedDemos = dashGetScopedDemos('scheduledDate').filter(function(d){ return d.status === 'showed'; });
+    title = 'Demos Completed — ' + rangeLbl + ' (' + showedDemos.length + ')';
+    if (!showedDemos.length) body = '<div style="padding:24px;text-align:center;color:#71717a;">No completed demos in this period.</div>';
+    else body = showedDemos.map(function(d) {
+      return '<div style="padding:10px 12px;border:1px solid #e4e4e7;border-radius:8px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:8px;">'
+        +'<div><span style="font-weight:700;">'+anEsc(d.name)+'</span> <span style="color:#71717a;">— '+(d.scheduledDate||'')+'</span></div>'
+        +'<button onclick="anOpenDemoFromTracker(\''+d.id+'\')" style="padding:5px 10px;border-radius:6px;border:none;background:#10b981;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Edit</button>'
+        +'</div>';
+    }).join('');
+    body = '<div style="margin-bottom:12px;"><button onclick="document.getElementById(\'dash-drilldown-modal\').remove();openAddDemo();" style="padding:8px 14px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ Log Demo</button></div>' + body;
+  } else if (type === 'deals' || type === 'pipeline') {
     var deals = (_dash.pipeline || []).filter(function(d){ return d.stage !== 'Closed Lost'; });
     title = 'Pipeline Deals (' + deals.length + ')';
     if (!deals.length) body = '<div style="padding:24px;text-align:center;color:#71717a;">No open deals.</div>';
@@ -5177,6 +5412,7 @@ window.dashOpenDrilldown = function(type, focusId) {
         +'<button onclick="if(confirm(\'Remove '+anEsc(d.name||'this deal')+'?\'))dashDeleteDeal('+idx+')" style="flex-shrink:0;padding:6px 10px;border-radius:7px;border:1px solid #fecaca;background:#fef2f2;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Remove</button>'
         +'</div>';
     }).join('');
+    body = '<div style="margin-bottom:12px;"><button onclick="document.getElementById(\'dash-drilldown-modal\').remove();dashAddDeal();" style="padding:8px 14px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ Add Deal</button></div>' + body;
   } else if (type === 'demos') {
     var demos = typeof dashGetScopedDemos === 'function' ? dashGetScopedDemos('bookedDate') : (_dash.demos || []);
     title = 'Demos Booked — ' + rangeLbl + ' (' + demos.length + ')';
@@ -5193,6 +5429,7 @@ window.dashOpenDrilldown = function(type, focusId) {
         +'<button onclick="anOpenDemoFromTracker(\''+d.id+'\')" style="padding:6px 10px;border-radius:6px;border:none;background:#6366f1;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Open</button>'
         +'</div></div>';
     }).join('');
+    body = '<div style="margin-bottom:12px;"><button onclick="document.getElementById(\'dash-drilldown-modal\').remove();openAddDemo();" style="padding:8px 14px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ Log Demo</button></div>' + body;
   } else if (type === 'mrr') {
     title = 'Pipeline MRR';
     var activeDeals = (_dash.pipeline || []).filter(function(d){ return d.stage !== 'Closed Lost'; });
@@ -5236,6 +5473,12 @@ window.dashOpenDeal = function(idx) {
   if (!deal) return;
   var modal = document.getElementById('dash-drilldown-modal');
   if (modal) modal.remove();
+  if (typeof anIsDemoCompletedStage === 'function' && anIsDemoCompletedStage(deal.stage) && (!deal.leadId || !deal.sdrEmail || !deal.aeEmail)) {
+    if (typeof dashRunDealDemoCompleteFlow === 'function') {
+      dashRunDealDemoCompleteFlow(idx);
+      return;
+    }
+  }
   if (deal.leadId && typeof AN !== 'undefined' && AN.leads) {
     var lead = AN.leads.find(function(l) { return l.id === deal.leadId; });
     if (lead && typeof anIsOpportunity === 'function' && anIsOpportunity(lead)) {
@@ -5270,9 +5513,8 @@ window.dashActivateTab = function(i) {
   pane0.style.display = i === 0 ? 'block' : 'none';
   pane1.style.display = i === 1 ? 'block' : 'none';
 
-  // AE/Deals tab: load charts & reports (Activity | Deals | Demo Tracker | Show Rate)
-  if (i === 1 && typeof buildAndShowCharts === 'function') {
-    if (!pane1.querySelector('#cp-activity')) {
+  if (typeof buildAndShowCharts === 'function') {
+    if (!pane0.querySelector('#cp-activity') || !pane1.querySelector('#cp-deals')) {
       buildAndShowCharts();
     } else if (typeof refreshActiveCharts === 'function') {
       refreshActiveCharts();
@@ -5290,15 +5532,15 @@ window.renderSalesDashboard = function() {
   var savedTab = window._dashActiveTab || 0;
   var alreadyBuilt = !!document.getElementById('dash-tab-bar');
 
-  // If AE/Deals tab is open, never wipe the DOM — only sync data
-  if (alreadyBuilt && savedTab === 1) {
+  // If a tab is open, never wipe the DOM — only sync data
+  if (alreadyBuilt && (savedTab === 0 || savedTab === 1)) {
     try {
       var cached = JSON.parse(localStorage.getItem('sales-dashboard') || '{}');
       ['prospect','pipeline','goals','activity','demos','activityLog'].forEach(function(k) {
         if (cached[k] !== undefined) _dash[k] = cached[k];
       });
     } catch(e) {}
-    dashActivateTab(1);
+    dashActivateTab(savedTab);
     dashLoad();
     return;
   }
@@ -5313,7 +5555,7 @@ window.renderSalesDashboard = function() {
   var pane0 = document.createElement('div'); pane0.id = 'dash-pane-0';
   var pane1 = document.createElement('div'); pane1.id = 'dash-pane-1'; pane1.style.display = 'none';
 
-  ['📞 SDR', '💎 AE / Deals'].forEach(function(label, i) {
+  ['📞 SDR', '💎 Deals'].forEach(function(label, i) {
     var btn = document.createElement('button');
     btn.textContent = label;
     btn.type = 'button';
@@ -5323,23 +5565,19 @@ window.renderSalesDashboard = function() {
     tabBar.appendChild(btn);
   });
 
-  // Pane 0: SDR — prospect context, goals, pipeline overview (was "Overview")
+  // Pane 0: SDR — prospect context + activity goals only
   pane0.appendChild(buildProspectCard());
-  var midGrid = document.createElement('div');
-  midGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;';
-  midGrid.appendChild(buildGoalsCard());
-  midGrid.appendChild(buildPipelineCard());
-  pane0.appendChild(midGrid);
-  if ((_dash.pipeline||[]).filter(function(d){return !d._fromHubSpot;}).length > 0) {
-    var sg = document.createElement('div');
-    sg.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;';
-    sg.appendChild(buildByStateCardEl());
-    sg.appendChild(buildBySizeCardEl());
-    pane0.appendChild(sg);
-  }
+  var goalsWrap = document.createElement('div');
+  goalsWrap.style.cssText = 'margin-bottom:20px;';
+  goalsWrap.appendChild(buildGoalsCard());
+  pane0.appendChild(goalsWrap);
 
-  // Pane 1: AE/Deals — full charts with Activity | Deals | Demo Tracker | Show Rate sub-tabs
-  // (was "Charts & Reports") — buildAndShowCharts() populates this lazily on first click
+  // SDR tab: Activity charts mount (built lazily on first visit)
+  var sdrChartsMount = document.createElement('div');
+  sdrChartsMount.id = 'dash-sdr-charts-root';
+  pane0.appendChild(sdrChartsMount);
+
+  // Pane 1: AE/Deals — pipeline charts only (built lazily on first visit)
 
   container.appendChild(tabBar);
   container.appendChild(pane0);
@@ -5347,37 +5585,33 @@ window.renderSalesDashboard = function() {
   dashActivateTab(savedTab);
 };
 
-// ── Build and show charts pane ────────────────────────────────
-function buildAndShowCharts() {
-  var pane1 = document.getElementById('dash-pane-1');
-  if (!pane1) return;
+// ── Chart range helper ────────────────────────────────────────
+function dashBuildRangeButtonsHtml() {
+  var rr = [{r:'day',l:'Today'},{r:'week',l:'Week'},{r:'month',l:'Month'}];
+  return rr.map(function(x) {
+    return '<button id="dr-'+x.r+'" onclick="window.setChartRange(\''+x.r+'\')" style="padding:5px 14px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;'+(_dashTimeRange===x.r?'background:#6366f1;color:#fff;':'background:transparent;color:#71717a;')+'">'+x.l+'</button>';
+  }).join('');
+}
 
-  ['activity','pipeline','state','size','closes','showrate','hotzone'].forEach(destroyChart);
+// ── SDR tab: Activity | Demo Tracker | Show Rate ──────────────
+function buildSDRChartsSection() {
+  var mount = document.getElementById('dash-sdr-charts-root');
+  if (!mount || mount.querySelector('#cp-activity')) return;
 
-  // 4 tabs: Activity | Deals | Demo Tracker | Show Rate
-  var TABS = [
+  window._dashChartPane = window._dashChartPane || 'activity';
+  var SDR_TABS = [
     {k:'activity', l:'Activity'},
-    {k:'deals',    l:'Deals'},
     {k:'demos',    l:'Demo Tracker'},
     {k:'showrate', l:'Show Rate'}
   ];
-
-  var rangeHtml = (function(){
-    var rr=[{r:'day',l:'Today'},{r:'week',l:'Week'},{r:'month',l:'Month'}];
-    return rr.map(function(x){
-      return '<button id="dr-'+x.r+'" onclick="window.setChartRange(\''+x.r+'\')" style="padding:5px 14px;border-radius:6px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;'+(_dashTimeRange===x.r?'background:#6366f1;color:#fff;':'background:transparent;color:#71717a;')+'">'+x.l+'</button>';
-    }).join('');
-  })();
-
-  var subTabHtml = TABS.map(function(t,i){
-    return '<button id="rt-'+t.k+'" onclick="window.switchChartPane(\''+t.k+'\')" style="padding:7px 16px;border-radius:8px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;'+(i===0?'background:#fff;color:#09090b;box-shadow:0 1px 3px rgba(0,0,0,0.08);':'background:transparent;color:#71717a;')+'">'+t.l+'</button>';
+  var subTabHtml = SDR_TABS.map(function(t,i) {
+    return '<button id="rt-'+t.k+'" onclick="window.switchChartPane(\''+t.k+'\')" style="padding:7px 16px;border-radius:8px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;'+(t.k==='activity'?'background:#fff;color:#09090b;box-shadow:0 1px 3px rgba(0,0,0,0.08);':'background:transparent;color:#71717a;')+'">'+t.l+'</button>';
   }).join('');
 
-  pane1.innerHTML =
-    // Sub-tab bar
-    '<div style="display:flex;gap:0;margin-bottom:20px;background:#f4f4f5;border-radius:10px;padding:3px;width:fit-content;">'+subTabHtml+'</div>'
-
-    // Time range + title row
+  mount.innerHTML =
+    '<div style="margin-top:8px;margin-bottom:20px;">'
+    + '<div style="font-size:10px;font-weight:700;color:#6366f1;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:12px;">SDR Activity</div>'
+    + '<div style="display:flex;gap:0;margin-bottom:20px;background:#f4f4f5;border-radius:10px;padding:3px;width:fit-content;">'+subTabHtml+'</div>'
     + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">'
     + '<div id="chart-title" style="font-size:13px;font-weight:700;color:#09090b;">Activity</div>'
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
@@ -5385,18 +5619,17 @@ function buildAndShowCharts() {
       ? '<span style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:0.08em;">Rep</span>'
         + anBuildTeamScopeSelectHTML('dash-team-scope', 'anSetTeamViewScope')
       : '')
-    + '<div style="display:flex;background:#f4f4f5;border-radius:8px;padding:3px;gap:2px;">'+rangeHtml+'</div>'
+    + '<div style="display:flex;background:#f4f4f5;border-radius:8px;padding:3px;gap:2px;">'+dashBuildRangeButtonsHtml()+'</div>'
     + '</div></div>'
-
-    // Stat tiles
-    + '<div id="dash-stat-tiles" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;">'
-    + dashBuildTopStatTilesHTML()
+    + '<div id="dash-stat-tiles" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;">'
+    + dashBuildActivityStatTilesHTML()
     + '</div>'
-
-    // ── ACTIVITY pane: Calls/Demos/Closes + Demo Sets by State + Hotzones ──
+    + '<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">'
+    + '<span style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:0.08em;">Manual entry</span>'
+    + '<button onclick="openActivityHistory()" style="padding:7px 14px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ Log Activity</button>'
+    + '<button onclick="openAddDemo()" style="padding:7px 14px;border:1.5px solid #e4e4e7;border-radius:8px;background:#fff;color:#09090b;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ Log Demo</button>'
+    + '</div>'
     + '<div id="cp-activity" style="display:block;">'
-
-    // Row 1: Calls/Demos/Closes bar chart + Demo Sets by State
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">'
     + '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:18px;">'
     + '<div style="font-size:11px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Calls / Demos / Closes</div>'
@@ -5405,8 +5638,6 @@ function buildAndShowCharts() {
     + '<div style="font-size:11px;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Demo Sets by State</div>'
     + '<canvas id="chart-demos-by-state" height="220"></canvas></div>'
     + '</div>'
-
-    // Row 2: Calls by Hour (Hotzone) + Time of Day breakdown
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">'
     + '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:18px;">'
     + '<div style="font-size:11px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">🔥 Calls by Hour — Hotzone</div>'
@@ -5414,15 +5645,79 @@ function buildAndShowCharts() {
     + '<div id="hotzone-slots-panel" style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:18px;">'
     + '<div style="font-size:11px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Activity by Time of Day</div>'
     + buildHotzoneSlots()
-    + '</div>'
-    + '</div>'
-
-    // Row 3: Top hours cards
+    + '</div></div>'
     + '<div id="hotzone-top-cards" style="margin-bottom:16px;">' + buildTopHourCards() + '</div>'
+    + '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:18px;margin-bottom:16px;">'
+    + '<div style="font-size:11px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Activity Trend — Calls / Demos / Closes</div>'
+    + '<canvas id="chart-closes" height="200"></canvas></div>'
     + '</div>'
+    + '<div id="cp-demos" style="display:none;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+    + '<div style="font-size:13px;font-weight:600;">All Demos</div>'
+    + '<button onclick="openAddDemo()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ Log Demo</button>'
+    + '</div>'
+    + '<div id="demo-list-wrap">' + buildDemoListHTML() + '</div>'
+    + '</div>'
+    + '<div id="cp-showrate" style="display:none;">' + buildShowRateHTML() + '</div>'
+    + '</div>';
 
-    // ── DEALS pane: Pipeline + State + Size + Closes ──
-    + '<div id="cp-deals" style="display:none;">'
+  function renderSDRChartsNow() {
+    renderActivityChart();
+    renderDemosByStateChart();
+    renderHotzoneChart();
+    renderClosesChart();
+  }
+  loadChartJS(function() {
+    if (typeof anFetchAllTeamStats === 'function') anFetchAllTeamStats(renderSDRChartsNow);
+    else renderSDRChartsNow();
+  });
+  if (typeof applyRoleTabVisibility === 'function') setTimeout(applyRoleTabVisibility, 80);
+}
+
+// ── AE tab: Deals & pipeline only (no SDR activity metrics) ───
+function buildAEChartsSection() {
+  var pane1 = document.getElementById('dash-pane-1');
+  if (!pane1 || pane1.querySelector('#cp-deals')) return;
+
+  pane1.innerHTML = '';
+  var root = document.createElement('div');
+  root.id = 'dash-ae-charts-root';
+
+  var openDeals = (_dash.pipeline || []).filter(function(d) { return !d._fromHubSpot; });
+
+  // Pipeline list + breakdown cards
+  var topGrid = document.createElement('div');
+  topGrid.style.cssText = 'display:grid;grid-template-columns:'+(openDeals.length > 0 ? '1fr 1fr' : '1fr')+';gap:16px;margin-bottom:20px;';
+  topGrid.appendChild(buildPipelineCard());
+  if (openDeals.length > 0) {
+    var breakdownCol = document.createElement('div');
+    breakdownCol.style.cssText = 'display:flex;flex-direction:column;gap:16px;';
+    breakdownCol.appendChild(buildByStateCardEl());
+    breakdownCol.appendChild(buildBySizeCardEl());
+    topGrid.appendChild(breakdownCol);
+  }
+  root.appendChild(topGrid);
+
+  var chartsWrap = document.createElement('div');
+  chartsWrap.innerHTML =
+    '<div style="font-size:10px;font-weight:700;color:#10b981;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:12px;">Deal Performance</div>'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">'
+    + '<div id="chart-title-ae" style="font-size:13px;font-weight:700;color:#09090b;">Pipeline</div>'
+    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+    + (typeof AN !== 'undefined' && AN.isAdmin && typeof anBuildTeamScopeSelectHTML === 'function'
+      ? '<span style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:0.08em;">Rep</span>'
+        + anBuildTeamScopeSelectHTML('dash-team-scope-ae', 'anSetTeamViewScope')
+      : '')
+    + '<div style="display:flex;background:#f4f4f5;border-radius:8px;padding:3px;gap:2px;">'+dashBuildRangeButtonsHtml()+'</div>'
+    + '</div></div>'
+    + '<div id="dash-ae-stat-tiles" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;">'
+    + dashBuildDealsStatTilesHTML()
+    + '</div>'
+    + '<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">'
+    + '<span style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:0.08em;">Manual entry</span>'
+    + '<button onclick="dashAddDeal()" style="padding:7px 14px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ Add Deal</button>'
+    + '</div>'
+    + '<div id="cp-deals" style="display:block;">'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">'
     + '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:18px;">'
     + '<div style="font-size:11px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Pipeline by Stage</div>'
@@ -5436,36 +5731,25 @@ function buildAndShowCharts() {
     + '<div style="font-size:11px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Deals by Size</div>'
     + '<canvas id="chart-size" height="220"></canvas></div>'
     + '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:18px;">'
-    + '<div style="font-size:11px;font-weight:700;color:#ef4444;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Closes Over Time</div>'
-    + '<canvas id="chart-closes" height="220"></canvas></div>'
-    + '</div>'
-    + '</div>'
+    + '<div style="font-size:11px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Closed Won Over Time</div>'
+    + '<canvas id="chart-deals-won" height="220"></canvas></div>'
+    + '</div></div>';
+  root.appendChild(chartsWrap);
+  pane1.appendChild(root);
 
-    // ── DEMO TRACKER pane ──
-    + '<div id="cp-demos" style="display:none;">'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
-    + '<div style="font-size:13px;font-weight:600;">All Demos</div>'
-    + '<button onclick="openAddDemo()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">+ Log Demo</button>'
-    + '</div>'
-    + '<div id="demo-list-wrap">' + buildDemoListHTML() + '</div>'
-    + '</div>'
-
-    // ── SHOW RATE pane ──
-    + '<div id="cp-showrate" style="display:none;">' + buildShowRateHTML() + '</div>';
-
-  // Render all visible charts (after team stats load for admin)
-  function renderChartsNow() {
-    renderActivityChart();
-    renderDemosByStateChart();
-    renderHotzoneChart();
-  }
   loadChartJS(function() {
-    if (typeof anFetchAllTeamStats === 'function') {
-      anFetchAllTeamStats(renderChartsNow);
-    } else {
-      renderChartsNow();
-    }
+    renderPipelineChart();
+    renderStateChart();
+    renderSizeChart();
+    renderDealsWonChart();
   });
+}
+
+// ── Build both chart sections (used by overrides chain) ───────
+function buildAndShowCharts() {
+  ['activity','pipeline','state','size','closes','showrate','hotzone','demos-by-state','deals-won'].forEach(destroyChart);
+  buildSDRChartsSection();
+  buildAEChartsSection();
 }
 
 
@@ -5531,14 +5815,18 @@ function renderDemosByStateChart() {
 
 // ── Updated switchChartPane ───────────────────────────────────
 window.switchChartPane = function(key) {
-  var allPanes = ['activity','deals','demos','showrate'];
-  var allTabs  = ['activity','deals','demos','showrate'];
-  var titles   = {activity:'Activity',deals:'Deals',demos:'Demo Tracker',showrate:'Show Rate Analysis'};
+  if (key === 'deals') {
+    if (typeof dashActivateTab === 'function') dashActivateTab(1);
+    return;
+  }
+  window._dashChartPane = key;
+  var allPanes = ['activity','demos','showrate'];
+  var titles   = {activity:'Activity',demos:'Demo Tracker',showrate:'Show Rate Analysis'};
 
   allPanes.forEach(function(k){
     var p=document.getElementById('cp-'+k); if(p) p.style.display=k===key?'block':'none';
   });
-  allTabs.forEach(function(k){
+  ['activity','demos','showrate'].forEach(function(k){
     var b=document.getElementById('rt-'+k);
     if(b){b.style.background=k===key?'#fff':'transparent';b.style.color=k===key?'#09090b':'#71717a';b.style.boxShadow=k===key?'0 1px 3px rgba(0,0,0,0.08)':'';}
   });
@@ -5549,11 +5837,6 @@ window.switchChartPane = function(key) {
       renderActivityChart();
       renderDemosByStateChart();
       renderHotzoneChart();
-    }
-    if(key==='deals'){
-      renderPipelineChart();
-      renderStateChart();
-      renderSizeChart();
       renderClosesChart();
     }
     if(key==='showrate') setTimeout(renderShowRateChart,50);
@@ -5574,14 +5857,22 @@ window.setChartRange = function(r) {
     if(b){b.style.background=x===r?'#6366f1':'transparent';b.style.color=x===r?'#fff':'#71717a';}
   });
   if (typeof dashRefreshTopStatTiles === 'function') dashRefreshTopStatTiles();
-  // Find which pane is currently active
-  var activePanes = ['activity','deals','demos','showrate'].filter(function(k){
+  var mainTab = window._dashActiveTab || 0;
+  if (mainTab === 1) {
+    loadChartJS(function() {
+      renderPipelineChart();
+      renderStateChart();
+      renderSizeChart();
+      renderDealsWonChart();
+    });
+    return;
+  }
+  var activePanes = ['activity','demos','showrate'].filter(function(k){
     var p=document.getElementById('cp-'+k); return p&&p.style.display!=='none';
   });
   loadChartJS(function(){
     activePanes.forEach(function(key){
-      if(key==='activity'){ renderActivityChart(); renderDemosByStateChart(); renderHotzoneChart(); }
-      if(key==='deals'){ renderClosesChart(); renderPipelineChart(); renderStateChart(); renderSizeChart(); }
+      if(key==='activity'){ renderActivityChart(); renderDemosByStateChart(); renderHotzoneChart(); renderClosesChart(); }
       if(key==='showrate'){ setTimeout(renderShowRateChart, 50); }
     });
   });
@@ -5601,7 +5892,35 @@ window.setDashRange = window.setChartRange;
 
 // ── Chart renderers ───────────────────────────────────────────
 window.renderAllCharts = function() {
-  renderActivityChart(); renderPipelineChart(); renderStateChart(); renderSizeChart(); renderClosesChart();
+  renderActivityChart();
+  renderDemosByStateChart();
+  renderHotzoneChart();
+  renderClosesChart();
+  renderPipelineChart();
+  renderStateChart();
+  renderSizeChart();
+  renderDealsWonChart();
+};
+
+window.anMergeLocalActivityLogIntoByDate = function(byDate, dates, repFilter) {
+  if (!byDate || !dates || typeof _dash === 'undefined') return;
+  var myEmail = (typeof anActiveRepEmail === 'function' ? anActiveRepEmail() : '').toLowerCase();
+  repFilter = repFilter ? String(repFilter).toLowerCase() : '';
+  if (repFilter && repFilter !== '__all__' && repFilter !== '__mine__' && myEmail && repFilter !== myEmail) return;
+  (_dash.activityLog || []).forEach(function(entry) {
+    if (!entry || !entry.date || !byDate[entry.date]) return;
+    var row = byDate[entry.date];
+    row.calls = Math.max(row.calls || 0, entry.calls || 0);
+    row.demos = Math.max(row.demos || 0, entry.demos || 0);
+    row.closes = Math.max(row.closes || 0, entry.closes || 0);
+    ['calls_by_hour','pickups_by_hour','demos_by_hour','voicemails_by_hour','noanswer_by_hour'].forEach(function(bh) {
+      if (!entry[bh]) return;
+      if (!row[bh]) row[bh] = {};
+      Object.keys(entry[bh]).forEach(function(h) {
+        row[bh][h] = Math.max(row[bh][h] || 0, entry[bh][h] || 0);
+      });
+    });
+  });
 };
 
 window.anGetScopedActivityLog = function() {
@@ -5645,6 +5964,9 @@ window.anGetScopedActivityLog = function() {
     if (typeof anMergeTeamDashIntoByDate === 'function') {
       anMergeTeamDashIntoByDate(byDate, dates, scope === '__mine__' ? anActiveRepEmail() : (scope || '__all__'));
     }
+    if (typeof anMergeLocalActivityLogIntoByDate === 'function') {
+      anMergeLocalActivityLogIntoByDate(byDate, dates, scope === '__mine__' ? '__mine__' : (scope || '__all__'));
+    }
     return dates.map(function(d) { return byDate[d]; });
   }
   if (useTeam) {
@@ -5673,6 +5995,9 @@ window.anGetScopedActivityLog = function() {
     anMergeTeamActivityIntoByDate(teamByDate, dates, '__all__');
     if (typeof anMergeTeamDashIntoByDate === 'function') {
       anMergeTeamDashIntoByDate(teamByDate, dates, '__all__');
+    }
+    if (typeof anMergeLocalActivityLogIntoByDate === 'function') {
+      anMergeLocalActivityLogIntoByDate(teamByDate, dates, '__all__');
     }
     return dates.map(function(d) { return teamByDate[d]; });
   }
@@ -5707,8 +6032,8 @@ function renderPipelineChart() {
   destroyChart('pipeline');
   var canvas = document.getElementById('chart-pipeline');
   if (!canvas || !window.Chart) return;
-  var STAGES = ['Prospecting','Demo Booked','Demo Done','Proposal Sent','Closed Won','Closed Lost'];
-  var counts = STAGES.map(function(s){ return (_dash.pipeline||[]).filter(function(d){return d.stage===s;}).length; });
+  var STAGES = window.DASH_PIPELINE_STAGES || ['Prospecting','Demo Booked','Demo Completed','Proposal Sent','Closed Won','Closed Lost'];
+  var counts = STAGES.map(function(s){ return typeof anCountPipelineByStage === 'function' ? anCountPipelineByStage(s) : (_dash.pipeline||[]).filter(function(d){return d.stage===s;}).length; });
   _charts['pipeline'] = new Chart(canvas, {
     type:'bar',
     data:{labels:STAGES,datasets:[{data:counts,backgroundColor:['#64748b','#6366f1','#8b5cf6','#f59e0b','#10b981','#ef4444'],borderRadius:6,borderSkipped:false}]},
@@ -5760,9 +6085,40 @@ function renderClosesChart() {
     type:'line',
     data:{labels:labels,datasets:[
       {label:'Calls',data:dates.map(function(d){var e=log.filter(function(x){return x.date===d;})[0];return e?(e.calls||0):0;}),borderColor:'#6366f1',backgroundColor:'#6366f118',tension:0.3,fill:true,pointRadius:4},
+      {label:'Demos Set',data:dates.map(function(d){var e=log.filter(function(x){return x.date===d;})[0];return e?(e.demos||0):0;}),borderColor:'#8b5cf6',backgroundColor:'#8b5cf618',tension:0.3,fill:true,pointRadius:4},
       {label:'Closes',data:dates.map(function(d){var e=log.filter(function(x){return x.date===d;})[0];return e?(e.closes||0):0;}),borderColor:'#10b981',backgroundColor:'#10b98118',tension:0.3,fill:true,pointRadius:4}
     ]},
     options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}},
+      scales:{y:{beginAtZero:true,ticks:{stepSize:1},grid:{color:'#f4f4f5'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}
+  });
+}
+
+function renderDealsWonChart() {
+  destroyChart('deals-won');
+  var canvas = document.getElementById('chart-deals-won');
+  if (!canvas || !window.Chart) return;
+  var dates = getActivityDates();
+  var pipeline = (_dash.pipeline || []).filter(function(d) { return !d._fromHubSpot; });
+  var labels = dates.map(function(d) {
+    var dt = new Date(d+'T12:00:00');
+    if (_dashTimeRange==='day') return 'Today';
+    return dt.toLocaleDateString('en-US',{weekday:_dashTimeRange==='week'?'short':undefined,month:'short',day:'numeric'});
+  });
+  var wonData = dates.map(function(d) {
+    return pipeline.filter(function(deal) {
+      if (deal.stage !== 'Closed Won') return false;
+      var raw = deal.closedDate || deal.closeDate || deal.added || deal.updated || '';
+      if (!raw) return false;
+      var dt = String(raw).slice(0, 10);
+      return dt === d;
+    }).length;
+  });
+  _charts['deals-won'] = new Chart(canvas, {
+    type:'bar',
+    data:{labels:labels,datasets:[
+      {label:'Closed Won',data:wonData,backgroundColor:'#10b981cc',borderRadius:6,borderSkipped:false}
+    ]},
+    options:{responsive:true,plugins:{legend:{display:false}},
       scales:{y:{beginAtZero:true,ticks:{stepSize:1},grid:{color:'#f4f4f5'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}
   });
 }
@@ -5840,7 +6196,7 @@ window.buildGoalsCard = function() {
   }).join('');
   card.innerHTML = '<div style="padding:14px 18px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;display:flex;align-items:center;justify-content:space-between;">'
     +'<div><div style="font-size:10px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:0.12em;">Activity Goals</div>'
-    +'<div style="font-size:11px;color:#71717a;margin-top:1px;">Click number to edit directly</div></div>'
+    +'<div style="font-size:11px;color:#71717a;margin-top:1px;">Click number to edit · use View history for past days &amp; leadership prep</div></div>'
     +'<div style="display:flex;background:#f4f4f5;border-radius:8px;padding:2px;gap:1px;">'+periodBtns+'</div>'
     +'</div>'
     +'<div style="padding:16px 18px;">'+rows+'</div>'
@@ -5870,20 +6226,26 @@ window.saveGoalP = function(key,period,val){ if(!_dash.goals)_dash.goals={}; var
 window.saveGoalForPeriod = window.saveGoalP;
 
 window.dashIncrP = function(key){
-  var today=new Date().toISOString().split('T')[0];
+  var today = typeof anLocalDateStr === 'function' ? anLocalDateStr() : new Date().toISOString().split('T')[0];
   if(!_dash.activityLog) _dash.activityLog=[];
   var e=_dash.activityLog.filter(function(x){return x.date===today;})[0];
   if(!e){e={date:today,calls:0,demos:0,closes:0};_dash.activityLog.push(e);}
   e[key]=(e[key]||0)+1;
   _dash.activity[key]=(_dash.activity[key]||0)+1;
   if(key==='calls'){if(!e.calls_by_hour)e.calls_by_hour={};var hr=new Date().getHours();e.calls_by_hour[hr]=(e.calls_by_hour[hr]||0)+1;}
+  if (typeof anPushTeamActivityCloud === 'function') {
+    var delta = {}; delta[key] = 1;
+    anPushTeamActivityCloud(delta);
+  }
   dashSave();
   var actData=getActivityForPeriod(_goalPeriod), inp=document.getElementById('gact-'+key);
   if(inp) inp.value=actData[key]||0;
   updateGB(key);
+  if (typeof dashRefreshTopStatTiles === 'function') dashRefreshTopStatTiles();
+  if (typeof refreshActiveCharts === 'function') refreshActiveCharts();
 };
 window.dashDecrP = function(key){
-  var today=new Date().toISOString().split('T')[0];
+  var today = typeof anLocalDateStr === 'function' ? anLocalDateStr() : new Date().toISOString().split('T')[0];
   if(!_dash.activityLog) _dash.activityLog=[];
   var e=_dash.activityLog.filter(function(x){return x.date===today;})[0];
   if(e&&e[key]>0) e[key]--;
@@ -5892,15 +6254,26 @@ window.dashDecrP = function(key){
   var actData=getActivityForPeriod(_goalPeriod), inp=document.getElementById('gact-'+key);
   if(inp) inp.value=actData[key]||0;
   updateGB(key);
+  if (typeof dashRefreshTopStatTiles === 'function') dashRefreshTopStatTiles();
 };
 window.dashSetAct = function(key,val){
   var n=Math.max(0,parseInt(val)||0);
-  var today=new Date().toISOString().split('T')[0];
+  var today = typeof anLocalDateStr === 'function' ? anLocalDateStr() : new Date().toISOString().split('T')[0];
   if(!_dash.activityLog) _dash.activityLog=[];
   var e=_dash.activityLog.filter(function(x){return x.date===today;})[0];
   if(!e){e={date:today,calls:0,demos:0,closes:0};_dash.activityLog.push(e);}
-  if(_goalPeriod==='today'){e[key]=n;_dash.activity[key]=n;}
+  if(_goalPeriod==='today'){
+    var prev = e[key] || 0;
+    e[key]=n;
+    _dash.activity[key]=n;
+    if (typeof anPushTeamActivityCloud === 'function' && n > prev) {
+      var delta = {}; delta[key] = n - prev;
+      anPushTeamActivityCloud(delta);
+    }
+  }
   dashSave(); updateGB(key);
+  if (typeof dashRefreshTopStatTiles === 'function') dashRefreshTopStatTiles();
+  if (typeof refreshActiveCharts === 'function') refreshActiveCharts();
 };
 function updateGB(key){
   var actData=getActivityForPeriod(_goalPeriod), gv=getGoalForPeriod(key,_goalPeriod), actual=actData[key]||0;
@@ -5923,6 +6296,7 @@ window.openActivityHistory = function openActivityHistory() {
       +'<div style="text-align:center;"><span style="font-size:14px;font-weight:700;color:#6366f1;">'+(e.calls||0)+'</span><div style="font-size:9px;color:#a1a1aa;">Calls</div></div>'
       +'<div style="text-align:center;"><span style="font-size:14px;font-weight:700;color:#10b981;">'+(e.demos||0)+'</span><div style="font-size:9px;color:#a1a1aa;">Demos</div></div>'
       +'<div style="text-align:center;"><span style="font-size:14px;font-weight:700;color:#f59e0b;">'+(e.closes||0)+'</span><div style="font-size:9px;color:#a1a1aa;">Closes</div></div>'
+      +'<button onclick="editActivityDay(\''+e.date+'\')" style="background:none;border:none;color:#6366f1;cursor:pointer;font-size:11px;font-weight:700;margin-right:4px;">Edit</button>'
       +'<button onclick="delActivityDay(\''+e.date+'\')" style="background:none;border:none;color:#d4d4d8;cursor:pointer;">&#x2715;</button>'
       +'</div>';
   }).join(''):'<div style="text-align:center;padding:32px;color:#a1a1aa;">No activity logged yet.</div>';
@@ -5949,7 +6323,7 @@ window.openActivityHistory = function openActivityHistory() {
     +'<div style="background:#eef2ff;border-radius:10px;padding:12px 14px;margin-bottom:14px;">'
     +'<div style="font-size:11px;font-weight:700;color:#6366f1;margin-bottom:8px;">Log Past Activity</div>'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
-    +'<input id="hd" type="date" value="'+new Date().toISOString().split('T')[0]+'" style="border:1.5px solid #e4e4e7;border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit;outline:none;">'
+    +'<input id="hd" type="date" value="'+(typeof anLocalDateStr==='function'?anLocalDateStr():new Date().toISOString().split('T')[0])+'" style="border:1.5px solid #e4e4e7;border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit;outline:none;">'
     +'<input id="hc" type="number" min="0" placeholder="Calls" style="width:62px;border:1.5px solid #e4e4e7;border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit;outline:none;">'
     +'<input id="hdm" type="number" min="0" placeholder="Demos" style="width:62px;border:1.5px solid #e4e4e7;border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit;outline:none;">'
     +'<input id="hcl" type="number" min="0" placeholder="Closes" style="width:62px;border:1.5px solid #e4e4e7;border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit;outline:none;">'
@@ -5966,16 +6340,65 @@ window.saveHistEntry=function(){
   if(!d||!d.value) return;
   if(!_dash.activityLog) _dash.activityLog=[];
   var ex=_dash.activityLog.filter(function(e){return e.date===d.value;})[0];
-  if(ex){ex.calls=parseInt(c?c.value:0)||0;ex.demos=parseInt(dm?dm.value:0)||0;ex.closes=parseInt(cl?cl.value:0)||0;}
-  else _dash.activityLog.push({date:d.value,calls:parseInt(c?c.value:0)||0,demos:parseInt(dm?dm.value:0)||0,closes:parseInt(cl?cl.value:0)||0});
+  var calls=parseInt(c?c.value:0)||0, demos=parseInt(dm?dm.value:0)||0, closes=parseInt(cl?cl.value:0)||0;
+  if(ex){ex.calls=calls;ex.demos=demos;ex.closes=closes;}
+  else _dash.activityLog.push({date:d.value,calls:calls,demos:demos,closes:closes});
+  if (d.value === (typeof anLocalDateStr === 'function' ? anLocalDateStr() : '')) {
+    _dash.activity = { calls: calls, demos: demos, closes: closes };
+  }
   dashSave();
+  if (typeof dashRefreshTopStatTiles === 'function') dashRefreshTopStatTiles();
+  if (typeof refreshActiveCharts === 'function') refreshActiveCharts();
   if(typeof showToast==='function') showToast('Logged!');
   openActivityHistory();
 };
 
+window.editActivityDay = function(dateStr) {
+  var old = document.getElementById('ah-edit-modal'); if (old) old.remove();
+  var e = (_dash.activityLog || []).find(function(x) { return x.date === dateStr; }) || { date: dateStr, calls: 0, demos: 0, closes: 0 };
+  var ov = document.createElement('div');
+  ov.id = 'ah-edit-modal';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10060;display:flex;align-items:center;justify-content:center;';
+  ov.innerHTML = '<div style="background:#fff;border-radius:14px;padding:22px;width:380px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
+    +'<div style="font-size:15px;font-weight:800;margin-bottom:14px;">Edit Activity — '+dateStr+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">'
+    +'<div><label style="font-size:10px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">Calls</label><input id="ahe-c" type="number" min="0" value="'+(e.calls||0)+'" style="width:100%;border:1.5px solid #e4e4e7;border-radius:6px;padding:7px;font-size:13px;font-family:inherit;box-sizing:border-box;"></div>'
+    +'<div><label style="font-size:10px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">Demos</label><input id="ahe-d" type="number" min="0" value="'+(e.demos||0)+'" style="width:100%;border:1.5px solid #e4e4e7;border-radius:6px;padding:7px;font-size:13px;font-family:inherit;box-sizing:border-box;"></div>'
+    +'<div><label style="font-size:10px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">Closes</label><input id="ahe-cl" type="number" min="0" value="'+(e.closes||0)+'" style="width:100%;border:1.5px solid #e4e4e7;border-radius:6px;padding:7px;font-size:13px;font-family:inherit;box-sizing:border-box;"></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;">'
+    +'<button onclick="document.getElementById(\'ah-edit-modal\').remove()" style="padding:8px 14px;border:1.5px solid #e4e4e7;border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;color:#71717a;">Cancel</button>'
+    +'<button onclick="saveActivityDayEdit(\''+dateStr+'\')" style="padding:8px 14px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Save</button>'
+    +'</div></div>';
+  document.body.appendChild(ov);
+  ov.onclick = function(ev) { if (ev.target === ov) ov.remove(); };
+};
+
+window.saveActivityDayEdit = function(dateStr) {
+  var c = document.getElementById('ahe-c'), d = document.getElementById('ahe-d'), cl = document.getElementById('ahe-cl');
+  if (!_dash.activityLog) _dash.activityLog = [];
+  var ex = _dash.activityLog.find(function(e) { return e.date === dateStr; });
+  var calls = parseInt(c ? c.value : 0) || 0, demos = parseInt(d ? d.value : 0) || 0, closes = parseInt(cl ? cl.value : 0) || 0;
+  if (ex) { ex.calls = calls; ex.demos = demos; ex.closes = closes; }
+  else _dash.activityLog.push({ date: dateStr, calls: calls, demos: demos, closes: closes });
+  if (dateStr === (typeof anLocalDateStr === 'function' ? anLocalDateStr() : '')) {
+    _dash.activity = { calls: calls, demos: demos, closes: closes };
+  }
+  dashSave();
+  var em = document.getElementById('ah-edit-modal'); if (em) em.remove();
+  if (typeof dashRefreshTopStatTiles === 'function') dashRefreshTopStatTiles();
+  if (typeof refreshActiveCharts === 'function') refreshActiveCharts();
+  if (typeof showToast === 'function') showToast('Activity updated');
+  if (document.getElementById('ah-modal')) openActivityHistory();
+  if (document.getElementById('dash-drilldown-modal') && typeof dashOpenDrilldown === 'function') dashOpenDrilldown('calls');
+};
+
 window.delActivityDay=function(dt){
   _dash.activityLog=(_dash.activityLog||[]).filter(function(e){return e.date!==dt;});
-  dashSave(); openActivityHistory();
+  dashSave();
+  if (typeof dashRefreshTopStatTiles === 'function') dashRefreshTopStatTiles();
+  if (typeof refreshActiveCharts === 'function') refreshActiveCharts();
+  openActivityHistory();
 };
 
 // ── Hotzone HTML builder ──────────────────────────────────────
@@ -6014,23 +6437,28 @@ function buildDemoListHTML() {
   var demos = typeof dashGetScopedDemosAnyDate === 'function' ? dashGetScopedDemosAnyDate() : (_dash.demos||[]);
   if(!demos.length) return '<div style="text-align:center;padding:48px;border:2px dashed #e4e4e7;border-radius:12px;color:#a1a1aa;"><div style="font-size:32px;margin-bottom:10px;">📅</div><div style="font-size:14px;font-weight:600;color:#71717a;margin-bottom:6px;">No demos in '+dashRangeLabel().toLowerCase()+'</div><button onclick="openAddDemo()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">+ Log Demo</button></div>';
   var SC={'booked':'#6366f1','showed':'#10b981','noshow':'#ef4444','rescheduled':'#f59e0b'};
-  var SL={'booked':'Booked','showed':'Showed','noshow':'No Show','rescheduled':'Rescheduled'};
+  var SL={'booked':'Booked','showed':'Demo Completed','noshow':'No Show','rescheduled':'Rescheduled'};
   var sorted=demos.slice().sort(function(a,b){var o={booked:0,rescheduled:1,showed:2,noshow:3};return (o[a.status]||0)-(o[b.status]||0);});
   return '<div style="display:flex;flex-direction:column;gap:8px;">'+sorted.map(function(d,i){
     var c=SC[d.status]||'#a1a1aa';
     var szl=((typeof SIZES!=='undefined'?SIZES:[]).filter(function(s){return s.id===d.size;})[0]||{label:d.size||''}).label;
     var dt=d.scheduledDate?new Date(d.scheduledDate+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'';
+    var ownerBits = '';
+    if (d.sdrName || d.sdrEmail) ownerBits += 'SDR: ' + (d.sdrName || (d.sdrEmail || '').split('@')[0]);
+    if (d.aeName || d.aeEmail) ownerBits += (ownerBits ? ' · ' : '') + 'AE: ' + (d.aeName || (d.aeEmail || '').split('@')[0]);
+    var contactCount = (d.contacts && d.contacts.length) || (d.contactLeadIds && d.contactLeadIds.length) || 0;
+    if (contactCount > 1) ownerBits += (ownerBits ? ' · ' : '') + contactCount + ' contacts';
     return '<div style="background:#fff;border:1.5px solid #e4e4e7;border-left:4px solid '+c+';border-radius:10px;padding:14px 16px;">'
       +'<div style="display:flex;align-items:center;gap:10px;">'
       +'<div style="flex:1;min-width:0;">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><div onclick="anOpenDemoFromTracker(\''+d.id+'\')" style="font-size:13px;font-weight:700;color:#09090b;cursor:pointer;text-decoration:underline;text-decoration-color:rgba(99,102,241,0.35);" title="Open in CRM / Opportunities">'+d.name+'</div>'
       +'<span style="font-size:10px;font-weight:700;color:'+c+';background:'+c+'18;padding:2px 8px;border-radius:10px;">'+SL[d.status]+'</span></div>'
-      +'<div style="font-size:11px;color:#71717a;">'+(d.state?d.state+' \u00b7 ':'')+szl+(dt?' \u00b7 \uD83D\uDCC5 '+dt:'')+(d.outcome?' \u00b7 '+d.outcome:'')+'</div>'
+      +'<div style="font-size:11px;color:#71717a;">'+(d.state?d.state+' \u00b7 ':'')+szl+(dt?' \u00b7 \uD83D\uDCC5 '+dt:'')+(d.outcome?' \u00b7 '+d.outcome:'')+(ownerBits?' \u00b7 '+ownerBits:'')+'</div>'
       +(d.notes?'<div style="font-size:11px;color:#a1a1aa;margin-top:3px;font-style:italic;">'+d.notes+'</div>':'')
       +'</div>'
       +'<div style="display:flex;gap:5px;flex-shrink:0;">'
       +(d.status==='booked'||d.status==='rescheduled'
-        ?'<button onclick="updDemoStatus(\''+d.id+'\',\'showed\')" style="background:#10b981;color:#fff;border:none;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">\u2713 Showed</button>'
+        ?'<button onclick="updDemoStatus(\''+d.id+'\',\'showed\')" style="background:#10b981;color:#fff;border:none;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">\u2713 Demo Completed</button>'
         +'<button onclick="updDemoStatus(\''+d.id+'\',\'noshow\')" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">\u2715 No Show</button>'
         +'<button onclick="updDemoStatus(\''+d.id+'\',\'rescheduled\')" style="background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:5px 8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">\u21ba</button>'
         :'')
@@ -6044,19 +6472,952 @@ function buildDemoListHTML() {
 window.updDemoStatus=function(id,status){
   var d=(_dash.demos||[]).filter(function(x){return x.id===id;})[0];
   if(!d) return;
+  if (status === 'showed') {
+    if (typeof anOpenDemoCompleteOwnersModal === 'function') {
+      anOpenDemoCompleteOwnersModal(d, { createOpp: true });
+      return;
+    }
+  }
   d.status=status;
-  d.completedDate=new Date().toISOString().split('T')[0];
+  d.completedDate=typeof anLocalDateStr==='function'?anLocalDateStr():new Date().toISOString().split('T')[0];
   dashSave();
   var w=document.getElementById('demo-list-wrap');
   if(w) w.innerHTML=buildDemoListHTML();
   if(typeof showToast==='function') showToast('Updated to '+status);
-  // When demo showed — ask what pain points/needs came up (feeds Field Insights)
-  if (status === 'showed' && typeof anOpenDemoShowedCapture === 'function') {
-    setTimeout(function() { anOpenDemoShowedCapture(d); }, 350);
+};
+
+// ── Demo completed: SDR/AE owners + opportunity creation ─────
+window.anParsePersonName = function(name) {
+  var parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return { firstName: '', lastName: '' };
+  if (parts.length === 1) return { firstName: parts[0], lastName: '' };
+  return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
+};
+
+window.anDemoContactToLeadShape = function(contact, company) {
+  var parsed = anParsePersonName((contact && contact.name) || '');
+  return {
+    firstName: parsed.firstName,
+    lastName: parsed.lastName,
+    company: (company || '').trim(),
+    email: (contact && contact.email) || '',
+    phone: (contact && contact.phone) || '',
+    title: (contact && contact.title) || ''
+  };
+};
+
+window.anFindDemoContactDuplicates = function(contact, company) {
+  if (typeof AN === 'undefined' || !AN.leads || !AN.leads.length) return [];
+  if (!contact) return [];
+  if (!(contact.name || '').trim() && !(contact.email || '').trim() && !(contact.phone || '').trim()) return [];
+  if (typeof anFindDuplicateMatches !== 'function') return [];
+  return anFindDuplicateMatches(anDemoContactToLeadShape(contact, company));
+};
+
+window.anLeadMatchSummary = function(lead) {
+  if (!lead) return 'Contact';
+  var name = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || lead.company || 'Contact';
+  var bits = [name];
+  if (lead.company && lead.company !== name) bits.push(lead.company);
+  if (lead.phone) bits.push(typeof anFormatPhone === 'function' ? anFormatPhone(lead.phone) : lead.phone);
+  if (lead.email) bits.push(lead.email);
+  return bits.join(' · ');
+};
+
+window.anGetCompanyLeadMatches = function(company) {
+  if (!company || typeof AN === 'undefined' || !AN.leads) return [];
+  var norm = typeof coNormName === 'function' ? coNormName(company) : company.trim().toLowerCase();
+  if (!norm) return [];
+  return AN.leads.filter(function(l) {
+    if (typeof coNormName === 'function') return coNormName(l.company) === norm;
+    return (l.company || '').trim().toLowerCase() === norm;
+  });
+};
+
+window.anGetCompanyNameSuggestions = function(query, limit) {
+  limit = limit || 12;
+  query = (query || '').trim().toLowerCase();
+  var byKey = {};
+  var counts = {};
+
+  if (typeof AN !== 'undefined' && Array.isArray(AN.leads)) {
+    AN.leads.forEach(function(l) {
+      var cn = (l.company || '').trim();
+      if (!cn) return;
+      var key = typeof coNormName === 'function' ? coNormName(cn) : cn.toLowerCase();
+      counts[key] = (counts[key] || 0) + 1;
+      if (!byKey[key]) byKey[key] = cn;
+    });
+  }
+  if (typeof _coData !== 'undefined' && Array.isArray(_coData)) {
+    _coData.forEach(function(c) {
+      if (!c || !c.name) return;
+      var key = typeof coNormName === 'function' ? coNormName(c.name) : c.name.trim().toLowerCase();
+      if (!byKey[key]) byKey[key] = c.name.trim();
+    });
+  }
+
+  var results = Object.keys(byKey).map(function(key) {
+    return { name: byKey[key], count: counts[key] || 0, key: key };
+  });
+
+  if (query) {
+    results = results.filter(function(r) {
+      return r.key.indexOf(query) >= 0 || r.name.toLowerCase().indexOf(query) >= 0;
+    });
+  }
+
+  results.sort(function(a, b) {
+    if (query) {
+      var aStart = a.name.toLowerCase().indexOf(query) === 0 ? 0 : 1;
+      var bStart = b.name.toLowerCase().indexOf(query) === 0 ? 0 : 1;
+      if (aStart !== bStart) return aStart - bStart;
+    }
+    if (b.count !== a.count) return b.count - a.count;
+    return a.name.localeCompare(b.name);
+  });
+
+  return results.slice(0, limit);
+};
+
+window.anOnDemoCompanyInput = function(prefix) {
+  prefix = prefix || 'dm';
+  if (typeof anRefreshAllDemoContactDuplicates === 'function') anRefreshAllDemoContactDuplicates(prefix);
+  var input = document.getElementById(prefix + '-company');
+  var list = document.getElementById(prefix + '-company-suggest');
+  if (!input || !list) return;
+  var q = input.value.trim();
+  if (q.length < 1) {
+    list.style.display = 'none';
+    list.innerHTML = '';
+    return;
+  }
+  var suggestions = typeof anGetCompanyNameSuggestions === 'function' ? anGetCompanyNameSuggestions(q, 12) : [];
+  if (!suggestions.length) {
+    list.style.display = 'none';
+    list.innerHTML = '';
+    return;
+  }
+  list.innerHTML = suggestions.map(function(s) {
+    var safeName = (s.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    return '<button type="button" onclick="anSelectDemoCompany(\'' + prefix + '\', \'' + safeName + '\')" style="display:block;width:100%;text-align:left;padding:9px 12px;border:none;background:transparent;font-size:13px;font-family:inherit;cursor:pointer;color:#09090b;" onmouseover="this.style.background=\'#f5f3ff\'" onmouseout="this.style.background=\'transparent\'">'
+      + '<span style="font-weight:700;">' + anEsc(s.name) + '</span>'
+      + (s.count ? '<span style="font-size:11px;color:#71717a;margin-left:6px;">' + s.count + ' contact' + (s.count !== 1 ? 's' : '') + '</span>' : '')
+      + '</button>';
+  }).join('');
+  list.style.display = 'block';
+};
+
+window.anSelectDemoCompany = function(prefix, name) {
+  prefix = prefix || 'dm';
+  var input = document.getElementById(prefix + '-company');
+  var list = document.getElementById(prefix + '-company-suggest');
+  if (input) input.value = name || '';
+  if (list) { list.style.display = 'none'; list.innerHTML = ''; }
+  if (typeof anRefreshAllDemoContactDuplicates === 'function') anRefreshAllDemoContactDuplicates(prefix);
+};
+
+if (!window._anDemoCompanySuggestBound) {
+  window._anDemoCompanySuggestBound = true;
+  document.addEventListener('click', function(e) {
+    if (e.target.closest && (e.target.closest('.an-demo-company-wrap') || e.target.closest('.an-demo-contact-wrap'))) return;
+    document.querySelectorAll('.an-demo-company-suggest, .an-demo-contact-suggest').forEach(function(el) {
+      el.style.display = 'none';
+    });
+  });
+}
+
+window.anGetContactNameSuggestions = function(query, company, limit) {
+  limit = limit || 12;
+  query = (query || '').trim();
+  if (query.length < 1) return [];
+  var results = [];
+  var seen = {};
+
+  function addLead(lead) {
+    if (!lead || !lead.id || seen[lead.id]) return;
+    if (!anLeadNameMatchesQuery(lead, query)) return;
+    seen[lead.id] = true;
+    results.push({
+      id: lead.id,
+      name: ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || lead.email || 'Contact',
+      summary: anLeadMatchSummary(lead),
+      company: (lead.company || '').trim()
+    });
+  }
+
+  var companyLeads = company ? anGetCompanyLeadMatches(company) : [];
+  companyLeads.forEach(addLead);
+
+  if (results.length < limit && query.length >= 2 && typeof AN !== 'undefined' && AN.leads) {
+    AN.leads.forEach(function(l) {
+      if (results.length >= limit) return;
+      addLead(l);
+    });
+  }
+
+  var qLower = query.toLowerCase();
+  results.sort(function(a, b) {
+    var aStart = a.name.toLowerCase().indexOf(qLower) === 0 ? 0 : 1;
+    var bStart = b.name.toLowerCase().indexOf(qLower) === 0 ? 0 : 1;
+    if (aStart !== bStart) return aStart - bStart;
+    if (company) {
+      var aCo = a.company && typeof coNormName === 'function' ? coNormName(a.company) === coNormName(company) : false;
+      var bCo = b.company && typeof coNormName === 'function' ? coNormName(b.company) === coNormName(company) : false;
+      if (aCo !== bCo) return aCo ? -1 : 1;
+    }
+    return a.name.localeCompare(b.name);
+  });
+
+  return results.slice(0, limit);
+};
+
+window.anOnDemoContactNameInput = function(prefix, rowIdx, el) {
+  prefix = prefix || 'dm';
+  var row = el && el.closest ? el.closest('.' + prefix + '-contact-row') : null;
+  if (!row) {
+    row = document.querySelector('#' + prefix + '-contacts-list .' + prefix + '-contact-row[data-idx="' + rowIdx + '"]');
+  }
+  if (!row) return;
+
+  var companyEl = document.getElementById(prefix + '-company');
+  var company = companyEl ? companyEl.value.trim() : '';
+  var q = el ? el.value.trim() : '';
+  var list = row.querySelector('.' + prefix + '-name-suggest');
+  var leadIdEl = row.querySelector('.' + prefix + '-c-lead-id');
+  var linkModeEl = row.querySelector('.' + prefix + '-c-link-mode');
+  if (!list) return;
+
+  if (typeof anRefreshDemoContactDuplicateRow === 'function') anRefreshDemoContactDuplicateRow(prefix, row);
+
+  if (q.length < 1) {
+    list.style.display = 'none';
+    list.innerHTML = '';
+    if (leadIdEl) leadIdEl.value = '';
+    if (linkModeEl) linkModeEl.value = 'auto';
+    return;
+  }
+
+  if (leadIdEl && leadIdEl.value && linkModeEl && linkModeEl.value === 'link' && typeof AN !== 'undefined' && AN.leads) {
+    var linked = AN.leads.find(function(l) { return l.id === leadIdEl.value; });
+    if (linked) {
+      var linkedName = ((linked.firstName || '') + ' ' + (linked.lastName || '')).trim();
+      if (linkedName.toLowerCase() === q.toLowerCase()) {
+        list.style.display = 'none';
+        list.innerHTML = '';
+        return;
+      }
+    }
+  }
+
+  if (leadIdEl) leadIdEl.value = '';
+  if (linkModeEl) linkModeEl.value = 'auto';
+
+  var suggestions = typeof anGetContactNameSuggestions === 'function' ? anGetContactNameSuggestions(q, company, 10) : [];
+  var suggestStyle = 'display:block;width:100%;text-align:left;padding:9px 12px;border:none;background:transparent;font-size:13px;font-family:inherit;cursor:pointer;color:#09090b;';
+  var html = suggestions.map(function(s) {
+  var safeId = (s.id || '').replace(/'/g, "\\'");
+    return '<button type="button" onmousedown="event.preventDefault();anSelectDemoContactName(\'' + prefix + '\',' + rowIdx + ',\'' + safeId + '\')" style="' + suggestStyle + '" onmouseover="this.style.background=\'#f5f3ff\'" onmouseout="this.style.background=\'transparent\'">'
+      + '<span style="font-weight:700;">' + anEsc(s.name) + '</span>'
+      + '<span style="display:block;font-size:11px;color:#71717a;margin-top:2px;">' + anEsc(s.summary) + '</span>'
+      + '</button>';
+  }).join('');
+
+  var safeQ = q.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  html += '<button type="button" onmousedown="event.preventDefault();anSelectDemoContactName(\'' + prefix + '\',' + rowIdx + ',\'\',\'' + safeQ + '\')" style="' + suggestStyle + 'border-top:1px solid #f0f0f5;color:#6366f1;font-weight:700;" onmouseover="this.style.background=\'#f5f3ff\'" onmouseout="this.style.background=\'transparent\'">'
+    + '➕ Create new contact: <span style="font-weight:800;">' + anEsc(q) + '</span>'
+    + '</button>';
+
+  list.innerHTML = html;
+  list.style.display = 'block';
+};
+
+window.anSelectDemoContactName = function(prefix, rowIdx, leadId, typedName) {
+  prefix = prefix || 'dm';
+  var row = document.querySelector('#' + prefix + '-contacts-list .' + prefix + '-contact-row[data-idx="' + rowIdx + '"]');
+  if (!row) return;
+  var list = row.querySelector('.' + prefix + '-name-suggest');
+  if (list) { list.style.display = 'none'; list.innerHTML = ''; }
+
+  if (leadId) {
+    if (typeof anOnDemoContactLinkSelect === 'function') anOnDemoContactLinkSelect(prefix, rowIdx, leadId);
+    return;
+  }
+
+  var nameEl = row.querySelector('.' + prefix + '-c-name');
+  if (nameEl && typedName) nameEl.value = typedName;
+  if (typeof anMarkDemoContactAsNew === 'function') anMarkDemoContactAsNew(prefix, rowIdx);
+};
+
+window.anFillDemoContactFromLead = function(prefix, row, lead) {
+  if (!row || !lead) return;
+  var nameEl = row.querySelector('.' + prefix + '-c-name');
+  var titleEl = row.querySelector('.' + prefix + '-c-title');
+  var phoneEl = row.querySelector('.' + prefix + '-c-phone');
+  var emailEl = row.querySelector('.' + prefix + '-c-email');
+  var fullName = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim();
+  if (nameEl && fullName) nameEl.value = fullName;
+  if (titleEl) titleEl.value = lead.title || '';
+  if (phoneEl) {
+    phoneEl.value = lead.phone
+      ? (typeof anFormatPhone === 'function' ? anFormatPhone(lead.phone) : lead.phone)
+      : '';
+  }
+  if (emailEl) emailEl.value = lead.email || '';
+};
+
+window.anLeadNameMatchesQuery = function(lead, query) {
+  if (!lead || !query) return false;
+  query = String(query).trim().toLowerCase();
+  if (!query) return false;
+  var full = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim().toLowerCase();
+  var email = (lead.email || '').toLowerCase();
+  var phone = String(lead.phone || '').replace(/\D/g, '');
+  var qphone = query.replace(/\D/g, '');
+  if (full && (full.indexOf(query) >= 0 || query.indexOf(full) >= 0)) return true;
+  if (email && email.indexOf(query) >= 0) return true;
+  if (qphone && phone && (phone.indexOf(qphone) >= 0 || qphone.indexOf(phone) >= 0)) return true;
+  var qParts = query.split(/\s+/).filter(Boolean);
+  if (qParts.length && full && qParts.every(function(p) { return full.indexOf(p) >= 0; })) return true;
+  return false;
+};
+
+window.anBuildDemoContactLinkSelectHTML = function(prefix, rowIdx, matches, selectedLeadId, company, nameQuery) {
+  prefix = prefix || 'adc';
+  matches = matches || [];
+  nameQuery = (nameQuery || '').trim();
+  var MAX_OPTIONS = 50;
+  var allOptions = matches.slice();
+  var seen = {};
+  allOptions.forEach(function(l) { if (l && l.id) seen[l.id] = true; });
+  var companyLeads = typeof anGetCompanyLeadMatches === 'function' ? anGetCompanyLeadMatches(company) : [];
+  var totalAtAgency = companyLeads.length;
+
+  if (nameQuery) {
+    companyLeads.forEach(function(l) {
+      if (!l || !l.id || seen[l.id] || allOptions.length >= MAX_OPTIONS) return;
+      if (anLeadNameMatchesQuery(l, nameQuery)) {
+        allOptions.push(l);
+        seen[l.id] = true;
+      }
+    });
+  }
+  companyLeads.forEach(function(l) {
+    if (!l || !l.id || seen[l.id] || allOptions.length >= MAX_OPTIONS) return;
+    allOptions.push(l);
+    seen[l.id] = true;
+  });
+
+  allOptions.sort(function(a, b) {
+    if (nameQuery) {
+      var am = anLeadNameMatchesQuery(a, nameQuery) ? 0 : 1;
+      var bm = anLeadNameMatchesQuery(b, nameQuery) ? 0 : 1;
+      if (am !== bm) return am - bm;
+    }
+    return anLeadMatchSummary(a).localeCompare(anLeadMatchSummary(b));
+  });
+
+  var labelExtra = totalAtAgency > MAX_OPTIONS
+    ? ' <span style="font-weight:500;color:#a16207;">(' + totalAtAgency + ' at agency — showing ' + Math.min(MAX_OPTIONS, totalAtAgency) + ')</span>'
+    : (totalAtAgency ? ' <span style="font-weight:500;color:#a16207;">(' + totalAtAgency + ' at agency)</span>' : '');
+
+  var html = '<label style="font-size:10px;font-weight:700;color:#92400e;display:block;margin-bottom:4px;">Link to existing contact' + labelExtra + '</label>'
+    + '<select class="' + prefix + '-link-select" onchange="anOnDemoContactLinkSelect(\'' + prefix + '\',' + rowIdx + ', this.value)" style="width:100%;border:1.5px solid #fde68a;border-radius:8px;padding:8px 10px;font-size:12px;font-family:inherit;background:#fff;cursor:pointer;">'
+    + '<option value=""' + (!selectedLeadId ? ' selected' : '') + '>— Create new contact —</option>';
+  allOptions.forEach(function(l) {
+    var sel = selectedLeadId === l.id ? ' selected' : '';
+    html += '<option value="' + anEsc(l.id) + '"' + sel + '>' + anEsc(anLeadMatchSummary(l)) + '</option>';
+  });
+  html += '</select>';
+  return html;
+};
+
+window.anOnDemoContactLinkSelect = function(prefix, rowIdx, leadId) {
+  prefix = prefix || 'adc';
+  var row = document.querySelector('#' + prefix + '-contacts-list .' + prefix + '-contact-row[data-idx="' + rowIdx + '"]');
+  if (!row) return;
+  var leadIdEl = row.querySelector('.' + prefix + '-c-lead-id');
+  var linkModeEl = row.querySelector('.' + prefix + '-c-link-mode');
+  if (!leadId) {
+    if (leadIdEl) leadIdEl.value = '';
+    if (linkModeEl) linkModeEl.value = 'new';
+    anRefreshDemoContactDuplicateRow(prefix, row);
+    return;
+  }
+  if (typeof AN === 'undefined' || !AN.leads) return;
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (!lead) return;
+  if (leadIdEl) leadIdEl.value = leadId;
+  if (linkModeEl) linkModeEl.value = 'link';
+  anFillDemoContactFromLead(prefix, row, lead);
+  anRefreshDemoContactDuplicateRow(prefix, row);
+};
+
+window.anRefreshDemoContactDuplicateRow = function(prefix, el) {
+  prefix = prefix || 'adc';
+  var row = el && el.closest ? el.closest('.' + prefix + '-contact-row') : el;
+  if (!row || !row.classList.contains(prefix + '-contact-row')) return;
+  var panel = row.querySelector('.' + prefix + '-dupe-panel');
+  var leadIdEl = row.querySelector('.' + prefix + '-c-lead-id');
+  var linkModeEl = row.querySelector('.' + prefix + '-c-link-mode');
+  if (!panel) return;
+  var companyEl = document.getElementById(prefix + '-company');
+  var company = companyEl ? companyEl.value.trim() : '';
+  var name = (row.querySelector('.' + prefix + '-c-name') || {}).value || '';
+  var email = (row.querySelector('.' + prefix + '-c-email') || {}).value || '';
+  var phone = (row.querySelector('.' + prefix + '-c-phone') || {}).value || '';
+  var linkMode = linkModeEl ? linkModeEl.value : 'auto';
+  var leadId = leadIdEl ? leadIdEl.value : '';
+  var rowIdx = row.getAttribute('data-idx');
+
+  if (!name.trim() && !email.trim() && !phone.trim() && !company) {
+    panel.innerHTML = '';
+    return;
+  }
+
+  if (linkMode === 'link' && leadId && typeof AN !== 'undefined' && AN.leads) {
+    var linkedLead = AN.leads.find(function(l) { return l.id === leadId; });
+    if (linkedLead) {
+      panel.innerHTML = '<div style="font-size:11px;color:#047857;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:8px 10px;">'
+        + '🔗 <strong>Linked</strong> to existing CRM contact — info auto-filled'
+        + '</div>';
+      return;
+    }
+  }
+
+  if (linkMode === 'new' && name.trim()) {
+    panel.innerHTML = '<div style="font-size:11px;color:#6366f1;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:8px 10px;">'
+      + '➕ <strong>New contact</strong> will be created in CRM'
+      + '</div>';
+    return;
+  }
+
+  if (!company && name.trim()) {
+    panel.innerHTML = '<div style="font-size:11px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;">'
+      + '💡 Add the agency above to see matching contacts as you type'
+      + '</div>';
+    return;
+  }
+
+  if (name.trim()) {
+    var dupes = anFindDemoContactDuplicates({ name: name.trim(), email: email.trim(), phone: phone.trim(), title: '' }, company);
+    if (dupes.length) {
+      panel.innerHTML = '<div style="font-size:11px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;">'
+        + '⚠️ Possible match in CRM — pick from suggestions or choose create new'
+        + '</div>';
+    } else {
+      panel.innerHTML = '<div style="font-size:11px;color:#10b981;background:#ecfdf5;border:1px solid #bbf7d0;border-radius:8px;padding:8px 10px;">'
+        + '✓ Type to search contacts at this agency, or create new'
+        + '</div>';
+    }
+    if (linkMode === 'auto' && leadIdEl) leadIdEl.value = '';
+    return;
+  }
+
+  if (company) {
+    var atAgency = anGetCompanyLeadMatches(company).length;
+    if (atAgency) {
+      panel.innerHTML = '<div style="font-size:11px;color:#6366f1;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:8px 10px;">'
+        + '👤 Start typing a name — ' + atAgency + ' contact' + (atAgency !== 1 ? 's' : '') + ' at this agency'
+        + '</div>';
+    }
+  }
+};
+
+window.anRefreshAllDemoContactDuplicates = function(prefix) {
+  prefix = prefix || 'adc';
+  document.querySelectorAll('#' + prefix + '-contacts-list .' + prefix + '-contact-row').forEach(function(row) {
+    anRefreshDemoContactDuplicateRow(prefix, row);
+  });
+  anRefreshDemoCompanyHint(prefix);
+};
+
+window.anRefreshDemoCompanyHint = function(prefix) {
+  prefix = prefix || 'adc';
+  var hint = document.getElementById(prefix + '-company-hint');
+  var companyEl = document.getElementById(prefix + '-company');
+  if (!hint || !companyEl) return;
+  var company = companyEl.value.trim();
+  if (!company) { hint.innerHTML = ''; return; }
+  var matches = anGetCompanyLeadMatches(company);
+  if (!matches.length) {
+    hint.innerHTML = '<div style="font-size:11px;color:#10b981;margin-top:6px;">✓ New agency name in CRM</div>';
+    return;
+  }
+  var names = matches.slice(0, 3).map(function(l) {
+    return ((l.firstName || '') + ' ' + (l.lastName || '')).trim() || l.email || 'Contact';
+  }).join(', ');
+  hint.innerHTML = '<div style="font-size:11px;color:#6366f1;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:8px 10px;margin-top:6px;">'
+    + '🏢 <strong>' + matches.length + '</strong> existing contact' + (matches.length !== 1 ? 's' : '') + ' at this agency'
+    + (names ? ' — e.g. ' + anEsc(names) + (matches.length > 3 ? '…' : '') : '')
+    + '</div>';
+};
+
+window.anLinkDemoContactToLead = function(prefix, rowIdx, leadId) {
+  anOnDemoContactLinkSelect(prefix, rowIdx, leadId);
+};
+
+window.anMarkDemoContactAsNew = function(prefix, rowIdx) {
+  prefix = prefix || 'adc';
+  var row = document.querySelector('#' + prefix + '-contacts-list .' + prefix + '-contact-row[data-idx="' + rowIdx + '"]');
+  if (!row) return;
+  var leadIdEl = row.querySelector('.' + prefix + '-c-lead-id');
+  var linkModeEl = row.querySelector('.' + prefix + '-c-link-mode');
+  var selectEl = row.querySelector('.' + prefix + '-link-select');
+  if (leadIdEl) leadIdEl.value = '';
+  if (linkModeEl) linkModeEl.value = 'new';
+  if (selectEl) selectEl.value = '';
+  anRefreshDemoContactDuplicateRow(prefix, row);
+};
+
+window.anValidateDemoContactsResolved = function(contacts, company) {
+  var unresolved = [];
+  (contacts || []).forEach(function(c) {
+    if (c.linkMode === 'link' || c.linkMode === 'new') return;
+    var matches = anFindDemoContactDuplicates(c, company);
+    var companyLeads = typeof anGetCompanyLeadMatches === 'function' ? anGetCompanyLeadMatches(company) : [];
+    if (matches.length > 0 || companyLeads.length > 0) unresolved.push(c.name || 'Contact');
+  });
+  return unresolved;
+};
+
+window.anBuildDemoContactRowHTML = function(prefix, idx, contact, opts) {
+  prefix = prefix || 'dm';
+  contact = contact || {};
+  opts = opts || {};
+  var canRemove = opts.canRemove !== false && idx > 0;
+  var dupeHandler = 'oninput="anRefreshDemoContactDuplicateRow(\'' + prefix + '\', this)" onblur="anRefreshDemoContactDuplicateRow(\'' + prefix + '\', this)"';
+  var nameHandler = 'oninput="anOnDemoContactNameInput(\'' + prefix + '\',' + idx + ', this)" onfocus="anOnDemoContactNameInput(\'' + prefix + '\',' + idx + ', this)"';
+  var suggestBox = '<div class="' + prefix + '-name-suggest an-demo-contact-suggest" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1.5px solid #e4e4e7;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);max-height:220px;overflow-y:auto;z-index:10050;"></div>';
+  return '<div class="'+prefix+'-contact-row" data-idx="'+idx+'" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;padding:10px;background:#fafafa;border:1px solid #e4e4e7;border-radius:8px;">'
+    + '<input type="hidden" class="'+prefix+'-c-lead-id" value="'+anEsc(contact.leadId||'')+'">'
+    + '<input type="hidden" class="'+prefix+'-c-link-mode" value="'+anEsc(contact.linkMode||'auto')+'">'
+    + '<div style="grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;">'
+    + '<div style="font-size:10px;font-weight:700;color:#71717a;">'+(idx===0?'Primary contact *':'Contact '+(idx+1))+'</div>'
+    +(canRemove ? '<button type="button" onclick="anRemoveDemoContactRow(this)" style="background:none;border:none;color:#a1a1aa;cursor:pointer;font-size:16px;line-height:1;">&#x2715;</button>' : '')
+    + '</div>'
+    + '<div style="grid-column:1/-1;" class="an-demo-contact-wrap"><label style="font-size:10px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">Full name *</label>'
+    + '<div style="position:relative;">'
+    + '<input class="'+prefix+'-c-name" type="text" value="'+anEsc(contact.name||'')+'" placeholder="Start typing name…" autocomplete="off" '+nameHandler+' style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">'
+    + suggestBox
+    + '</div></div>'
+    + '<div class="'+prefix+'-dupe-panel" style="grid-column:1/-1;margin-bottom:4px;"></div>'
+    + '<div><input class="'+prefix+'-c-title" type="text" value="'+anEsc(contact.title||'')+'" placeholder="Title / role" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:8px 10px;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box;"></div>'
+    + '<div><input class="'+prefix+'-c-phone" type="tel" value="'+anEsc(contact.phone||'')+'" placeholder="Phone" '+dupeHandler+' style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:8px 10px;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box;"></div>'
+    + '<div style="grid-column:1/-1;"><input class="'+prefix+'-c-email" type="email" value="'+anEsc(contact.email||'')+'" placeholder="Email (optional)" '+dupeHandler+' style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:8px 10px;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box;"></div>'
+    + '</div>';
+};
+
+window.anBuildDemoContactsFieldsHTML = function(prefix, contacts, company) {
+  prefix = prefix || 'dm';
+  contacts = (contacts && contacts.length) ? contacts : [{ name: '', title: '', phone: '', email: '' }];
+  company = company || '';
+  var rows = contacts.map(function(c, i) {
+    return anBuildDemoContactRowHTML(prefix, i, c, { canRemove: i > 0 });
+  }).join('');
+  return '<div id="'+prefix+'-contacts-panel" style="grid-column:1/-1;">'
+    + '<div style="margin-bottom:10px;"><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Agency / Company *</label>'
+    + '<div class="an-demo-company-wrap" style="position:relative;">'
+    + '<input id="'+prefix+'-company" type="text" value="'+anEsc(company)+'" placeholder="Start typing agency name…" autocomplete="off" oninput="anOnDemoCompanyInput(\''+prefix+'\')" onfocus="anOnDemoCompanyInput(\''+prefix+'\')" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">'
+    + '<div id="'+prefix+'-company-suggest" class="an-demo-company-suggest" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1.5px solid #e4e4e7;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);max-height:220px;overflow-y:auto;z-index:10050;"></div>'
+    + '</div>'
+    + '<div id="'+prefix+'-company-hint"></div></div>'
+    + '<div style="font-size:10px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">People on the demo</div>'
+    + '<div id="'+prefix+'-contacts-list">'+rows+'</div>'
+    + '<button type="button" onclick="anAddDemoContactRow(\''+prefix+'\')" style="margin-top:4px;background:#f5f3ff;color:#6366f1;border:1.5px dashed #c4b5fd;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;">+ Add another contact</button>'
+    + '</div>';
+};
+
+window.anAddDemoContactRow = function(prefix) {
+  prefix = prefix || 'dm';
+  var list = document.getElementById(prefix + '-contacts-list');
+  if (!list) return;
+  var idx = list.querySelectorAll('.' + prefix + '-contact-row').length;
+  var wrap = document.createElement('div');
+  wrap.innerHTML = anBuildDemoContactRowHTML(prefix, idx, {}, { canRemove: true });
+  list.appendChild(wrap.firstChild);
+  if (typeof anRefreshDemoContactDuplicateRow === 'function') {
+    anRefreshDemoContactDuplicateRow(prefix, list.lastElementChild);
+  }
+};
+
+window.anRemoveDemoContactRow = function(btn) {
+  var row = btn && btn.closest ? btn.closest('[class$="-contact-row"]') : null;
+  if (row) row.remove();
+};
+
+window.anToggleDemoContactsUI = function() {
+  var st = document.getElementById('dm-st');
+  var simple = document.getElementById('dm-simple-prospect');
+  var multi = document.getElementById('dm-contacts-panel');
+  if (!st || !simple || !multi) return;
+  var isComplete = st.value === 'showed';
+  simple.style.display = isComplete ? 'none' : '';
+  multi.style.display = isComplete ? '' : 'none';
+  if (isComplete) {
+    var n = document.getElementById('dm-n');
+    var firstName = document.querySelector('#dm-contacts-list .dm-c-name');
+    if (n && n.value.trim() && firstName && !firstName.value.trim()) firstName.value = n.value.trim();
+    if (typeof anRefreshAllDemoContactDuplicates === 'function') anRefreshAllDemoContactDuplicates('dm');
+  }
+};
+
+window.anCollectDemoContactsFromForm = function(prefix) {
+  prefix = prefix || 'dm';
+  var companyEl = document.getElementById(prefix + '-company');
+  var company = companyEl ? companyEl.value.trim() : '';
+  var rows = document.querySelectorAll('#' + prefix + '-contacts-list .' + prefix + '-contact-row');
+  var contacts = [];
+  rows.forEach(function(row) {
+    var nameEl = row.querySelector('.' + prefix + '-c-name');
+    var name = nameEl ? nameEl.value.trim() : '';
+    if (!name) return;
+    var titleEl = row.querySelector('.' + prefix + '-c-title');
+    var phoneEl = row.querySelector('.' + prefix + '-c-phone');
+    var emailEl = row.querySelector('.' + prefix + '-c-email');
+    var leadIdEl = row.querySelector('.' + prefix + '-c-lead-id');
+    var linkModeEl = row.querySelector('.' + prefix + '-c-link-mode');
+    contacts.push({
+      name: name,
+      title: titleEl ? titleEl.value.trim() : '',
+      phone: phoneEl ? phoneEl.value.trim() : '',
+      email: emailEl ? emailEl.value.trim() : '',
+      leadId: leadIdEl ? leadIdEl.value.trim() : '',
+      linkMode: linkModeEl ? linkModeEl.value.trim() || 'auto' : 'auto'
+    });
+  });
+  return { company: company, contacts: contacts };
+};
+
+window.anDemoDisplayName = function(company, contacts, fallback) {
+  var primary = (contacts && contacts[0]) ? contacts[0].name : (fallback || '');
+  company = (company || '').trim();
+  primary = (primary || '').trim();
+  if (company && primary) return primary + ' @ ' + company;
+  return company || primary || fallback || 'Demo';
+};
+
+window.anSaveDemoContactsToCRM = function(demo, sdrEmail, aeEmail) {
+  if (!demo || typeof AN === 'undefined') return null;
+  var contacts = demo.contacts || [];
+  var company = (demo.company || '').trim();
+  if (!contacts.length && demo.name) {
+    contacts = [{ name: demo.name, title: '', phone: '', email: '' }];
+  }
+  if (!contacts.length) return null;
+
+  var repEmail = (sdrEmail || AN.currentRepEmail || '').toLowerCase();
+  aeEmail = (aeEmail || demo.aeEmail || '').toLowerCase();
+  var created = [];
+  var primary = null;
+
+  contacts.forEach(function(c, i) {
+    var name = (c.name || '').trim();
+    if (!name) return;
+    var parsed = anParsePersonName(name);
+    var existing = null;
+
+    if (c.leadId && c.linkMode !== 'new' && AN.leads) {
+      existing = AN.leads.find(function(l) { return l.id === c.leadId; }) || null;
+    }
+
+    if (!existing && c.linkMode !== 'new' && typeof anFindDuplicateMatches === 'function') {
+      var shape = anDemoContactToLeadShape(c, company);
+      var matches = anFindDuplicateMatches(shape);
+      if (matches.length === 1) existing = matches[0];
+      else if (matches.length > 1 && c.leadId) {
+        existing = AN.leads.find(function(l) { return l.id === c.leadId; }) || null;
+      }
+    }
+
+    if (existing) {
+      if (company && !(existing.company || '').trim()) existing.company = company;
+      if (c.phone && !existing.phone) existing.phone = typeof anNormalizePhone === 'function' ? anNormalizePhone(c.phone) : c.phone;
+      if (c.email && !existing.email) existing.email = c.email;
+      if (c.title && !existing.title) existing.title = c.title;
+      if (demo.state && !existing.state) existing.state = demo.state;
+      if (demo.size && !existing.size) existing.size = demo.size;
+      existing.sdrEmail = existing.sdrEmail || repEmail;
+      existing.aeEmail = existing.aeEmail || aeEmail;
+      if (demo.scheduledDate) existing.demoDate = existing.demoDate || demo.scheduledDate;
+      existing.updated = new Date().toISOString();
+      c.leadId = existing.id;
+      created.push(existing);
+      if (i === 0) primary = existing;
+      return;
+    }
+    var leadCompany = company;
+    if (!leadCompany && i === 0 && contacts.length === 1 && !parsed.lastName) leadCompany = name;
+    var lead = {
+      id: 'lead-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6) + '-' + i,
+      firstName: parsed.firstName,
+      lastName: parsed.lastName,
+      company: leadCompany,
+      title: c.title || '',
+      phone: c.phone ? (typeof anNormalizePhone === 'function' ? anNormalizePhone(c.phone) : c.phone) : '',
+      email: c.email || '',
+      state: demo.state || '',
+      size: demo.size || 'solo',
+      status: i === 0 ? 'booked_demo' : 'new',
+      _repEmail: repEmail,
+      sdrEmail: repEmail,
+      aeEmail: aeEmail,
+      demoDate: demo.scheduledDate || '',
+      source: 'manual_demo',
+      callLog: [],
+      notes: i === 0 ? (demo.notes || '') : ('Attended demo at ' + (company || 'agency') + (demo.notes ? ' — ' + demo.notes : '')),
+      created: new Date().toISOString(),
+      updated: new Date().toISOString()
+    };
+    if (!AN.leads) AN.leads = [];
+    AN.leads.unshift(lead);
+    created.push(lead);
+    if (i === 0) primary = lead;
+  });
+
+  if (primary) {
+    demo.leadId = primary.id;
+    demo.contactLeadIds = created.map(function(l) { return l.id; });
+    demo.company = company || primary.company || '';
+    demo.contacts = contacts;
+    demo.name = anDemoDisplayName(demo.company, contacts, demo.name);
+    primary.relatedDemoContactIds = created.filter(function(l) { return l.id !== primary.id; }).map(function(l) { return l.id; });
+  }
+  return { primary: primary, all: created };
+};
+
+window.anBuildRepSelectOptions = function(selectedEmail, includeNone) {
+  var reps = typeof anGetKnownRepEmails === 'function' ? anGetKnownRepEmails() : [];
+  var myEmail = (typeof AN !== 'undefined' && AN.currentRepEmail) || '';
+  var html = includeNone === false ? '' : '<option value="">— Select —</option>';
+  return html + reps.map(function(em) {
+    var label = typeof anGetRepName === 'function' ? anGetRepName(em) : em.split('@')[0];
+    var sel = (selectedEmail || '').toLowerCase() === em.toLowerCase() ? ' selected' : '';
+    return '<option value="'+anEsc(em)+'"'+sel+'>'+anEsc(label)+(em===myEmail?' (me)':'')+'</option>';
+  }).join('');
+};
+
+window.anEnsureLeadForDemo = function(demo) {
+  if (!demo || typeof AN === 'undefined') return null;
+  var lead = typeof anFindLeadForDemo === 'function' ? anFindLeadForDemo(demo) : null;
+  if (lead) {
+    if (!demo.leadId) demo.leadId = lead.id;
+    return lead;
+  }
+  if (demo.contacts && demo.contacts.length && typeof anSaveDemoContactsToCRM === 'function') {
+    var batch = anSaveDemoContactsToCRM(demo, demo.sdrEmail, demo.aeEmail);
+    return batch ? batch.primary : null;
+  }
+  var name = (demo.name || '').trim();
+  if (!name) return null;
+  var parts = name.split(/\s+/).filter(Boolean);
+  var firstName = parts[0] || '';
+  var lastName = parts.length > 1 ? parts.slice(1).join(' ') : '';
+  var company = parts.length === 1 ? name : '';
+  var repEmail = (demo.sdrEmail || (AN.currentRepEmail || '')).toLowerCase();
+  lead = {
+    id: 'lead-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    firstName: firstName,
+    lastName: lastName,
+    company: company,
+    state: demo.state || '',
+    size: demo.size || 'solo',
+    status: 'booked_demo',
+    _repEmail: repEmail,
+    sdrEmail: demo.sdrEmail || repEmail,
+    aeEmail: demo.aeEmail || '',
+    demoDate: demo.scheduledDate || '',
+    created: new Date().toISOString(),
+    updated: new Date().toISOString(),
+    callLog: [],
+    source: 'manual_demo'
+  };
+  if (!AN.leads) AN.leads = [];
+  AN.leads.unshift(lead);
+  demo.leadId = lead.id;
+  if (typeof AN.save === 'function') AN.save();
+  return lead;
+};
+
+window.anOpenDemoCompleteOwnersModal = function(demo, opts) {
+  opts = opts || {};
+  if (!demo) return;
+  var existing = document.getElementById('an-demo-complete-modal');
+  if (existing) existing.remove();
+
+  var myEmail = (typeof AN !== 'undefined' && AN.currentRepEmail) || '';
+  var defaultSdr = demo.sdrEmail || demo._repEmail || myEmail;
+  var defaultAe = demo.aeEmail || '';
+  var contacts = (demo.contacts && demo.contacts.length) ? demo.contacts.slice() : [{ name: demo.name || '', title: '', phone: '', email: '' }];
+  var company = demo.company || '';
+  if (!company && demo.name && demo.name.indexOf(' @ ') >= 0) {
+    company = demo.name.split(' @ ').slice(1).join(' @ ').trim();
+    if (!demo.contacts || !demo.contacts.length) contacts[0].name = demo.name.split(' @ ')[0].trim();
+  }
+  var contactsHTML = typeof anBuildDemoContactsFieldsHTML === 'function'
+    ? anBuildDemoContactsFieldsHTML('adc', contacts, company) : '';
+
+  var backdrop = document.createElement('div');
+  backdrop.id = 'an-demo-complete-modal';
+  backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:22000;display:flex;align-items:center;justify-content:center;padding:20px;';
+  backdrop.onclick = function(e) { if (e.target === backdrop) backdrop.remove(); };
+  backdrop.innerHTML = '<div style="background:#fff;border-radius:14px;padding:24px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.3);font-family:inherit;" onclick="event.stopPropagation()">'
+    + '<div style="font-size:16px;font-weight:800;color:#09090b;margin-bottom:4px;">✅ Demo Completed</div>'
+    + '<div style="font-size:12px;color:#71717a;margin-bottom:16px;">Add everyone from the demo, assign owners, and create the opportunity.</div>'
+    + contactsHTML
+    + '<div style="background:#f5f3ff;border:1.5px solid #ddd6fe;border-radius:10px;padding:14px;margin:14px 0;">'
+    + '<div style="font-size:10px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px;">Who gets credit?</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+    + '<div><label style="font-size:10px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">SDR Owner *</label>'
+    + '<select id="adc-sdr" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px;font-size:13px;font-family:inherit;">'+anBuildRepSelectOptions(defaultSdr)+'</select></div>'
+    + '<div><label style="font-size:10px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">AE Owner *</label>'
+    + '<select id="adc-ae" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px;font-size:13px;font-family:inherit;">'+anBuildRepSelectOptions(defaultAe)+'</select></div>'
+    + '</div></div>'
+    + '<label style="font-size:10px;font-weight:700;color:#71717a;display:block;margin-bottom:4px;">Demo notes / pain points</label>'
+    + '<textarea id="adc-notes" rows="3" placeholder="What came up on the demo? Next steps?" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:10px;font-size:12.5px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;margin-bottom:16px;">'+anEsc(demo.notes||'')+'</textarea>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button type="button" onclick="document.getElementById(\'an-demo-complete-modal\').remove()" style="flex:1;padding:10px;border:1.5px solid #e4e4e7;border-radius:8px;background:#fff;color:#71717a;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Cancel</button>'
+    + '<button type="button" onclick="anSubmitDemoCompleteOwners(\''+anEsc(demo.id)+'\','+(opts.createOpp?'true':'false')+')" style="flex:1;padding:10px;border:none;border-radius:8px;background:#10b981;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Create Opportunity →</button>'
+    + '</div></div>';
+  document.body.appendChild(backdrop);
+  setTimeout(function() {
+    if (typeof anRefreshAllDemoContactDuplicates === 'function') anRefreshAllDemoContactDuplicates('adc');
+  }, 60);
+};
+
+window.anSubmitDemoCompleteOwners = function(demoId, createOpp) {
+  var demo = (_dash.demos || []).find(function(d) { return d.id === demoId; });
+  if (!demo) return;
+  var sdrEl = document.getElementById('adc-sdr');
+  var aeEl = document.getElementById('adc-ae');
+  var notesEl = document.getElementById('adc-notes');
+  var sdrEmail = (sdrEl ? sdrEl.value : '').trim().toLowerCase();
+  var aeEmail = (aeEl ? aeEl.value : '').trim().toLowerCase();
+  if (!sdrEmail || !aeEmail) {
+    if (typeof showToast === 'function') showToast('Please select both SDR and AE owners');
+    return;
+  }
+  var notes = notesEl ? notesEl.value.trim() : '';
+
+  var collected = typeof anCollectDemoContactsFromForm === 'function' ? anCollectDemoContactsFromForm('adc') : { company: '', contacts: [] };
+  if (!collected.contacts.length) {
+    if (typeof showToast === 'function') showToast('Add at least one contact name');
+    return;
+  }
+  if (!collected.company && collected.contacts.length === 1 && !collected.contacts[0].name.split(' ').slice(1).join(' ')) {
+    collected.company = collected.contacts[0].name;
+  }
+  var unresolved = typeof anValidateDemoContactsResolved === 'function'
+    ? anValidateDemoContactsResolved(collected.contacts, collected.company) : [];
+  if (unresolved.length) {
+    if (typeof showToast === 'function') showToast('Choose link or new contact for: ' + unresolved.join(', '));
+    return;
+  }
+
+  var modal = document.getElementById('an-demo-complete-modal');
+  if (modal) modal.remove();
+  demo.company = collected.company;
+  demo.contacts = collected.contacts;
+  demo.name = typeof anDemoDisplayName === 'function' ? anDemoDisplayName(demo.company, demo.contacts, demo.name) : demo.name;
+
+  var wasShowed = demo.status === 'showed';
+  demo.status = 'showed';
+  demo.completedDate = typeof anLocalDateStr === 'function' ? anLocalDateStr() : new Date().toISOString().split('T')[0];
+  demo.sdrEmail = sdrEmail;
+  demo.aeEmail = aeEmail;
+  demo.sdrName = typeof anGetRepName === 'function' ? anGetRepName(sdrEmail) : '';
+  demo.aeName = typeof anGetRepName === 'function' ? anGetRepName(aeEmail) : '';
+  if (notes) demo.notes = notes;
+
+  var batch = typeof anSaveDemoContactsToCRM === 'function' ? anSaveDemoContactsToCRM(demo, sdrEmail, aeEmail) : null;
+  var lead = batch ? batch.primary : (typeof anEnsureLeadForDemo === 'function' ? anEnsureLeadForDemo(demo) : null);
+  if (lead) {
+    lead.sdrEmail = sdrEmail;
+    lead._repEmail = lead._repEmail || sdrEmail;
+    lead.aeEmail = aeEmail;
+    if (typeof anAssignAE === 'function') anAssignAE(lead, aeEmail);
+    if (notes) {
+      lead.demoNotes = notes;
+      if (!lead.callLog) lead.callLog = [];
+      var now = new Date();
+      lead.callLog.push({
+        id: 'act-' + Date.now(),
+        type: 'note',
+        outcome: 'showed',
+        date: typeof anLocalDateStr === 'function' ? anLocalDateStr() : now.toISOString().split('T')[0],
+        time: String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0'),
+        rep: (typeof AN !== 'undefined' && AN.currentRepEmail) || '',
+        loggedAt: now.toISOString(),
+        notes: notes,
+        category: 'pain'
+      });
+    }
+    lead.demoDate = demo.scheduledDate || lead.demoDate;
+    lead.size = demo.size || lead.size;
+    lead.state = demo.state || lead.state;
+    lead.demoCompletedAt = lead.demoCompletedAt || new Date().toISOString();
+    if (typeof anRecordDemoCompleted === 'function') anRecordDemoCompleted(lead, { source: 'manual_demo_complete' });
+    if (typeof AN !== 'undefined' && AN.save) AN.save();
+    if (createOpp && typeof anIsOpportunity === 'function' && !anIsOpportunity(lead)) {
+      if (typeof anTriggerDemoCompleteConversion === 'function') {
+        anTriggerDemoCompleteConversion(lead, { silent: false, save: false, source: 'manual_demo_complete' });
+      } else if (typeof anPromoteLeadToOpportunity === 'function') {
+        anPromoteLeadToOpportunity(lead, {
+          stage: 'showed',
+          sdrEmail: sdrEmail,
+          aeEmail: aeEmail,
+          notes: notes,
+          size: demo.size,
+          demoCompletedAt: true,
+          skipRefresh: true,
+          save: false
+        });
+        if (typeof anRecordDemoConverted === 'function') {
+          anRecordDemoConverted(lead, { source: 'manual_demo_complete' });
+        }
+      }
+    } else if (typeof AN !== 'undefined' && AN.save) {
+      AN.save();
+    }
+    if (typeof renderOpportunities === 'function') renderOpportunities();
+    if (typeof AN !== 'undefined' && AN.save) AN.save();
+  }
+
+  if (typeof dashSave === 'function') dashSave();
+  if (demo._pipelineIdx != null && _dash.pipeline && _dash.pipeline[demo._pipelineIdx]) {
+    var pipeDeal = _dash.pipeline[demo._pipelineIdx];
+    pipeDeal.stage = 'Demo Completed';
+    pipeDeal.leadId = demo.leadId || pipeDeal.leadId;
+    pipeDeal.demoId = demo.id;
+    pipeDeal.name = demo.name || pipeDeal.name;
+    pipeDeal.company = demo.company || pipeDeal.company;
+    pipeDeal.contacts = demo.contacts || pipeDeal.contacts;
+    pipeDeal.contactLeadIds = demo.contactLeadIds || pipeDeal.contactLeadIds;
+    pipeDeal.sdrEmail = demo.sdrEmail;
+    pipeDeal.aeEmail = demo.aeEmail;
+    pipeDeal.sdrName = demo.sdrName;
+    pipeDeal.aeName = demo.aeName;
+    pipeDeal.notes = demo.notes || pipeDeal.notes;
+    pipeDeal.updated = new Date().toISOString();
+  }
+  if (typeof anPushTeamActivityCloud === 'function' && !wasShowed) {
+    anPushTeamActivityCloud({ showed: 1 }, { repEmail: sdrEmail });
+  }
+  if (typeof dashRefreshTopStatTiles === 'function') dashRefreshTopStatTiles();
+  if (typeof refreshActiveCharts === 'function') refreshActiveCharts();
+  var w = document.getElementById('demo-list-wrap');
+  if (w && typeof buildDemoListHTML === 'function') w.innerHTML = buildDemoListHTML();
+  if (typeof showToast === 'function') {
+    var nContacts = (demo.contactLeadIds || []).length || (demo.contacts || []).length || 1;
+    showToast('Demo completed — ' + nContacts + ' contact' + (nContacts !== 1 ? 's' : '') + ' saved, opportunity ready');
   }
 };
 
 window.anOpenDemoShowedCapture = function(demo) {
+  if (typeof anOpenDemoCompleteOwnersModal === 'function') {
+    anOpenDemoCompleteOwnersModal(demo, { createOpp: true });
+    return;
+  }
   var existing = document.getElementById('an-demo-showed-modal');
   if (existing) existing.remove();
   var backdrop = document.createElement('div');
@@ -6215,23 +7576,33 @@ function buildShowRateHTML() {
 window.openAddDemo=function(editId){
   var ex=editId?(_dash.demos||[]).filter(function(d){return d.id===editId;})[0]:null;
   var old=document.getElementById('dm-modal'); if(old) old.remove();
-  var STAGES=['booked','showed','noshow','rescheduled'], SLABELS={booked:'Booked',showed:'Showed Up',noshow:'No Show',rescheduled:'Rescheduled'};
+  var STAGES=['booked','showed','noshow','rescheduled'], SLABELS={booked:'Booked',showed:'Demo Completed',noshow:'No Show',rescheduled:'Rescheduled'};
   var stateOpts='<option value="">State...</option>'+(typeof US_STATES!=='undefined'?US_STATES:[]).map(function(s){return '<option value="'+s+'"'+(ex&&ex.state===s?' selected':'')+'>'+s+'</option>';}).join('');
   var sizeOpts=(typeof SIZES!=='undefined'?SIZES:[]).map(function(s){return '<option value="'+s.id+'"'+(ex&&ex.size===s.id?' selected':'')+'>'+s.label+'</option>';}).join('');
   var statusOpts=STAGES.map(function(s){return '<option value="'+s+'"'+(ex?ex.status===s?' selected':'':s==='booked'?' selected':'')+'>'+SLABELS[s]+'</option>';}).join('');
+  var isComplete = ex && ex.status === 'showed';
+  var initContacts = (ex && ex.contacts && ex.contacts.length) ? ex.contacts.slice() : [{ name: (ex && ex.name) ? ex.name : '', title: '', phone: '', email: '' }];
+  var initCompany = (ex && ex.company) ? ex.company : '';
+  if (!initCompany && ex && ex.name && ex.name.indexOf(' @ ') >= 0) {
+    initCompany = ex.name.split(' @ ').slice(1).join(' @ ').trim();
+    if (!ex.contacts || !ex.contacts.length) initContacts[0].name = ex.name.split(' @ ')[0].trim();
+  }
+  var contactsPanelHTML = typeof anBuildDemoContactsFieldsHTML === 'function'
+    ? anBuildDemoContactsFieldsHTML('dm', initContacts, initCompany) : '';
   var ov=document.createElement('div'); ov.id='dm-modal'; ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
-  ov.innerHTML='<div style="background:#fff;border-radius:14px;padding:24px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
+  ov.innerHTML='<div style="background:#fff;border-radius:14px;padding:24px;width:540px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;"><div style="font-size:16px;font-weight:800;">'+(editId?'Edit Demo':'Log Demo')+'</div>'
     +'<button onclick="document.getElementById(\'dm-modal\').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#a1a1aa;">&#x2715;</button></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">'
-    +'<div style="grid-column:1/-1;"><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Prospect Name *</label>'
-    +'<input id="dm-n" type="text" value="'+(ex?ex.name:'')+'" placeholder="Company or person" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"></div>'
+    +'<div id="dm-simple-prospect" style="grid-column:1/-1;'+(isComplete?'display:none;':'')+'"><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Prospect Name *</label>'
+    +'<input id="dm-n" type="text" value="'+(ex?anEsc(ex.name):'')+'" placeholder="Company or person" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"></div>'
+    +contactsPanelHTML
     +'<div><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">State</label><select id="dm-s" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;cursor:pointer;">'+stateOpts+'</select></div>'
     +'<div><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Size</label><select id="dm-z" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;cursor:pointer;">'+sizeOpts+'</select></div>'
     +'<div><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Scheduled Date</label><input id="dm-d" type="date" value="'+(ex&&ex.scheduledDate?ex.scheduledDate:new Date().toISOString().substring(0,10))+'" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"></div>'
-    +'<div><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Status</label><select id="dm-st" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;cursor:pointer;">'+statusOpts+'</select></div>'
+    +'<div><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Status</label><select id="dm-st" onchange="anToggleDemoContactsUI()" style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;cursor:pointer;">'+statusOpts+'</select></div>'
     +'<div style="grid-column:1/-1;"><label style="font-size:10px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:5px;">Notes</label>'
-    +'<textarea id="dm-nt" rows="2" placeholder="Pain points, outcome, next step..." style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;">'+(ex&&ex.notes?ex.notes:'')+'</textarea></div>'
+    +'<textarea id="dm-nt" rows="2" placeholder="Pain points, outcome, next step..." style="width:100%;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;">'+(ex&&ex.notes?anEsc(ex.notes):'')+'</textarea></div>'
     +'</div>'
     +'<div style="display:flex;gap:8px;justify-content:flex-end;">'
     +'<button onclick="document.getElementById(\'dm-modal\').remove()" style="padding:9px 18px;border-radius:8px;border:1.5px solid #e4e4e7;background:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#71717a;">Cancel</button>'
@@ -6239,7 +7610,18 @@ window.openAddDemo=function(editId){
     +'</div></div>';
   document.body.appendChild(ov);
   ov.onclick=function(e){if(e.target===ov) ov.remove();};
-  setTimeout(function(){var n=document.getElementById('dm-n');if(n) n.focus();},50);
+  var contactsPanel = document.getElementById('dm-contacts-panel');
+  if (contactsPanel) contactsPanel.style.display = isComplete ? '' : 'none';
+  setTimeout(function(){
+    if (isComplete || (document.getElementById('dm-st') && document.getElementById('dm-st').value === 'showed')) {
+      if (typeof anRefreshAllDemoContactDuplicates === 'function') anRefreshAllDemoContactDuplicates('dm');
+      var co = document.getElementById('dm-company');
+      if (co) co.focus();
+    } else {
+      var n=document.getElementById('dm-n');
+      if(n) n.focus();
+    }
+  },50);
 };
 
 // ── Remove Demo Booked entries from pipeline (demos are not deals) ──
@@ -6260,15 +7642,96 @@ window.openAddDemo=function(editId){
 
 window.saveDemoEntry=function(editId,addPipeline){
   var n=document.getElementById('dm-n'),s=document.getElementById('dm-s'),z=document.getElementById('dm-z'),d=document.getElementById('dm-d'),st=document.getElementById('dm-st'),nt=document.getElementById('dm-nt');
-  if(!n||!n.value.trim()){if(n){n.style.borderColor='#ef4444';n.focus();}return;}
+  var newStatus = st ? st.value : 'booked';
+  var isCompleteForm = newStatus === 'showed';
+  var collected = isCompleteForm && typeof anCollectDemoContactsFromForm === 'function'
+    ? anCollectDemoContactsFromForm('dm') : { company: '', contacts: [] };
+  if (isCompleteForm) {
+    if (!collected.contacts.length) {
+      if (typeof showToast === 'function') showToast('Add at least one contact');
+      return;
+    }
+    if (!collected.company && collected.contacts.length === 1) collected.company = collected.contacts[0].name;
+    var unresolved = typeof anValidateDemoContactsResolved === 'function'
+      ? anValidateDemoContactsResolved(collected.contacts, collected.company) : [];
+    if (unresolved.length) {
+      if (typeof showToast === 'function') showToast('Choose link or new contact for: ' + unresolved.join(', '));
+      return;
+    }
+  } else if (!n || !n.value.trim()) {
+    if (n) { n.style.borderColor = '#ef4444'; n.focus(); }
+    return;
+  }
   if(!_dash.demos) _dash.demos=[];
-  var demo={name:n.value.trim(),state:s?s.value:'',size:z?z.value:'',scheduledDate:d?d.value:'',status:st?st.value:'booked',notes:nt?nt.value.trim():'',id:editId||('demo-'+Date.now()),bookedDate:new Date().toISOString().split('T')[0]};
-  if(editId){var idx=-1;_dash.demos.forEach(function(x,i){if(x.id===editId) idx=i;});if(idx>=0){demo.id=editId;demo.bookedDate=_dash.demos[idx].bookedDate||demo.bookedDate;_dash.demos[idx]=demo;}}
-  else{_dash.demos.push(demo);}
-  // NOTE: demos are NOT added to _dash.pipeline — a Demo Booked is not a deal
+  var prevDemo = editId ? (_dash.demos || []).filter(function(x){ return x.id === editId; })[0] : null;
+  var prevStatus = prevDemo ? prevDemo.status : '';
+  var myEmail = (typeof AN !== 'undefined' && AN.currentRepEmail) ? AN.currentRepEmail.toLowerCase() : '';
+  var displayName = isCompleteForm
+    ? (typeof anDemoDisplayName === 'function' ? anDemoDisplayName(collected.company, collected.contacts, '') : collected.contacts[0].name)
+    : n.value.trim();
+  var demo={
+    name: displayName,
+    company: isCompleteForm ? collected.company : (prevDemo && prevDemo.company) || '',
+    contacts: isCompleteForm ? collected.contacts : (prevDemo && prevDemo.contacts) || [],
+    state:s?s.value:'',
+    size:z?z.value:'',
+    scheduledDate:d?d.value:'',
+    status:newStatus,
+    notes:nt?nt.value.trim():'',
+    id:editId||('demo-'+Date.now()),
+    bookedDate:prevDemo && prevDemo.bookedDate ? prevDemo.bookedDate : (typeof anLocalDateStr==='function'?anLocalDateStr():new Date().toISOString().split('T')[0]),
+    sdrEmail: (prevDemo && prevDemo.sdrEmail) || myEmail,
+    aeEmail: (prevDemo && prevDemo.aeEmail) || ''
+  };
+  if (prevDemo) {
+    demo.leadId = prevDemo.leadId;
+    demo.completedDate = prevDemo.completedDate;
+    demo.sdrName = prevDemo.sdrName;
+    demo.aeName = prevDemo.aeName;
+  }
+
+  var openingComplete = newStatus === 'showed' && prevStatus !== 'showed';
+  if (openingComplete) {
+    demo.status = prevStatus || 'booked';
+    if (editId) {
+      var idx = -1;
+      _dash.demos.forEach(function(x,i){ if(x.id===editId) idx=i; });
+      if (idx >= 0) _dash.demos[idx] = Object.assign({}, _dash.demos[idx], demo);
+    } else {
+      _dash.demos.push(demo);
+    }
+    dashSave();
+    var m=document.getElementById('dm-modal'); if(m) m.remove();
+    if (typeof anOpenDemoCompleteOwnersModal === 'function') {
+      var saved = (_dash.demos || []).filter(function(x){ return x.id === demo.id; })[0] || demo;
+      anOpenDemoCompleteOwnersModal(saved, { createOpp: true });
+    }
+    return;
+  }
+
+  if(editId){
+    var idx2=-1;
+    _dash.demos.forEach(function(x,i){if(x.id===editId) idx2=i;});
+    if(idx2>=0){demo.id=editId;demo.bookedDate=_dash.demos[idx2].bookedDate||demo.bookedDate;_dash.demos[idx2]=demo;}
+  } else {
+    _dash.demos.push(demo);
+  }
   dashSave();
-  var m=document.getElementById('dm-modal');if(m) m.remove();
+  var m2=document.getElementById('dm-modal');if(m2) m2.remove();
   switchChartPane('demos');
+  if(typeof dashRefreshTopStatTiles==='function') dashRefreshTopStatTiles();
+  var w=document.getElementById('demo-list-wrap');
+  if(w&&typeof buildDemoListHTML==='function') w.innerHTML=buildDemoListHTML();
+
+  var savedDemo = (_dash.demos || []).filter(function(x) { return x.id === demo.id; })[0] || demo;
+  if (typeof anSyncDemoToOpportunity === 'function') {
+    anSyncDemoToOpportunity(savedDemo);
+    if (typeof AN !== 'undefined' && AN.save) AN.save();
+    dashSave();
+  }
+  if (typeof renderOpportunities === 'function') renderOpportunities();
+  if (typeof renderLeadsTable === 'function') renderLeadsTable();
+
   if(typeof showToast==='function') showToast(editId?'Demo updated!':'Demo logged!');
 };
 
@@ -6276,9 +7739,12 @@ window.saveDemoEntry=function(editId,addPipeline){
 window.dashResetActivity=function(){
   if(!confirm('Reset today\'s activity counters?')) return;
   _dash.activity={calls:0,demos:0,closes:0};
-  var today=new Date().toISOString().split('T')[0];
+  var today = typeof anLocalDateStr === 'function' ? anLocalDateStr() : new Date().toISOString().split('T')[0];
   if(_dash.activityLog){var e=_dash.activityLog.filter(function(x){return x.date===today;})[0];if(e){e.calls=0;e.demos=0;e.closes=0;}}
-  dashSave(); renderSalesDashboard();
+  dashSave();
+  if (typeof dashRefreshTopStatTiles === 'function') dashRefreshTopStatTiles();
+  if (typeof refreshActiveCharts === 'function') refreshActiveCharts();
+  if (typeof fastSetGoalPeriod === 'function') fastSetGoalPeriod(_goalPeriod || 'today');
 };
 
 console.log('[FINAL DASHBOARD] Clean render: charts, goals, demos, hotzones.');
@@ -6405,10 +7871,11 @@ function buildPipelineCard() {
 function buildPipelineHTML() {
   var p = _dash.pipeline || [];
   if (!p.length) return '<div style="text-align:center;padding:20px;color:#a1a1aa;font-size:12px;">No deals yet. Click + Add Deal.</div>';
-  var SC = {'Closed Won':'#10b981','Closed Lost':'#ef4444','Demo Booked':'#6366f1','Demo Done':'#8b5cf6','Proposal Sent':'#f59e0b','Prospecting':'#a1a1aa'};
+  var SC = {'Closed Won':'#10b981','Closed Lost':'#ef4444','Demo Booked':'#6366f1','Demo Completed':'#8b5cf6','Demo Done':'#8b5cf6','Proposal Sent':'#f59e0b','Prospecting':'#a1a1aa'};
   return '<div style="display:flex;flex-direction:column;gap:6px;">' + p.map(function(deal,i){
     var sz = SIZES_DASH.filter(function(x){return x.id===deal.size;})[0]||{label:deal.size||'',price:''};
-    var sc = SC[deal.stage]||'#a1a1aa';
+    var stageLabel = typeof anDisplayPipelineStage === 'function' ? anDisplayPipelineStage(deal.stage) : deal.stage;
+    var sc = SC[deal.stage] || SC[stageLabel] || '#a1a1aa';
     var clickAttr = deal.leadId
       ? ' onclick="showSection(\'opportunities\',null);setTimeout(function(){anOpenOppRecord(\''+String(deal.leadId).replace(/'/g, "\\'")+'\')},200)"'
       : '';
@@ -6423,7 +7890,7 @@ function buildPipelineHTML() {
       +'</div>'
       +(deal.notes?'<div style="font-size:10px;color:#a1a1aa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+deal.notes+'</div>':'')
       +'</div>'
-      +'<span style="font-size:10px;font-weight:700;color:'+sc+';background:'+sc+'18;padding:2px 8px;border-radius:10px;white-space:nowrap;">'+deal.stage+'</span>'
+      +'<span style="font-size:10px;font-weight:700;color:'+sc+';background:'+sc+'18;padding:2px 8px;border-radius:10px;white-space:nowrap;">'+stageLabel+'</span>'
       +'<button onclick="dashAddDeal('+i+')" style="background:none;border:1px solid #e4e4e7;color:#6366f1;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;">Edit</button>'
       +'<button onclick="dashDeleteDeal('+i+')" style="background:none;border:none;color:#d4d4d8;cursor:pointer;font-size:11px;padding:2px 4px;">&#x2715;</button>'
       +'</div>';
@@ -6562,9 +8029,88 @@ window.buildAndShowCharts = function() {
 };
 
 // ── SDR Metrics HTML ─────────────────────────────────────────
+function dashBuildTeamRepBreakdownHTML() {
+  if (typeof AN === 'undefined' || !AN.isAdmin) return '';
+  var scope = typeof anGetTeamViewScope === 'function' ? anGetTeamViewScope() : '';
+  if (scope && scope !== '') return '';
+  var now = new Date();
+  var bounds = (typeof getDateRangeBounds === 'function') ? getDateRangeBounds() : null;
+  var cutoff = bounds ? bounds.from : (function(){ var d = new Date(now); d.setDate(d.getDate()-30); return d; })();
+  var to = bounds ? bounds.to : now;
+  var inRange = function(dt) {
+    if (!dt) return true;
+    return typeof inDateRange === 'function' ? inDateRange(dt, cutoff, to) : true;
+  };
+  var allDemos = (_dash.demos || []).filter(function(d) { return d.source !== 'backfill'; }).filter(function(d) {
+    return inRange(d.completedDate || d.bookedDate || d.scheduledDate || '');
+  });
+  var reps = typeof anGetKnownRepEmails === 'function' ? anGetKnownRepEmails() : [];
+  var byRep = {};
+  reps.forEach(function(em) {
+    byRep[em.toLowerCase()] = { email: em, booked: 0, completed: 0, opps: 0, calls: 0 };
+  });
+  allDemos.forEach(function(d) {
+    var em = (d.sdrEmail || d._repEmail || '').toLowerCase();
+    if (!em || !byRep[em]) return;
+    if (d.status === 'booked' || d.status === 'rescheduled') byRep[em].booked++;
+    if (d.status === 'showed') byRep[em].completed++;
+  });
+  (_dash.pipeline || []).filter(function(p) { return !p._fromHubSpot; }).forEach(function(p) {
+    var em = (p.sdrEmail || '').toLowerCase();
+    if (!em || !byRep[em]) return;
+    if (!inRange(String((p.added || '')).split('T')[0])) return;
+    if (p.stage !== 'Closed Lost') byRep[em].opps++;
+  });
+  var log = _dash.activityLog || [];
+  log.forEach(function(e) {
+    if (!inRange(e.date)) return;
+    // activity log is per-device; team cloud data merged elsewhere
+  });
+  if (typeof AN !== 'undefined' && AN._teamActivityByRep) {
+    Object.keys(AN._teamActivityByRep).forEach(function(em) {
+      if (!byRep[em]) byRep[em] = { email: em, booked: 0, completed: 0, opps: 0, calls: 0 };
+      Object.keys(AN._teamActivityByRep[em] || {}).forEach(function(day) {
+        if (!inRange(day)) return;
+        var row = AN._teamActivityByRep[em][day] || {};
+        byRep[em].calls += row.calls || 0;
+        byRep[em].booked += row.demos || 0;
+        byRep[em].completed += row.showed || 0;
+      });
+    });
+  }
+  var rows = Object.keys(byRep).map(function(k) { return byRep[k]; })
+    .filter(function(r) { return r.booked || r.completed || r.opps || r.calls; })
+    .sort(function(a, b) { return (b.completed + b.booked + b.calls) - (a.completed + a.booked + a.calls); });
+  if (!rows.length) return '';
+  var tableRows = rows.map(function(r) {
+    var name = typeof anGetRepName === 'function' ? anGetRepName(r.email) : r.email.split('@')[0];
+    var showRate = (r.completed + (r.booked > r.completed ? r.booked - r.completed : 0)) > 0
+      ? Math.round((r.completed / Math.max(r.booked, r.completed)) * 100) + '%' : '—';
+    return '<tr style="border-bottom:1px solid #f4f4f5;">'
+      + '<td style="padding:10px 8px;font-weight:700;color:#09090b;">'+anEsc(name)+'</td>'
+      + '<td style="padding:10px 8px;text-align:center;color:#6366f1;font-weight:700;">'+r.calls+'</td>'
+      + '<td style="padding:10px 8px;text-align:center;color:#8b5cf6;font-weight:700;">'+r.booked+'</td>'
+      + '<td style="padding:10px 8px;text-align:center;color:#10b981;font-weight:700;">'+r.completed+'</td>'
+      + '<td style="padding:10px 8px;text-align:center;color:#06b6d4;font-weight:700;">'+showRate+'</td>'
+      + '<td style="padding:10px 8px;text-align:center;color:#f59e0b;font-weight:700;">'+r.opps+'</td>'
+      + '</tr>';
+  }).join('');
+  return '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:18px;margin-top:16px;">'
+    + '<div style="font-size:11px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Team by Rep</div>'
+    + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:520px;">'
+    + '<thead><tr style="background:#fafafa;">'
+    + '<th style="padding:8px;text-align:left;font-size:10px;color:#a1a1aa;text-transform:uppercase;">Rep</th>'
+    + '<th style="padding:8px;text-align:center;font-size:10px;color:#a1a1aa;text-transform:uppercase;">Calls</th>'
+    + '<th style="padding:8px;text-align:center;font-size:10px;color:#a1a1aa;text-transform:uppercase;">Demos Booked</th>'
+    + '<th style="padding:8px;text-align:center;font-size:10px;color:#a1a1aa;text-transform:uppercase;">Completed</th>'
+    + '<th style="padding:8px;text-align:center;font-size:10px;color:#a1a1aa;text-transform:uppercase;">Show Rate</th>'
+    + '<th style="padding:8px;text-align:center;font-size:10px;color:#a1a1aa;text-transform:uppercase;">Opps</th>'
+    + '</tr></thead><tbody>'+tableRows+'</tbody></table></div></div>';
+}
+
 function buildSDRMetricsHTML() {
-  var log    = _dash.activityLog || [];
-  var demos  = _dash.demos || [];
+  var log    = typeof anGetScopedActivityLog === 'function' ? anGetScopedActivityLog() : (_dash.activityLog || []);
+  var demos  = typeof dashGetScopedDemosAnyDate === 'function' ? dashGetScopedDemosAnyDate() : (_dash.demos || []);
   var now    = new Date();
   var bounds = (typeof getDateRangeBounds === 'function') ? getDateRangeBounds() : null;
   var cutoff30 = bounds ? bounds.from : (function(){ var d = new Date(now); d.setDate(d.getDate()-30); return d; })();
@@ -6692,6 +8238,7 @@ function buildSDRMetricsHTML() {
         +'</div>';
     }).join('')
     +'</div></div>'
+    +(typeof dashBuildTeamRepBreakdownHTML === 'function' ? dashBuildTeamRepBreakdownHTML() : '')
     +'</div>';
 }
 
@@ -7135,7 +8682,8 @@ window.applyCustomRange = function() {
 };
 
 function refreshActiveCharts() {
-  // Always rebuild SDR section with current date range
+  if (typeof dashRefreshTopStatTiles === 'function') dashRefreshTopStatTiles();
+
   setTimeout(function() {
     var sdr = document.getElementById('sdr-metrics-section');
     if (sdr && typeof buildSDRMetricsHTML === 'function') {
@@ -7146,7 +8694,18 @@ function refreshActiveCharts() {
     }
   }, 50);
 
-  var active = ['activity','deals','demos','showrate'].filter(function(k){
+  var mainTab = window._dashActiveTab || 0;
+  if (mainTab === 1) {
+    loadChartJS(function() {
+      renderPipelineChart();
+      renderStateChart();
+      renderSizeChart();
+      renderDealsWonChart();
+    });
+    return;
+  }
+
+  var active = ['activity','demos','showrate'].filter(function(k){
     var p = document.getElementById('cp-'+k); return p && p.style.display !== 'none';
   })[0] || 'activity';
   loadChartJS(function() {
@@ -7154,20 +8713,22 @@ function refreshActiveCharts() {
       renderActivityChart();
       renderDemosByStateChart();
       renderHotzoneChart();
-      // Refresh hotzone slots panel
+      renderClosesChart();
       var slots = document.getElementById('hotzone-slots-panel');
       if (slots) {
         var inner = slots.querySelector('div:last-child');
         if (inner) inner.innerHTML = buildHotzoneSlots();
       }
-      // Refresh top cards
       var top = document.getElementById('hotzone-top-cards');
       if (top) top.innerHTML = buildTopHourCards();
-      // Refresh SDR section
       var sdr = document.getElementById('sdr-metrics-section');
       if (sdr) { sdr.innerHTML = buildSDRMetricsHTML(); renderFunnelChart(); }
     }
-    if (active === 'deals') { renderClosesChart(); renderPipelineChart(); }
+    if (active === 'showrate') setTimeout(renderShowRateChart, 50);
+    if (active === 'demos') {
+      var w = document.getElementById('demo-list-wrap');
+      if (w) w.innerHTML = buildDemoListHTML();
+    }
   });
 }
 
@@ -7175,12 +8736,13 @@ function refreshActiveCharts() {
 var _origBACS_range = window.buildAndShowCharts;
 window.buildAndShowCharts = function() {
   _origBACS_range();
-  // Replace the old range buttons with the dropdown
-  var titleRow = document.getElementById('chart-title');
-  if (titleRow && titleRow.parentNode) {
-    var rangeHolder = titleRow.parentNode.querySelector('div:last-child');
-    if (rangeHolder) rangeHolder.innerHTML = buildRangeDropdown();
-  }
+  ['chart-title','chart-title-ae'].forEach(function(id) {
+    var titleRow = document.getElementById(id);
+    if (titleRow && titleRow.parentNode) {
+      var rangeHolder = titleRow.parentNode.querySelector('div:last-child');
+      if (rangeHolder && typeof buildRangeDropdown === 'function') rangeHolder.innerHTML = buildRangeDropdown();
+    }
+  });
 };
 
 // ── CALL LOG DATA STRUCTURE ───────────────────────────────────
@@ -9777,7 +11339,7 @@ var AN_LEAD_STATUSES = [
 
 var AN_OPP_STATUSES = [
   { id:'demo',         label:'Demo Set',       color:'#8b5cf6', dot:'#a78bfa' },
-  { id:'showed',       label:'Showed Up',      color:'#06b6d4', dot:'#22d3ee' },
+  { id:'showed',       label:'Demo Completed', color:'#06b6d4', dot:'#22d3ee' },
   { id:'proposal',     label:'Proposal Sent',  color:'#3b82f6', dot:'#60a5fa' },
   { id:'negotiation',  label:'Negotiating',    color:'#f59e0b', dot:'#fbbf24' },
   { id:'won',          label:'Closed Won',     color:'#10b981', dot:'#34d399' },
@@ -9818,21 +11380,45 @@ window.anTriggerDemoCompleteConversion = function(lead, opts) {
   if (!lead || anIsOpportunity(lead)) return false;
   opts = opts || {};
   var prevStatus = opts.prevStatus || (lead.status !== 'demo_complete' ? lead.status : (lead._demoCompletePrevStatus || 'booked_demo'));
-  if (lead.status !== 'demo_complete') {
+  if (lead.status !== 'demo_complete' && !opts.skipStatusBump) {
     lead._demoCompletePrevStatus = prevStatus;
     lead.status = 'demo_complete';
     lead.updated = new Date().toISOString();
   }
   if (typeof anRecordDemoCompleted === 'function') anRecordDemoCompleted(lead, { source: 'demo_complete' });
-  if (opts.save !== false && typeof AN !== 'undefined' && AN.save) AN.save();
-  if (typeof renderLeadsTable === 'function') renderLeadsTable();
-  setTimeout(function() {
-    if (typeof anConvertToOpportunity === 'function') {
+
+  if (opts.openModal && typeof anConvertToOpportunity === 'function') {
+    if (opts.save !== false && typeof AN !== 'undefined' && AN.save) AN.save();
+    if (typeof renderLeadsTable === 'function') renderLeadsTable();
+    setTimeout(function() {
       anConvertToOpportunity(lead.id, { fromDemoComplete: true, prevStatus: prevStatus });
+    }, opts.delay || 80);
+    if (typeof showToast === 'function' && opts.silent !== true) {
+      showToast('Demo complete — create the opportunity');
     }
-  }, opts.delay || 80);
+    return true;
+  }
+
+  if (typeof anPromoteLeadToOpportunity === 'function') {
+    anPromoteLeadToOpportunity(lead, {
+      stage: 'showed',
+      sdrEmail: lead.sdrEmail,
+      aeEmail: lead.aeEmail,
+      notes: lead.oppNotes || lead.notes,
+      size: lead.size,
+      demoCompletedAt: true,
+      skipRefresh: true,
+      save: opts.save !== false
+    });
+  }
+  delete lead._demoCompletePrevStatus;
+  if (typeof anRecordDemoConverted === 'function') {
+    anRecordDemoConverted(lead, { source: opts.source || 'demo_complete_auto' });
+  }
+  if (typeof renderLeadsTable === 'function') renderLeadsTable();
+  if (typeof renderOpportunities === 'function') renderOpportunities();
   if (typeof showToast === 'function' && opts.silent !== true) {
-    showToast('Demo complete — create the opportunity');
+    showToast('Opportunity created — demo complete');
   }
   return true;
 };
@@ -9844,9 +11430,21 @@ window.anApplyLeadStatusChange = function(lead, newStatus, opts) {
     anTriggerDemoCompleteConversion(lead, {
       save: opts.save !== false,
       silent: !!opts.silent,
-      prevStatus: lead.status !== 'demo_complete' ? lead.status : undefined
+      prevStatus: lead.status !== 'demo_complete' ? lead.status : undefined,
+      source: opts.source || 'status_change'
     });
-    return 'demo_complete';
+    return lead.status || 'showed';
+  }
+  if (newStatus === 'booked_demo' && !anIsOpportunity(lead) && typeof anPromoteLeadToOpportunity === 'function') {
+    anPromoteLeadToOpportunity(lead, {
+      stage: 'demo',
+      skipRefresh: true,
+      save: opts.save !== false
+    });
+    if (lead.demoDate && typeof anRecordDemoBooked === 'function') {
+      anRecordDemoBooked(lead, { source: opts.source || 'status_change' });
+    }
+    return 'demo';
   }
   lead.status = newStatus;
   if (newStatus === 'booked_demo' && lead.demoDate && typeof anRecordDemoBooked === 'function') {
@@ -9915,7 +11513,7 @@ window.anCountBookedDemosToday = function(pool) {
 };
 
 window.anOppStageToPipelineStage = function(status) {
-  var map = { demo: 'Demo Booked', showed: 'Demo Done', proposal: 'Proposal Sent', negotiation: 'Proposal Sent', won: 'Closed Won', lost: 'Closed Lost' };
+  var map = { demo: 'Demo Booked', showed: 'Demo Completed', proposal: 'Proposal Sent', negotiation: 'Proposal Sent', won: 'Closed Won', lost: 'Closed Lost' };
   return map[status] || 'Prospecting';
 };
 
@@ -9935,8 +11533,12 @@ window.anSyncOpportunityToPipeline = function(lead, opts) {
     stage: stage,
     notes: lead.oppNotes || lead.notes || '',
     added: lead.convertedAt || (lead.convertedAt = new Date().toISOString()),
-    mrr: lead.oppMRR || 0
+    mrr: lead.oppMRR || 0,
+    sdrEmail: (lead.sdrEmail || lead._repEmail || '').toLowerCase(),
+    aeEmail: (lead.aeEmail || '').toLowerCase()
   };
+  if (entry.sdrEmail && typeof anGetRepName === 'function') entry.sdrName = anGetRepName(entry.sdrEmail);
+  if (entry.aeEmail && typeof anGetRepName === 'function') entry.aeName = anGetRepName(entry.aeEmail);
   // First time converting to an Opportunity: if an AE was assigned during the demo
   // booking, ownership transfers from the SDR to the AE.
   if (isFirstConversion && lead.aeEmail && typeof anTransferOwnershipToAE === 'function') {
@@ -9985,6 +11587,215 @@ window.anSyncAllOpportunitiesToPipeline = function(opts) {
     var list = document.getElementById('dash-pipeline-list');
     if (list && typeof buildPipelineHTML === 'function') list.innerHTML = buildPipelineHTML();
   }
+};
+
+window.anPipelineStageToOppStatus = function(pipelineStage) {
+  var s = typeof anNormalizePipelineStageValue === 'function'
+    ? anNormalizePipelineStageValue(pipelineStage) : (pipelineStage || '');
+  var map = {
+    'Prospecting': 'demo',
+    'Demo Booked': 'demo',
+    'Demo Completed': 'showed',
+    'Demo Done': 'showed',
+    'Proposal Sent': 'proposal',
+    'Closed Won': 'won',
+    'Closed Lost': 'lost'
+  };
+  return map[s] || 'demo';
+};
+
+window.anPromoteLeadToOpportunity = function(lead, opts) {
+  if (!lead || typeof AN === 'undefined') return lead;
+  opts = opts || {};
+  var stage = opts.stage || 'demo';
+  if (stage === 'booked' || stage === 'booked_demo') stage = 'demo';
+  if (stage === 'showed' || stage === 'demo_complete') stage = 'showed';
+
+  if (!lead.isOpportunity) {
+    lead.isOpportunity = true;
+    if (!lead.convertedAt) lead.convertedAt = new Date().toISOString();
+  }
+  lead.status = stage;
+  lead.size = opts.size || lead.size || 'solo';
+  if (!lead.oppMRR) {
+    var sz = (AN_SIZES || []).find(function(s) { return s.id === lead.size; });
+    lead.oppMRR = (sz && sz.price) || 79;
+  }
+  if (opts.sdrEmail) lead.sdrEmail = String(opts.sdrEmail).toLowerCase();
+  if (opts.aeEmail) {
+    lead.aeEmail = String(opts.aeEmail).toLowerCase();
+    lead._repEmail = lead.aeEmail;
+  } else if (opts.sdrEmail && !lead._repEmail) {
+    lead._repEmail = String(opts.sdrEmail).toLowerCase();
+  }
+  if (opts.notes) {
+    lead.oppNotes = opts.notes;
+    if (!lead.notes) lead.notes = opts.notes;
+  }
+  if (opts.demoCompletedAt || stage === 'showed') {
+    lead.demoCompletedAt = lead.demoCompletedAt || new Date().toISOString();
+  }
+  if (opts.demoDate || lead.demoDate) lead.demoDate = opts.demoDate || lead.demoDate;
+  lead.updated = new Date().toISOString();
+
+  if (!opts.skipPipeline && typeof anSyncOpportunityToPipeline === 'function') {
+    anSyncOpportunityToPipeline(lead, { skipSave: true, skipRefresh: true });
+  }
+  if (opts.save !== false && typeof AN.save === 'function') AN.save();
+  if (!opts.skipRefresh) {
+    if (typeof renderOpportunities === 'function') renderOpportunities();
+    if (typeof renderLeadsTable === 'function') renderLeadsTable();
+  }
+  return lead;
+};
+
+window.anSyncPipelineDealToOpportunity = function(deal) {
+  if (!deal || typeof AN === 'undefined') return null;
+  var oppStatus = typeof anPipelineStageToOppStatus === 'function'
+    ? anPipelineStageToOppStatus(deal.stage) : 'demo';
+  var lead = null;
+  if (deal.leadId && AN.leads) {
+    lead = AN.leads.find(function(l) { return l.id === deal.leadId; }) || null;
+  }
+  if (!lead && AN.leads) {
+    var name = (deal.name || '').trim();
+    var company = (deal.company || '').trim();
+    var firstName = '';
+    var lastName = '';
+    if (name.indexOf(' @ ') >= 0) {
+      var parts = name.split(' @ ');
+      firstName = parts[0].trim();
+      company = company || parts.slice(1).join(' @ ').trim();
+      var np = typeof anParsePersonName === 'function' ? anParsePersonName(firstName) : { firstName: firstName, lastName: '' };
+      firstName = np.firstName;
+      lastName = np.lastName;
+    } else {
+      var parsed = typeof anParsePersonName === 'function' ? anParsePersonName(name) : { firstName: name, lastName: '' };
+      firstName = parsed.firstName;
+      lastName = parsed.lastName;
+      if (!company && !lastName) company = name;
+    }
+    var repEmail = (deal.aeEmail || deal.sdrEmail || AN.currentRepEmail || '').toLowerCase();
+    lead = {
+      id: 'lead-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+      firstName: firstName,
+      lastName: lastName,
+      company: company || name,
+      state: deal.state || '',
+      size: deal.size || 'solo',
+      status: oppStatus,
+      isOpportunity: true,
+      _repEmail: repEmail,
+      sdrEmail: (deal.sdrEmail || '').toLowerCase(),
+      aeEmail: (deal.aeEmail || '').toLowerCase(),
+      oppNotes: deal.notes || '',
+      convertedAt: deal.added || new Date().toISOString(),
+      created: new Date().toISOString(),
+      updated: new Date().toISOString(),
+      callLog: [],
+      source: 'pipeline_deal'
+    };
+    var sz = (AN_SIZES || []).find(function(s) { return s.id === lead.size; });
+    lead.oppMRR = deal.mrr || (sz && sz.price) || 79;
+    if (!AN.leads) AN.leads = [];
+    AN.leads.unshift(lead);
+    deal.leadId = lead.id;
+  } else if (lead) {
+    if (typeof anPromoteLeadToOpportunity === 'function') {
+      anPromoteLeadToOpportunity(lead, {
+        stage: oppStatus,
+        sdrEmail: deal.sdrEmail,
+        aeEmail: deal.aeEmail,
+        notes: deal.notes,
+        size: deal.size,
+        skipPipeline: true,
+        skipRefresh: true,
+        save: false
+      });
+    }
+    if (deal.mrr) lead.oppMRR = deal.mrr;
+    deal.leadId = lead.id;
+  }
+  if (lead && typeof anSyncOpportunityToPipeline === 'function') {
+    anSyncOpportunityToPipeline(lead, { skipSave: true, skipRefresh: true });
+  }
+  return lead;
+};
+
+window.anSyncDemoToOpportunity = function(demo) {
+  if (!demo || typeof AN === 'undefined') return null;
+  var status = demo.status || 'booked';
+  if (status === 'noshow' || status === 'rescheduled') {
+    return typeof anEnsureLeadForDemo === 'function' ? anEnsureLeadForDemo(demo) : null;
+  }
+  var oppStage = status === 'showed' ? 'showed' : 'demo';
+  var lead = null;
+
+  if (status === 'showed' && demo.contacts && demo.contacts.length && typeof anSaveDemoContactsToCRM === 'function') {
+    var batch = anSaveDemoContactsToCRM(demo, demo.sdrEmail, demo.aeEmail);
+    lead = batch ? batch.primary : null;
+  }
+  if (!lead && typeof anEnsureLeadForDemo === 'function') {
+    lead = anEnsureLeadForDemo(demo);
+  }
+  if (!lead) return null;
+
+  if (typeof anPromoteLeadToOpportunity === 'function') {
+    anPromoteLeadToOpportunity(lead, {
+      stage: oppStage,
+      sdrEmail: demo.sdrEmail,
+      aeEmail: demo.aeEmail,
+      notes: demo.notes,
+      size: demo.size,
+      demoCompletedAt: status === 'showed',
+      demoDate: demo.scheduledDate,
+      skipPipeline: false,
+      skipRefresh: true,
+      save: false
+    });
+  }
+  if (status === 'showed' && typeof anRecordDemoCompleted === 'function') {
+    anRecordDemoCompleted(lead, { source: 'demo_sync' });
+  } else if (status === 'booked' && typeof anRecordDemoBooked === 'function') {
+    anRecordDemoBooked(lead, { source: 'demo_sync' });
+  }
+  demo.leadId = lead.id;
+  return lead;
+};
+
+window.anSyncAllPipelineDealsToOpportunities = function(opts) {
+  opts = opts || {};
+  if (typeof _dash === 'undefined' || !_dash.pipeline || typeof AN === 'undefined') return;
+  var changed = false;
+  (_dash.pipeline || []).forEach(function(deal) {
+    if (!deal || !deal.name) return;
+    if (typeof anSyncPipelineDealToOpportunity === 'function' && anSyncPipelineDealToOpportunity(deal)) {
+      changed = true;
+    }
+  });
+  if (changed && !opts.skipSave) {
+    if (typeof AN.save === 'function') AN.save();
+    if (typeof dashSave === 'function') dashSave();
+  }
+  if (!opts.skipRefresh && typeof renderOpportunities === 'function') renderOpportunities();
+};
+
+window.anSyncAllDemosToOpportunities = function(opts) {
+  opts = opts || {};
+  if (typeof _dash === 'undefined' || !_dash.demos || typeof AN === 'undefined') return;
+  if (typeof anLinkDemosToLeads === 'function') anLinkDemosToLeads();
+  var changed = false;
+  (_dash.demos || []).forEach(function(demo) {
+    if (!demo || demo.status === 'noshow' || demo.status === 'rescheduled') return;
+    if (demo.status === 'booked' || demo.status === 'showed') {
+      if (typeof anSyncDemoToOpportunity === 'function' && anSyncDemoToOpportunity(demo)) changed = true;
+    }
+  });
+  if (changed && !opts.skipSave) {
+    if (typeof AN.save === 'function') AN.save();
+    if (typeof dashSave === 'function') dashSave();
+  }
+  if (!opts.skipRefresh && typeof renderOpportunities === 'function') renderOpportunities();
 };
 
 window.anGetTeamViewScope = function() {
@@ -10152,10 +11963,11 @@ window.anMergeTeamActivityIntoByDate = function(byDate, dates, repFilter) {
   });
 };
 
-window.anPushTeamActivityCloud = function(delta) {
+window.anPushTeamActivityCloud = function(delta, opts) {
+  opts = opts || {};
   delta = delta || {};
   if (!delta.calls && !delta.demos && !delta.closes && !delta.showed) return;
-  var repEmail = ((typeof AN !== 'undefined' && AN.currentRepEmail) || (_currentUser && _currentUser.email) || '').toLowerCase();
+  var repEmail = (opts.repEmail || (typeof AN !== 'undefined' && AN.currentRepEmail) || (_currentUser && _currentUser.email) || '').toLowerCase();
   if (!repEmail) return;
   var today = anLocalDateStr();
   if (!AN._teamActivityByRep) AN._teamActivityByRep = {};
@@ -10667,6 +12479,10 @@ window.anSyncLeadDemoToDashboard = function(lead, action, syncOpts) {
       existing.status = 'showed';
       existing.completedDate = existing.completedDate || (lead.demoCompletedAt ? String(lead.demoCompletedAt).slice(0, 10) : today);
       existing.name = leadName;
+      if (lead.sdrEmail) existing.sdrEmail = lead.sdrEmail;
+      if (lead.aeEmail) existing.aeEmail = lead.aeEmail;
+      if (existing.sdrEmail && typeof anGetRepName === 'function') existing.sdrName = anGetRepName(existing.sdrEmail);
+      if (existing.aeEmail && typeof anGetRepName === 'function') existing.aeName = anGetRepName(existing.aeEmail);
       if (!wasShowed && !syncOpts.skipCounters) {
         if (!_dash.activityLog) _dash.activityLog = [];
         var entry = _dash.activityLog.find(function(e) { return e.date === today; });
@@ -11330,10 +13146,16 @@ AN.load = function(cb){
         dashLoad(function() {
           if (typeof anBackfillDashboardDemosFromLeads === 'function') anBackfillDashboardDemosFromLeads(AN.leads);
           if (typeof anSyncAllOpportunitiesToPipeline === 'function') anSyncAllOpportunitiesToPipeline({ skipSave: true });
+          if (typeof anSyncAllPipelineDealsToOpportunities === 'function') anSyncAllPipelineDealsToOpportunities({ skipSave: true, skipRefresh: true });
+          if (typeof anSyncAllDemosToOpportunities === 'function') anSyncAllDemosToOpportunities({ skipSave: true, skipRefresh: true });
+          if (typeof renderOpportunities === 'function') renderOpportunities();
         });
       } else {
         if (typeof anBackfillDashboardDemosFromLeads === 'function') anBackfillDashboardDemosFromLeads(AN.leads);
         if (typeof anSyncAllOpportunitiesToPipeline === 'function') anSyncAllOpportunitiesToPipeline({ skipSave: true });
+        if (typeof anSyncAllPipelineDealsToOpportunities === 'function') anSyncAllPipelineDealsToOpportunities({ skipSave: true, skipRefresh: true });
+        if (typeof anSyncAllDemosToOpportunities === 'function') anSyncAllDemosToOpportunities({ skipSave: true, skipRefresh: true });
+        if (typeof renderOpportunities === 'function') renderOpportunities();
       }
     }, fromCloud ? 200 : 800);
     if(typeof hdRefreshCallableSlot === 'function') hdRefreshCallableSlot();
@@ -13300,7 +15122,13 @@ window.anSaveCall = window.anSaveActivity = function(leadId) {
 
   // Auto-advance status for calls
   if (type==='call') {
-    if (outcome==='demo' && lead.status==='new') lead.status = 'demo';
+    if (outcome==='demo') {
+      if (typeof anPromoteLeadToOpportunity === 'function') {
+        anPromoteLeadToOpportunity(lead, { stage: 'demo', skipRefresh: true, save: false });
+      } else if (lead.status==='new') {
+        lead.status = 'demo';
+      }
+    }
     if (outcome==='won') {
       lead.status = 'won';
       lead.isOpportunity = true;
@@ -13310,7 +15138,7 @@ window.anSaveCall = window.anSaveActivity = function(leadId) {
   }
 
   lead.updated = new Date().toISOString();
-  if (outcome==='won' && typeof anSyncOpportunityToPipeline === 'function') {
+  if ((outcome==='won' || outcome==='demo') && typeof anSyncOpportunityToPipeline === 'function') {
     anSyncOpportunityToPipeline(lead, { skipSave: true, skipRefresh: true });
   }
   AN.save();
@@ -17285,16 +19113,65 @@ window.coDismissNativeMenus = function() {
 };
 
 window.coCloseAllLifeMenus = function() {
-  document.querySelectorAll('.co-life-menu').forEach(function(m) { m.style.display = 'none'; });
+  document.querySelectorAll('.co-life-menu').forEach(function(m) {
+    m.style.display = 'none';
+    if (m._coRestoreParent) {
+      m._coRestoreParent.appendChild(m);
+      m._coRestoreParent = null;
+    }
+    m.style.top = '';
+    m.style.left = '';
+    m.style.right = '';
+    m.style.bottom = '';
+  });
+  if (window._coLifeMenuReposition) {
+    window.removeEventListener('scroll', window._coLifeMenuReposition, true);
+    window.removeEventListener('resize', window._coLifeMenuReposition);
+    window._coLifeMenuReposition = null;
+  }
+};
+
+window.coPositionLifeMenu = function(menu, btn) {
+  if (!menu || !btn) return;
+  menu.style.display = 'block';
+  menu.style.visibility = 'hidden';
+  if (menu.parentNode !== document.body) {
+    menu._coRestoreParent = menu.parentNode;
+    document.body.appendChild(menu);
+  }
+  var rect = btn.getBoundingClientRect();
+  var menuW = menu.offsetWidth || 168;
+  var menuH = menu.offsetHeight || 220;
+  var gap = 6;
+  var top = rect.bottom + gap;
+  var left = rect.right - menuW;
+  if (top + menuH > window.innerHeight - 8) top = rect.top - menuH - gap;
+  if (top < 8) top = 8;
+  if (left < 8) left = 8;
+  if (left + menuW > window.innerWidth - 8) left = window.innerWidth - menuW - 8;
+  menu.style.top = top + 'px';
+  menu.style.left = left + 'px';
+  menu.style.right = 'auto';
+  menu.style.bottom = 'auto';
+  menu.style.visibility = '';
 };
 
 window.coToggleLifeMenu = function(e, coId) {
   if (e) { e.preventDefault(); e.stopPropagation(); }
   var menu = document.getElementById('co-life-menu-' + coId);
   if (!menu) return;
-  var open = menu.style.display === 'block';
+  var wasOpen = menu.style.display === 'block' && menu.style.visibility !== 'hidden';
   coCloseAllLifeMenus();
-  menu.style.display = open ? 'none' : 'block';
+  if (wasOpen) return;
+  var btn = (e && e.currentTarget) || (menu.parentNode && menu.parentNode.querySelector('button'));
+  if (!btn) return;
+  coPositionLifeMenu(menu, btn);
+  window._coLifeMenuReposition = function() {
+    if (menu.style.display === 'block') coPositionLifeMenu(menu, btn);
+    else coCloseAllLifeMenus();
+  };
+  window.addEventListener('scroll', window._coLifeMenuReposition, true);
+  window.addEventListener('resize', window._coLifeMenuReposition);
 };
 
 window.coPickLifecycle = function(coId, stageId) {
@@ -17306,9 +19183,9 @@ window.coPickLifecycle = function(coId, stageId) {
 function coBuildLifecyclePicker(coId, currentVal) {
   var stage = typeof coNormalizeLifecycleStage === 'function' ? coNormalizeLifecycleStage(currentVal) : (currentVal || 'prospecting');
   var stageObj = CO_STAGES.find(function(s) { return s.id === stage; }) || CO_STAGES[0];
-  return '<div class="co-life-picker" style="position:relative;display:inline-block;">'
+  return '<div class="co-life-picker" data-co-id="' + coId + '">'
     + '<button type="button" onclick="coToggleLifeMenu(event,\'' + coId + '\')" style="border:1.5px solid var(--divider);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;font-family:inherit;background:var(--card-bg);color:' + stageObj.color + ';cursor:pointer;white-space:nowrap;">' + (typeof coEsc === 'function' ? coEsc(stageObj.label) : stageObj.label) + ' ▾</button>'
-    + '<div class="co-life-menu" id="co-life-menu-' + coId + '" style="display:none;position:absolute;right:0;top:calc(100% + 4px);min-width:168px;background:var(--card-bg);border:1px solid var(--divider);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.14);overflow:hidden;">'
+    + '<div class="co-life-menu" id="co-life-menu-' + coId + '">'
     + CO_STAGES.map(function(s) {
       var active = s.id === stageObj.id;
       return '<button type="button" onclick="event.stopPropagation();coPickLifecycle(\'' + coId + '\',\'' + s.id + '\')" style="display:block;width:100%;text-align:left;padding:8px 12px;border:none;background:' + (active ? 'rgba(99,102,241,0.08)' : 'transparent') + ';color:' + s.color + ';font-size:12px;font-weight:' + (active ? '700' : '600') + ';cursor:pointer;font-family:inherit;">' + (active ? '✓ ' : '') + (typeof coEsc === 'function' ? coEsc(s.label) : s.label) + '</button>';
@@ -18000,6 +19877,15 @@ window.anConvertToOpportunity = function(leadId, opts) {
   var headerSub = fromDemoComplete
     ? leadLine + ' · Fill in deal details to create the opportunity'
     : leadLine;
+  var ownersLine = '';
+  if (lead.sdrEmail || lead.aeEmail) {
+    var sdrLbl = lead.sdrEmail && typeof anGetRepName === 'function' ? anGetRepName(lead.sdrEmail) : (lead.sdrEmail || '').split('@')[0];
+    var aeLbl = lead.aeEmail && typeof anGetRepName === 'function' ? anGetRepName(lead.aeEmail) : (lead.aeEmail || '').split('@')[0];
+    ownersLine = '<div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;">'
+      +(lead.sdrEmail ? '<span style="font-size:11px;color:rgba(255,255,255,0.55);background:rgba(255,255,255,0.08);padding:4px 10px;border-radius:20px;">SDR: <strong style="color:#c4b5fd;">'+anEsc(sdrLbl)+'</strong></span>' : '')
+      +(lead.aeEmail ? '<span style="font-size:11px;color:rgba(255,255,255,0.55);background:rgba(255,255,255,0.08);padding:4px 10px;border-radius:20px;">AE: <strong style="color:#86efac;">'+anEsc(aeLbl)+'</strong></span>' : '')
+      +'</div>';
+  }
 
   var m = document.createElement('div');
   m.id = 'opp-convert-modal';
@@ -18013,6 +19899,7 @@ window.anConvertToOpportunity = function(leadId, opts) {
     +'<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);padding:22px 26px;display:flex;justify-content:space-between;align-items:center;">'
     +'<div><div style="font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.4px;">'+headerTitle+'</div>'
     +'<div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:3px;">'+headerSub+'</div>'
+    +ownersLine
     +'</div>'
     +'<button onclick="anCloseOppConvertModal(\''+leadId+'\')" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px;">✕</button>'
     +'</div>'
@@ -18119,6 +20006,8 @@ window.anFinalizeConversion = function(leadId) {
   lead.oppCloseDate   = closeDate;
   lead.oppNotes       = notes;
   lead.isOpportunity  = true;
+  if (!lead.sdrEmail && lead._repEmail) lead.sdrEmail = lead._repEmail;
+  if (lead.aeEmail) lead._repEmail = lead.aeEmail.toLowerCase();
   lead.convertedAt    = new Date().toISOString();
   if (fromDemoComplete) lead.demoCompletedAt = lead.demoCompletedAt || new Date().toISOString();
   delete lead._demoCompletePrevStatus;
@@ -18368,6 +20257,182 @@ window.anCloseOppRecord = function() {
   }, 300);
 };
 
+function leadBuildRecordHTML(lead) {
+  var st = (typeof anStatus === 'function') ? anStatus(lead.status || 'new') : { label: lead.status || 'new', color: '#6366f1' };
+  var sz = lead.size ? (AN_SIZES.find(function(s) { return s.id === lead.size; }) || { label: lead.size }) : null;
+  var name = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || lead.company || 'Contact';
+  var safeId = (lead.id || '').replace(/'/g, "\\'");
+  var safeCo = (lead.company || '').replace(/'/g, "\\'");
+  var leadState = typeof anResolveLeadState === 'function' ? anResolveLeadState(lead) : (lead.state || '');
+  var STATUS_OPTS = (typeof anStatusesFor === 'function' ? anStatusesFor(lead) : AN_LEAD_STATUSES).map(function(s) {
+    return '<option value="' + s.id + '"' + (lead.status === s.id ? ' selected' : '') + '>' + s.label + '</option>';
+  }).join('');
+  var companyOpen = !!(document.getElementById('co-company-panel') && document.getElementById('co-company-panel').classList.contains('open'));
+  var backLabel = companyOpen ? '← Back to company' : '← Lead Pipeline';
+  var backAction = companyOpen ? 'anCloseLeadRecord()' : 'anCloseLeadRecord();if(typeof showSection===\'function\')showSection(\'crm\')';
+
+  var calls = (lead.callLog || []).slice().sort(function(a, b) { return (b.date || '').localeCompare(a.date || ''); });
+  var callIcons = { pickup: '☎️', demo: '🎯', voicemail: '📬', noanswer: '📵', note: '📝', connected: '✅' };
+  var activityHTML = calls.length ? calls.slice(0, 40).map(function(c) {
+    var ic = callIcons[c.outcome] || '📞';
+    return '<div style="padding:12px 0;border-bottom:1px solid var(--divider);">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
+      + '<span>' + ic + '</span><span style="font-size:13px;font-weight:700;color:var(--text-primary);">' + anEsc((c.outcome || 'call').charAt(0).toUpperCase() + (c.outcome || 'call').slice(1)) + '</span>'
+      + '<span style="margin-left:auto;font-size:11px;color:var(--text-muted);">' + anEsc(c.date || '') + (c.time ? ' ' + c.time : '') + '</span>'
+      + '</div>'
+      + (c.notes ? '<div style="font-size:12.5px;color:var(--text-secondary);background:var(--body-bg);border-radius:8px;padding:10px;line-height:1.5;">' + anEsc(c.notes) + '</div>' : '')
+      + '</div>';
+  }).join('') : '<div style="text-align:center;padding:40px;color:var(--text-muted);">No activity yet — log a call from quick actions.</div>';
+
+  var siblings = [];
+  if (lead.company && typeof AN !== 'undefined' && Array.isArray(AN.leads)) {
+    siblings = AN.leads.filter(function(l) {
+      if (l.id === lead.id) return false;
+      if ((l.company || '').trim() !== (lead.company || '').trim()) return false;
+      if (typeof anRepOwnsLead === 'function' && !anRepOwnsLead(l) && !(AN.isAdmin)) return false;
+      return true;
+    }).slice(0, 12);
+  }
+  var siblingsHTML = siblings.length ? siblings.map(function(l) {
+    var sname = ((l.firstName || '') + ' ' + (l.lastName || '')).trim() || 'Contact';
+    var sst = (typeof anStatus === 'function') ? anStatus(l.status || 'new') : { label: l.status, color: '#6366f1' };
+    return '<div class="co-contact-row" ondblclick="coOpenContact(\'' + l.id + '\')" onclick="coOpenContact(\'' + l.id + '\')" title="Open contact">'
+      + '<div style="width:30px;height:30px;border-radius:50%;background:' + sst.color + '22;color:' + sst.color + ';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;">' + sname.charAt(0).toUpperCase() + '</div>'
+      + '<div style="flex:1;min-width:0;"><div class="co-contact-name" style="font-size:12.5px;font-weight:700;">' + anEsc(sname) + '</div>'
+      + '<div style="font-size:10px;color:var(--text-muted);">' + (l.title ? anEsc(l.title) : (l.email || l.phone || '')) + '</div></div>'
+      + '<span style="font-size:9px;font-weight:700;color:' + sst.color + ';background:' + sst.color + '18;padding:2px 7px;border-radius:10px;">' + sst.label + '</span>'
+      + '</div>';
+  }).join('') : '<div style="text-align:center;padding:20px 10px;color:var(--text-muted);font-size:12px;">No other contacts at this company.</div>';
+
+  var companyHTML = lead.company
+    ? '<div class="co-contact-row" onclick="anCloseLeadRecord();typeof anOpenFullCompanyRecord===\'function\'?anOpenFullCompanyRecord(\'' + safeCo + '\'):void(0)">'
+      + '<div style="width:34px;height:34px;border-radius:10px;background:#6366f122;color:#6366f1;display:flex;align-items:center;justify-content:center;font-weight:800;">' + lead.company.charAt(0).toUpperCase() + '</div>'
+      + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;">' + anEsc(lead.company) + '</div><div style="font-size:11px;color:var(--text-muted);">View company record →</div></div></div>'
+    : '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">No company linked</div>';
+
+  var ownerBtn = (typeof anCanReassignOwner === 'function' && anCanReassignOwner(lead))
+    ? '<button type="button" onclick="anOpenOwnerPicker({leadId:\'' + safeId + '\'})" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">' + anEsc(lead._repEmail ? anGetRepName(lead._repEmail) : 'Assign') + ' ▾</button>'
+    : '<span>' + anEsc(lead._repEmail ? anGetRepName(lead._repEmail) : '—') + '</span>';
+
+  return ''
+    + '<div class="co-record-layout">'
+    + '<aside class="co-record-left">'
+    + '<button type="button" class="co-record-back" onclick="' + backAction + '">' + backLabel + '</button>'
+    + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">'
+    + '<div style="width:48px;height:48px;border-radius:12px;background:' + st.color + '22;color:' + st.color + ';display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;">' + name.charAt(0).toUpperCase() + '</div>'
+    + '<div style="min-width:0;"><div style="font-size:20px;font-weight:800;color:var(--text-primary);line-height:1.2;">' + anEsc(name) + '</div>'
+    + '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + (lead.title ? anEsc(lead.title) : 'Contact') + (lead.company ? ' · ' + anEsc(lead.company) : '') + '</div></div></div>'
+    + '<div class="co-quick-actions">'
+    + '<button type="button" class="co-quick-btn" title="Log activity" onclick="anLogCall(\'' + safeId + '\')">📞</button>'
+    + '<button type="button" class="co-quick-btn" title="Email" onclick="anQuickLogEmail(\'' + safeId + '\')">✉️</button>'
+    + '<button type="button" class="co-quick-btn" title="Edit" onclick="anOpenLeadModal(\'' + safeId + '\')">✏️</button>'
+    + '<button type="button" class="co-quick-btn" title="Call session" onclick="typeof openMobileCallMode===\'function\'?openMobileCallMode(\'' + safeId + '\'):void(0)">📱</button>'
+    + '<button type="button" class="co-quick-btn" title="Create opportunity" onclick="anConvertToOpportunity(\'' + safeId + '\')">💎</button>'
+    + '</div>'
+    + '<div class="co-key-info"><div class="co-key-info-head">About this contact</div>'
+    + '<div class="co-panel-row"><span>Status</span><span style="color:' + st.color + ';">' + anEsc(st.label) + '</span></div>'
+    + '<div class="co-panel-row"><span>Owner</span>' + ownerBtn + '</div>'
+    + '<div class="co-panel-row"><span>Email</span>' + (lead.email ? '<a href="mailto:' + anEsc(lead.email) + '" style="color:#6366f1;font-weight:600;">' + anEsc(lead.email) + '</a>' : '<span>—</span>') + '</div>'
+    + '<div class="co-panel-row"><span>Phone</span>' + (lead.phone ? '<a href="tel:' + anEsc(typeof anTelPhone === 'function' ? anTelPhone(lead.phone) : lead.phone) + '" style="color:var(--text-primary);font-weight:600;">' + anEsc(typeof anFormatPhone === 'function' ? anFormatPhone(lead.phone) : lead.phone) + '</a>' : '<span>—</span>') + '</div>'
+    + '<div class="co-panel-row"><span>State</span><span>' + anEsc(leadState || '—') + '</span></div>'
+    + '<div class="co-panel-row"><span>Agency size</span><span>' + anEsc(sz ? sz.label : '—') + '</span></div>'
+    + '<div class="co-panel-row"><span>Source</span><span>' + anEsc(lead.source || '—') + '</span></div>'
+    + '<div style="padding:12px 14px;"><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Move status</label>'
+    + '<select onchange="anLeadRecordSaveStatus(\'' + safeId + '\',this.value)" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:8px 10px;font-size:13px;background:var(--card-bg);font-family:inherit;">' + STATUS_OPTS + '</select></div>'
+    + '</div>'
+    + '<div style="margin-top:14px;"><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Notes</div>'
+    + '<textarea rows="4" placeholder="Objections, follow-ups, context..." onblur="anLeadRecordSaveField(\'' + safeId + '\',\'notes\',this.value)" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:10px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box;">' + anEsc(lead.notes || '') + '</textarea></div>'
+    + '</aside>'
+    + '<main class="co-record-center">'
+    + '<div class="co-activity-head"><div style="font-size:14px;font-weight:800;">Activities</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Calls, emails, and notes on this contact</div></div>'
+    + '<div class="co-activity-feed">' + activityHTML + '</div>'
+    + '</main>'
+    + '<aside class="co-record-right">'
+    + '<div class="co-assoc-card"><div class="co-assoc-head"><span>Company</span></div><div class="co-assoc-body">' + companyHTML + '</div></div>'
+    + '<div class="co-assoc-card"><div class="co-assoc-head"><span>Other contacts' + (siblings.length ? ' (' + siblings.length + ')' : '') + '</span></div><div class="co-assoc-body">' + siblingsHTML + '</div></div>'
+    + '<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);border-radius:10px;padding:14px;color:#fff;margin-top:8px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;opacity:0.55;">Engagement</div>'
+    + '<div style="font-size:26px;font-weight:900;margin-top:4px;">' + calls.length + '<span style="font-size:13px;opacity:0.5;"> activities</span></div>'
+    + '<div style="font-size:11px;opacity:0.55;margin-top:4px;">Last contact: ' + (typeof anTimeAgo === 'function' ? anTimeAgo(lead.lastContactDate || lead.created) : '—') + '</div></div>'
+    + '</aside></div>';
+}
+
+window.anOpenLeadRecord = function(leadId, opts) {
+  opts = opts || {};
+  window._anLeadDetailLeadId = leadId;
+  var lead = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.find(function(l) { return l.id === leadId; }) : null;
+  if (!lead) {
+    if (typeof showToast === 'function') showToast('Contact not found');
+    return;
+  }
+  if (typeof anHydrateLeadState === 'function') anHydrateLeadState(lead);
+  if (typeof anRepOwnsLead === 'function' && !anRepOwnsLead(lead) && !(typeof AN !== 'undefined' && AN.isAdmin)) {
+    if (typeof showToast === 'function') showToast('You can only view contacts assigned to you');
+    return;
+  }
+  if (typeof anIsOpportunityRecord === 'function' && anIsOpportunityRecord(lead)) {
+    if (typeof anOpenOppRecord === 'function') anOpenOppRecord(leadId);
+    return;
+  }
+
+  var existing = document.getElementById('lead-record-panel');
+  var existingBackdrop = document.getElementById('lead-panel-backdrop');
+  if (existing) {
+    existing.innerHTML = leadBuildRecordHTML(lead);
+    if (!existing.classList.contains('open')) requestAnimationFrame(function() { existing.classList.add('open'); });
+    if (existingBackdrop && !existingBackdrop.classList.contains('open')) requestAnimationFrame(function() { existingBackdrop.classList.add('open'); });
+    return;
+  }
+  if (existingBackdrop) existingBackdrop.remove();
+
+  var backdrop = document.createElement('div');
+  backdrop.id = 'lead-panel-backdrop';
+  backdrop.onclick = anCloseLeadRecord;
+  document.body.appendChild(backdrop);
+  var panel = document.createElement('div');
+  panel.id = 'lead-record-panel';
+  panel.innerHTML = leadBuildRecordHTML(lead);
+  document.body.appendChild(panel);
+  requestAnimationFrame(function() {
+    backdrop.classList.add('open');
+    panel.classList.add('open');
+  });
+};
+
+window.anCloseLeadRecord = function() {
+  var panel = document.getElementById('lead-record-panel');
+  var backdrop = document.getElementById('lead-panel-backdrop');
+  if (panel) panel.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('open');
+  window._anLeadDetailLeadId = null;
+  setTimeout(function() {
+    if (panel && !panel.classList.contains('open')) panel.remove();
+    if (backdrop && !backdrop.classList.contains('open')) backdrop.remove();
+  }, 300);
+};
+
+window.anLeadRecordSaveField = function(leadId, field, value) {
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (!lead) return;
+  lead[field] = value;
+  lead.updated = new Date().toISOString();
+  AN.save();
+};
+
+window.anLeadRecordSaveStatus = function(leadId, newStatus) {
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (!lead || !newStatus) return;
+  if (typeof anApplyLeadStatusChange === 'function') anApplyLeadStatusChange(lead, newStatus, { save: false });
+  else lead.status = newStatus;
+  lead.updated = new Date().toISOString();
+  AN.save();
+  if (document.getElementById('lead-record-panel')) anOpenLeadRecord(leadId);
+  if (typeof renderLeadsTable === 'function') renderLeadsTable();
+  var coPanel = document.getElementById('co-company-panel');
+  if (coPanel && coPanel.classList.contains('open') && typeof _coSelected !== 'undefined' && _coSelected && typeof coOpenCompanyPanel === 'function') {
+    coOpenCompanyPanel(_coSelected);
+  }
+};
+
 window.anOppSaveField = function(leadId, field, value) {
   var lead = AN.leads.find(function(l) { return l.id === leadId; });
   if (!lead) return;
@@ -18414,7 +20479,7 @@ window.renderOpportunities = function() {
 
   var stages = [
     {id:'demo',     label:'Demo Set',    color:'#8b5cf6'},
-    {id:'showed',   label:'Showed Up',   color:'#06b6d4'},
+    {id:'showed',   label:'Demo Completed',   color:'#06b6d4'},
     {id:'proposal', label:'Proposal',    color:'#3b82f6'},
     {id:'negotiation', label:'Negotiating', color:'#f59e0b'},
     {id:'won',      label:'Closed Won',  color:'#10b981'},
@@ -18998,18 +21063,19 @@ document.addEventListener('DOMContentLoaded', function() {
 function applyRoleTabVisibility() {
   var role = anGetMyRole();
   var allowed = anGetAllowedTabs(role);
-  var allTabs = ['activity','deals','demos','showrate'];
+  var sdrTabs = ['activity','demos','showrate'];
 
-  allTabs.forEach(function(k) {
+  sdrTabs.forEach(function(k) {
     var tabBtn = document.getElementById('rt-'+k);
     if (!tabBtn) return;
-    if (allowed.indexOf(k) < 0) {
-      // Hide the tab button for this role
-      tabBtn.style.display = 'none';
-    } else {
-      tabBtn.style.display = '';
-    }
+    tabBtn.style.display = allowed.indexOf(k) < 0 ? 'none' : '';
   });
+
+  // Hide AE main tab for SDR-only roles (no deals access)
+  var tabBar = document.getElementById('dash-tab-bar');
+  if (tabBar && tabBar.children[1]) {
+    tabBar.children[1].style.display = allowed.indexOf('deals') < 0 ? 'none' : '';
+  }
 }
 
 // ── Override switchChartPane to block restricted tabs ─────────
@@ -19017,8 +21083,16 @@ var _origSCP_role = window.switchChartPane;
 window.switchChartPane = function(key) {
   var role = anGetMyRole();
   var allowed = anGetAllowedTabs(role);
+  if (key === 'deals') {
+    if (allowed.indexOf('deals') < 0) {
+      if (typeof showToast === 'function') showToast('Deals are on the AE tab — contact your admin for access.');
+      return;
+    }
+    if (typeof dashActivateTab === 'function') dashActivateTab(1);
+    return;
+  }
   if (allowed.indexOf(key) < 0) {
-    if (typeof showToast === 'function') showToast('This tab requires AE access — contact your admin.');
+    if (typeof showToast === 'function') showToast('This view is not available for your role.');
     return;
   }
   if (typeof _origSCP_role === 'function') _origSCP_role(key);
@@ -19038,8 +21112,8 @@ window.loadAdminRepsDashboard = function() {
 
   var legendHTML = '<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">'
     +'<span style="font-size:11px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;">Roles:</span>'
-    +'<span style="background:#6366f115;color:#6366f1;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">🏆 AE — Activity + Deals + Demo Tracker + Show Rate</span>'
-    +'<span style="background:#f59e0b15;color:#f59e0b;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">⚡ SDR — Activity + Demo Tracker only</span>'
+    +'<span style="background:#6366f115;color:#6366f1;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">🏆 AE — SDR tab: Activity + Demos + Show Rate · AE tab: Deals</span>'
+    +'<span style="background:#f59e0b15;color:#f59e0b;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">⚡ SDR — SDR tab only: Activity + Demo Tracker</span>'
     +'</div>';
 
   if (!emails.length) {
@@ -19072,8 +21146,8 @@ window.loadAdminRepsDashboard = function() {
     + '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">' + repRows + '</div>'
     + '<div style="padding:12px 16px;background:#f8f8fa;border-radius:10px;border:1px solid #e4e4e7;font-size:12px;color:#71717a;line-height:1.7;">'
     + '<strong style="color:#09090b;">Access summary:</strong><br>'
-    + '• <strong>AE</strong>: Activity · Deals · Demo Tracker · Show Rate — their data only<br>'
-    + '• <strong>SDR</strong>: Activity · Demo Tracker — their data only<br>'
+    + '• <strong>AE</strong>: SDR tab (Activity · Demo Tracker · Show Rate) + AE tab (Deals)<br>'
+    + '• <strong>SDR</strong>: SDR tab only (Activity · Demo Tracker)<br>'
     + '• <strong>Admin</strong>: all tabs + all reps\' combined data'
     + '</div>';
 
@@ -20069,7 +22143,7 @@ window.openMobileCallMode = function(leadId) {
         { v:'voicemail', l:'📬 Voicemail',    c:'#6366f1' },
         { v:'emailed',   l:'✉️ Sent Email',   c:'#8b5cf6' },
         { v:'demo',      l:'🎯 Book Demo',    c:'#f59e0b' },
-        { v:'demo_complete', l:'✅ Demo Done', c:'#06b6d4' },
+        { v:'demo_complete', l:'✅ Demo Completed', c:'#06b6d4' },
         { v:'callback',  l:'⏰ Follow Up',    c:'#06b6d4' }
       ];
 
@@ -21452,7 +23526,7 @@ window.anOpenQuickAddDeal = function() {
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">'
     + '<div><label style="'+labelStyle+'">Stage</label>'
     + '<select id="qdl-stage" style="'+selStyle+'">'
-    + ['Demo Set','Showed Up','Proposal Sent','Negotiating','Closed Won','Closed Lost'].map(function(s){ return '<option value="'+s+'">'+s+'</option>'; }).join('')
+    + ['Demo Set','Demo Completed','Proposal Sent','Negotiating','Closed Won','Closed Lost'].map(function(s){ return '<option value="'+s+'">'+s+'</option>'; }).join('')
     + '</select></div>'
     + '<div><label style="'+labelStyle+'">Account Size</label>'
     + '<select id="qdl-size" style="'+selStyle+'">'
@@ -22698,10 +24772,17 @@ body.co-full-record-over-call #an-cs-company-panel { display: none !important; }
 .co-quick-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 20px; }
 .co-quick-btn { width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--divider, #e4e4e7); background: var(--card-bg, #fff); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: border-color 0.15s, background 0.15s; }
 .co-quick-btn:hover { border-color: #c7d2fe; background: #f5f3ff; }
-.co-key-info { border: 1px solid var(--divider, #e9e9ef); border-radius: 10px; overflow: hidden; }
-.co-key-info-head { padding: 10px 14px; font-size: 12px; font-weight: 700; color: var(--text-primary); background: var(--body-bg, #f7f7f9); border-bottom: 1px solid var(--divider, #e9e9ef); }
+.co-key-info { border: 1px solid var(--divider, #e9e9ef); border-radius: 10px; overflow: visible; }
+.co-key-info-head { padding: 10px 14px; font-size: 12px; font-weight: 700; color: var(--text-primary); background: var(--body-bg, #f7f7f9); border-bottom: 1px solid var(--divider, #e9e9ef); border-radius: 10px 10px 0 0; }
 .co-panel-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--divider, #f0f0f5); gap: 12px; }
-.co-panel-row:last-child { border-bottom: none; }
+.co-panel-row:last-child { border-bottom: none; border-radius: 0 0 10px 10px; }
+.co-panel-row.co-life-row { overflow: visible; position: relative; z-index: 2; }
+.co-life-picker { position: relative; display: inline-block; flex-shrink: 0; }
+.co-life-menu {
+  display: none; position: fixed; min-width: 168px; max-height: min(280px, calc(100vh - 16px));
+  background: var(--card-bg); border: 1px solid var(--divider); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.14); overflow-y: auto; z-index: 20020;
+}
 .co-panel-row span:first-child { font-size: 12px; color: var(--text-muted, #71717a); flex-shrink: 0; }
 .co-panel-row span:last-child, .co-panel-row input, .co-panel-row select { font-size: 12.5px; font-weight: 600; color: var(--text-primary, #09090b); text-align: right; max-width: 58%; }
 .co-activity-head { padding: 14px 20px; border-bottom: 1px solid var(--divider, #e9e9ef); background: var(--card-bg, #fff); position: sticky; top: 0; z-index: 2; }
@@ -22725,6 +24806,20 @@ body.sb-collapsed #opp-record-panel { left: 68px; }
 #opp-record-panel.open { transform: translateX(0); }
 #opp-panel-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 9004; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
 #opp-panel-backdrop.open { opacity: 1; pointer-events: auto; }
+#lead-record-panel {
+  position: fixed; top: 0; left: var(--sb-width, 228px); right: 0; height: 100vh;
+  background: var(--body-bg, #f7f7f9); border-left: 1px solid var(--divider, #e9e9ef);
+  box-shadow: -12px 0 40px rgba(0,0,0,0.14); z-index: 9010; display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform 0.28s ease;
+}
+body.sb-collapsed #lead-record-panel { left: 68px; }
+#lead-record-panel.open { transform: translateX(0); }
+#lead-panel-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 9009; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+#lead-panel-backdrop.open { opacity: 1; pointer-events: auto; }
+body.co-full-record-over-call #lead-record-panel { z-index: 20015 !important; }
+body.co-full-record-over-call #lead-panel-backdrop { z-index: 20014 !important; }
+.co-contact-row .co-contact-name { cursor: pointer; }
+.co-contact-row .co-contact-name:hover { color: #6366f1; }
 .opp-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .opp-search { padding: 8px 12px 8px 32px; border: 1.5px solid var(--divider); border-radius: 8px; font-size: 13px; width: 220px; font-family: var(--sans); background: var(--card-bg); color: var(--text-primary); outline: none; }
 .opp-table-wrap { overflow: auto; border: 1px solid var(--divider); border-radius: 12px; background: var(--card-bg); }
@@ -23865,9 +25960,9 @@ function coBuildCompanyPanelHTML(co, stats) {
   var contactsHTML = leads.length ? leads.map(function(l) {
     var name = ((l.firstName||'')+' '+(l.lastName||'')).trim() || 'Unknown';
     var st = (typeof anStatus === 'function') ? anStatus(l.status||'new') : { label: l.status||'new', color: '#6366f1' };
-    return '<div class="co-contact-row" onclick="coOpenContact(\''+l.id+'\')">'
+    return '<div class="co-contact-row" ondblclick="coOpenContact(\''+l.id+'\')" onclick="coOpenContact(\''+l.id+'\')" title="Click or double-click to open contact">'
       +'<div style="width:34px;height:34px;border-radius:50%;background:'+st.color+'22;color:'+st.color+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;">'+name.charAt(0).toUpperCase()+'</div>'
-      +'<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:var(--text-primary,#09090b);">'+coEsc(name)+'</div>'
+      +'<div style="flex:1;min-width:0;"><div class="co-contact-name" style="font-size:13px;font-weight:700;color:var(--text-primary,#09090b);">'+coEsc(name)+'</div>'
       +'<div style="font-size:11px;color:var(--text-muted,#71717a);">'+(l.title?coEsc(l.title)+' · ':'')+(l.email||l.phone||'')+'</div></div>'
       +'<span style="font-size:10px;font-weight:700;color:'+st.color+';background:'+st.color+'18;padding:3px 9px;border-radius:12px;white-space:nowrap;">'+st.label+'</span>'
       +'<button onclick="event.stopPropagation();coLogCallForLead(\''+l.id+'\')" style="padding:4px 8px;border-radius:6px;border:1px solid #a7f3d0;background:#ecfdf5;color:#10b981;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">📞</button>'
@@ -23879,7 +25974,7 @@ function coBuildCompanyPanelHTML(co, stats) {
     return '<div style="padding:12px 0;border-bottom:1px solid var(--divider,#f0f0f5);">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
       +'<span>'+ic+'</span><span style="font-size:13px;font-weight:700;color:var(--text-primary,#09090b);">'+coEsc((c.outcome||'call').charAt(0).toUpperCase()+(c.outcome||'call').slice(1))+'</span>'
-      +'<span style="font-size:12px;color:var(--text-muted,#71717a);">with '+coEsc(c.contact)+'</span>'
+      +'<span style="font-size:12px;color:var(--text-muted,#71717a);">with <span class="co-contact-name" ondblclick="event.stopPropagation();coOpenContact(\''+c.leadId+'\')" onclick="event.stopPropagation();coOpenContact(\''+c.leadId+'\')" style="color:#6366f1;font-weight:600;cursor:pointer;" title="Open contact">'+coEsc(c.contact)+'</span></span>'
       +'<span style="margin-left:auto;font-size:11px;color:var(--text-muted,#a1a1aa);">'+coEsc(c.date)+(c.time?' '+c.time:'')+'</span>'
       +'</div>'
       +(c.notes?'<div style="font-size:12.5px;color:var(--text-secondary,#52525b);background:var(--body-bg,#f7f7f9);border-radius:8px;padding:10px;line-height:1.5;">'+coEsc(c.notes)+'</div>':'')
@@ -23888,7 +25983,7 @@ function coBuildCompanyPanelHTML(co, stats) {
 
   var dealsHTML = opps.length ? opps.map(function(o) {
     var st = (typeof anStatus === 'function') ? anStatus(o.status||'demo') : { label: o.status, color: '#6366f1' };
-    var openDeal = (typeof anIsOpportunityRecord === 'function' && anIsOpportunityRecord(o)) ? 'showSection(\'opportunities\',null);setTimeout(function(){anOpenOppRecord(\''+o.id+'\')},200)' : 'coOpenContact(\''+o.id+'\')';
+    var openDeal = 'coOpenContact(\''+o.id+'\')';
     return '<div onclick="'+openDeal+'" style="border:1px solid var(--divider,#e9e9ef);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;border-left:3px solid '+st.color+';">'
       +'<div style="font-size:13px;font-weight:700;">'+coEsc(((o.firstName||'')+' '+(o.lastName||'')).trim())+'</div>'
       +'<div style="font-size:11px;color:var(--text-muted,#71717a);margin-top:3px;">$'+(coLeadMRR(o)||79)+'/mo · '+st.label+'</div></div>';
@@ -23928,7 +26023,7 @@ function coBuildCompanyPanelHTML(co, stats) {
     +panelRow('Pipeline MRR', stats.pipelineMRR ? '$'+stats.pipelineMRR+'/mo' : '—')
     +'<div class="co-panel-row"><span>Website</span><input type="text" value="'+coEsc(co.website||'')+'" placeholder="website.com" onblur="coSaveField(\''+co.id+'\',\'website\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;outline:none;min-width:120px;text-align:right;font-family:inherit;font-size:12px;"></div>'
     +'<div class="co-panel-row"><span>Industry</span><input type="text" value="'+coEsc(co.industry||'Insurance Agency')+'" onblur="coSaveField(\''+co.id+'\',\'industry\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;outline:none;min-width:120px;text-align:right;font-family:inherit;font-size:12px;"></div>'
-    +'<div class="co-panel-row"><span>Lifecycle</span>'+coBuildLifecyclePicker(co.id, co.lifecycleStage || '')+'</div>'
+    +'<div class="co-panel-row co-life-row"><span>Lifecycle</span>'+coBuildLifecyclePicker(co.id, co.lifecycleStage || '')+'</div>'
     +'</div>'
     +'<div style="margin-top:16px;"><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Company notes</div>'
     +'<textarea rows="5" placeholder="Strategy, objections, pricing..." onblur="coSaveField(\''+co.id+'\',\'notes\',this.value)" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:10px;font-size:12px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box;">'+coEsc(co.notes||'')+'</textarea></div>'
@@ -23970,16 +26065,37 @@ window.coViewInPipeline = function(companyName) {
 
 window.coOpenContact = function(leadId) {
   var lead = (typeof AN !== 'undefined' && AN.leads) ? AN.leads.find(function(l) { return l.id === leadId; }) : null;
-  if (lead && typeof anIsOpportunityRecord === 'function' && anIsOpportunityRecord(lead)) {
-    if (typeof showSection === 'function') showSection('opportunities', null);
-    setTimeout(function() {
-      if (typeof anOpenOppRecord === 'function') anOpenOppRecord(leadId);
-    }, 200);
+  if (!lead) {
+    if (typeof showToast === 'function') showToast('Contact not found');
     return;
   }
-  if(typeof anOpenLeadPanel === 'function') anOpenLeadPanel(leadId);
-  else if(typeof anOpenLead === 'function') anOpenLead(leadId);
-  else if(typeof anOpenLeadModal === 'function') anOpenLeadModal(leadId);
+  if (typeof anRepOwnsLead === 'function' && !anRepOwnsLead(lead) && !(typeof AN !== 'undefined' && AN.isAdmin)) {
+    if (typeof showToast === 'function') showToast('You can only view contacts assigned to you');
+    return;
+  }
+  var companyOpen = !!(document.getElementById('co-company-panel') && document.getElementById('co-company-panel').classList.contains('open'));
+  if (typeof anIsOpportunityRecord === 'function' && anIsOpportunityRecord(lead)) {
+    if (companyOpen) {
+      if (typeof anOpenOppRecord === 'function') anOpenOppRecord(leadId);
+    } else {
+      if (typeof showSection === 'function') showSection('opportunities', null);
+      setTimeout(function() {
+        if (typeof anOpenOppRecord === 'function') anOpenOppRecord(leadId);
+      }, 200);
+    }
+    return;
+  }
+  if (companyOpen && typeof anOpenLeadRecord === 'function') {
+    anOpenLeadRecord(leadId, { fromCompany: true });
+    return;
+  }
+  if (typeof anOpenLeadRecord === 'function') {
+    anOpenLeadRecord(leadId);
+    return;
+  }
+  if (typeof anOpenLeadPanel === 'function') anOpenLeadPanel(leadId);
+  else if (typeof anOpenLead === 'function') anOpenLead(leadId);
+  else if (typeof anOpenLeadModal === 'function') anOpenLeadModal(leadId);
 };
 
 window.coLogCallForLead = function(leadId) {
@@ -24315,23 +26431,25 @@ window.dashRefreshVisiblePanes = function() {
   var sec = document.getElementById('section-dashboard');
   if (!sec || !sec.classList.contains('active')) return;
   var tab = window._dashActiveTab || 0;
+  var refresh = function() {
+    if (typeof refreshActiveCharts === 'function') refreshActiveCharts();
+    else if (typeof renderAllCharts === 'function') renderAllCharts();
+  };
   if (tab === 1) {
-    var refresh = function() {
-      if (typeof refreshActiveCharts === 'function') refreshActiveCharts();
-      else if (typeof renderAllCharts === 'function') renderAllCharts();
-    };
+    if (!document.getElementById('cp-deals') && typeof buildAndShowCharts === 'function') buildAndShowCharts();
     if (typeof anFetchAllTeamStats === 'function') anFetchAllTeamStats(refresh);
     else refresh();
-  } else if (typeof renderSalesDashboard === 'function') {
-    window._dashActiveTab = 0;
-    renderSalesDashboard();
-    // Also refresh SDR section in case it's visible
+  } else {
+    if (!document.getElementById('cp-activity') && typeof buildAndShowCharts === 'function') buildAndShowCharts();
+    if (typeof anFetchAllTeamStats === 'function') anFetchAllTeamStats(refresh);
+    else refresh();
     setTimeout(function() {
       var sdr = document.getElementById('sdr-metrics-section');
       if (sdr && typeof buildSDRMetricsHTML === 'function') {
         sdr.innerHTML = buildSDRMetricsHTML();
         if (typeof loadChartJS === 'function') loadChartJS(function(){ setTimeout(renderFunnelChart,80); });
       }
+      if (typeof fastSetGoalPeriod === 'function') fastSetGoalPeriod(_goalPeriod || 'today');
     }, 200);
   }
 };
@@ -26051,6 +28169,9 @@ console.log('[CALL SYNC] Side panel + dashboard tracking + team shouts loaded.')
   };
   window.anRefreshLeadPanel = function(leadId){
     window.anOpenLeadPanel(leadId, { force: true });
+    if (document.getElementById('lead-record-panel') && typeof anOpenLeadRecord === 'function') {
+      anOpenLeadRecord(leadId);
+    }
   };
 })();
 
