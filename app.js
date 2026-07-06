@@ -14063,23 +14063,74 @@ window.anLoadTeamDailyLeaderboard = function(cb) {
 };
 
 window.anRenderDailyLeaderboardHTML = function(rows) {
-  rows = (rows || []).filter(function(r) { return (r.points || 0) > 0 || (r.calls || 0) > 0; });
+  rows = (rows || []).filter(function(r) { return (r.calls || 0) > 0 || (r.demos || 0) > 0 || (r.closes || 0) > 0; });
+
+  // Team totals
+  var totCalls = 0, totDemos = 0, totShowed = 0, totCloses = 0;
+  rows.forEach(function(r) {
+    totCalls  += r.calls  || 0;
+    totDemos  += r.demos  || 0;
+    totShowed += r.showed || 0;
+    totCloses += r.closes || 0;
+  });
+
+  var tileStyle = 'flex:1;min-width:90px;padding:14px 12px;border-radius:10px;text-align:center;';
+  var tiles = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">'
+    + '<div style="'+tileStyle+'background:#f0fdf4;border:1px solid #bbf7d0;">'
+      + '<div style="font-size:26px;font-weight:900;color:#16a34a;line-height:1;">' + totCalls + '</div>'
+      + '<div style="font-size:10px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;">Calls Made</div>'
+    + '</div>'
+    + '<div style="'+tileStyle+'background:#eef2ff;border:1px solid #c7d2fe;">'
+      + '<div style="font-size:26px;font-weight:900;color:#6366f1;line-height:1;">' + totDemos + '</div>'
+      + '<div style="font-size:10px;font-weight:700;color:#4338ca;text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;">Demos Set</div>'
+    + '</div>'
+    + '<div style="'+tileStyle+'background:#fff7ed;border:1px solid #fed7aa;">'
+      + '<div style="font-size:26px;font-weight:900;color:#ea580c;line-height:1;">' + totShowed + '</div>'
+      + '<div style="font-size:10px;font-weight:700;color:#c2410c;text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;">Showed</div>'
+    + '</div>'
+    + '<div style="'+tileStyle+'background:#f0fdf4;border:1px solid #bbf7d0;">'
+      + '<div style="font-size:26px;font-weight:900;color:#10b981;line-height:1;">' + totCloses + '</div>'
+      + '<div style="font-size:10px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;">Closes</div>'
+    + '</div>'
+  + '</div>';
+
   if (!rows.length) {
-    return '<div class="hd-empty"><div class="hd-empty-icon">🏁</div>No SDR activity logged today yet. New calls count right away; earlier today\'s calls appear once reps sync leads to cloud.</div>';
+    return tiles + '<div style="text-align:center;padding:16px;color:#a1a1aa;font-size:12px;">No activity logged today yet — calls count right away once reps sync to cloud.</div>';
   }
-  var medals = ['🥇', '🥈', '🥉'];
-  var note = '<div style="font-size:10px;color:#a1a1aa;margin-top:10px;line-height:1.45;">Counts from today\'s call logs + cloud sync. Older calls appear if the lead was saved to cloud — have reps open the app once to sync.</div>';
-  return '<div style="display:flex;flex-direction:column;gap:8px;">' + rows.slice(0, 8).map(function(row, i) {
+
+  // Per-rep breakdown rows
+  var repRows = rows.map(function(row) {
     var name = (typeof anGetRepName === 'function') ? anGetRepName(row.email) : (row.email ? row.email.split('@')[0] : 'Rep');
-    var medal = medals[i] || (i + 1) + '.';
     var isMe = (typeof AN !== 'undefined' && AN.currentRepEmail && row.email === AN.currentRepEmail.toLowerCase());
-    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:'+(isMe ? 'rgba(99,102,241,0.08)' : '#f8f8fc')+';border:1px solid '+(isMe ? 'rgba(99,102,241,0.2)' : '#eeeef2')+';">'
-      + '<span style="font-size:16px;width:24px;text-align:center;flex-shrink:0;">'+medal+'</span>'
-      + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:800;color:#09090b;">'+anEsc(name)+(isMe ? ' <span style="font-size:10px;color:#6366f1;">(you)</span>' : '')+'</div>'
-      + '<div style="font-size:10px;color:#71717a;margin-top:2px;">'+row.calls+' calls · '+row.demos+' demos · '+(row.showed||0)+' showed · '+row.closes+' closes</div></div>'
-      + '<div style="font-size:15px;font-weight:900;color:#6366f1;flex-shrink:0;">'+row.points+'<span style="font-size:9px;font-weight:600;color:#a1a1aa;"> pts</span></div>'
-      + '</div>';
-  }).join('') + note + '</div>';
+    var bar = function(val, max, color) {
+      var pct = max > 0 ? Math.round((val / max) * 100) : 0;
+      return '<div style="height:4px;border-radius:2px;background:#f1f5f9;margin-top:4px;">'
+        + '<div style="height:4px;border-radius:2px;background:'+color+';width:'+Math.min(pct,100)+'%;transition:width 0.4s;"></div>'
+        + '</div>';
+    };
+    return '<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;background:'+(isMe?'rgba(99,102,241,0.06)':'transparent')+';border:1px solid '+(isMe?'rgba(99,102,241,0.18)':'var(--divider, #e4e4e7)')+';margin-bottom:6px;">'
+      + '<div style="font-size:12px;font-weight:700;color:var(--text-primary,#09090b);min-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+        + (typeof anEsc === 'function' ? anEsc(name) : name) + (isMe ? ' <span style="font-size:9px;color:#6366f1;">(you)</span>' : '')
+      + '</div>'
+      + '<div style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">'
+        + [
+            { label:'Calls',   val:row.calls||0,  max:totCalls,  color:'#16a34a' },
+            { label:'Demos',   val:row.demos||0,  max:totDemos,  color:'#6366f1' },
+            { label:'Showed',  val:row.showed||0, max:totShowed, color:'#ea580c' },
+            { label:'Closes',  val:row.closes||0, max:totCloses, color:'#10b981' }
+          ].map(function(col) {
+            return '<div style="text-align:center;">'
+              + '<div style="font-size:14px;font-weight:800;color:'+(col.val>0?col.color:'#d4d4d8')+';">' + col.val + '</div>'
+              + bar(col.val, col.max, col.color)
+              + '<div style="font-size:9px;color:#a1a1aa;margin-top:2px;">' + col.label + '</div>'
+            + '</div>';
+          }).join('')
+      + '</div>'
+    + '</div>';
+  }).join('');
+
+  var note = '<div style="font-size:10px;color:#a1a1aa;margin-top:8px;line-height:1.45;">Today\'s totals from call logs + cloud sync. Have reps open the app once to sync earlier calls.</div>';
+  return tiles + repRows + note;
 };
 
 window.anRecordDemoLifecycleEvent = function(lead, type, opts) {
@@ -19673,6 +19724,15 @@ function saveInlineEdit(lead, field, value, td, original) {
   td.dataset.inlineSaving = '1';
 
   if (field === 'status') {
+    // Block any renderLeadsTable triggered inside anApplyLeadStatusChange so we
+    // control exactly when the table refreshes (after AN.save completes).
+    var _rltBlocked = false;
+    var _origRLTInline = window.renderLeadsTable;
+    window.renderLeadsTable = function() {
+      if (!_rltBlocked && typeof _origRLTInline === 'function') _origRLTInline.apply(this, arguments);
+    };
+    _rltBlocked = true;
+
     if (typeof anApplyLeadStatusChange === 'function') {
       anApplyLeadStatusChange(lead, value, { save: false });
     } else {
@@ -19684,14 +19744,23 @@ function saveInlineEdit(lead, field, value, td, original) {
       anRecordDemoBooked(lead, { source: 'inline_edit_legacy' });
     }
     if (value === 'won') syncActivityFromCRM('closes', 1);
+
+    lead.updated = new Date().toISOString();
+    AN.save();
+
+    // Restore renderLeadsTable and do a single controlled refresh
+    window.renderLeadsTable = _origRLTInline;
+    _rltBlocked = false;
+
+    delete td.dataset.inlineSaving;
+    anRefreshAfterInlineEdit(lead, field, td);
   } else {
     lead[field] = value;
+    lead.updated = new Date().toISOString();
+    AN.save();
+    delete td.dataset.inlineSaving;
+    anRefreshAfterInlineEdit(lead, field, td);
   }
-  lead.updated = new Date().toISOString();
-
-  AN.save();
-  delete td.dataset.inlineSaving;
-  anRefreshAfterInlineEdit(lead, field, td);
 }
 
 function renderCellContent(td, field, lead) {
@@ -23830,29 +23899,10 @@ window.scOpenForLead = function(leadId) {
 var _origRLT_schedule = window.renderLeadsTable;
 window.renderLeadsTable = function() {
   if (typeof _origRLT_schedule === 'function') _origRLT_schedule();
-  setTimeout(function() {
-    var tbody = document.querySelector('#crm-content tbody');
-    if (!tbody) return;
-    tbody.querySelectorAll('tr').forEach(function(tr) {
-      var cb = tr.querySelector('.lead-cb');
-      if (!cb) return;
-      var leadId = cb.dataset.id;
-      if (!leadId) return;
-      var actionsDiv = tr.querySelector('td:last-child div');
-      if (!actionsDiv || actionsDiv.dataset.schedPatched) return;
-      actionsDiv.dataset.schedPatched = '1';
-      var schedBtn = document.createElement('button');
-      schedBtn.title = 'Schedule Demo';
-      schedBtn.style.cssText = 'background:#eef2ff;color:#6366f1;border:1px solid #c7d2fe;border-radius:6px;padding:4px 8px;font-size:11.5px;cursor:pointer;font-family:var(--sans);';
-      schedBtn.innerHTML = '📅';
-      schedBtn.onclick = function(e) { e.stopPropagation(); scOpenForLead(leadId); };
-      // Insert before the delete button
-      var delBtn = actionsDiv.querySelector('button:last-child');
-      if (delBtn) actionsDiv.insertBefore(schedBtn, delBtn);
-      else actionsDiv.appendChild(schedBtn);
-    });
-  }, 180);
 };
+
+// Schedule Demo is accessible from inside the lead panel / call session only
+// (removed from table row actions per UX simplification)
 
 // ── Also add Schedule button to side panel ────────────────────
 var _origAnOpenLeadPanel_schedule = window.anOpenLeadPanel;
@@ -25701,10 +25751,10 @@ function hdRenderCore() {
 
     // ── Daily SDR Leaderboard ──
     +'<div class="hd-card" id="hd-leaderboard-card" style="grid-column:1/-1;">'
-    +'<div class="hd-card-header"><span class="hd-card-title">🏆 SDR Leaderboard — Today</span>'
+    +'<div class="hd-card-header"><span class="hd-card-title">📊 Team Activity — Today</span>'
     +'<div style="display:flex;align-items:center;gap:10px;">'
     +(isAdmin && typeof anBuildTeamScopeSelectHTML === 'function' ? anBuildTeamScopeSelectHTML('hd-lb-scope', 'anSetTeamViewScope') : '')
-    +'<span style="font-size:10px;color:#9999aa;">Calls +5 demos · +3 showed · +20 closes</span></div></div>'
+    +'</div></div>'
     +'<div class="hd-card-body" id="hd-leaderboard-body">'
     + anRenderDailyLeaderboardHTML(anBuildDailyLeaderboard())
     +'</div></div>'
