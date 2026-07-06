@@ -22111,29 +22111,12 @@ function anBuildOppCalendarHTML(opps) {
 function oppBuildRecordHTML(lead) {
   var st = (typeof anStatus === 'function') ? anStatus(lead.status || 'demo') : { label: lead.status, color: '#6366f1' };
   var sz = lead.size ? (AN_SIZES.find(function(s){ return s.id === lead.size; }) || { label: lead.size, price: 79 }) : { label: 'Solo Agent', price: 79 };
-
-  // MRR: if agents are known use getQuoteCalc, otherwise fall back to oppMRR or size default
-  var agentCount = parseInt(lead.oppAgents, 10) || 0;
-  var calcMRR = (agentCount > 0 && typeof getQuoteCalc === 'function')
-    ? getQuoteCalc(agentCount, 0).monthly
-    : null;
-  var mrr = lead.oppMRR || calcMRR || sz.price || 79;
-
-  var ctLabel = { mrr: 'Monthly (MRR)', arr: 'Annual (ARR)', '2yr': '2-Year Prepaid', '3yr': '3-Year Prepaid' };
+  var mrr = lead.oppMRR || sz.price;
+  var ctLabel = { mrr: 'Monthly (MRR)', arr: 'Annual (ARR)', '2yr': '2-Year Prepaid', '3yr': '3-Year Prepaid' }[lead.oppContract || 'mrr'] || 'Monthly';
   var name = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || lead.company || 'Deal';
   var safeId = lead.id.replace(/'/g, "\\'");
   var STATUS_OPTS = AN_OPP_STATUSES.map(function(s) {
     return '<option value="'+s.id+'"'+(lead.status === s.id ? ' selected' : '')+'>'+s.label+'</option>';
-  }).join('');
-
-  // Size options
-  var sizeOpts = AN_SIZES.map(function(s) {
-    return '<option value="'+s.id+'"'+(lead.size === s.id ? ' selected' : '')+'>'+s.label+'</option>';
-  }).join('');
-
-  // Contract options
-  var contractOpts = [['mrr','Monthly (MRR)'],['arr','Annual (ARR)'],['2yr','2-Year Prepaid'],['3yr','3-Year Prepaid']].map(function(c){
-    return '<option value="'+c[0]+'"'+((lead.oppContract||'mrr')===c[0]?' selected':'')+'>'+c[1]+'</option>';
   }).join('');
 
   var demoLabels = { booked: 'Demo booked', completed: 'Demo completed', converted: 'Demo → opportunity' };
@@ -22172,16 +22155,10 @@ function oppBuildRecordHTML(lead) {
 
   var companyName = (lead.company || '').trim();
   var companyHTML = companyName
-    ? '<div class="co-contact-row" onclick="typeof anOpenFullCompanyRecord===\'function\'?anOpenFullCompanyRecord(\''+companyName.replace(/'/g, "\\'")+'\'): void(0)">'
+    ? '<div class="co-contact-row" onclick="typeof anOpenFullCompanyRecord===\'function\'?anOpenFullCompanyRecord(\''+companyName.replace(/'/g, "\\'")+'\'):void(0)">'
       +'<div style="width:34px;height:34px;border-radius:10px;background:#6366f122;color:#6366f1;display:flex;align-items:center;justify-content:center;font-weight:800;">'+companyName.charAt(0).toUpperCase()+'</div>'
       +'<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;">'+anEsc(companyName)+'</div><div style="font-size:11px;color:var(--text-muted);">View company record →</div></div></div>'
     : '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:12px;">No company linked</div>';
-
-  // Shared editable row style
-  var rowStyle = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--divider);';
-  var labelStyle = 'font-size:11.5px;color:var(--text-muted);';
-  var inputStyle = 'border:1.5px solid var(--divider);border-radius:6px;padding:5px 8px;font-size:12px;font-family:var(--sans);background:var(--card-bg);color:var(--text-primary);outline:none;width:100%;box-sizing:border-box;text-align:right;';
-  var selectStyle = inputStyle + 'cursor:pointer;';
 
   return ''
     +'<div class="co-record-layout">'
@@ -22202,78 +22179,28 @@ function oppBuildRecordHTML(lead) {
     +'<button type="button" class="co-quick-btn" title="Deal session" onclick="typeof openMobileCallMode===\'function\'?openMobileCallMode(\''+safeId+'\'):void(0)">💎</button>'
     +'<button type="button" class="co-quick-btn" title="Delete" onclick="anDeleteOpportunity(\''+safeId+'\')">🗑</button>'
     +'</div>'
-
-    // ── Editable deal fields ──
     +'<div class="co-key-info"><div class="co-key-info-head">About this deal</div>'
-
-    // Amount — live-calculated, shown as read-only tile, updated by agent/size changes
-    +'<div style="'+rowStyle+'">'
-    +'<span style="'+labelStyle+'">Amount</span>'
-    +'<span id="opp-mrr-display-'+lead.id+'" style="color:#6366f1;font-weight:800;font-size:13px;text-align:right;">$'+mrr+'/mo</span>'
-    +'</div>'
-
-    // Close date
-    +'<div style="'+rowStyle+'">'
-    +'<span style="'+labelStyle+'">Close date</span>'
-    +'<input type="date" value="'+(lead.oppCloseDate||'')+'" onchange="anOppSaveField(\''+safeId+'\',\'oppCloseDate\',this.value)" style="'+inputStyle+'">'
-    +'</div>'
-
-    // Deal stage — full dropdown
-    +'<div style="'+rowStyle+'">'
-    +'<span style="'+labelStyle+'">Deal stage</span>'
-    +'<select onchange="anMoveOppStage(\''+safeId+'\',this.value)" style="'+selectStyle+'color:'+st.color+';">'+STATUS_OPTS+'</select>'
-    +'</div>'
-
-    // Contract type
-    +'<div style="'+rowStyle+'">'
-    +'<span style="'+labelStyle+'">Contract</span>'
-    +'<select onchange="anOppSaveField(\''+safeId+'\',\'oppContract\',this.value);anRefreshOppMRR(\''+safeId+'\')" style="'+selectStyle+'">'+contractOpts+'</select>'
-    +'</div>'
-
-    // Agency size — drives MRR recalc
-    +'<div style="'+rowStyle+'">'
-    +'<span style="'+labelStyle+'">Agency size</span>'
-    +'<select onchange="anOppSaveField(\''+safeId+'\',\'size\',this.value);anRefreshOppMRR(\''+safeId+'\')" style="'+selectStyle+'">'+sizeOpts+'</select>'
-    +'</div>'
-
-    // Agents — editable number, drives MRR recalc
-    +'<div style="'+rowStyle+';background:rgba(99,102,241,0.04);border-radius:0;">'
-    +'<span style="'+labelStyle+'font-weight:700;color:var(--text-secondary);">Agents <span style="font-size:9px;font-weight:400;color:var(--text-muted);">→ updates price</span></span>'
-    +'<input type="number" min="1" max="500" value="'+(lead.oppAgents||agentCount||1)+'" placeholder="# agents"'
-    +' onchange="anOppSaveField(\''+safeId+'\',\'oppAgents\',parseInt(this.value,10)||1);anRefreshOppMRR(\''+safeId+'\')"'
-    +' onblur="anOppSaveField(\''+safeId+'\',\'oppAgents\',parseInt(this.value,10)||1);anRefreshOppMRR(\''+safeId+'\')"'
-    +' style="'+inputStyle+'font-weight:700;">'
-    +'</div>'
-
-    // MRR override — lets AE manually set price if quote differs
-    +'<div style="'+rowStyle+'">'
-    +'<span style="'+labelStyle+'">MRR override <span style="font-size:9px;color:var(--text-muted);">optional</span></span>'
-    +'<input type="number" min="0" value="'+(lead.oppMRR||'')+'" placeholder="auto"'
-    +' onblur="anOppSaveField(\''+safeId+'\',\'oppMRR\',this.value?parseInt(this.value,10):null);anRefreshOppMRR(\''+safeId+'\')"'
-    +' style="'+inputStyle+'">'
-    +'</div>'
-
-    // Owner
-    +'<div style="'+rowStyle+'">'
-    +'<span style="'+labelStyle+'">Owner</span>'
+    +'<div class="co-panel-row"><span>Amount</span><span style="color:#6366f1;font-weight:800;">$'+mrr+'/mo</span></div>'
+    +'<div class="co-panel-row"><span>Close date</span><input type="date" value="'+(lead.oppCloseDate||'')+'" onchange="anOppSaveField(\''+safeId+'\',\'oppCloseDate\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;font-family:inherit;font-size:12px;text-align:right;"></div>'
+    +'<div class="co-panel-row"><span>Deal stage</span><span style="color:'+st.color+';">'+anEsc(st.label)+'</span></div>'
+    +'<div class="co-panel-row"><span>Contract</span><span>'+anEsc(ctLabel)+'</span></div>'
+    +'<div class="co-panel-row"><span>Agency size</span><span>'+anEsc(sz.label)+'</span></div>'
+    +'<div class="co-panel-row"><span>Agents</span><span>'+(lead.oppAgents || 1)+'</span></div>'
+    +'<div class="co-panel-row"><span>Owner</span>'
     +(typeof anCanReassignOwner === 'function' && anCanReassignOwner(lead)
-      ? '<button type="button" onclick="anOpenOwnerPicker({leadId:\''+safeId+'\'})" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;justify-self:end;">'+anEsc(lead._repEmail ? anGetRepName(lead._repEmail) : 'Assign')+' ▾</button>'
-      : '<span style="text-align:right;font-size:12px;">'+anEsc(lead._repEmail ? anGetRepName(lead._repEmail) : '—')+'</span>')
+      ? '<button type="button" onclick="anOpenOwnerPicker({leadId:\''+safeId+'\'})" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">'+anEsc(lead._repEmail ? anGetRepName(lead._repEmail) : 'Assign')+' ▾</button>'
+      : '<span>'+anEsc(lead._repEmail ? anGetRepName(lead._repEmail) : '—')+'</span>')
     +'</div>'
+    +'<div style="padding:12px 14px;"><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Move stage</label>'
+    +'<select onchange="anMoveOppStage(\''+safeId+'\',this.value);anOpenOppRecord(\''+safeId+'\')" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:8px 10px;font-size:13px;background:var(--card-bg);font-family:inherit;">'+STATUS_OPTS+'</select></div>'
     +'</div>'
-
-    // Deal notes
-    +'<div style="margin-top:14px;padding:0 14px 14px;">'
-    +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Deal notes</div>'
-    +'<textarea rows="4" placeholder="Pain points, timeline, competitors..." onblur="anOppSaveField(\''+safeId+'\',\'oppNotes\',this.value)" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:10px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box;background:var(--card-bg);color:var(--text-primary);">'+anEsc(lead.oppNotes || lead.notes || '')+'</textarea>'
-    +'</div>'
+    +'<div style="margin-top:14px;"><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Deal notes</div>'
+    +'<textarea rows="4" placeholder="Pain points, timeline, competitors..." onblur="anOppSaveField(\''+safeId+'\',\'oppNotes\',this.value)" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:10px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box;">'+anEsc(lead.oppNotes || lead.notes || '')+'</textarea></div>'
     +'</aside>'
-
     +'<main class="co-record-center">'
     +'<div class="co-activity-head"><div style="font-size:14px;font-weight:800;">Activities</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Calls, stage changes, and notes on this deal</div></div>'
     +'<div class="co-activity-feed">'+activityHTML+'</div>'
     +'</main>'
-
     +'<aside class="co-record-right">'
     +'<div class="co-assoc-card"><div class="co-assoc-head"><span>Contact</span><button type="button" onclick="anOpenLeadPanel(\''+safeId+'\')" style="background:none;border:none;color:#6366f1;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Profile →</button></div>'
     +'<div class="co-assoc-body"><div class="co-contact-row" onclick="anOpenLeadPanel(\''+safeId+'\')">'
@@ -22284,15 +22211,10 @@ function oppBuildRecordHTML(lead) {
     +(lead.phone ? '<div style="padding:4px 10px 10px;font-size:12px;"><a href="tel:'+anEsc(anTelPhone(lead.phone))+'" style="color:var(--text-secondary);">'+anEsc(anFormatPhone(lead.phone))+'</a></div>' : '')
     +'</div></div>'
     +'<div class="co-assoc-card"><div class="co-assoc-head"><span>Company</span></div><div class="co-assoc-body">'+companyHTML+'</div></div>'
-    +'<div id="opp-pipeline-tile-'+lead.id+'" style="background:linear-gradient(135deg,#0a0a14,#1a1640);border-radius:10px;padding:14px;color:#fff;margin-top:8px;">'
-    +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;opacity:0.55;">Pipeline value</div>'
-    +'<div style="font-size:26px;font-weight:900;margin-top:4px;">$'+mrr+'<span style="font-size:13px;opacity:0.5;">/mo</span></div>'
-    +(agentCount > 0 && typeof getQuoteCalc === 'function'
-      ? (function(){ var q = getQuoteCalc(agentCount, 0); return '<div style="font-size:10px;opacity:0.55;margin-top:4px;">'+q.planName+' · '+agentCount+' agent'+(agentCount!==1?'s':'')+'</div>'; })()
-      : '')
-    +'</div>'
+    +'<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);border-radius:10px;padding:14px;color:#fff;margin-top:8px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;opacity:0.55;">Pipeline value</div><div style="font-size:26px;font-weight:900;margin-top:4px;">$'+mrr+'<span style="font-size:13px;opacity:0.5;">/mo</span></div></div>'
     +'</aside></div>';
 }
+
 window.anOpenOppRecord = function(leadId, opts) {
   opts = opts || {};
   window._anOppDetailLeadId = leadId;
@@ -22519,20 +22441,8 @@ window.anLeadRecordSaveStatus = function(leadId, newStatus) {
 window.anOppSaveField = function(leadId, field, value) {
   var lead = AN.leads.find(function(l) { return l.id === leadId; });
   if (!lead) return;
-  // Null-out oppMRR override if explicitly cleared
-  if (field === 'oppMRR') {
-    lead.oppMRR = value ? parseInt(value, 10) : null;
-  } else {
-    lead[field] = value;
-  }
+  lead[field] = value;
   if (field === 'oppNotes') lead.notes = value;
-  // Track manual size change so we don't auto-override it from agent count
-  if (field === 'size') lead._sizeManuallySet = true;
-  // When agents changes, also auto-update size tier if not manually set
-  if (field === 'oppAgents' && !lead._sizeManuallySet && typeof anAgencyTierFromCount === 'function') {
-    var tier = anAgencyTierFromCount(parseInt(value, 10));
-    if (tier) lead.size = tier.id;
-  }
   lead.updated = new Date().toISOString();
   AN.save();
   if (typeof anSyncOpportunitiesToCommissionTrackers === 'function') {
@@ -22727,59 +22637,6 @@ function initOppDragDrop() {
 // ── 6. OPP DETAIL (full record) ─────────────────────────────
 window.anOpenOppDetail = function(leadId) {
   if (typeof anOpenOppRecord === 'function') anOpenOppRecord(leadId);
-};
-
-// ── Live MRR recalculator — called whenever agents/size/contract/override changes ──
-window.anRefreshOppMRR = function(leadId) {
-  var lead = AN.leads.find(function(l){ return l.id === leadId; });
-  if (!lead) return;
-
-  var agents = parseInt(lead.oppAgents, 10) || 0;
-  var sz = lead.size ? (AN_SIZES.find(function(s){ return s.id === lead.size; }) || { price: 79 }) : { price: 79 };
-
-  // Agent-count drives price via getQuoteCalc when available
-  var calcMRR = null;
-  if (agents > 0 && typeof getQuoteCalc === 'function') {
-    calcMRR = getQuoteCalc(agents, 0).monthly;
-  }
-
-  // oppMRR override wins if explicitly set; otherwise use calc or size default
-  var mrr = lead.oppMRR || calcMRR || sz.price || 79;
-
-  // Also auto-set size tier from agent count if not manually overridden
-  if (agents > 0 && !lead._sizeManuallySet && typeof anAgencyTierFromCount === 'function') {
-    var tier = anAgencyTierFromCount(agents);
-    if (tier && tier.id !== lead.size) {
-      lead.size = tier.id;
-      // Update size dropdown if still in panel
-      var sizeSelPanel = document.querySelector('#opp-record-panel select[onchange*="oppRecordSaveField"]');
-      // update it visually if present
-    }
-  }
-
-  // Update the amount display tile and pipeline value tile — no full re-render
-  var mrrDisplay = document.getElementById('opp-mrr-display-' + leadId);
-  if (mrrDisplay) mrrDisplay.textContent = '$' + mrr + '/mo';
-
-  var pipelineTile = document.getElementById('opp-pipeline-tile-' + leadId);
-  if (pipelineTile) {
-    var planLine = '';
-    if (agents > 0 && typeof getQuoteCalc === 'function') {
-      var q = getQuoteCalc(agents, 0);
-      planLine = '<div style="font-size:10px;opacity:0.55;margin-top:4px;">'+q.planName+' · '+agents+' agent'+(agents!==1?'s':'')+'</div>';
-    }
-    pipelineTile.innerHTML = '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;opacity:0.55;">Pipeline value</div>'
-      +'<div style="font-size:26px;font-weight:900;margin-top:4px;">$'+mrr+'<span style="font-size:13px;opacity:0.5;">/mo</span></div>'
-      + planLine;
-  }
-
-  // Save the recalculated MRR back only if it's agent-driven (not manual override)
-  if (!lead.oppMRR && calcMRR && calcMRR !== lead._lastCalcMRR) {
-    lead._lastCalcMRR = calcMRR;
-    lead.updated = new Date().toISOString();
-    AN.save();
-    if (typeof renderOpportunities === 'function') renderOpportunities();
-  }
 };
 
 window.anMoveOppStage = function(leadId, newStage) {
@@ -36254,3 +36111,632 @@ window.anStartBulkSend = function(recipients, gmailUser, gmailPass) {
     }, 800);
   };
 })();
+
+// ============================================================
+// AGENTNAV REPORTS — PDF-exportable Activity & Pipeline reports
+// Adds a "📊 Export Report" button to the dashboard tab bar.
+// ============================================================
+(function() {
+
+// ── Inject "Export Report" button into the dashboard tab bar ──
+function anInjectReportButton() {
+  var bar = document.getElementById('dash-tab-bar');
+  if (!bar || bar.dataset.reportBtnAdded) return;
+  bar.dataset.reportBtnAdded = '1';
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = '📊 Export Report';
+  btn.style.cssText = 'margin-left:8px;padding:8px 16px;border-radius:8px;border:1.5px solid #6366f1;background:#eef2ff;color:#6366f1;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.12s;white-space:nowrap;';
+  btn.onmouseenter = function(){ this.style.background='#6366f1';this.style.color='#fff'; };
+  btn.onmouseleave = function(){ this.style.background='#eef2ff';this.style.color='#6366f1'; };
+  btn.onclick = function(e){ e.stopPropagation(); anOpenReportBuilder(); };
+  bar.appendChild(btn);
+}
+
+// Patch dashActivateTab to inject button after tab bar is rendered
+var _origDashActivateTab = window.dashActivateTab;
+window.dashActivateTab = function(i) {
+  if (typeof _origDashActivateTab === 'function') _origDashActivateTab(i);
+  setTimeout(anInjectReportButton, 80);
+};
+
+// Also try on DOMContentLoaded / section activate
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(anInjectReportButton, 800);
+});
+var _origShowSection = window.showSection;
+window.showSection = function(id, btn) {
+  if (typeof _origShowSection === 'function') _origShowSection(id, btn);
+  if (id === 'dashboard') setTimeout(anInjectReportButton, 300);
+};
+
+// ── Report Builder Modal ──────────────────────────────────────
+window.anOpenReportBuilder = function() {
+  var existing = document.getElementById('an-report-builder-modal');
+  if (existing) existing.remove();
+
+  var reps = (typeof anGetKnownRepEmails === 'function') ? anGetKnownRepEmails() : [];
+  var repOptions = '<option value="all">All reps</option>' + reps.map(function(e){
+    var name = (typeof anGetRepName === 'function') ? anGetRepName(e) : e.split('@')[0];
+    return '<option value="'+e+'">'+name+'</option>';
+  }).join('');
+
+  var dateRanges = [
+    ['today','Today'],['yesterday','Yesterday'],['this_week','This Week'],
+    ['last_week','Last Week'],['this_month','This Month'],['last_month','Last Month'],
+    ['last_30','Last 30 Days'],['last_90','Last 90 Days'],['this_year','This Year']
+  ];
+  var rangeOptions = dateRanges.map(function(r){
+    return '<option value="'+r[0]+'"'+(r[0]==='this_month'?' selected':'')+'>'+r[1]+'</option>';
+  }).join('');
+
+  var modal = document.createElement('div');
+  modal.id = 'an-report-builder-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);padding:16px;';
+  modal.innerHTML =
+    '<div style="background:var(--card-bg,#fff);border-radius:16px;width:100%;max-width:520px;box-shadow:0 24px 80px rgba(0,0,0,0.18);overflow:hidden;">'
+    // header
+    +'<div style="background:linear-gradient(135deg,#0f172a,#1e293b);padding:20px 24px;display:flex;justify-content:space-between;align-items:center;">'
+    +'<div><div style="font-size:18px;font-weight:800;color:#fff;">📊 Export Report</div>'
+    +'<div style="font-size:12px;color:#94a3b8;margin-top:2px;">Pull a PDF report to share with your team or manager</div></div>'
+    +'<button onclick="document.getElementById(\'an-report-builder-modal\').remove()" style="background:rgba(255,255,255,0.1);border:none;color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px;">✕</button>'
+    +'</div>'
+    // body
+    +'<div style="padding:24px;">'
+    // report type
+    +'<div style="margin-bottom:18px;">'
+    +'<label style="font-size:11px;font-weight:700;color:var(--text-muted,#71717a);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:8px;">Report Type</label>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+    +'<label id="an-rpt-type-activity" style="display:flex;align-items:flex-start;gap:10px;padding:14px;border:2px solid #6366f1;border-radius:10px;cursor:pointer;background:#eef2ff;">'
+    +'<input type="radio" name="an-rpt-type" value="activity" checked style="margin-top:2px;accent-color:#6366f1;">'
+    +'<div><div style="font-size:13px;font-weight:700;color:#3730a3;">Activity Report</div>'
+    +'<div style="font-size:11px;color:#6366f1;margin-top:2px;">Calls, demos, closes · per rep breakdown</div></div></label>'
+    +'<label id="an-rpt-type-pipeline" style="display:flex;align-items:flex-start;gap:10px;padding:14px;border:2px solid var(--divider,#e4e4e7);border-radius:10px;cursor:pointer;">'
+    +'<input type="radio" name="an-rpt-type" value="pipeline" style="margin-top:2px;accent-color:#6366f1;">'
+    +'<div><div style="font-size:13px;font-weight:700;">Pipeline Report</div>'
+    +'<div style="font-size:11px;color:var(--text-muted,#71717a);margin-top:2px;">Opportunities · stages · MRR</div></div></label>'
+    +'</div></div>'
+    // date range
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;">'
+    +'<div><label style="font-size:11px;font-weight:700;color:var(--text-muted,#71717a);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Date Range</label>'
+    +'<select id="an-rpt-range" style="width:100%;border:1.5px solid var(--divider,#e4e4e7);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;background:var(--card-bg,#fff);color:var(--text-primary,#09090b);">'+rangeOptions+'</select></div>'
+    +'<div><label style="font-size:11px;font-weight:700;color:var(--text-muted,#71717a);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Rep / Team</label>'
+    +'<select id="an-rpt-rep" style="width:100%;border:1.5px solid var(--divider,#e4e4e7);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;background:var(--card-bg,#fff);color:var(--text-primary,#09090b);">'+repOptions+'</select></div>'
+    +'</div>'
+    // custom date row (hidden by default)
+    +'<div id="an-rpt-custom-dates" style="display:none;gap:10px;margin-bottom:18px;">'
+    +'<div><label style="font-size:11px;color:var(--text-muted,#71717a);display:block;margin-bottom:4px;">From</label>'
+    +'<input type="date" id="an-rpt-from" style="width:100%;border:1.5px solid var(--divider,#e4e4e7);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;background:var(--card-bg,#fff);box-sizing:border-box;"></div>'
+    +'<div><label style="font-size:11px;color:var(--text-muted,#71717a);display:block;margin-bottom:4px;">To</label>'
+    +'<input type="date" id="an-rpt-to" style="width:100%;border:1.5px solid var(--divider,#e4e4e7);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;background:var(--card-bg,#fff);box-sizing:border-box;"></div>'
+    +'</div>'
+    // generated by
+    +'<div style="margin-bottom:20px;">'
+    +'<label style="font-size:11px;font-weight:700;color:var(--text-muted,#71717a);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Generated by (optional)</label>'
+    +'<input type="text" id="an-rpt-author" placeholder="Your name or team name" style="width:100%;border:1.5px solid var(--divider,#e4e4e7);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;background:var(--card-bg,#fff);color:var(--text-primary,#09090b);box-sizing:border-box;">'
+    +'</div>'
+    // buttons
+    +'<div style="display:flex;gap:10px;">'
+    +'<button onclick="document.getElementById(\'an-report-builder-modal\').remove()" style="flex:1;padding:11px;border:1.5px solid var(--divider,#e4e4e7);border-radius:8px;background:transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>'
+    +'<button id="an-rpt-generate-btn" onclick="anGenerateReportPDF()" style="flex:2;padding:11px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Download PDF Report</button>'
+    +'</div>'
+    +'</div></div>';
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+
+  // Radio button visual toggle
+  modal.querySelectorAll('input[name="an-rpt-type"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      modal.querySelectorAll('label[id^="an-rpt-type-"]').forEach(function(lbl) {
+        var isSelected = lbl.querySelector('input').checked;
+        lbl.style.border = isSelected ? '2px solid #6366f1' : '2px solid var(--divider,#e4e4e7)';
+        lbl.style.background = isSelected ? '#eef2ff' : 'transparent';
+      });
+    });
+  });
+
+  // Show/hide custom date inputs
+  var rangeEl = document.getElementById('an-rpt-range');
+  rangeEl.addEventListener('change', function(){
+    var cd = document.getElementById('an-rpt-custom-dates');
+    if (rangeEl.value === 'custom') {
+      cd.style.display = 'grid';
+      cd.style.gridTemplateColumns = '1fr 1fr';
+    } else {
+      cd.style.display = 'none';
+    }
+  });
+};
+
+// ── Date range resolver ───────────────────────────────────────
+function anReportDateRange(rangeKey, customFrom, customTo) {
+  var today = new Date();
+  var pad = function(n){ return String(n).padStart(2,'0'); };
+  var fmt = function(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); };
+  var t = fmt(today);
+  var startOfWeek = new Date(today); startOfWeek.setDate(today.getDate() - today.getDay());
+  var startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  var startOfYear = new Date(today.getFullYear(), 0, 1);
+  switch(rangeKey) {
+    case 'today':     return { from: t, to: t, label: 'Today' };
+    case 'yesterday': var y=new Date(today); y.setDate(y.getDate()-1); var ys=fmt(y); return { from:ys, to:ys, label:'Yesterday' };
+    case 'this_week': return { from:fmt(startOfWeek), to:t, label:'This Week' };
+    case 'last_week': var ls=new Date(startOfWeek); ls.setDate(ls.getDate()-7); var le=new Date(ls); le.setDate(le.getDate()+6); return { from:fmt(ls), to:fmt(le), label:'Last Week' };
+    case 'this_month': return { from:fmt(startOfMonth), to:t, label:'This Month' };
+    case 'last_month': var lms=new Date(today.getFullYear(), today.getMonth()-1, 1); var lme=new Date(today.getFullYear(), today.getMonth(), 0); return { from:fmt(lms), to:fmt(lme), label:'Last Month' };
+    case 'last_30': var l30=new Date(today); l30.setDate(l30.getDate()-30); return { from:fmt(l30), to:t, label:'Last 30 Days' };
+    case 'last_90': var l90=new Date(today); l90.setDate(l90.getDate()-90); return { from:fmt(l90), to:t, label:'Last 90 Days' };
+    case 'this_year': return { from:fmt(startOfYear), to:t, label:'This Year' };
+    case 'custom': return { from:customFrom||t, to:customTo||t, label:(customFrom||t)+' – '+(customTo||t) };
+    default: return { from:t, to:t, label:'Today' };
+  }
+}
+
+// ── Main PDF generator ────────────────────────────────────────
+window.anGenerateReportPDF = function() {
+  var btn = document.getElementById('an-rpt-generate-btn');
+  if (btn) { btn.textContent = 'Generating…'; btn.disabled = true; }
+
+  var typeEl = document.querySelector('input[name="an-rpt-type"]:checked');
+  var reportType = typeEl ? typeEl.value : 'activity';
+  var rangeKey = (document.getElementById('an-rpt-range')||{}).value || 'this_month';
+  var repFilter = (document.getElementById('an-rpt-rep')||{}).value || 'all';
+  var author = ((document.getElementById('an-rpt-author')||{}).value || '').trim() || 'AgentNav';
+  var customFrom = (document.getElementById('an-rpt-from')||{}).value;
+  var customTo = (document.getElementById('an-rpt-to')||{}).value;
+  var range = anReportDateRange(rangeKey, customFrom, customTo);
+
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    if (btn) { btn.textContent = 'Download PDF Report'; btn.disabled = false; }
+    if (typeof showToast === 'function') showToast('PDF engine loading — try again');
+    return;
+  }
+
+  try {
+    if (reportType === 'pipeline') {
+      anBuildPipelinePDF(range, repFilter, author);
+    } else {
+      anBuildActivityPDF(range, repFilter, author);
+    }
+    var modal = document.getElementById('an-report-builder-modal');
+    if (modal) modal.remove();
+    if (typeof showToast === 'function') showToast('Report downloaded!');
+  } catch(err) {
+    console.error('[Reports]', err);
+    if (typeof showToast === 'function') showToast('Error: ' + err.message);
+  }
+  if (btn) { btn.textContent = 'Download PDF Report'; btn.disabled = false; }
+};
+
+// ── PDF layout helpers ────────────────────────────────────────
+function rptNewDoc() {
+  var doc = new window.jspdf.jsPDF({ unit:'mm', format:'letter' });
+  doc._W = 215.9;
+  doc._H = 279.4;
+  doc._M = 16; // margin
+  doc._CW = 215.9 - 32; // content width
+  return doc;
+}
+
+function rptHeader(doc, title, subtitle, author, range) {
+  var W = doc._W, M = doc._M;
+  // Dark header bar
+  doc.setFillColor(10, 10, 20);
+  doc.rect(0, 0, W, 38, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(17);
+  doc.setTextColor(255, 255, 255);
+  doc.text('AgentNav', M, 15);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(148, 163, 184);
+  doc.text(title.toUpperCase(), M, 22);
+  // Right side — date + author
+  var today = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  doc.text(today, W-M, 12, { align:'right' });
+  doc.text(range.label, W-M, 19, { align:'right' });
+  doc.text('Generated by: ' + author, W-M, 26, { align:'right' });
+  // Subtitle strip
+  doc.setFillColor(238, 242, 255);
+  doc.rect(0, 38, W, 12, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(67, 56, 202);
+  doc.text(subtitle, M, 46);
+  return 58; // y after header
+}
+
+function rptSectionTitle(doc, y, text) {
+  var M = doc._M, W = doc._W;
+  doc.setFillColor(249, 250, 251);
+  doc.rect(M, y, doc._CW, 8, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(113, 113, 122);
+  doc.text(text.toUpperCase(), M+3, y+5.5);
+  return y + 12;
+}
+
+function rptStatRow(doc, y, label, value, color) {
+  var M = doc._M, CW = doc._CW;
+  color = color || [9, 9, 11];
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(82, 82, 91);
+  doc.text(label, M+3, y+4);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(color[0], color[1], color[2]);
+  doc.text(String(value), M+CW, y+4, { align:'right' });
+  doc.setDrawColor(228, 228, 231);
+  doc.setLineWidth(0.2);
+  doc.line(M, y+7, M+CW, y+7);
+  return y + 9;
+}
+
+function rptCheckPage(doc, y, needed) {
+  needed = needed || 20;
+  if (y + needed > doc._H - 20) {
+    doc.addPage();
+    // Light top rule
+    doc.setFillColor(238, 242, 255);
+    doc.rect(0, 0, doc._W, 6, 'F');
+    return 14;
+  }
+  return y;
+}
+
+function rptFooter(doc) {
+  var pageCount = doc.internal.getNumberOfPages();
+  for (var i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(161, 161, 170);
+    doc.text('AgentNav Sales Platform  ·  Confidential', doc._M, doc._H - 8);
+    doc.text('Page ' + i + ' of ' + pageCount, doc._W - doc._M, doc._H - 8, { align:'right' });
+  }
+}
+
+// ── ACTIVITY REPORT ───────────────────────────────────────────
+window.anBuildActivityPDF = function(range, repFilter, author) {
+  var doc = rptNewDoc();
+  var M = doc._M, CW = doc._CW;
+
+  // ── Build data ──
+  var leads = (typeof AN !== 'undefined' && AN.leads) ? AN.leads : [];
+  var actLog = (typeof _dash !== 'undefined' && _dash.activityLog) ? _dash.activityLog : [];
+  var demos  = (typeof _dash !== 'undefined' && _dash.demos) ? _dash.demos : [];
+
+  // Filter activity log to range
+  var logInRange = actLog.filter(function(e){
+    return e.date && e.date >= range.from && e.date <= range.to;
+  });
+
+  // Per-rep aggregates
+  var reps = {};
+  var ensure = function(email) {
+    if (!reps[email]) reps[email] = { calls:0, demos:0, showed:0, closes:0, contacts:0 };
+  };
+
+  // From call logs on leads
+  leads.forEach(function(lead) {
+    var owner = (lead._repEmail || '').toLowerCase();
+    if (repFilter !== 'all' && owner !== repFilter) return;
+    (lead.callLog || []).forEach(function(c) {
+      if (!c.date || c.date < range.from || c.date > range.to) return;
+      var rep = (c._repEmail || owner || '').toLowerCase() || 'unknown';
+      ensure(rep);
+      reps[rep].calls++;
+      if (c.outcome === 'demo' || c.outcome === 'booked_demo') reps[rep].demos++;
+      if (c.outcome === 'won') reps[rep].closes++;
+    });
+    // Count contacts reached (at least one call in range)
+    if (owner) {
+      ensure(owner);
+      var touched = (lead.callLog||[]).some(function(c){ return c.date >= range.from && c.date <= range.to; });
+      if (touched) reps[owner].contacts++;
+    }
+  });
+
+  // From demos showed
+  demos.forEach(function(d) {
+    var dt = d.scheduledDate || d.bookedDate || '';
+    if (!dt || dt < range.from || dt > range.to) return;
+    var rep = (d.sdrEmail || d.aeEmail || '').toLowerCase();
+    if (repFilter !== 'all' && rep !== repFilter) return;
+    if (rep) { ensure(rep); if (d.status === 'showed') reps[rep].showed++; }
+  });
+
+  // Team totals
+  var tot = { calls:0, demos:0, showed:0, closes:0, contacts:0 };
+  Object.keys(reps).forEach(function(r){
+    tot.calls += reps[r].calls;
+    tot.demos += reps[r].demos;
+    tot.showed += reps[r].showed;
+    tot.closes += reps[r].closes;
+    tot.contacts += reps[r].contacts;
+  });
+
+  var repLabel = repFilter === 'all' ? 'All Reps' : ((typeof anGetRepName === 'function') ? anGetRepName(repFilter) : repFilter);
+  var y = rptHeader(doc, 'Activity Report', range.label + '  ·  ' + repLabel, author, range);
+
+  // ── Team Summary tiles ──
+  y = rptSectionTitle(doc, y, 'Team Summary');
+  var tileW = (CW - 9) / 4;
+  var tiles = [
+    { label:'Calls Made', val:tot.calls, col:[22,163,74] },
+    { label:'Demos Set', val:tot.demos, col:[99,102,241] },
+    { label:'Demos Showed', val:tot.showed, col:[234,88,12] },
+    { label:'Closes', val:tot.closes, col:[16,185,129] }
+  ];
+  tiles.forEach(function(t, i) {
+    var tx = M + i*(tileW + 3);
+    doc.setFillColor(t.col[0], t.col[1], t.col[2]);
+    doc.roundedRect(tx, y, tileW, 22, 3, 3, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.setTextColor(255,255,255);
+    doc.text(String(t.val), tx + tileW/2, y+13, { align:'center' });
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(t.label.toUpperCase(), tx + tileW/2, y+19, { align:'center' });
+  });
+  y += 28;
+
+  // Show-rate callout
+  var showRate = tot.demos > 0 ? Math.round((tot.showed / tot.demos) * 100) : 0;
+  var dpc = tot.calls > 0 ? (tot.demos / tot.calls * 100).toFixed(1) : '0.0';
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(82, 82, 91);
+  doc.text('Demo set rate: ' + dpc + '%  ·  Show rate: ' + showRate + '%  ·  Contacts reached: ' + tot.contacts, M, y);
+  y += 10;
+
+  // ── Per-rep breakdown ──
+  var repKeys = Object.keys(reps);
+  if (repKeys.length > 1) {
+    y = rptCheckPage(doc, y, 30);
+    y = rptSectionTitle(doc, y, 'Rep Breakdown');
+    // Table header
+    var cols = ['Rep', 'Calls', 'Demos Set', 'Showed', 'Closes', 'Show Rate'];
+    var colX = [M+3, M+CW*0.38, M+CW*0.52, M+CW*0.65, M+CW*0.78, M+CW*0.91];
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(113,113,122);
+    cols.forEach(function(c,i){ doc.text(c, colX[i], y+4, i>0?{align:'right'}:{}); });
+    doc.setDrawColor(228,228,231);
+    doc.line(M, y+7, M+CW, y+7);
+    y += 10;
+    repKeys.sort(function(a,b){ return (reps[b].demos - reps[a].demos) || (reps[b].calls - reps[a].calls); });
+    repKeys.forEach(function(rep) {
+      y = rptCheckPage(doc, y, 10);
+      var r = reps[rep];
+      var name = (typeof anGetRepName === 'function') ? anGetRepName(rep) : rep.split('@')[0];
+      var sr = r.demos > 0 ? Math.round(r.showed/r.demos*100)+'%' : '—';
+      var rowVals = [name, r.calls, r.demos, r.showed, r.closes, sr];
+      rowVals.forEach(function(v,i){
+        doc.setFont('helvetica', i===0?'bold':'normal');
+        doc.setFontSize(9.5);
+        doc.setTextColor(9,9,11);
+        doc.text(String(v), colX[i], y+4, i>0?{align:'right'}:{});
+      });
+      doc.setDrawColor(243,244,246);
+      doc.setLineWidth(0.2);
+      doc.line(M, y+7, M+CW, y+7);
+      y += 9;
+    });
+    y += 4;
+  }
+
+  // ── Daily activity log ──
+  if (logInRange.length) {
+    y = rptCheckPage(doc, y, 20);
+    y = rptSectionTitle(doc, y, 'Daily Activity Log');
+    var logSorted = logInRange.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    logSorted.slice(0,60).forEach(function(entry) {
+      y = rptCheckPage(doc, y, 10);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(9,9,11);
+      doc.text(entry.date||'', M+3, y+4);
+      var vals = 'Calls: '+(entry.calls||0)+'   Demos: '+(entry.demos||0)+'   Closes: '+(entry.closes||0);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(82,82,91);
+      doc.text(vals, M+30, y+4);
+      doc.setDrawColor(243,244,246);
+      doc.setLineWidth(0.15);
+      doc.line(M, y+7, M+CW, y+7);
+      y += 9;
+    });
+  }
+
+  rptFooter(doc);
+  var filename = 'AgentNav-Activity-Report-' + range.from + '.pdf';
+  doc.save(filename);
+};
+
+// ── PIPELINE REPORT ───────────────────────────────────────────
+window.anBuildPipelinePDF = function(range, repFilter, author) {
+  var doc = rptNewDoc();
+  var M = doc._M, CW = doc._CW;
+
+  var leads = (typeof AN !== 'undefined' && AN.leads) ? AN.leads : [];
+  var opps = leads.filter(function(l){
+    if (typeof anIsOpportunity !== 'function' || !anIsOpportunity(l)) return false;
+    if (repFilter !== 'all') {
+      var owner = (l._repEmail || '').toLowerCase();
+      if (owner !== repFilter) return false;
+    }
+    // Include if created/updated in range, or still open (no close date before range.from)
+    var created = (l.convertedAt || l.created || '').slice(0,10);
+    var closed = l.closedAt ? l.closedAt.slice(0,10) : null;
+    if (closed && closed < range.from) return false; // closed before range
+    return true;
+  });
+
+  // Stage buckets
+  var stages = ['demo', 'demo_complete', 'showed', 'proposal', 'won', 'lost'];
+  var stageLabels = { demo:'Demo Set', demo_complete:'Demo Completed', showed:'Demo Showed', proposal:'Proposal Sent', negotiating:'Negotiating', won:'Closed Won', lost:'Closed Lost' };
+  var stageCounts = {};
+  var stageMRR = {};
+  stages.forEach(function(s){ stageCounts[s]=0; stageMRR[s]=0; });
+
+  var totalOpenMRR = 0;
+  var totalWonMRR = 0;
+  var repPipeline = {};
+
+  opps.forEach(function(l) {
+    var st = l.status || 'demo';
+    if (!stageCounts[st]) stageCounts[st] = 0;
+    if (!stageMRR[st]) stageMRR[st] = 0;
+    var sz = l.size ? (AN_SIZES.find(function(s){ return s.id===l.size; })||{price:79}) : {price:79};
+    var agents = parseInt(l.oppAgents,10)||0;
+    var mrr = l.oppMRR || (agents>0&&typeof getQuoteCalc==='function'?getQuoteCalc(agents,0).monthly:null) || sz.price || 79;
+    stageCounts[st]++;
+    stageMRR[st] += mrr;
+    if (st !== 'lost') totalOpenMRR += mrr;
+    if (st === 'won') totalWonMRR += mrr;
+
+    // Per-rep
+    var owner = (l._repEmail || '').toLowerCase() || 'unassigned';
+    if (!repPipeline[owner]) repPipeline[owner] = { open:0, won:0, openMRR:0, wonMRR:0 };
+    if (st !== 'lost') { repPipeline[owner].open++; repPipeline[owner].openMRR += mrr; }
+    if (st === 'won') { repPipeline[owner].won++; repPipeline[owner].wonMRR += mrr; }
+  });
+
+  var repLabel = repFilter === 'all' ? 'All Reps' : ((typeof anGetRepName === 'function') ? anGetRepName(repFilter) : repFilter);
+  var y = rptHeader(doc, 'Pipeline Report', range.label + '  ·  ' + repLabel, author, range);
+
+  // ── Summary tiles ──
+  y = rptSectionTitle(doc, y, 'Pipeline Summary');
+  var openOpps = opps.filter(function(l){ return l.status !== 'lost' && l.status !== 'won'; });
+  var wonOpps = opps.filter(function(l){ return l.status === 'won'; });
+  var tileW2 = (CW - 9) / 4;
+  var t2 = [
+    { label:'Open Deals', val:openOpps.length, col:[99,102,241] },
+    { label:'Open MRR', val:'$'+(totalOpenMRR-totalWonMRR).toLocaleString(), col:[139,92,246] },
+    { label:'Closed Won', val:wonOpps.length, col:[16,185,129] },
+    { label:'Won MRR', val:'$'+totalWonMRR.toLocaleString(), col:[22,163,74] }
+  ];
+  t2.forEach(function(t, i) {
+    var tx = M + i*(tileW2 + 3);
+    doc.setFillColor(t.col[0], t.col[1], t.col[2]);
+    doc.roundedRect(tx, y, tileW2, 22, 3, 3, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(t.val.length > 6 ? 14 : 20);
+    doc.setTextColor(255,255,255);
+    doc.text(String(t.val), tx + tileW2/2, y+13, { align:'center' });
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(t.label.toUpperCase(), tx + tileW2/2, y+19, { align:'center' });
+  });
+  y += 28;
+
+  // Win rate
+  var wr = (wonOpps.length+openOpps.length) > 0 ? Math.round(wonOpps.length/(wonOpps.length+openOpps.length)*100) : 0;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(82,82,91);
+  doc.text('Win rate: '+wr+'%  ·  Total deals in period: '+opps.length, M, y);
+  y += 10;
+
+  // ── Stage breakdown ──
+  y = rptCheckPage(doc, y, 20);
+  y = rptSectionTitle(doc, y, 'By Stage');
+  var allStages = Object.keys(stageCounts).filter(function(s){ return stageCounts[s]>0; });
+  var stageColX = [M+3, M+CW*0.55, M+CW*0.75, M+CW];
+  var stageHeaders = ['Stage','Deals','MRR'];
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(113,113,122);
+  doc.text(stageHeaders[0], stageColX[0], y+4);
+  doc.text(stageHeaders[1], stageColX[2], y+4, {align:'right'});
+  doc.text(stageHeaders[2], stageColX[3], y+4, {align:'right'});
+  doc.setDrawColor(228,228,231); doc.line(M, y+7, M+CW, y+7);
+  y += 10;
+  var stageColors = { won:[16,185,129], lost:[239,68,68], demo:[99,102,241], demo_complete:[139,92,246], showed:[234,88,12], proposal:[245,158,11] };
+  allStages.forEach(function(st) {
+    y = rptCheckPage(doc, y, 10);
+    var col = stageColors[st] || [9,9,11];
+    doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
+    doc.setTextColor(col[0],col[1],col[2]);
+    doc.text(stageLabels[st]||st, stageColX[0], y+4);
+    doc.setTextColor(9,9,11);
+    doc.text(String(stageCounts[st]), stageColX[2], y+4, {align:'right'});
+    doc.text('$'+stageMRR[st].toLocaleString(), stageColX[3], y+4, {align:'right'});
+    doc.setDrawColor(243,244,246); doc.setLineWidth(0.2); doc.line(M, y+7, M+CW, y+7);
+    y += 9;
+  });
+  y += 4;
+
+  // ── Per-rep pipeline ──
+  var repKeys2 = Object.keys(repPipeline);
+  if (repKeys2.length > 1) {
+    y = rptCheckPage(doc, y, 20);
+    y = rptSectionTitle(doc, y, 'Rep Pipeline');
+    var repColX = [M+3, M+CW*0.42, M+CW*0.58, M+CW*0.75, M+CW];
+    var repHeaders = ['Rep','Open','Won','Open MRR','Won MRR'];
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(113,113,122);
+    repHeaders.forEach(function(h,i){ doc.text(h, repColX[i], y+4, i>0?{align:'right'}:{}); });
+    doc.setDrawColor(228,228,231); doc.line(M, y+7, M+CW, y+7);
+    y += 10;
+    repKeys2.sort(function(a,b){ return repPipeline[b].openMRR - repPipeline[a].openMRR; });
+    repKeys2.forEach(function(rep) {
+      y = rptCheckPage(doc, y, 10);
+      var rp = repPipeline[rep];
+      var name = (typeof anGetRepName === 'function') ? anGetRepName(rep) : rep.split('@')[0];
+      var vals = [name, rp.open, rp.won, '$'+rp.openMRR.toLocaleString(), '$'+rp.wonMRR.toLocaleString()];
+      vals.forEach(function(v,i){
+        doc.setFont('helvetica',i===0?'bold':'normal'); doc.setFontSize(9.5); doc.setTextColor(9,9,11);
+        doc.text(String(v), repColX[i], y+4, i>0?{align:'right'}:{});
+      });
+      doc.setDrawColor(243,244,246); doc.setLineWidth(0.2); doc.line(M, y+7, M+CW, y+7);
+      y += 9;
+    });
+    y += 4;
+  }
+
+  // ── Deal listing ──
+  y = rptCheckPage(doc, y, 20);
+  y = rptSectionTitle(doc, y, 'Deal Detail (' + opps.length + ' deals)');
+  var dealColX = [M+3, M+CW*0.40, M+CW*0.60, M+CW*0.78, M+CW];
+  var dealHeaders = ['Contact / Company','Stage','Owner','MRR'];
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(113,113,122);
+  dealHeaders.forEach(function(h,i){ doc.text(h, dealColX[i], y+4, i>2?{align:'right'}:{}); });
+  doc.setDrawColor(228,228,231); doc.line(M, y+7, M+CW, y+7);
+  y += 10;
+
+  var oppsSorted = opps.slice().sort(function(a,b){
+    var order = {won:0, proposal:1, showed:2, demo_complete:3, demo:4, lost:5};
+    return (order[a.status]||99) - (order[b.status]||99);
+  });
+
+  oppsSorted.forEach(function(l) {
+    y = rptCheckPage(doc, y, 11);
+    var name = ((l.firstName||'')+' '+(l.lastName||'')).trim() || l.company || 'Contact';
+    var co = l.company || '';
+    var displayName = name + (co && co !== name ? ' · '+co : '');
+    if (displayName.length > 34) displayName = displayName.slice(0,32)+'…';
+    var st2 = l.status || 'demo';
+    var stCol = stageColors[st2] || [9,9,11];
+    var ownerName = l._repEmail ? ((typeof anGetRepName==='function')?anGetRepName(l._repEmail):l._repEmail.split('@')[0]) : '—';
+    var sz2 = l.size ? (AN_SIZES.find(function(s){ return s.id===l.size; })||{price:79}) : {price:79};
+    var ag2 = parseInt(l.oppAgents,10)||0;
+    var mrr2 = l.oppMRR || (ag2>0&&typeof getQuoteCalc==='function'?getQuoteCalc(ag2,0).monthly:null) || sz2.price || 79;
+
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(9,9,11);
+    doc.text(displayName, dealColX[0], y+4);
+    doc.setTextColor(stCol[0],stCol[1],stCol[2]);
+    doc.text(stageLabels[st2]||st2, dealColX[1], y+4);
+    doc.setTextColor(82,82,91);
+    doc.text(ownerName.length>12?ownerName.slice(0,11)+'…':ownerName, dealColX[2], y+4);
+    doc.setFont('helvetica','bold'); doc.setTextColor(99,102,241);
+    doc.text('$'+mrr2+'/mo', dealColX[3], y+4, {align:'right'});
+    doc.setDrawColor(243,244,246); doc.setLineWidth(0.15); doc.line(M, y+7, M+CW, y+7);
+    y += 9;
+  });
+
+  rptFooter(doc);
+  var filename = 'AgentNav-Pipeline-Report-' + range.from + '.pdf';
+  doc.save(filename);
+};
+
+})(); // end IIFE
