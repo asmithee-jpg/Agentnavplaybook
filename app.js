@@ -22111,12 +22111,29 @@ function anBuildOppCalendarHTML(opps) {
 function oppBuildRecordHTML(lead) {
   var st = (typeof anStatus === 'function') ? anStatus(lead.status || 'demo') : { label: lead.status, color: '#6366f1' };
   var sz = lead.size ? (AN_SIZES.find(function(s){ return s.id === lead.size; }) || { label: lead.size, price: 79 }) : { label: 'Solo Agent', price: 79 };
-  var mrr = lead.oppMRR || sz.price;
-  var ctLabel = { mrr: 'Monthly (MRR)', arr: 'Annual (ARR)', '2yr': '2-Year Prepaid', '3yr': '3-Year Prepaid' }[lead.oppContract || 'mrr'] || 'Monthly';
+
+  // MRR: if agents are known use getQuoteCalc, otherwise fall back to oppMRR or size default
+  var agentCount = parseInt(lead.oppAgents, 10) || 0;
+  var calcMRR = (agentCount > 0 && typeof getQuoteCalc === 'function')
+    ? getQuoteCalc(agentCount, 0).monthly
+    : null;
+  var mrr = lead.oppMRR || calcMRR || sz.price || 79;
+
+  var ctLabel = { mrr: 'Monthly (MRR)', arr: 'Annual (ARR)', '2yr': '2-Year Prepaid', '3yr': '3-Year Prepaid' };
   var name = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || lead.company || 'Deal';
   var safeId = lead.id.replace(/'/g, "\\'");
   var STATUS_OPTS = AN_OPP_STATUSES.map(function(s) {
     return '<option value="'+s.id+'"'+(lead.status === s.id ? ' selected' : '')+'>'+s.label+'</option>';
+  }).join('');
+
+  // Size options
+  var sizeOpts = AN_SIZES.map(function(s) {
+    return '<option value="'+s.id+'"'+(lead.size === s.id ? ' selected' : '')+'>'+s.label+'</option>';
+  }).join('');
+
+  // Contract options
+  var contractOpts = [['mrr','Monthly (MRR)'],['arr','Annual (ARR)'],['2yr','2-Year Prepaid'],['3yr','3-Year Prepaid']].map(function(c){
+    return '<option value="'+c[0]+'"'+((lead.oppContract||'mrr')===c[0]?' selected':'')+'>'+c[1]+'</option>';
   }).join('');
 
   var demoLabels = { booked: 'Demo booked', completed: 'Demo completed', converted: 'Demo → opportunity' };
@@ -22155,10 +22172,16 @@ function oppBuildRecordHTML(lead) {
 
   var companyName = (lead.company || '').trim();
   var companyHTML = companyName
-    ? '<div class="co-contact-row" onclick="typeof anOpenFullCompanyRecord===\'function\'?anOpenFullCompanyRecord(\''+companyName.replace(/'/g, "\\'")+'\'):void(0)">'
+    ? '<div class="co-contact-row" onclick="typeof anOpenFullCompanyRecord===\'function\'?anOpenFullCompanyRecord(\''+companyName.replace(/'/g, "\\'")+'\'): void(0)">'
       +'<div style="width:34px;height:34px;border-radius:10px;background:#6366f122;color:#6366f1;display:flex;align-items:center;justify-content:center;font-weight:800;">'+companyName.charAt(0).toUpperCase()+'</div>'
       +'<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;">'+anEsc(companyName)+'</div><div style="font-size:11px;color:var(--text-muted);">View company record →</div></div></div>'
     : '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:12px;">No company linked</div>';
+
+  // Shared editable row style
+  var rowStyle = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--divider);';
+  var labelStyle = 'font-size:11.5px;color:var(--text-muted);';
+  var inputStyle = 'border:1.5px solid var(--divider);border-radius:6px;padding:5px 8px;font-size:12px;font-family:var(--sans);background:var(--card-bg);color:var(--text-primary);outline:none;width:100%;box-sizing:border-box;text-align:right;';
+  var selectStyle = inputStyle + 'cursor:pointer;';
 
   return ''
     +'<div class="co-record-layout">'
@@ -22179,28 +22202,78 @@ function oppBuildRecordHTML(lead) {
     +'<button type="button" class="co-quick-btn" title="Deal session" onclick="typeof openMobileCallMode===\'function\'?openMobileCallMode(\''+safeId+'\'):void(0)">💎</button>'
     +'<button type="button" class="co-quick-btn" title="Delete" onclick="anDeleteOpportunity(\''+safeId+'\')">🗑</button>'
     +'</div>'
+
+    // ── Editable deal fields ──
     +'<div class="co-key-info"><div class="co-key-info-head">About this deal</div>'
-    +'<div class="co-panel-row"><span>Amount</span><span style="color:#6366f1;font-weight:800;">$'+mrr+'/mo</span></div>'
-    +'<div class="co-panel-row"><span>Close date</span><input type="date" value="'+(lead.oppCloseDate||'')+'" onchange="anOppSaveField(\''+safeId+'\',\'oppCloseDate\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;font-family:inherit;font-size:12px;text-align:right;"></div>'
-    +'<div class="co-panel-row"><span>Deal stage</span><span style="color:'+st.color+';">'+anEsc(st.label)+'</span></div>'
-    +'<div class="co-panel-row"><span>Contract</span><span>'+anEsc(ctLabel)+'</span></div>'
-    +'<div class="co-panel-row"><span>Agency size</span><span>'+anEsc(sz.label)+'</span></div>'
-    +'<div class="co-panel-row"><span>Agents</span><span>'+(lead.oppAgents || 1)+'</span></div>'
-    +'<div class="co-panel-row"><span>Owner</span>'
+
+    // Amount — live-calculated, shown as read-only tile, updated by agent/size changes
+    +'<div style="'+rowStyle+'">'
+    +'<span style="'+labelStyle+'">Amount</span>'
+    +'<span id="opp-mrr-display-'+lead.id+'" style="color:#6366f1;font-weight:800;font-size:13px;text-align:right;">$'+mrr+'/mo</span>'
+    +'</div>'
+
+    // Close date
+    +'<div style="'+rowStyle+'">'
+    +'<span style="'+labelStyle+'">Close date</span>'
+    +'<input type="date" value="'+(lead.oppCloseDate||'')+'" onchange="anOppSaveField(\''+safeId+'\',\'oppCloseDate\',this.value)" style="'+inputStyle+'">'
+    +'</div>'
+
+    // Deal stage — full dropdown
+    +'<div style="'+rowStyle+'">'
+    +'<span style="'+labelStyle+'">Deal stage</span>'
+    +'<select onchange="anMoveOppStage(\''+safeId+'\',this.value)" style="'+selectStyle+'color:'+st.color+';">'+STATUS_OPTS+'</select>'
+    +'</div>'
+
+    // Contract type
+    +'<div style="'+rowStyle+'">'
+    +'<span style="'+labelStyle+'">Contract</span>'
+    +'<select onchange="anOppSaveField(\''+safeId+'\',\'oppContract\',this.value);anRefreshOppMRR(\''+safeId+'\')" style="'+selectStyle+'">'+contractOpts+'</select>'
+    +'</div>'
+
+    // Agency size — drives MRR recalc
+    +'<div style="'+rowStyle+'">'
+    +'<span style="'+labelStyle+'">Agency size</span>'
+    +'<select onchange="anOppSaveField(\''+safeId+'\',\'size\',this.value);anRefreshOppMRR(\''+safeId+'\')" style="'+selectStyle+'">'+sizeOpts+'</select>'
+    +'</div>'
+
+    // Agents — editable number, drives MRR recalc
+    +'<div style="'+rowStyle+';background:rgba(99,102,241,0.04);border-radius:0;">'
+    +'<span style="'+labelStyle+'font-weight:700;color:var(--text-secondary);">Agents <span style="font-size:9px;font-weight:400;color:var(--text-muted);">→ updates price</span></span>'
+    +'<input type="number" min="1" max="500" value="'+(lead.oppAgents||agentCount||1)+'" placeholder="# agents"'
+    +' onchange="anOppSaveField(\''+safeId+'\',\'oppAgents\',parseInt(this.value,10)||1);anRefreshOppMRR(\''+safeId+'\')"'
+    +' onblur="anOppSaveField(\''+safeId+'\',\'oppAgents\',parseInt(this.value,10)||1);anRefreshOppMRR(\''+safeId+'\')"'
+    +' style="'+inputStyle+'font-weight:700;">'
+    +'</div>'
+
+    // MRR override — lets AE manually set price if quote differs
+    +'<div style="'+rowStyle+'">'
+    +'<span style="'+labelStyle+'">MRR override <span style="font-size:9px;color:var(--text-muted);">optional</span></span>'
+    +'<input type="number" min="0" value="'+(lead.oppMRR||'')+'" placeholder="auto"'
+    +' onblur="anOppSaveField(\''+safeId+'\',\'oppMRR\',this.value?parseInt(this.value,10):null);anRefreshOppMRR(\''+safeId+'\')"'
+    +' style="'+inputStyle+'">'
+    +'</div>'
+
+    // Owner
+    +'<div style="'+rowStyle+'">'
+    +'<span style="'+labelStyle+'">Owner</span>'
     +(typeof anCanReassignOwner === 'function' && anCanReassignOwner(lead)
-      ? '<button type="button" onclick="anOpenOwnerPicker({leadId:\''+safeId+'\'})" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">'+anEsc(lead._repEmail ? anGetRepName(lead._repEmail) : 'Assign')+' ▾</button>'
-      : '<span>'+anEsc(lead._repEmail ? anGetRepName(lead._repEmail) : '—')+'</span>')
+      ? '<button type="button" onclick="anOpenOwnerPicker({leadId:\''+safeId+'\'})" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;justify-self:end;">'+anEsc(lead._repEmail ? anGetRepName(lead._repEmail) : 'Assign')+' ▾</button>'
+      : '<span style="text-align:right;font-size:12px;">'+anEsc(lead._repEmail ? anGetRepName(lead._repEmail) : '—')+'</span>')
     +'</div>'
-    +'<div style="padding:12px 14px;"><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Move stage</label>'
-    +'<select onchange="anMoveOppStage(\''+safeId+'\',this.value);anOpenOppRecord(\''+safeId+'\')" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:8px 10px;font-size:13px;background:var(--card-bg);font-family:inherit;">'+STATUS_OPTS+'</select></div>'
     +'</div>'
-    +'<div style="margin-top:14px;"><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Deal notes</div>'
-    +'<textarea rows="4" placeholder="Pain points, timeline, competitors..." onblur="anOppSaveField(\''+safeId+'\',\'oppNotes\',this.value)" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:10px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box;">'+anEsc(lead.oppNotes || lead.notes || '')+'</textarea></div>'
+
+    // Deal notes
+    +'<div style="margin-top:14px;padding:0 14px 14px;">'
+    +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Deal notes</div>'
+    +'<textarea rows="4" placeholder="Pain points, timeline, competitors..." onblur="anOppSaveField(\''+safeId+'\',\'oppNotes\',this.value)" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:10px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box;background:var(--card-bg);color:var(--text-primary);">'+anEsc(lead.oppNotes || lead.notes || '')+'</textarea>'
+    +'</div>'
     +'</aside>'
+
     +'<main class="co-record-center">'
     +'<div class="co-activity-head"><div style="font-size:14px;font-weight:800;">Activities</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Calls, stage changes, and notes on this deal</div></div>'
     +'<div class="co-activity-feed">'+activityHTML+'</div>'
     +'</main>'
+
     +'<aside class="co-record-right">'
     +'<div class="co-assoc-card"><div class="co-assoc-head"><span>Contact</span><button type="button" onclick="anOpenLeadPanel(\''+safeId+'\')" style="background:none;border:none;color:#6366f1;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Profile →</button></div>'
     +'<div class="co-assoc-body"><div class="co-contact-row" onclick="anOpenLeadPanel(\''+safeId+'\')">'
@@ -22211,10 +22284,15 @@ function oppBuildRecordHTML(lead) {
     +(lead.phone ? '<div style="padding:4px 10px 10px;font-size:12px;"><a href="tel:'+anEsc(anTelPhone(lead.phone))+'" style="color:var(--text-secondary);">'+anEsc(anFormatPhone(lead.phone))+'</a></div>' : '')
     +'</div></div>'
     +'<div class="co-assoc-card"><div class="co-assoc-head"><span>Company</span></div><div class="co-assoc-body">'+companyHTML+'</div></div>'
-    +'<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);border-radius:10px;padding:14px;color:#fff;margin-top:8px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;opacity:0.55;">Pipeline value</div><div style="font-size:26px;font-weight:900;margin-top:4px;">$'+mrr+'<span style="font-size:13px;opacity:0.5;">/mo</span></div></div>'
+    +'<div id="opp-pipeline-tile-'+lead.id+'" style="background:linear-gradient(135deg,#0a0a14,#1a1640);border-radius:10px;padding:14px;color:#fff;margin-top:8px;">'
+    +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;opacity:0.55;">Pipeline value</div>'
+    +'<div style="font-size:26px;font-weight:900;margin-top:4px;">$'+mrr+'<span style="font-size:13px;opacity:0.5;">/mo</span></div>'
+    +(agentCount > 0 && typeof getQuoteCalc === 'function'
+      ? (function(){ var q = getQuoteCalc(agentCount, 0); return '<div style="font-size:10px;opacity:0.55;margin-top:4px;">'+q.planName+' · '+agentCount+' agent'+(agentCount!==1?'s':'')+'</div>'; })()
+      : '')
+    +'</div>'
     +'</aside></div>';
 }
-
 window.anOpenOppRecord = function(leadId, opts) {
   opts = opts || {};
   window._anOppDetailLeadId = leadId;
@@ -22441,8 +22519,20 @@ window.anLeadRecordSaveStatus = function(leadId, newStatus) {
 window.anOppSaveField = function(leadId, field, value) {
   var lead = AN.leads.find(function(l) { return l.id === leadId; });
   if (!lead) return;
-  lead[field] = value;
+  // Null-out oppMRR override if explicitly cleared
+  if (field === 'oppMRR') {
+    lead.oppMRR = value ? parseInt(value, 10) : null;
+  } else {
+    lead[field] = value;
+  }
   if (field === 'oppNotes') lead.notes = value;
+  // Track manual size change so we don't auto-override it from agent count
+  if (field === 'size') lead._sizeManuallySet = true;
+  // When agents changes, also auto-update size tier if not manually set
+  if (field === 'oppAgents' && !lead._sizeManuallySet && typeof anAgencyTierFromCount === 'function') {
+    var tier = anAgencyTierFromCount(parseInt(value, 10));
+    if (tier) lead.size = tier.id;
+  }
   lead.updated = new Date().toISOString();
   AN.save();
   if (typeof anSyncOpportunitiesToCommissionTrackers === 'function') {
@@ -22637,6 +22727,59 @@ function initOppDragDrop() {
 // ── 6. OPP DETAIL (full record) ─────────────────────────────
 window.anOpenOppDetail = function(leadId) {
   if (typeof anOpenOppRecord === 'function') anOpenOppRecord(leadId);
+};
+
+// ── Live MRR recalculator — called whenever agents/size/contract/override changes ──
+window.anRefreshOppMRR = function(leadId) {
+  var lead = AN.leads.find(function(l){ return l.id === leadId; });
+  if (!lead) return;
+
+  var agents = parseInt(lead.oppAgents, 10) || 0;
+  var sz = lead.size ? (AN_SIZES.find(function(s){ return s.id === lead.size; }) || { price: 79 }) : { price: 79 };
+
+  // Agent-count drives price via getQuoteCalc when available
+  var calcMRR = null;
+  if (agents > 0 && typeof getQuoteCalc === 'function') {
+    calcMRR = getQuoteCalc(agents, 0).monthly;
+  }
+
+  // oppMRR override wins if explicitly set; otherwise use calc or size default
+  var mrr = lead.oppMRR || calcMRR || sz.price || 79;
+
+  // Also auto-set size tier from agent count if not manually overridden
+  if (agents > 0 && !lead._sizeManuallySet && typeof anAgencyTierFromCount === 'function') {
+    var tier = anAgencyTierFromCount(agents);
+    if (tier && tier.id !== lead.size) {
+      lead.size = tier.id;
+      // Update size dropdown if still in panel
+      var sizeSelPanel = document.querySelector('#opp-record-panel select[onchange*="oppRecordSaveField"]');
+      // update it visually if present
+    }
+  }
+
+  // Update the amount display tile and pipeline value tile — no full re-render
+  var mrrDisplay = document.getElementById('opp-mrr-display-' + leadId);
+  if (mrrDisplay) mrrDisplay.textContent = '$' + mrr + '/mo';
+
+  var pipelineTile = document.getElementById('opp-pipeline-tile-' + leadId);
+  if (pipelineTile) {
+    var planLine = '';
+    if (agents > 0 && typeof getQuoteCalc === 'function') {
+      var q = getQuoteCalc(agents, 0);
+      planLine = '<div style="font-size:10px;opacity:0.55;margin-top:4px;">'+q.planName+' · '+agents+' agent'+(agents!==1?'s':'')+'</div>';
+    }
+    pipelineTile.innerHTML = '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;opacity:0.55;">Pipeline value</div>'
+      +'<div style="font-size:26px;font-weight:900;margin-top:4px;">$'+mrr+'<span style="font-size:13px;opacity:0.5;">/mo</span></div>'
+      + planLine;
+  }
+
+  // Save the recalculated MRR back only if it's agent-driven (not manual override)
+  if (!lead.oppMRR && calcMRR && calcMRR !== lead._lastCalcMRR) {
+    lead._lastCalcMRR = calcMRR;
+    lead.updated = new Date().toISOString();
+    AN.save();
+    if (typeof renderOpportunities === 'function') renderOpportunities();
+  }
 };
 
 window.anMoveOppStage = function(leadId, newStage) {
