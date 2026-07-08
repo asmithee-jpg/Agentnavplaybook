@@ -13069,7 +13069,8 @@ var AN_STATUSES = AN_LEAD_STATUSES.concat(AN_OPP_STATUSES);
 window.anIsOpportunity = function(lead) {
   if (!lead) return false;
   if (lead.isOpportunity) return true;
-  return ['demo','showed','proposal','negotiation','won','lost'].indexOf(lead.status || '') >= 0;
+  // demo_complete is a conversion-limbo status — treat as opp so it shows in pipeline
+  return ['demo','showed','proposal','negotiation','won','lost','demo_complete'].indexOf(lead.status || '') >= 0;
 };
 
 window.anIsProspect = function(lead) {
