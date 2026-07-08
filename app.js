@@ -19716,17 +19716,19 @@ function anRefreshAfterInlineEdit(lead, field, td) {
 function saveInlineEdit(lead, field, value, td, original) {
   if (td.dataset.inlineSaving === '1') return;
   if (field === 'phone') value = anNormalizePhone(value);
-  var unchanged = field === 'status' ? lead.status === value : lead[field] === value;
-  if (unchanged) {
+
+  // Normalize value comparison
+  var currentVal = field === 'status' ? lead.status : lead[field];
+  if (currentVal === value) {
     td.style.padding = '';
     renderCellContent(td, field, lead);
     return;
   }
+
   td.dataset.inlineSaving = '1';
 
+  // ── Mutate lead immediately so any re-render sees the new value ──
   if (field === 'status') {
-    // Block any renderLeadsTable triggered inside anApplyLeadStatusChange so we
-    // control exactly when the table refreshes (after AN.save completes).
     var _rltBlocked = false;
     var _origRLTInline = window.renderLeadsTable;
     window.renderLeadsTable = function() {
@@ -19741,26 +19743,46 @@ function saveInlineEdit(lead, field, value, td, original) {
     }
     if (value === 'booked_demo' && lead.demoDate && typeof anRecordDemoBooked === 'function') {
       anRecordDemoBooked(lead, { source: 'inline_edit' });
-    } else if (value === 'demo' && typeof anRecordDemoBooked === 'function') {
-      anRecordDemoBooked(lead, { source: 'inline_edit_legacy' });
     }
-    if (value === 'won') syncActivityFromCRM('closes', 1);
+    if (value === 'won' && typeof syncActivityFromCRM === 'function') syncActivityFromCRM('closes', 1);
 
-    lead.updated = new Date().toISOString();
-    AN.save();
-
-    // Restore renderLeadsTable and do a single controlled refresh
+    // Restore before save so AN.save()'s internal render call works normally
     window.renderLeadsTable = _origRLTInline;
     _rltBlocked = false;
-
-    delete td.dataset.inlineSaving;
-    anRefreshAfterInlineEdit(lead, field, td);
   } else {
     lead[field] = value;
-    lead.updated = new Date().toISOString();
-    AN.save();
-    delete td.dataset.inlineSaving;
-    anRefreshAfterInlineEdit(lead, field, td);
+  }
+
+  lead.updated = new Date().toISOString();
+
+  // Invalidate caches so the next render reads fresh data
+  if (typeof AN !== 'undefined' && AN.invalidateLeadCaches) AN.invalidateLeadCaches();
+
+  // Save
+  if (typeof AN !== 'undefined' && AN.save) AN.save();
+
+  delete td.dataset.inlineSaving;
+
+  // Update just this cell — no full table re-render needed for most field changes
+  td.style.padding = '';
+  if (typeof renderCellContent === 'function') {
+    renderCellContent(td, field, lead);
+  }
+
+  // For status changes, do a targeted row badge update rather than full re-render
+  if (field === 'status') {
+    var tr = td.closest('tr');
+    if (tr) {
+      // Update row highlight class
+      tr.dataset.status = lead.status || '';
+      // Refresh the status cell display
+      renderCellContent(td, 'status', lead);
+    }
+    // Debounce full table re-render to avoid rapid-fire re-renders
+    clearTimeout(window._anStatusRenderTimer);
+    window._anStatusRenderTimer = setTimeout(function() {
+      if (typeof renderLeadsTable === 'function') renderLeadsTable();
+    }, 600);
   }
 }
 
@@ -27169,12 +27191,25 @@ function coRender() {
   var sec = document.getElementById('section-companies');
   if (!sec) return;
 
+  // ── 1. Paint immediately from whatever we have cached ──
   var cached = _coData.length ? _coData : (function(){ try{ return JSON.parse(localStorage.getItem(CO_KEY)||'[]'); }catch(e){return [];} })();
-  _coRenderWith(sec, cached);
+  if (cached.length) _coRenderWith(sec, cached);
 
+  // ── 2. Sync in background — only re-render if the company list actually changed ──
   coLoad(function(companies) {
+    if (_coSyncedFromLeadsThisSession) {
+      // Already synced — just render with current data if we haven't yet
+      if (!cached.length) _coRenderWith(sec, companies);
+      return;
+    }
     coEnsureSyncedFromLeads(function(synced) {
-      _coRenderWith(sec, synced && synced.length ? synced : companies);
+      var final = synced && synced.length ? synced : companies;
+      // Only re-render if something actually changed (different count or ids)
+      var prevKey = (cached || []).map(function(c){return c.id;}).sort().join(',');
+      var nextKey = (final || []).map(function(c){return c.id;}).sort().join(',');
+      if (nextKey !== prevKey || !cached.length) {
+        _coRenderWith(sec, final);
+      }
     });
   });
 }
@@ -27212,18 +27247,164 @@ function coSortCompanyItems(items) {
 }
 
 function _coRenderWith(sec, companies) {
+  // Build stats cache once — O(n) over leads, not O(n*m)
   var cache = coBuildStatsCache(companies);
   var visible = coGetVisibleCompanies(companies, cache.statsMap);
-  var body = CO.currentView === 'board' ? coKanbanView(visible, cache.statsMap) : coTableView(visible, cache.statsMap);
-  sec.innerHTML = '<div id="co-root">' + coPageHeader(companies, visible, cache.statsMap) + body + '</div>';
-  coUpdateSyncBadge();
+
+  // Render header synchronously (it's small)
+  var headerHTML = coPageHeader(companies, visible, cache.statsMap);
+
+  if (CO.currentView === 'board') {
+    // Kanban: render column shells immediately, fill cards via rAF chunks
+    var colShells = coKanbanShellHTML(visible, cache.statsMap);
+    sec.innerHTML = '<div id="co-root">' + headerHTML + colShells + '</div>';
+    coUpdateSyncBadge();
+    // Fill each column's cards in separate frames so the page stays responsive
+    requestAnimationFrame(function() { coFillKanbanCards(visible, cache.statsMap); });
+  } else {
+    // Table: render header row + first 50 rows immediately, rest via rAF
+    var tableHTML = coTableViewFast(visible, cache.statsMap);
+    sec.innerHTML = '<div id="co-root">' + headerHTML + tableHTML + '</div>';
+    coUpdateSyncBadge();
+  }
+
+  // Restore selection highlight
   if (_coSelected) {
-    var card = document.querySelector('.co-kanban-card[data-co-id="'+_coSelected+'"]');
+    var card = sec.querySelector('.co-kanban-card[data-co-id="'+_coSelected+'"]');
     if (card) card.classList.add('active');
-    var row = document.querySelector('.co-table-row[data-co-id="'+_coSelected+'"]');
+    var row = sec.querySelector('.co-table-row[data-co-id="'+_coSelected+'"]');
     if (row) row.classList.add('active');
   }
-  if (CO.currentView === 'board') setTimeout(initCoDragDrop, 60);
+  if (CO.currentView === 'board') setTimeout(initCoDragDrop, 80);
+}
+
+// Kanban: render column shells with count badges, no card HTML yet
+function coKanbanShellHTML(visible, statsMap) {
+  var stages = CO_STAGES || [
+    {id:'prospecting',label:'Prospecting',color:'#a1a1aa'},
+    {id:'demo_scheduled',label:'Demo Scheduled',color:'#6366f1'},
+    {id:'proposal_out',label:'Proposal Out',color:'#f59e0b'},
+    {id:'negotiating',label:'Negotiating',color:'#f97316'},
+    {id:'closed_won',label:'Closed Won',color:'#10b981'},
+    {id:'not_interested',label:'Not Interested',color:'#ef4444'}
+  ];
+  var byStage = {};
+  stages.forEach(function(st){ byStage[st.id] = []; });
+  visible.forEach(function(co) {
+    var stats = statsMap[co.id] || {};
+    var stage = coNormalizeLifecycleStage(stats.lifecycle) || 'prospecting';
+    if (!byStage[stage]) byStage[stage] = [];
+    byStage[stage].push({ co: co, stats: stats });
+  });
+  var cols = stages.map(function(st) {
+    var items = byStage[st.id] || [];
+    return '<div class="co-kanban-col" data-stage="'+st.id+'" style="min-width:220px;flex:1;">'
+      +'<div class="co-kanban-col-head" style="display:flex;align-items:center;gap:6px;padding:10px 12px;border-bottom:2px solid '+st.color+';margin-bottom:8px;">'
+      +'<span style="width:8px;height:8px;border-radius:50%;background:'+st.color+';display:inline-block;"></span>'
+      +'<span style="font-size:12px;font-weight:700;color:var(--text-primary);">'+st.label+'</span>'
+      +'<span style="margin-left:auto;background:'+st.color+'22;color:'+st.color+';border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700;">'+items.length+'</span>'
+      +'</div>'
+      +'<div class="co-kanban-cards" id="co-col-cards-'+st.id+'" data-stage="'+st.id+'">'
+      +'<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:11px;">Loading…</div>'
+      +'</div></div>';
+  }).join('');
+  return '<div class="co-kanban-wrap" style="display:flex;gap:12px;overflow-x:auto;padding:0 0 16px;min-height:300px;">' + cols + '</div>';
+}
+
+// Fill kanban cards stage by stage, one per animation frame
+function coFillKanbanCards(visible, statsMap) {
+  var stages = CO_STAGES || [
+    {id:'prospecting'},{id:'demo_scheduled'},{id:'proposal_out'},
+    {id:'negotiating'},{id:'closed_won'},{id:'not_interested'}
+  ];
+  var byStage = {};
+  stages.forEach(function(st){ byStage[st.id] = []; });
+  visible.forEach(function(co) {
+    var stats = statsMap[co.id] || {};
+    var stage = coNormalizeLifecycleStage(stats.lifecycle) || 'prospecting';
+    if (!byStage[stage]) byStage[stage] = [];
+    byStage[stage].push({ co: co, stats: stats });
+  });
+
+  var stageIds = stages.map(function(s){ return s.id; });
+  var idx = 0;
+  function fillNext() {
+    if (idx >= stageIds.length) { if (typeof initCoDragDrop === 'function') initCoDragDrop(); return; }
+    var stId = stageIds[idx++];
+    var container = document.getElementById('co-col-cards-' + stId);
+    if (container) {
+      var items = byStage[stId] || [];
+      var st = stages.find(function(s){ return s.id === stId; }) || { color: '#a1a1aa', label: stId };
+      if (!items.length) {
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:11px;border:2px dashed var(--divider);border-radius:8px;margin:4px;">No companies</div>';
+      } else {
+        container.innerHTML = items.slice(0, CO_KANBAN_COL_LIMIT).map(function(item) {
+          return coKanbanCard(item, st);
+        }).join('');
+        if (items.length > CO_KANBAN_COL_LIMIT) {
+          container.innerHTML += '<div style="text-align:center;padding:8px;font-size:11px;color:var(--text-muted);">+' + (items.length - CO_KANBAN_COL_LIMIT) + ' more</div>';
+        }
+      }
+    }
+    requestAnimationFrame(fillNext);
+  }
+  requestAnimationFrame(fillNext);
+}
+
+// Table view: build rows efficiently, no per-row localStorage reads
+function coTableViewFast(companies, statsMap) {
+  if (!companies.length) {
+    return '<div style="text-align:center;padding:60px;color:var(--text-muted);">'
+      +'<div style="font-size:32px;margin-bottom:12px;">🏢</div>'
+      +'<div style="font-size:15px;font-weight:700;margin-bottom:6px;">No companies yet</div>'
+      +'<div style="font-size:13px;">Companies appear here when leads have a company name filled in.</div></div>';
+  }
+  // Pre-load all co-data in one localStorage read
+  var allCoData = {};
+  try { allCoData = JSON.parse(localStorage.getItem('an-co-data') || '{}'); } catch(e) {}
+
+  function th(label, w) {
+    return '<th style="padding:10px 14px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap;'+(w?'width:'+w+';':'')+'border-bottom:1px solid var(--divider);background:var(--body-bg);">'+label+'</th>';
+  }
+  var items = companies.map(function(co) {
+    return { co: co, stats: statsMap[co.id] || {} };
+  });
+  items = coSortCompanyItems(items);
+
+  var rows = items.map(function(item) {
+    var co = item.co, stats = item.stats;
+    var cd = allCoData[co.name] || {};
+    var tierBadge = typeof anAgencyTierBadgeHtml === 'function'
+      ? anAgencyTierBadgeHtml(cd.agentCount, { fallbackLeads: stats.leads })
+      : '';
+    var ownerEmail = stats.ownerEmail || co.ownerEmail || '';
+    var ownerName = ownerEmail ? (typeof anGetRepName === 'function' ? anGetRepName(ownerEmail) : ownerEmail.split('@')[0]) : '—';
+    var lifecycle = coNormalizeLifecycleStage(stats.lifecycle) || 'prospecting';
+    var lifecycleLabel = (CO_STAGES || []).reduce(function(acc, s){ return s.id === lifecycle ? s.label : acc; }, lifecycle);
+    var lastAct = stats.lastActivity ? (typeof anTimeAgo === 'function' ? anTimeAgo(stats.lastActivity) : stats.lastActivity.slice(0,10)) : '—';
+    var mrr = stats.pipelineMRR || stats.activeMRR || 0;
+    return '<tr class="co-table-row" data-co-id="'+co.id+'" onclick="coOpenRecord(\''+co.id+'\')" style="cursor:pointer;border-bottom:1px solid var(--divider);">'
+      +'<td style="padding:11px 14px;width:32px;"><input type="checkbox" class="co-bulk-cb" data-co-id="'+co.id+'" onclick="event.stopPropagation();coToggleSelect(\''+co.id+'\')" style="accent-color:#6366f1;"></td>'
+      +'<td style="padding:11px 14px;"><div style="display:flex;align-items:center;gap:9px;">'
+      +'<div style="width:30px;height:30px;border-radius:8px;background:'+coColor(co.name)+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;">'+co.name.charAt(0).toUpperCase()+'</div>'
+      +'<div><div style="font-size:13px;font-weight:700;color:var(--text-primary);">'+anEsc(co.name)+'</div>'
+      +(co.website?'<div style="font-size:11px;color:var(--text-muted);">'+anEsc(co.website)+'</div>':'')
+      +'</div></div></td>'
+      +'<td style="padding:11px 14px;font-size:12px;color:var(--text-secondary);">'+anEsc(ownerName)+'</td>'
+      +'<td style="padding:11px 14px;font-size:12px;color:var(--text-secondary);">'+(co.created?co.created.slice(0,10):'—')+'</td>'
+      +'<td style="padding:11px 14px;font-size:12px;color:var(--text-secondary);">'+(co.phone?anEsc(co.phone):'—')+'</td>'
+      +'<td style="padding:11px 14px;font-size:12px;color:var(--text-secondary);">'+lastAct+'</td>'
+      +'<td style="padding:11px 14px;font-size:12px;color:var(--text-secondary);">'+anEsc(stats.state||'—')+'</td>'
+      +'<td style="padding:11px 14px;"><span style="font-size:11px;font-weight:700;background:var(--body-bg);border:1px solid var(--divider);border-radius:20px;padding:2px 9px;color:var(--text-secondary);">'+lifecycleLabel+'</span></td>'
+      +'<td style="padding:11px 14px;">'+tierBadge+'</td>'
+      +'<td style="padding:11px 14px;font-size:13px;color:var(--text-secondary);text-align:center;">'+stats.totalContacts+'</td>'
+      +'</tr>';
+  }).join('');
+
+  return '<div class="co-table-wrap" style="overflow-x:auto;">'
+    +'<table style="width:100%;border-collapse:collapse;font-size:13.5px;">'
+    +'<thead><tr>'+th('','32px')+th('Company name')+th('Owner')+th('Created')+th('Phone')+th('Last activity')+th('State')+th('Lifecycle')+th('Size')+th('Contacts','72px')+'</tr></thead>'
+    +'<tbody>'+rows+'</tbody></table></div>';
 }
 
 function coTableView(companies, statsMap) {
