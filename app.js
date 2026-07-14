@@ -14430,6 +14430,32 @@ var AN_SIZES = [
   { id:'enterprise', label:'Enterprise',    price:0   }
 ];
 
+// ── Canonical agent-count → monthly value pricing ──────────────
+// This mirrors the tiers used in the Quote Calculator (calcUniversal / getQuoteCalc2)
+// so a deal's value is always derived from how many agents it can sign on,
+// not a flat "agency size" category.
+window.anAgentPricing = function(agents, assistants) {
+  agents = Math.max(0, parseInt(agents) || 0);
+  assistants = Math.max(0, parseInt(assistants) || 0);
+  var monthly, planName, sizeId;
+  if (agents === 0)      { monthly = 0;                                     planName = 'Enter agents';        sizeId = 'solo'; }
+  else if (agents === 1) { monthly = 79 + assistants*25;                    planName = 'Independent Agent';   sizeId = 'solo'; }
+  else if (agents <= 4)  { monthly = 247 + assistants*25;                   planName = 'Small Agency';        sizeId = 'small'; }
+  else if (agents <= 10) { monthly = 597 + assistants*25;                   planName = 'Large Agency';        sizeId = 'large'; }
+  else if (agents <= 50) { monthly = agents*30 + assistants*15;             planName = 'Enterprise';          sizeId = 'enterprise'; }
+  else if (agents <= 100){ monthly = agents*27 + assistants*12;             planName = 'Enterprise';          sizeId = 'enterprise'; }
+  else if (agents <= 200){ monthly = agents*24 + assistants*10;             planName = 'Enterprise';          sizeId = 'enterprise'; }
+  else if (agents <= 500){ monthly = agents*22 + assistants*8;              planName = 'Enterprise';          sizeId = 'enterprise'; }
+  else                   { monthly = agents*20 + assistants*7;              planName = 'Enterprise (Scale)';  sizeId = 'enterprise'; }
+  return {
+    monthly: monthly,
+    annual: Math.round(monthly*12*0.8),
+    planName: planName,
+    sizeId: sizeId,
+    perPerson: (agents+assistants) > 0 ? Math.round(monthly/(agents+assistants)) : 0
+  };
+};
+
 var AN_SOURCES = ['Cold Call','HubSpot Import','Referral','Apollo','LinkedIn','Event','Inbound','CSV Import','Other'];
 
 // ── Agency size tiers — mirrors AN_SIZES buckets ──────────────
@@ -21880,7 +21906,11 @@ window.anConvertToOpportunity = function(leadId, opts) {
     +'<div style="padding:24px 26px;">'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">'
 
-    // Size
+    // Number of agents — PRIMARY driver of deal value
+    +'<div><label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">Number of Agents</label>'
+    +'<input id="opp-agents" type="number" min="1" value="1" placeholder="e.g. 4" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13.5px;color:var(--text-primary);background:var(--card-bg);outline:none;font-family:var(--sans);box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'"></div>'
+
+    // Size — auto-derived from agent count, still shown/overridable for display purposes
     +'<div><label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">Agency Size</label>'
     +'<select id="opp-size" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13.5px;color:var(--text-primary);background:var(--card-bg);outline:none;font-family:var(--sans);">'+SIZE_OPTS+'</select></div>'
 
@@ -21893,13 +21923,10 @@ window.anConvertToOpportunity = function(leadId, opts) {
     +'<option value="3yr">3-Year Prepaid</option>'
     +'</select></div>'
 
-    // MRR value
+    // MRR value — auto-filled from agent count, editable for manual overrides/discounts
     +'<div><label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">Monthly Value ($)</label>'
-    +'<input id="opp-mrr" type="number" min="0" placeholder="e.g. 247" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13.5px;color:var(--text-primary);background:var(--card-bg);outline:none;font-family:var(--sans);box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'"></div>'
-
-    // Number of agents
-    +'<div><label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">Number of Agents</label>'
-    +'<input id="opp-agents" type="number" min="1" value="1" placeholder="e.g. 4" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13.5px;color:var(--text-primary);background:var(--card-bg);outline:none;font-family:var(--sans);box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'"></div>'
+    +'<input id="opp-mrr" type="number" min="0" placeholder="auto from agents" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13.5px;color:var(--text-primary);background:var(--card-bg);outline:none;font-family:var(--sans);box-sizing:border-box;" onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'var(--divider)\'">'
+    +'<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;">Auto-calculated from agent count — edit to override</div></div>'
 
     +'</div>'
 
@@ -21922,16 +21949,25 @@ window.anConvertToOpportunity = function(leadId, opts) {
   document.body.appendChild(m);
   m.onclick = function(e){ if(e.target===m) anCloseOppConvertModal(leadId); };
 
-  // Auto-fill MRR from size selection
-  document.getElementById('opp-size').addEventListener('change', function(){
-    var sz = AN_SIZES.find(function(s){ return s.id===this.value; }, this);
-    if (sz && sz.price) {
-      document.getElementById('opp-mrr').value = sz.price;
-      updateOppValuePreview();
-    }
+  // Auto-fill MRR + Agency Size from Number of Agents — value follows how many agents
+  // this deal can sign on, using the same pricing tiers as the Quote Calculator.
+  document.getElementById('opp-agents').addEventListener('input', function(){
+    var agents = parseInt(this.value) || 0;
+    var pricing = anAgentPricing(agents, 0);
+    document.getElementById('opp-mrr').value = pricing.monthly || '';
+    var sizeEl = document.getElementById('opp-size');
+    if (sizeEl) sizeEl.value = pricing.sizeId;
+    updateOppValuePreview();
   });
   document.getElementById('opp-mrr').addEventListener('input', updateOppValuePreview);
   document.getElementById('opp-contract').addEventListener('change', updateOppValuePreview);
+
+  // Seed the initial value from the default agent count (1)
+  (function(){
+    var pricing = anAgentPricing(parseInt(document.getElementById('opp-agents').value)||1, 0);
+    document.getElementById('opp-mrr').value = pricing.monthly || '';
+    document.getElementById('opp-size').value = pricing.sizeId;
+  })();
 };
 
 function updateOppValuePreview() {
@@ -21973,7 +22009,7 @@ window.anFinalizeConversion = function(leadId) {
   lead.size           = size;
   lead.status         = fromDemoComplete ? 'showed' : 'demo';
   lead.oppContract    = contract;
-  lead.oppMRR         = mrr||( AN_SIZES.find(function(s){return s.id===size;})||{price:79}).price;
+  lead.oppMRR         = mrr || anAgentPricing(agents, 0).monthly || 79;
   lead.oppAgents      = agents;
   lead.oppCloseDate   = closeDate;
   lead.oppNotes       = notes;
@@ -25345,10 +25381,10 @@ window.anOpenQuickAddDeal = function() {
     + '<select id="qdl-stage" style="'+selStyle+'">'
     + ['Demo Set','Demo Completed','Proposal Sent','Negotiating','Closed Won','Closed Lost'].map(function(s){ return '<option value="'+s+'">'+s+'</option>'; }).join('')
     + '</select></div>'
-    + '<div><label style="'+labelStyle+'">Account Size</label>'
-    + '<select id="qdl-size" style="'+selStyle+'">'
-    + '<option value="solo">Solo ($79/mo)</option><option value="small">Small ($158/mo)</option><option value="large">Large ($237/mo)</option>'
-    + '</select></div>'
+    + '<div><label style="'+labelStyle+'">Number of Agents</label>'
+    + '<input id="qdl-agents" type="number" min="1" value="1" placeholder="e.g. 4" style="'+inpStyle+'" oninput="qdlUpdateValuePreview()">'
+    + '<div id="qdl-value-preview" style="font-size:10.5px;color:#6366f1;margin-top:3px;font-weight:700;"></div>'
+    + '</div>'
     + '</div>'
 
     // SDR + AE — the celebration fields!
@@ -25388,6 +25424,16 @@ window.anOpenQuickAddDeal = function() {
   var today = new Date().toISOString().split('T')[0];
   var dateEl = document.getElementById('qdl-date');
   if (dateEl) dateEl.value = today;
+  qdlUpdateValuePreview();
+};
+
+window.qdlUpdateValuePreview = function() {
+  var el = document.getElementById('qdl-agents');
+  var preview = document.getElementById('qdl-value-preview');
+  if (!el || !preview) return;
+  var agents = parseInt(el.value) || 1;
+  var pricing = anAgentPricing(agents, 0);
+  preview.textContent = '$' + pricing.monthly + '/mo · ' + pricing.planName;
 };
 
 window.qdlSearchLeads = function(q) {
@@ -25434,7 +25480,7 @@ window.anSubmitQuickDeal = function() {
   var name  = (document.getElementById('qdl-name').value || '').trim();
   if (!name) { document.getElementById('qdl-name').style.borderColor = '#ef4444'; document.getElementById('qdl-name').focus(); return; }
   var stage        = document.getElementById('qdl-stage').value;
-  var size         = document.getElementById('qdl-size').value;
+  var agents       = parseInt(document.getElementById('qdl-agents').value) || 1;
   var state        = (document.getElementById('qdl-state').value || '').trim().toUpperCase();
   var date         = document.getElementById('qdl-date').value || new Date().toISOString().split('T')[0];
   var notes        = (document.getElementById('qdl-notes').value || '').trim();
@@ -25443,7 +25489,8 @@ window.anSubmitQuickDeal = function() {
   var linkedLeadId = (document.getElementById('qdl-lead-id') && document.getElementById('qdl-lead-id').value || '').trim();
   var repEmail     = (typeof AN !== 'undefined' && AN.currentRepEmail) || '';
 
-  var mrrMap = { solo: 79, small: 158, large: 237 };
+  var pricing = anAgentPricing(agents, 0);
+  var size = pricing.sizeId;
   var sdrName = sdrEmail && typeof anGetRepName === 'function' ? anGetRepName(sdrEmail) : '';
   var aeName  = aeEmail  && typeof anGetRepName === 'function' ? anGetRepName(aeEmail) : '';
 
@@ -25453,6 +25500,7 @@ window.anSubmitQuickDeal = function() {
     leadId: linkedLeadId || null,
     stage: stage,
     size: size,
+    agents: agents,
     state: state,
     notes: notes,
     sdrEmail: sdrEmail,
@@ -25462,7 +25510,7 @@ window.anSubmitQuickDeal = function() {
     added: new Date().toISOString(),
     updated: new Date().toISOString(),
     closedDate: (stage === 'Closed Won' || stage === 'Closed Lost') ? date + 'T12:00:00.000Z' : undefined,
-    mrr: mrrMap[size] || 79,
+    mrr: pricing.monthly || 79,
     rep: aeEmail || sdrEmail || repEmail
   };
 
@@ -25484,7 +25532,7 @@ window.anSubmitQuickDeal = function() {
       }
       // Fire a team shout-out so everyone sees it on Home
       if (typeof anAddTeamShout === 'function') {
-        var shoutMsg = '🏆 ' + name + ' — ' + (size === 'solo' ? '$79/mo' : size === 'small' ? '$158/mo' : '$237/mo');
+        var shoutMsg = '🏆 ' + name + ' — $' + deal.mrr + '/mo';
         if (aeName && sdrName && aeName !== sdrName) {
           shoutMsg += ' | AE: ' + aeName + ' · SDR: ' + sdrName;
         } else if (aeName) {
