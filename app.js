@@ -4769,19 +4769,16 @@ window.loadAdminRepsDashboard = function() {
     return;
   }
 
-  // Pull demo_recaps + sales_dashboard + an_leads for rep names
+  // Pull demo_recaps + sales_dashboard for rep names and activity
   Promise.all([
     sb.from('demo_recaps').select('user_id, prospect, created_at, outcome').order('created_at', { ascending: false }).limit(500),
-    sb.from('sales_dashboard').select('user_id, rep_email, pipeline, goals, activity, demos, activityLog, updated_at'),
-    sb.from('an_leads').select('user_id, rep_email, updated_at')
+    sb.from('sales_dashboard').select('user_id, rep_email, pipeline, goals, activity, demos, activityLog, updated_at')
   ]).then(function(results) {
     var recapResult = results[0];
     var dashResult  = results[1];
-    var leadsResult = results[2];
 
     var recaps = (!recapResult.error && recapResult.data) ? recapResult.data : [];
     var dashes = (!dashResult.error  && dashResult.data)  ? dashResult.data  : [];
-    var leadRows = (!leadsResult.error && leadsResult.data) ? leadsResult.data : [];
 
     // Build per-user map
     var userMap = {};
@@ -4794,10 +4791,6 @@ window.loadAdminRepsDashboard = function() {
       if (!userMap[d.user_id]) userMap[d.user_id] = { userId: d.user_id, repEmail: '', recaps: [], dash: null };
       userMap[d.user_id].dash = d;
       if (d.rep_email) userMap[d.user_id].repEmail = d.rep_email;
-    });
-    leadRows.forEach(function(row) {
-      if (!userMap[row.user_id]) userMap[row.user_id] = { userId: row.user_id, repEmail: '', recaps: [], dash: null };
-      if (row.rep_email && !userMap[row.user_id].repEmail) userMap[row.user_id].repEmail = row.rep_email;
     });
 
     var users = Object.values(userMap);
@@ -14803,64 +14796,13 @@ function anFetchRepUserIdMap(sb, cb){
   });
 }
 
+// Superseded by the shared an_leads_shared table — every rep already reads/writes
+// the same store, so there's no longer anything to distribute to individual rows.
+// Kept as a no-op so existing callers (force-sync button, reassignment flows) still
+// work without changes; AN.save() is what actually keeps everyone in sync now.
 function anSyncRepLeadsToCloud(opts, cb){
-  opts = opts || {};
   cb = cb || function(){};
-  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
-  if(!sb || typeof _currentUser === 'undefined' || !_currentUser){
-    cb();
-    return;
-  }
-  anFetchRepUserIdMap(sb, function(map){
-    var only = opts.onlyEmails ? opts.onlyEmails.map(function(e){ return (e || '').toLowerCase(); }).filter(Boolean) : null;
-    var byRep = {};
-    AN.leads.forEach(function(l){
-      if(!l) return;
-      // A deal is visible to both its SDR and its AE, not just one "primary" owner —
-      // push a copy into each of their rows so it shows up on their own devices too.
-      var emails = typeof anLeadVisibleEmails === 'function' ? anLeadVisibleEmails(l) : [(l._repEmail||'').toLowerCase()];
-      emails.forEach(function(em){
-        if(!em || em.indexOf('@') < 1) return;
-        if(only && only.indexOf(em) < 0) return;
-        if(!byRep[em]) byRep[em] = [];
-        var c = Object.assign({}, l);
-        // Keep _repEmail as the primary owner for display purposes, but the record
-        // itself is still delivered into every involved rep's own cloud row.
-        c._repEmail = c._repEmail || em;
-        byRep[em].push(c);
-      });
-    });
-    var upserts = [];
-    Object.keys(byRep).forEach(function(em){
-      var uid = map[em];
-      if(!uid){
-        console.warn('[CRM] No Supabase user_id for rep — they must log in once before leads sync:', em);
-        return;
-      }
-      upserts.push({
-        user_id: uid,
-        rep_email: em,
-        data: byRep[em],
-        updated_at: new Date().toISOString()
-      });
-    });
-    if(!upserts.length){ cb(); return; }
-    var i = 0;
-    var BATCH = 2;
-    function next(){
-      var batch = upserts.slice(i, i + BATCH);
-      i += BATCH;
-      if(!batch.length){ cb(); return; }
-      sb.from('an_leads').upsert(batch, { onConflict: 'user_id' }).then(function(r){
-        if(r.error) console.warn('[CRM] Rep lead sync error:', r.error);
-        next();
-      }).catch(function(err){
-        console.warn('[CRM] Rep lead sync failed:', err);
-        next();
-      });
-    }
-    next();
-  });
+  cb();
 }
 
 function anRememberRepUserId(user){
@@ -20439,25 +20381,10 @@ window.anEnsureTeamMapLeads = function(cb) {
   cb = cb || function() {};
   if (typeof AN === 'undefined') { cb([]); return; }
   var local = AN.leads ? AN.leads.slice() : [];
-  if (!AN.isAdmin) {
-    AN._teamMapLeadsPool = typeof anFilterLeadsForCurrentRep === 'function' ? anFilterLeadsForCurrentRep(local) : local;
-    cb(AN._teamMapLeadsPool);
-    return;
-  }
-  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
-  if (!sb || typeof _currentUser === 'undefined' || !_currentUser) {
-    AN._teamMapLeadsPool = local;
-    cb(local);
-    return;
-  }
-  sb.from('an_leads').select('rep_email, data, updated_at').then(function(r) {
-    var extra = (r.data && !r.error) ? anParseLeadsFromSupabaseRows(r.data) : [];
-    AN._teamMapLeadsPool = anMergeTeamMapLeadPool(local, extra);
-    cb(AN._teamMapLeadsPool);
-  }).catch(function() {
-    AN._teamMapLeadsPool = local;
-    cb(local);
-  });
+  // Admin's AN.leads already IS the full, current team dataset (loaded from the
+  // shared team table), so there's nothing extra to fetch or merge in anymore.
+  AN._teamMapLeadsPool = AN.isAdmin ? local : (typeof anFilterLeadsForCurrentRep === 'function' ? anFilterLeadsForCurrentRep(local) : local);
+  cb(AN._teamMapLeadsPool);
 };
 
 window.anLeadMapStatusLabel = function(lead) {
