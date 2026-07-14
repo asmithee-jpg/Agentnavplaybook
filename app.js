@@ -22111,19 +22111,20 @@ function anBuildOppTableHTML(opps, stages) {
     var mrr = o.oppMRR || (AN_SIZES.find(function(s){ return s.id === o.size; }) || { price: 79 }).price;
     var szMeta = typeof anAgencySizeMeta === 'function' ? anAgencySizeMeta(o.size || 'solo') : { label: 'Solo Agent', short: 'Solo', color: '#6366f1', bg: '#eef2ff' };
     var szLabel = (AN_SIZES.find(function(s){ return s.id === o.size; }) || { label: szMeta.label }).label;
+    var agents = o.oppAgents || 1;
     var sdrEm = typeof anResolveOppSdrEmail === 'function' ? anResolveOppSdrEmail(o) : '';
     var aeEm = typeof anResolveOppAeEmail === 'function' ? anResolveOppAeEmail(o) : '';
     var owners = (sdrEm ? 'SDR: ' + anGetRepName(sdrEm) : 'SDR: —')
       + (aeEm ? ' · AE: ' + anGetRepName(aeEm) : ' · AE: —');
     var name = ((o.firstName||'')+' '+(o.lastName||'')).trim() || o.company || 'Deal';
-    return '<tr onclick="anOpenOppRecord(\''+o.id+'\')" style="border-bottom:1px solid var(--divider);cursor:pointer;" onmouseover="this.style.background=\'rgba(99,102,241,0.04)\'" onmouseout="this.style.background=\'transparent\'">'
+    return '<tr data-lead-id="'+o.id+'" onclick="anOpenOppRecord(\''+o.id+'\')" style="border-bottom:1px solid var(--divider);cursor:pointer;" onmouseover="this.style.background=\'rgba(99,102,241,0.04)\'" onmouseout="this.style.background=\'transparent\'">'
       +'<td style="padding:12px 14px;font-weight:700;color:var(--text-primary);">'+anEsc(name)+'</td>'
-      +'<td style="padding:12px 14px;color:var(--text-secondary);">'+anEsc(o.company||'—')+'</td>'
-      +'<td style="padding:12px 14px;"><span style="background:'+szMeta.bg+';color:'+szMeta.color+';border:1px solid '+szMeta.color+'33;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">'+anEsc(szLabel)+'</span></td>'
-      +'<td style="padding:12px 14px;"><span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">'+anEsc(st.label)+'</span></td>'
-      +'<td style="padding:12px 14px;font-weight:800;color:#6366f1;">$'+mrr+'/mo</td>'
-      +'<td style="padding:12px 14px;color:var(--text-muted);">'+(o.oppCloseDate ? anDate(o.oppCloseDate) : '—')+'</td>'
-      +'<td style="padding:12px 14px;color:var(--text-muted);font-size:12px;">'+anEsc(owners)+'</td>'
+      +'<td data-field="company" style="padding:12px 14px;color:var(--text-secondary);cursor:text;" title="Click to edit">'+anEsc(o.company||'—')+'</td>'
+      +'<td data-field="agents" style="padding:12px 14px;cursor:text;" title="Click to edit number of agents"><span style="background:'+szMeta.bg+';color:'+szMeta.color+';border:1px solid '+szMeta.color+'33;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">'+anEsc(szLabel)+' · '+agents+'</span></td>'
+      +'<td data-field="stage" style="padding:12px 14px;cursor:text;" title="Click to edit"><span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">'+anEsc(st.label)+'</span></td>'
+      +'<td data-field="value" style="padding:12px 14px;font-weight:800;color:#6366f1;cursor:text;" title="Click to edit">$'+mrr+'/mo</td>'
+      +'<td data-field="closeDate" style="padding:12px 14px;color:var(--text-muted);cursor:text;" title="Click to edit">'+(o.oppCloseDate ? anDate(o.oppCloseDate) : '—')+'</td>'
+      +'<td style="padding:12px 14px;color:var(--text-muted);font-size:12px;" onclick="event.stopPropagation()">'+anEsc(owners)+'</td>'
       +'</tr>';
   }).join('');
   return '<div class="opp-table-wrap"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:820px;">'
@@ -22137,6 +22138,133 @@ function anBuildOppTableHTML(opps, stages) {
     +'<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">SDR / AE</th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
+
+// ── Inline click-to-edit for the Deals table (mirrors Leads table pattern) ──
+(function() {
+  document.addEventListener('click', function(e) {
+    var td = e.target.closest('.opp-table-wrap tbody td[data-field]');
+    if (!td || td.querySelector('input,select')) return;
+    e.stopPropagation();
+    startOppInlineEdit(td);
+  }, true);
+})();
+
+function startOppInlineEdit(td) {
+  var field  = td.dataset.field;
+  var leadId = td.closest('tr').dataset.leadId;
+  var lead   = AN.leads.find(function(l){ return l.id === leadId; });
+  if (!lead) return;
+  var original = td.innerHTML;
+  td.style.padding = '2px 6px';
+
+  if (field === 'stage') {
+    var sel = document.createElement('select');
+    sel.style.cssText = 'width:100%;border:1.5px solid #6366f1;border-radius:6px;padding:5px 8px;font-size:12px;font-family:var(--sans);background:var(--card-bg);color:var(--text-primary);outline:none;';
+    AN_OPP_STATUSES.forEach(function(s) {
+      var opt = document.createElement('option');
+      opt.value = s.id; opt.textContent = s.label;
+      if (s.id === (lead.status||'')) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.onchange = function() { anMoveOppStage(leadId, sel.value); };
+    sel.onkeydown = function(e) { if (e.key === 'Escape') { td.innerHTML = original; td.style.padding = ''; } };
+    td.innerHTML = ''; td.appendChild(sel); sel.focus();
+    return;
+  }
+
+  if (field === 'agents') {
+    var inpA = document.createElement('input');
+    inpA.type = 'number'; inpA.min = '1';
+    inpA.value = lead.oppAgents || 1;
+    inpA.style.cssText = 'width:80px;border:1.5px solid #6366f1;border-radius:6px;padding:5px 8px;font-size:13px;font-family:var(--sans);background:var(--card-bg);color:var(--text-primary);outline:none;';
+    inpA.onblur = function() { anOppSetAgents(leadId, inpA.value); };
+    inpA.onkeydown = function(e) {
+      if (e.key === 'Enter') inpA.blur();
+      if (e.key === 'Escape') { td.innerHTML = original; td.style.padding = ''; }
+    };
+    td.innerHTML = ''; td.appendChild(inpA); inpA.focus(); inpA.select();
+    return;
+  }
+
+  if (field === 'value') {
+    var inpV = document.createElement('input');
+    inpV.type = 'number'; inpV.min = '0';
+    inpV.value = lead.oppMRR || 0;
+    inpV.style.cssText = 'width:100px;border:1.5px solid #6366f1;border-radius:6px;padding:5px 8px;font-size:13px;font-family:var(--sans);background:var(--card-bg);color:var(--text-primary);outline:none;';
+    inpV.onblur = function() { anOppSetMRR(leadId, inpV.value); };
+    inpV.onkeydown = function(e) {
+      if (e.key === 'Enter') inpV.blur();
+      if (e.key === 'Escape') { td.innerHTML = original; td.style.padding = ''; }
+    };
+    td.innerHTML = ''; td.appendChild(inpV); inpV.focus(); inpV.select();
+    return;
+  }
+
+  if (field === 'closeDate') {
+    var inpD = document.createElement('input');
+    inpD.type = 'date';
+    inpD.value = lead.oppCloseDate || '';
+    inpD.style.cssText = 'width:100%;border:1.5px solid #6366f1;border-radius:6px;padding:5px 8px;font-size:12px;font-family:var(--sans);background:var(--card-bg);color:var(--text-primary);outline:none;';
+    inpD.onchange = function() { anOppSaveField(leadId, 'oppCloseDate', inpD.value); };
+    inpD.onkeydown = function(e) { if (e.key === 'Escape') { td.innerHTML = original; td.style.padding = ''; } };
+    td.innerHTML = ''; td.appendChild(inpD); inpD.focus();
+    return;
+  }
+
+  // Plain text fields (company)
+  var inp = document.createElement('input');
+  inp.type = 'text';
+  inp.value = lead[field] || '';
+  inp.style.cssText = 'width:100%;border:1.5px solid #6366f1;border-radius:6px;padding:5px 8px;font-size:13px;font-family:var(--sans);background:var(--card-bg);color:var(--text-primary);outline:none;min-width:80px;';
+  inp.onblur = function() { anOppSaveField(leadId, field, inp.value); };
+  inp.onkeydown = function(e) {
+    if (e.key === 'Enter') inp.blur();
+    if (e.key === 'Escape') { td.innerHTML = original; td.style.padding = ''; }
+  };
+  td.innerHTML = ''; td.appendChild(inp); inp.focus(); inp.select();
+}
+
+// Editing agent count is the primary lever for deal value — recompute MRR + size bucket together
+// Manually picking an agency size bucket sets a representative agent count for that tier
+window.anOppSetSizeBucket = function(leadId, sizeId) {
+  var defaults = { solo: 1, small: 4, large: 10, enterprise: 20 };
+  anOppSetAgents(leadId, defaults[sizeId] || 1);
+};
+
+window.anOppSetAgents = function(leadId, agentsVal) {
+  var lead = AN.leads.find(function(l){ return l.id === leadId; });
+  if (!lead) return;
+  var agents = Math.max(1, parseInt(agentsVal) || 1);
+  var pricing = anAgentPricing(agents, 0);
+  lead.oppAgents = agents;
+  lead.size = pricing.sizeId;
+  lead.oppMRR = pricing.monthly;
+  lead.updated = new Date().toISOString();
+  AN.save();
+  if (typeof anSyncOpportunitiesToCommissionTrackers === 'function') anSyncOpportunitiesToCommissionTrackers({ skipSave: true });
+  if (typeof renderOpportunities === 'function') renderOpportunities();
+  anRefreshOppPanelIfOpen(leadId);
+};
+
+// Manual override of the computed value (e.g. custom discount)
+window.anOppSetMRR = function(leadId, value) {
+  var lead = AN.leads.find(function(l){ return l.id === leadId; });
+  if (!lead) return;
+  var v = parseFloat(value);
+  if (isNaN(v) || v < 0) v = 0;
+  lead.oppMRR = v;
+  lead.updated = new Date().toISOString();
+  AN.save();
+  if (typeof renderOpportunities === 'function') renderOpportunities();
+  anRefreshOppPanelIfOpen(leadId);
+};
+
+window.anRefreshOppPanelIfOpen = function(leadId) {
+  var panel = document.getElementById('opp-record-panel');
+  if (!panel || window._anOppDetailLeadId !== leadId) return;
+  var lead = AN.leads.find(function(l){ return l.id === leadId; });
+  if (lead && typeof oppBuildRecordHTML === 'function') panel.innerHTML = oppBuildRecordHTML(lead);
+};
 
 function anBuildOppCalendarHTML(opps) {
   if (!opps.length) return '<div style="text-align:center;padding:48px;color:var(--text-muted);">No deals with close dates yet.</div>';
@@ -22239,12 +22367,19 @@ function oppBuildRecordHTML(lead) {
     +'<button type="button" class="co-quick-btn" title="Delete" onclick="anDeleteOpportunity(\''+safeId+'\')">🗑</button>'
     +'</div>'
     +'<div class="co-key-info"><div class="co-key-info-head">About this deal</div>'
-    +'<div class="co-panel-row"><span>Amount</span><span style="color:#6366f1;font-weight:800;">$'+mrr+'/mo</span></div>'
+    +'<div class="co-panel-row"><span>Amount</span><input type="number" min="0" value="'+mrr+'" onchange="anOppSetMRR(\''+safeId+'\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;font-family:inherit;font-size:13px;font-weight:800;color:#6366f1;text-align:right;width:80px;">/mo</div>'
     +'<div class="co-panel-row"><span>Close date</span><input type="date" value="'+(lead.oppCloseDate||'')+'" onchange="anOppSaveField(\''+safeId+'\',\'oppCloseDate\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;font-family:inherit;font-size:12px;text-align:right;"></div>'
     +'<div class="co-panel-row"><span>Deal stage</span><span style="color:'+st.color+';">'+anEsc(st.label)+'</span></div>'
-    +'<div class="co-panel-row"><span>Contract</span><span>'+anEsc(ctLabel)+'</span></div>'
-    +'<div class="co-panel-row"><span>Agency size</span><span>'+anEsc(sz.label)+'</span></div>'
-    +'<div class="co-panel-row"><span>Agents</span><span>'+(lead.oppAgents || 1)+'</span></div>'
+    +'<div class="co-panel-row"><span>Contract</span><select onchange="anOppSaveField(\''+safeId+'\',\'oppContract\',this.value)" style="border:none;background:transparent;font-family:inherit;font-size:12px;text-align:right;">'
+    +['mrr','arr','2yr','3yr'].map(function(ct){
+        var lbl = { mrr:'Monthly (MRR)', arr:'Annual (ARR)', '2yr':'2-Year Prepaid', '3yr':'3-Year Prepaid' }[ct];
+        return '<option value="'+ct+'"'+((lead.oppContract||'mrr')===ct?' selected':'')+'>'+lbl+'</option>';
+      }).join('')
+    +'</select></div>'
+    +'<div class="co-panel-row"><span>Agency size</span><select onchange="anOppSetSizeBucket(\''+safeId+'\',this.value)" style="border:none;background:transparent;font-family:inherit;font-size:12px;text-align:right;">'
+    +AN_SIZES.map(function(s){ return '<option value="'+s.id+'"'+((lead.size||'solo')===s.id?' selected':'')+'>'+anEsc(s.label)+'</option>'; }).join('')
+    +'</select></div>'
+    +'<div class="co-panel-row"><span>Agents</span><input type="number" min="1" value="'+(lead.oppAgents || 1)+'" onchange="anOppSetAgents(\''+safeId+'\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;font-family:inherit;font-size:12px;text-align:right;width:50px;"></div>'
     +'<div class="co-panel-row"><span>Owner</span>'
     +(typeof anCanReassignOwner === 'function' && anCanReassignOwner(lead)
       ? '<button type="button" onclick="anOpenOwnerPicker({leadId:\''+safeId+'\'})" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">'+anEsc(lead._repEmail ? anGetRepName(lead._repEmail) : 'Assign')+' ▾</button>'
@@ -22508,6 +22643,7 @@ window.anOppSaveField = function(leadId, field, value) {
     anSyncOpportunitiesToCommissionTrackers({ skipSave: true });
   }
   if (typeof renderOpportunities === 'function') renderOpportunities();
+  if (typeof anRefreshOppPanelIfOpen === 'function') anRefreshOppPanelIfOpen(leadId);
 };
 
 // ── 4. OVERRIDE renderOpportunities with DRAGGABLE KANBAN ─────
@@ -25479,7 +25615,7 @@ window.qdlSelectLead = function(leadId, name) {
 window.anSubmitQuickDeal = function() {
   var name  = (document.getElementById('qdl-name').value || '').trim();
   if (!name) { document.getElementById('qdl-name').style.borderColor = '#ef4444'; document.getElementById('qdl-name').focus(); return; }
-  var stage        = document.getElementById('qdl-stage').value;
+  var stageLabel   = document.getElementById('qdl-stage').value;
   var agents       = parseInt(document.getElementById('qdl-agents').value) || 1;
   var state        = (document.getElementById('qdl-state').value || '').trim().toUpperCase();
   var date         = document.getElementById('qdl-date').value || new Date().toISOString().split('T')[0];
@@ -25493,65 +25629,76 @@ window.anSubmitQuickDeal = function() {
   var size = pricing.sizeId;
   var sdrName = sdrEmail && typeof anGetRepName === 'function' ? anGetRepName(sdrEmail) : '';
   var aeName  = aeEmail  && typeof anGetRepName === 'function' ? anGetRepName(aeEmail) : '';
+  var statusId = (AN_OPP_STATUSES.find(function(s){ return s.label === stageLabel; }) || { id: 'demo' }).id;
+  var isClosed = statusId === 'won' || statusId === 'lost';
 
-  var deal = {
-    id: 'deal-' + Date.now() + '-' + Math.random().toString(36).slice(2,5),
-    name: name,
-    leadId: linkedLeadId || null,
-    stage: stage,
-    size: size,
-    agents: agents,
-    state: state,
-    notes: notes,
-    sdrEmail: sdrEmail,
-    sdrName: sdrName,
-    aeEmail: aeEmail,
-    aeName: aeName,
-    added: new Date().toISOString(),
-    updated: new Date().toISOString(),
-    closedDate: (stage === 'Closed Won' || stage === 'Closed Lost') ? date + 'T12:00:00.000Z' : undefined,
-    mrr: pricing.monthly || 79,
-    rep: aeEmail || sdrEmail || repEmail
-  };
+  if (!Array.isArray(AN.leads)) AN.leads = [];
 
-  if (typeof _dash !== 'undefined') {
-    if (!_dash.pipeline) _dash.pipeline = [];
-    _dash.pipeline.unshift(deal);
+  // If this deal is linked to an existing lead, convert that lead in place rather than
+  // creating a duplicate record — this is what keeps the Deals table and Leads/CRM in sync.
+  var lead = linkedLeadId ? AN.leads.find(function(l){ return l.id === linkedLeadId; }) : null;
+  if (!lead) {
+    lead = {
+      id: 'deal-' + Date.now() + '-' + Math.random().toString(36).slice(2,5),
+      firstName: name,
+      lastName: '',
+      company: name,
+      created: new Date().toISOString()
+    };
+    AN.leads.unshift(lead);
+  }
 
-    // Closed Won — add to commission ledger + fire team shout-out
-    if (stage === 'Closed Won') {
-      if (typeof anAddCommissionDeal === 'function') {
-        anAddCommissionDeal({
-          name: name,
-          size: size,
-          contractType: 'mrr',
-          closedDate: deal.added,
-          source: 'manual',
-          notes: notes + (sdrName ? ' | SDR: '+sdrName : '') + (aeName ? ' | AE: '+aeName : '')
-        }, { skipSave: true });
-      }
-      // Fire a team shout-out so everyone sees it on Home
-      if (typeof anAddTeamShout === 'function') {
-        var shoutMsg = '🏆 ' + name + ' — $' + deal.mrr + '/mo';
-        if (aeName && sdrName && aeName !== sdrName) {
-          shoutMsg += ' | AE: ' + aeName + ' · SDR: ' + sdrName;
-        } else if (aeName) {
-          shoutMsg += ' · Closed by ' + aeName;
-        } else if (sdrName) {
-          shoutMsg += ' · ' + sdrName;
-        }
-        anAddTeamShout({ type: 'close', msg: shoutMsg, rep: aeEmail || sdrEmail || repEmail });
-      }
+  lead.status         = statusId;
+  lead.isOpportunity   = true;
+  lead.state           = state || lead.state || '';
+  lead.size            = size;
+  lead.oppAgents       = agents;
+  lead.oppMRR          = pricing.monthly || 79;
+  lead.oppContract     = 'mrr';
+  lead.oppCloseDate    = date;
+  lead.oppNotes        = notes;
+  lead.notes           = notes;
+  lead.sdrEmail        = sdrEmail;
+  lead.aeEmail         = aeEmail;
+  if (aeEmail) lead._repEmail = aeEmail;
+  else if (sdrEmail && !lead._repEmail) lead._repEmail = sdrEmail;
+  lead.convertedAt     = lead.convertedAt || new Date().toISOString();
+  if (isClosed) lead.closedAt = lead.closedAt || new Date().toISOString();
+  lead.updated         = new Date().toISOString();
+
+  if (typeof AN.invalidateLeadCaches === 'function') AN.invalidateLeadCaches();
+  AN.save();
+
+  // Closed Won — add to commission ledger + fire team shout-out
+  if (statusId === 'won') {
+    if (typeof anAddCommissionDeal === 'function') {
+      anAddCommissionDeal({
+        name: name,
+        size: size,
+        contractType: 'mrr',
+        closedDate: lead.updated,
+        source: 'manual',
+        notes: notes + (sdrName ? ' | SDR: '+sdrName : '') + (aeName ? ' | AE: '+aeName : '')
+      }, { skipSave: true });
     }
-
-    if (typeof dashSave === 'function') dashSave();
+    if (typeof anAddTeamShout === 'function') {
+      var shoutMsg = '🏆 ' + name + ' — $' + lead.oppMRR + '/mo';
+      if (aeName && sdrName && aeName !== sdrName) {
+        shoutMsg += ' | AE: ' + aeName + ' · SDR: ' + sdrName;
+      } else if (aeName) {
+        shoutMsg += ' · Closed by ' + aeName;
+      } else if (sdrName) {
+        shoutMsg += ' · ' + sdrName;
+      }
+      anAddTeamShout({ type: 'close', msg: shoutMsg, rep: aeEmail || sdrEmail || repEmail });
+    }
   }
 
   document.getElementById('an-quick-deal-modal') && document.getElementById('an-quick-deal-modal').remove();
   if (typeof renderOpportunities === 'function') renderOpportunities();
 
   // Celebration toast
-  var celebMsg = stage === 'Closed Won'
+  var celebMsg = statusId === 'won'
     ? '🎉 Deal closed! ' + name + (aeName ? ' — great work ' + aeName.split(' ')[0] + '!' : '!')
     : '✓ Deal added: ' + name;
   if (typeof showToast === 'function') showToast(celebMsg);
