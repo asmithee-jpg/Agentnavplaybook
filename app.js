@@ -14456,6 +14456,33 @@ window.anAgentPricing = function(agents, assistants) {
   };
 };
 
+// Comma-formatted dollar amounts (e.g. 18539 -> "18,539")
+window.anFmtMoney = function(n) {
+  n = Math.round(Number(n) || 0);
+  return n.toLocaleString('en-US');
+};
+
+// A deal's value depends on its contract type — monthly (MRR), or annual/2yr/3yr prepaid.
+// oppMRR always stores the monthly base rate; this derives what to actually display
+// and a monthly-equivalent figure for apples-to-apples pipeline totals.
+window.anOppContractValue = function(o) {
+  var base = (o && o.oppMRR) || 0;
+  var contract = (o && o.oppContract) || 'mrr';
+  if (contract === 'arr') {
+    var totalArr = Math.round(base*12*0.80);
+    return { display: '$'+anFmtMoney(totalArr)+'/yr', monthlyEquivalent: totalArr/12, total: totalArr };
+  }
+  if (contract === '2yr') {
+    var total2 = Math.round(base*24*0.75);
+    return { display: '$'+anFmtMoney(total2)+' total', monthlyEquivalent: total2/24, total: total2 };
+  }
+  if (contract === '3yr') {
+    var total3 = Math.round(base*36*0.72);
+    return { display: '$'+anFmtMoney(total3)+' total', monthlyEquivalent: total3/36, total: total3 };
+  }
+  return { display: '$'+anFmtMoney(base)+'/mo', monthlyEquivalent: base, total: base };
+};
+
 var AN_SOURCES = ['Cold Call','HubSpot Import','Referral','Apollo','LinkedIn','Event','Inbound','CSV Import','Other'];
 
 // ── Agency size tiers — mirrors AN_SIZES buckets ──────────────
@@ -22109,6 +22136,8 @@ function anBuildOppTableHTML(opps, stages) {
     var stageId = typeof anOppPipelineStage === 'function' ? anOppPipelineStage(o) : o.status;
     var st = stageMap[stageId] || { label: stageId, color: '#6366f1' };
     var mrr = o.oppMRR || (AN_SIZES.find(function(s){ return s.id === o.size; }) || { price: 79 }).price;
+    var cv = anOppContractValue(o);
+    var contractTag = { arr:'ARR', '2yr':'2-YR', '3yr':'3-YR' }[o.oppContract];
     var szMeta = typeof anAgencySizeMeta === 'function' ? anAgencySizeMeta(o.size || 'solo') : { label: 'Solo Agent', short: 'Solo', color: '#6366f1', bg: '#eef2ff' };
     var szLabel = (AN_SIZES.find(function(s){ return s.id === o.size; }) || { label: szMeta.label }).label;
     var agents = o.oppAgents || 1;
@@ -22122,7 +22151,7 @@ function anBuildOppTableHTML(opps, stages) {
       +'<td data-field="company" style="padding:12px 14px;color:var(--text-secondary);cursor:text;" title="Click to edit">'+anEsc(o.company||'—')+'</td>'
       +'<td data-field="agents" style="padding:12px 14px;cursor:text;" title="Click to edit number of agents"><span style="background:'+szMeta.bg+';color:'+szMeta.color+';border:1px solid '+szMeta.color+'33;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">'+anEsc(szLabel)+' · '+agents+'</span></td>'
       +'<td data-field="stage" style="padding:12px 14px;cursor:text;" title="Click to edit"><span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">'+anEsc(st.label)+'</span></td>'
-      +'<td data-field="value" style="padding:12px 14px;font-weight:800;color:#6366f1;cursor:text;" title="Click to edit">$'+mrr+'/mo</td>'
+      +'<td data-field="value" style="padding:12px 14px;font-weight:800;color:#6366f1;cursor:text;" title="Click to edit">'+cv.display+(contractTag?' <span style="background:#f5f3ff;color:#7c3aed;border-radius:5px;padding:1px 6px;font-size:9.5px;font-weight:800;letter-spacing:0.05em;margin-left:4px;">'+contractTag+'</span>':'')+'</td>'
       +'<td data-field="closeDate" style="padding:12px 14px;color:var(--text-muted);cursor:text;" title="Click to edit">'+(o.oppCloseDate ? anDate(o.oppCloseDate) : '—')+'</td>'
       +'<td style="padding:12px 14px;color:var(--text-muted);font-size:12px;" onclick="event.stopPropagation()">'+anEsc(owners)+'</td>'
       +'</tr>';
@@ -22284,10 +22313,10 @@ function anBuildOppCalendarHTML(opps) {
       var name = ((o.firstName||'')+' '+(o.lastName||'')).trim() || o.company || 'Deal';
       var stageId = typeof anOppPipelineStage === 'function' ? anOppPipelineStage(o) : (o.status || 'demo');
       var st = (typeof anStatus === 'function') ? anStatus(stageId) : { label: stageId, color: '#6366f1' };
-      var mrr = o.oppMRR || 79;
+      var cv = anOppContractValue(o);
       return '<div onclick="anOpenOppRecord(\''+o.id+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid var(--divider);border-radius:10px;margin-bottom:8px;cursor:pointer;background:var(--card-bg);" onmouseover="this.style.borderColor=\'#c7d2fe\'" onmouseout="this.style.borderColor=\'var(--divider)\'">'
         +'<div><div style="font-weight:700;color:var(--text-primary);">'+anEsc(name)+'</div>'
-        +'<div style="font-size:12px;color:var(--text-muted);">'+(o.oppCloseDate ? anDate(o.oppCloseDate) : 'TBD')+' · $'+mrr+'/mo</div></div>'
+        +'<div style="font-size:12px;color:var(--text-muted);">'+(o.oppCloseDate ? anDate(o.oppCloseDate) : 'TBD')+' · '+cv.display+'</div></div>'
         +'<span style="font-size:11px;font-weight:700;color:'+st.color+';background:'+st.color+'18;padding:4px 10px;border-radius:20px;">'+anEsc(st.label)+'</span>'
         +'</div>';
     }).join('');
@@ -22299,6 +22328,7 @@ function oppBuildRecordHTML(lead) {
   var st = (typeof anStatus === 'function') ? anStatus(lead.status || 'demo') : { label: lead.status, color: '#6366f1' };
   var sz = lead.size ? (AN_SIZES.find(function(s){ return s.id === lead.size; }) || { label: lead.size, price: 79 }) : { label: 'Solo Agent', price: 79 };
   var mrr = lead.oppMRR || sz.price;
+  var cv = anOppContractValue(lead);
   var ctLabel = { mrr: 'Monthly (MRR)', arr: 'Annual (ARR)', '2yr': '2-Year Prepaid', '3yr': '3-Year Prepaid' }[lead.oppContract || 'mrr'] || 'Monthly';
   var name = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || lead.company || 'Deal';
   var safeId = lead.id.replace(/'/g, "\\'");
@@ -22367,7 +22397,8 @@ function oppBuildRecordHTML(lead) {
     +'<button type="button" class="co-quick-btn" title="Delete" onclick="anDeleteOpportunity(\''+safeId+'\')">🗑</button>'
     +'</div>'
     +'<div class="co-key-info"><div class="co-key-info-head">About this deal</div>'
-    +'<div class="co-panel-row"><span>Amount</span><input type="number" min="0" value="'+mrr+'" onchange="anOppSetMRR(\''+safeId+'\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;font-family:inherit;font-size:13px;font-weight:800;color:#6366f1;text-align:right;width:80px;">/mo</div>'
+    +'<div class="co-panel-row"><span>Monthly rate</span><input type="number" min="0" value="'+mrr+'" onchange="anOppSetMRR(\''+safeId+'\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;font-family:inherit;font-size:13px;font-weight:800;color:#6366f1;text-align:right;width:80px;">/mo</div>'
+    +'<div class="co-panel-row"><span>Deal value</span><span style="color:#6366f1;font-weight:800;">'+cv.display+'</span></div>'
     +'<div class="co-panel-row"><span>Close date</span><input type="date" value="'+(lead.oppCloseDate||'')+'" onchange="anOppSaveField(\''+safeId+'\',\'oppCloseDate\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;font-family:inherit;font-size:12px;text-align:right;"></div>'
     +'<div class="co-panel-row"><span>Deal stage</span><span style="color:'+st.color+';">'+anEsc(st.label)+'</span></div>'
     +'<div class="co-panel-row"><span>Contract</span><select onchange="anOppSaveField(\''+safeId+'\',\'oppContract\',this.value)" style="border:none;background:transparent;font-family:inherit;font-size:12px;text-align:right;">'
@@ -22405,7 +22436,7 @@ function oppBuildRecordHTML(lead) {
     +(lead.phone ? '<div style="padding:4px 10px 10px;font-size:12px;"><a href="tel:'+anEsc(anTelPhone(lead.phone))+'" style="color:var(--text-secondary);">'+anEsc(anFormatPhone(lead.phone))+'</a></div>' : '')
     +'</div></div>'
     +'<div class="co-assoc-card"><div class="co-assoc-head"><span>Company</span></div><div class="co-assoc-body">'+companyHTML+'</div></div>'
-    +'<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);border-radius:10px;padding:14px;color:#fff;margin-top:8px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;opacity:0.55;">Pipeline value</div><div style="font-size:26px;font-weight:900;margin-top:4px;">$'+mrr+'<span style="font-size:13px;opacity:0.5;">/mo</span></div></div>'
+    +'<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);border-radius:10px;padding:14px;color:#fff;margin-top:8px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;opacity:0.55;">Pipeline value</div><div style="font-size:26px;font-weight:900;margin-top:4px;">'+cv.display+'</div></div>'
     +'</aside></div>';
 }
 
@@ -22690,22 +22721,22 @@ window.renderOpportunities = function() {
   ];
 
   var totalMRR = opps.filter(function(o){return o.status!=='lost';})
-    .reduce(function(s,o){ return s+(o.oppMRR||( AN_SIZES.find(function(x){return x.id===o.size;})||{price:79}).price); },0);
+    .reduce(function(s,o){ return s+anOppContractValue(o).monthlyEquivalent; },0);
   var wonCount = opps.filter(function(o){return o.status==='won';}).length;
   var winRate  = opps.length>0 ? Math.round(wonCount/opps.length*100) : 0;
 
   var statsHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;">'
-    +[{l:'Opportunities',v:opps.length,c:'#6366f1'},{l:'Pipeline MRR',v:'$'+totalMRR+'/mo',c:'#10b981'},{l:'Closed Won',v:wonCount,c:'#f59e0b'},{l:'Win Rate',v:winRate+'%',c:'#8b5cf6'}]
+    +[{l:'Opportunities',v:opps.length,c:'#6366f1'},{l:'Pipeline MRR',v:'$'+anFmtMoney(totalMRR)+'/mo',c:'#10b981'},{l:'Closed Won',v:wonCount,c:'#f59e0b'},{l:'Win Rate',v:winRate+'%',c:'#8b5cf6'}]
     .map(function(s){ return '<div style="background:var(--card-bg);border:1px solid var(--divider);border-radius:12px;padding:16px;text-align:center;"><div style="font-size:9px;font-weight:700;color:'+s.c+';text-transform:uppercase;letter-spacing:0.12em;margin-bottom:6px;">'+s.l+'</div><div style="font-size:24px;font-weight:900;color:var(--text-primary);letter-spacing:-1px;">'+s.v+'</div></div>'; })
     .join('')+'</div>';
 
   var kanbanHTML = '<div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:16px;min-height:400px;">'
     +stages.map(function(stage){
       var stageLead = opps.filter(function(o){ return anOppPipelineStage(o) === stage.id; });
-      var stageMRR  = stageLead.reduce(function(s,o){ return s+(o.oppMRR||( AN_SIZES.find(function(x){return x.id===o.size;})||{price:79}).price); },0);
+      var stageMRR  = stageLead.reduce(function(s,o){ return s+anOppContractValue(o).monthlyEquivalent; },0);
 
       var cards = stageLead.map(function(opp){
-        var mrr    = opp.oppMRR||( AN_SIZES.find(function(s){return s.id===opp.size;})||{price:79}).price;
+        var cv     = anOppContractValue(opp);
         var sz     = opp.size ? (AN_SIZES.find(function(s){return s.id===opp.size;})||{label:opp.size}) : {label:'Solo'};
         var szMeta = typeof anAgencySizeMeta === 'function' ? anAgencySizeMeta(opp.size || 'solo') : { color: stage.color, bg: '#fff', border: '#e4e4e7', short: 'Solo' };
         var cardBorder = szMeta.color;
@@ -22719,7 +22750,7 @@ window.renderOpportunities = function() {
           +'<div style="font-size:13.5px;font-weight:700;color:var(--text-primary);margin-bottom:2px;padding-right:28px;">'+anEsc((opp.firstName||'')+' '+(opp.lastName||''))+'</div>'
           +(opp.company?'<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">'+anEsc(opp.company)+'</div>':'<div style="margin-bottom:8px;"></div>')
           +'<div style="display:flex;justify-content:space-between;align-items:center;">'
-          +'<div><div style="font-size:14px;font-weight:800;color:'+szMeta.color+';">$'+mrr+'/mo</div>'
+          +'<div><div style="font-size:14px;font-weight:800;color:'+szMeta.color+';">'+cv.display+'</div>'
           +'<div style="font-size:10px;color:var(--text-muted);"><span style="font-weight:700;color:'+szMeta.color+';">'+anEsc(sz.label)+'</span> · '+ctLabel+'</div>'
           +'</div>'
           +(opp.oppCloseDate?'<div style="font-size:10.5px;color:#6366f1;text-align:right;">📅<br>'+anDate(opp.oppCloseDate)+'</div>':'')
@@ -22736,7 +22767,7 @@ window.renderOpportunities = function() {
         +'<span style="font-size:12.5px;font-weight:700;color:var(--text-primary);">'+stage.label+'</span>'
         +'<span style="background:var(--card-bg);border:1px solid var(--divider);border-radius:10px;padding:1px 7px;font-size:11px;color:var(--text-muted);">'+stageLead.length+'</span>'
         +'</div>'
-        +(stageMRR?'<span style="font-size:11px;font-weight:600;color:'+stage.color+';">$'+stageMRR+'/mo</span>':'')
+        +(stageMRR?'<span style="font-size:11px;font-weight:600;color:'+stage.color+';">$'+anFmtMoney(stageMRR)+'/mo</span>':'')
         +'</div>'
         + cards
         +'</div>';
@@ -25519,6 +25550,11 @@ window.anOpenQuickAddDeal = function() {
     + '</select></div>'
     + '<div><label style="'+labelStyle+'">Number of Agents</label>'
     + '<input id="qdl-agents" type="number" min="1" value="1" placeholder="e.g. 4" style="'+inpStyle+'" oninput="qdlUpdateValuePreview()">'
+    + '</div>'
+    + '<div><label style="'+labelStyle+'">Contract</label>'
+    + '<select id="qdl-contract" style="'+selStyle+'" onchange="qdlUpdateValuePreview()">'
+    + '<option value="mrr">Monthly (MRR)</option><option value="arr">Annual Prepaid (ARR)</option><option value="2yr">2-Year Prepaid</option><option value="3yr">3-Year Prepaid</option>'
+    + '</select>'
     + '<div id="qdl-value-preview" style="font-size:10.5px;color:#6366f1;margin-top:3px;font-weight:700;"></div>'
     + '</div>'
     + '</div>'
@@ -25565,11 +25601,13 @@ window.anOpenQuickAddDeal = function() {
 
 window.qdlUpdateValuePreview = function() {
   var el = document.getElementById('qdl-agents');
+  var contractEl = document.getElementById('qdl-contract');
   var preview = document.getElementById('qdl-value-preview');
   if (!el || !preview) return;
   var agents = parseInt(el.value) || 1;
   var pricing = anAgentPricing(agents, 0);
-  preview.textContent = '$' + pricing.monthly + '/mo · ' + pricing.planName;
+  var cv = anOppContractValue({ oppMRR: pricing.monthly, oppContract: contractEl ? contractEl.value : 'mrr' });
+  preview.textContent = cv.display + ' · ' + pricing.planName;
 };
 
 window.qdlSearchLeads = function(q) {
@@ -25617,6 +25655,7 @@ window.anSubmitQuickDeal = function() {
   if (!name) { document.getElementById('qdl-name').style.borderColor = '#ef4444'; document.getElementById('qdl-name').focus(); return; }
   var stageLabel   = document.getElementById('qdl-stage').value;
   var agents       = parseInt(document.getElementById('qdl-agents').value) || 1;
+  var contract     = (document.getElementById('qdl-contract') && document.getElementById('qdl-contract').value) || 'mrr';
   var state        = (document.getElementById('qdl-state').value || '').trim().toUpperCase();
   var date         = document.getElementById('qdl-date').value || new Date().toISOString().split('T')[0];
   var notes        = (document.getElementById('qdl-notes').value || '').trim();
@@ -25654,7 +25693,7 @@ window.anSubmitQuickDeal = function() {
   lead.size            = size;
   lead.oppAgents       = agents;
   lead.oppMRR          = pricing.monthly || 79;
-  lead.oppContract     = 'mrr';
+  lead.oppContract     = contract;
   lead.oppCloseDate    = date;
   lead.oppNotes        = notes;
   lead.notes           = notes;
@@ -25682,7 +25721,7 @@ window.anSubmitQuickDeal = function() {
       }, { skipSave: true });
     }
     if (typeof anAddTeamShout === 'function') {
-      var shoutMsg = '🏆 ' + name + ' — $' + lead.oppMRR + '/mo';
+      var shoutMsg = '🏆 ' + name + ' — ' + anOppContractValue(lead).display;
       if (aeName && sdrName && aeName !== sdrName) {
         shoutMsg += ' | AE: ' + aeName + ' · SDR: ' + sdrName;
       } else if (aeName) {
