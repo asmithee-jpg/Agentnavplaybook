@@ -22153,7 +22153,7 @@ function anBuildOppTableHTML(opps, stages) {
       +'<td data-field="stage" style="padding:12px 14px;cursor:text;" title="Click to edit"><span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">'+anEsc(st.label)+'</span></td>'
       +'<td data-field="value" style="padding:12px 14px;font-weight:800;color:#6366f1;cursor:text;" title="Click to edit">'+cv.display+(contractTag?' <span style="background:#f5f3ff;color:#7c3aed;border-radius:5px;padding:1px 6px;font-size:9.5px;font-weight:800;letter-spacing:0.05em;margin-left:4px;">'+contractTag+'</span>':'')+'</td>'
       +'<td data-field="closeDate" style="padding:12px 14px;color:var(--text-muted);cursor:text;" title="Click to edit">'+(o.oppCloseDate ? anDate(o.oppCloseDate) : '—')+'</td>'
-      +'<td style="padding:12px 14px;color:var(--text-muted);font-size:12px;" onclick="event.stopPropagation()">'+anEsc(owners)+'</td>'
+      +'<td style="padding:12px 14px;color:var(--text-muted);font-size:12px;cursor:pointer;" title="Click to edit SDR / AE" onclick="event.stopPropagation();anOpenSdrAePicker(\''+o.id+'\')">'+anEsc(owners)+' <span style="color:#6366f1;">▾</span></td>'
       +'</tr>';
   }).join('');
   return '<div class="opp-table-wrap"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:820px;">'
@@ -22295,6 +22295,59 @@ window.anRefreshOppPanelIfOpen = function(leadId) {
   if (lead && typeof oppBuildRecordHTML === 'function') panel.innerHTML = oppBuildRecordHTML(lead);
 };
 
+// Editable SDR / AE picker — used by the Deals table cell and the record panel
+window.anOpenSdrAePicker = function(leadId) {
+  var lead = AN.leads.find(function(l){ return l.id === leadId; });
+  if (!lead) return;
+  var old = document.getElementById('an-sdrae-popover');
+  if (old) old.remove();
+
+  var knownEmails = typeof anGetKnownRepEmails === 'function' ? anGetKnownRepEmails() : [];
+  var repOpts = function(selected) {
+    return '<option value="">— None —</option>' + knownEmails.map(function(em) {
+      var nm = typeof anGetRepName === 'function' ? anGetRepName(em) : em.split('@')[0];
+      return '<option value="'+em+'"'+(em===selected?' selected':'')+'>'+anEsc(nm)+'</option>';
+    }).join('');
+  };
+  var currentSdr = typeof anResolveOppSdrEmail === 'function' ? anResolveOppSdrEmail(lead) : (lead.sdrEmail||'');
+  var currentAe  = typeof anResolveOppAeEmail === 'function' ? anResolveOppAeEmail(lead) : (lead.aeEmail||'');
+
+  var pop = document.createElement('div');
+  pop.id = 'an-sdrae-popover';
+  pop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:10002;display:flex;align-items:center;justify-content:center;padding:20px;';
+  pop.onclick = function(e){ if (e.target===pop) pop.remove(); };
+  var selStyle = 'width:100%;border:1.5px solid var(--divider,#e4e4e7);border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;background:var(--card-bg,#fff);color:var(--text-primary,#09090b);cursor:pointer;';
+  pop.innerHTML = '<div style="background:var(--card-bg,#fff);border-radius:14px;padding:22px;width:340px;max-width:95vw;box-shadow:0 16px 48px rgba(0,0,0,0.28);" onclick="event.stopPropagation()">'
+    +'<div style="font-size:15px;font-weight:800;color:var(--text-primary);margin-bottom:14px;">Assign SDR / AE</div>'
+    +'<label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:5px;display:block;">SDR (sourced the lead)</label>'
+    +'<select id="sdrae-sdr" style="'+selStyle+'margin-bottom:14px;">'+repOpts(currentSdr)+'</select>'
+    +'<label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:5px;display:block;">AE (ran the demo / closed)</label>'
+    +'<select id="sdrae-ae" style="'+selStyle+'margin-bottom:18px;">'+repOpts(currentAe)+'</select>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<button onclick="document.getElementById(\'an-sdrae-popover\').remove()" style="flex:1;padding:10px;border:1.5px solid var(--divider);border-radius:8px;background:var(--card-bg);color:var(--text-muted);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Cancel</button>'
+    +'<button onclick="anSaveSdrAe(\''+leadId+'\')" style="flex:2;padding:10px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">Save</button>'
+    +'</div></div>';
+  document.body.appendChild(pop);
+};
+
+window.anSaveSdrAe = function(leadId) {
+  var lead = AN.leads.find(function(l){ return l.id === leadId; });
+  if (!lead) return;
+  var sdrEl = document.getElementById('sdrae-sdr');
+  var aeEl  = document.getElementById('sdrae-ae');
+  lead.sdrEmail = sdrEl ? sdrEl.value : lead.sdrEmail;
+  lead.aeEmail  = aeEl ? aeEl.value : lead.aeEmail;
+  if (lead.aeEmail) lead._repEmail = lead.aeEmail;
+  else if (lead.sdrEmail) lead._repEmail = lead.sdrEmail;
+  lead.updated = new Date().toISOString();
+  AN.save();
+  var pop = document.getElementById('an-sdrae-popover');
+  if (pop) pop.remove();
+  if (typeof renderOpportunities === 'function') renderOpportunities();
+  if (typeof anRefreshOppPanelIfOpen === 'function') anRefreshOppPanelIfOpen(leadId);
+  if (typeof showToast === 'function') showToast('SDR / AE updated');
+};
+
 function anBuildOppCalendarHTML(opps) {
   if (!opps.length) return '<div style="text-align:center;padding:48px;color:var(--text-muted);">No deals with close dates yet.</div>';
   var byMonth = {};
@@ -22415,6 +22468,11 @@ function oppBuildRecordHTML(lead) {
     +(typeof anCanReassignOwner === 'function' && anCanReassignOwner(lead)
       ? '<button type="button" onclick="anOpenOwnerPicker({leadId:\''+safeId+'\'})" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">'+anEsc(lead._repEmail ? anGetRepName(lead._repEmail) : 'Assign')+' ▾</button>'
       : '<span>'+anEsc(lead._repEmail ? anGetRepName(lead._repEmail) : '—')+'</span>')
+    +'</div>'
+    +'<div class="co-panel-row"><span>SDR / AE</span>'
+    +'<button type="button" onclick="anOpenSdrAePicker(\''+safeId+'\')" style="background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">'
+    +anEsc((typeof anResolveOppSdrEmail==='function'&&anResolveOppSdrEmail(lead))?anGetRepName(anResolveOppSdrEmail(lead)):'—')
+    +' / '+anEsc((typeof anResolveOppAeEmail==='function'&&anResolveOppAeEmail(lead))?anGetRepName(anResolveOppAeEmail(lead)):'—')+' ▾</button>'
     +'</div>'
     +'<div style="padding:12px 14px;"><label style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Move stage</label>'
     +'<select onchange="anMoveOppStage(\''+safeId+'\',this.value);anOpenOppRecord(\''+safeId+'\')" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:8px 10px;font-size:13px;background:var(--card-bg);font-family:inherit;">'+STATUS_OPTS+'</select></div>'
