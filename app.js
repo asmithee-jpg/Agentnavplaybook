@@ -14624,7 +14624,7 @@ function anMergeOpportunityRecords(keep, drop) {
     keep.callLog = (keep.callLog || []).concat(drop.callLog);
     keep.callLog.sort(function(a, b) { return (b.date + b.time).localeCompare(a.date + a.time); });
   }
-  ['notes', 'oppNotes', 'demoDate', 'demoTime', 'demoBookedAt', 'demoCompletedAt', 'company', 'email', 'phone', 'firstName', 'lastName', 'oppMRR', 'size', 'oppCloseDate'].forEach(function(f) {
+  ['notes', 'oppNotes', 'demoDate', 'demoTime', 'demoBookedAt', 'demoCompletedAt', 'company', 'email', 'phone', 'firstName', 'lastName', 'oppMRR', 'size', 'oppCloseDate', 'oppAgents', 'oppContract', 'sdrEmail', 'aeEmail'].forEach(function(f) {
     if ((keep[f] === undefined || keep[f] === null || keep[f] === '') && drop[f]) keep[f] = drop[f];
   });
   if (anOppStageRank(drop.status) > anOppStageRank(keep.status)) keep.status = drop.status;
@@ -14807,7 +14807,7 @@ function anSyncRepLeadsToCloud(opts, cb){
   opts = opts || {};
   cb = cb || function(){};
   var sb = typeof getSupabase === 'function' ? getSupabase() : null;
-  if(!sb || typeof _currentUser === 'undefined' || !_currentUser || !AN.isAdmin){
+  if(!sb || typeof _currentUser === 'undefined' || !_currentUser){
     cb();
     return;
   }
@@ -14815,15 +14815,20 @@ function anSyncRepLeadsToCloud(opts, cb){
     var only = opts.onlyEmails ? opts.onlyEmails.map(function(e){ return (e || '').toLowerCase(); }).filter(Boolean) : null;
     var byRep = {};
     AN.leads.forEach(function(l){
-      if(!l || !anIsProspect(l)) return;
-      var em = (l._repEmail || '').toLowerCase();
-      if(!em || em.indexOf('@') < 1) return;
-      if(only && only.indexOf(em) < 0) return;
-      if(!byRep[em]) byRep[em] = [];
-      var c = Object.assign({}, l);
-      // Keep _repEmail in the stored data so ownership survives reload
-      c._repEmail = em;
-      byRep[em].push(c);
+      if(!l) return;
+      // A deal is visible to both its SDR and its AE, not just one "primary" owner —
+      // push a copy into each of their rows so it shows up on their own devices too.
+      var emails = typeof anLeadVisibleEmails === 'function' ? anLeadVisibleEmails(l) : [(l._repEmail||'').toLowerCase()];
+      emails.forEach(function(em){
+        if(!em || em.indexOf('@') < 1) return;
+        if(only && only.indexOf(em) < 0) return;
+        if(!byRep[em]) byRep[em] = [];
+        var c = Object.assign({}, l);
+        // Keep _repEmail as the primary owner for display purposes, but the record
+        // itself is still delivered into every involved rep's own cloud row.
+        c._repEmail = c._repEmail || em;
+        byRep[em].push(c);
+      });
     });
     var upserts = [];
     Object.keys(byRep).forEach(function(em){
@@ -15131,24 +15136,12 @@ function anFinishCloudLeadLoad(sb, cb){
     if(cb) cb();
   }
 
-  if(AN.isAdmin){
-    sb.from('an_leads').select('*').order('updated_at',{ascending:false}).then(function(r){
-      mergeCloudLeads(anParseLeadsFromSupabaseRows(r.data));
-    }).catch(function(err){
-      console.warn('[CRM] Supabase load failed, using local cache:', err);
-      anApplyOwnerPatches(AN.leads);
-      if(cb) cb();
-    });
-    return;
-  }
-
-  // Non-admin: only fetch their own row. Their leads already have correct _repEmail
-  // from our ownership fix, so we don't need to download the admin's entire row.
-  var repEmail = (AN.currentRepEmail || '').toLowerCase();
-  sb.from('an_leads').select('*').eq('rep_email', repEmail).order('updated_at',{ascending:false})
-  .then(function(result){
-    var ownLeads = anParseLeadsFromSupabaseRows((result.data) || []);
-    mergeCloudLeads(ownLeads);
+  // Everyone reads the same shared team row — there's exactly one copy of the truth.
+  // Non-admins still only ever SEE their own/visible records, enforced by
+  // anEnforceRepLeadScope() below, but the underlying data is never siloed per-account.
+  sb.from('an_leads_shared').select('data').eq('team_id', 'default').maybeSingle().then(function(r){
+    var rows = (r.data && Array.isArray(r.data.data)) ? [{ data: r.data.data }] : [];
+    mergeCloudLeads(anParseLeadsFromSupabaseRows(rows));
   }).catch(function(err){
     console.warn('[CRM] Supabase load failed, using local cache:', err);
     anApplyOwnerPatches(AN.leads);
@@ -15221,65 +15214,38 @@ AN.save = function(cb){
       if(cb) cb(true, null, where || 'local');
       return;
     }
-    var repEmail = (AN.currentRepEmail || _currentUser.email || '').toLowerCase();
 
-    if(AN.isAdmin){
-      function finishAdminSave(cloudErr){
-        if(cb) cb(true, cloudErr || null, cloudErr ? (where || 'local') : (where || 'cloud'));
-      }
-      anSyncRepLeadsToCloud({}, function(){
-        if(AN.leads.length > AN_LARGE_LEAD_SKIP_CLOUD){
-          finishAdminSave(null);
-          return;
-        }
-        var payload = AN.leads.map(function(l){ return Object.assign({}, l); });
-        sb.from('an_leads').upsert({
-          user_id: _currentUser.id,
-          rep_email: repEmail,
-          data: payload,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id' }).then(function(r){
-          if(r.error){
-            console.error('[CRM] Supabase save error:', r.error);
-            finishAdminSave(r.error);
-          } else finishAdminSave(null);
-        }).catch(function(err){
-          console.error('[CRM] Supabase save failed:', err);
-          finishAdminSave(err);
-        });
+    // Everyone shares one team row now. A non-admin's AN.leads is a scoped VIEW
+    // (only records they can see) — never write it wholesale, or it would erase
+    // every teammate's unrelated data. Always merge this rep's copy against the
+    // freshest server copy first, keeping every other record untouched.
+    sb.from('an_leads_shared').select('data').eq('team_id', 'default').maybeSingle().then(function(r){
+      var serverLeads = (r.data && Array.isArray(r.data.data)) ? r.data.data : [];
+      var byId = {};
+      serverLeads.forEach(function(l){ if(l && l.id) byId[l.id] = l; });
+      AN.leads.forEach(function(l){
+        if(!l || !l.id) return;
+        var existing = byId[l.id];
+        // This rep's local copy is what they just edited — prefer it unless the
+        // server somehow has a newer edit (e.g. a teammate saved moments ago).
+        if(!existing || anLeadUpdatedMs(l) >= anLeadUpdatedMs(existing)) byId[l.id] = l;
       });
-      return;
-    }
-
-    // For reps with large lead sets: always save changed/active leads to Supabase
-    // so admin can see their work. We save the full row but only leads with activity.
-    var hasChanged = AN.leads.filter(function(l){
-      return !l._repEmail || l._repEmail.toLowerCase() === repEmail;
-    });
-    // For very large sets, only push leads that have been touched (have callLog, status change, or recent update)
-    var cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-    var payload = (hasChanged.length > AN_LARGE_LEAD_SKIP_CLOUD)
-      ? hasChanged.filter(function(l){
-          return (l.callLog && l.callLog.length > 0)
-            || (l.status && l.status !== 'new')
-            || (l.updated && l.updated > cutoff)
-            || l.isOpportunity;
-        })
-      : hasChanged;
-    payload = payload.map(function(l){ var c = Object.assign({}, l); c._repEmail = repEmail; return c; });
-    if (!payload.length) { if(cb) cb(true, null, where || 'idb'); return; }
-    sb.from('an_leads').upsert({
-      user_id: _currentUser.id,
-      rep_email: repEmail,
-      data: payload,
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id' }).then(function(r){
-      if(r.error){
-        console.error('[CRM] Supabase save error:', r.error);
-        if(cb) cb(true, r.error, where || 'local');
-      } else if(cb) cb(true, null, 'cloud');
+      var merged = Object.keys(byId).map(function(id){ return byId[id]; });
+      sb.from('an_leads_shared').upsert({
+        team_id: 'default',
+        data: merged,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'team_id' }).then(function(r2){
+        if(r2.error){
+          console.error('[CRM] Supabase save error:', r2.error);
+          if(cb) cb(true, r2.error, where || 'local');
+        } else if(cb) cb(true, null, 'cloud');
+      }).catch(function(err2){
+        console.error('[CRM] Supabase save failed:', err2);
+        if(cb) cb(true, err2, where || 'local');
+      });
     }).catch(function(err){
-      console.error('[CRM] Supabase save failed:', err);
+      console.error('[CRM] Supabase fetch-before-save failed:', err);
       if(cb) cb(true, err, where || 'local');
     });
   });
@@ -15879,26 +15845,41 @@ window.anDeleteContactList = function(id){
 };
 
 // ── Rep vs admin lead visibility ──────────────────────────────
+// A plain lead/prospect has one owner (_repEmail). A deal can involve two people —
+// the SDR who sourced it and the AE who's running it — and both should see it on
+// their own account/device, not just whichever one happens to be the "primary" owner.
+window.anLeadVisibleEmails = function(lead) {
+  var emails = [];
+  if (!lead) return emails;
+  var add = function(e) { e = (e || '').toLowerCase().trim(); if (e && emails.indexOf(e) < 0) emails.push(e); };
+  add(lead._repEmail);
+  if (lead.isOpportunity) {
+    add(lead.sdrEmail);
+    add(lead.aeEmail);
+  }
+  return emails;
+};
+
 window.anRepOwnsLead = function(lead) {
   if (!lead || typeof AN === 'undefined') return false;
   if (AN.isAdmin) return true;
   var myEmail = (AN.currentRepEmail || '').toLowerCase();
   if (!myEmail) return false;
-  return (lead._repEmail || '').toLowerCase() === myEmail;
+  return anLeadVisibleEmails(lead).indexOf(myEmail) >= 0;
 };
 
 window.anFilterLeadsForCurrentRep = function(leads) {
   if (typeof AN !== 'undefined' && AN.isAdmin) return leads || [];
   var myEmail = (AN.currentRepEmail || '').toLowerCase();
   return (leads || []).filter(function(l) {
-    var owner = (l._repEmail || '').toLowerCase();
-    // Legacy leads with no _repEmail stamped: if it's in this rep's own local/cloud data,
+    var visible = anLeadVisibleEmails(l);
+    // Legacy leads with no owner stamped at all: if it's in this rep's own local/cloud data,
     // it belongs to them — stamp it now rather than silently dropping it.
-    if (!owner) {
+    if (!visible.length) {
       if (l) l._repEmail = myEmail;
       return true;
     }
-    return owner === myEmail;
+    return visible.indexOf(myEmail) >= 0;
   });
 };
 
@@ -22140,7 +22121,8 @@ function anBuildOppTableHTML(opps, stages) {
     var contractTag = { arr:'ARR', '2yr':'2-YR', '3yr':'3-YR' }[o.oppContract];
     var szMeta = typeof anAgencySizeMeta === 'function' ? anAgencySizeMeta(o.size || 'solo') : { label: 'Solo Agent', short: 'Solo', color: '#6366f1', bg: '#eef2ff' };
     var szLabel = (AN_SIZES.find(function(s){ return s.id === o.size; }) || { label: szMeta.label }).label;
-    var agents = o.oppAgents || 1;
+    var agents = (o.oppAgents != null && o.oppAgents !== '') ? o.oppAgents : null;
+    var agentsDisplay = agents != null ? agents : '?';
     var sdrEm = typeof anResolveOppSdrEmail === 'function' ? anResolveOppSdrEmail(o) : '';
     var aeEm = typeof anResolveOppAeEmail === 'function' ? anResolveOppAeEmail(o) : '';
     var owners = (sdrEm ? 'SDR: ' + anGetRepName(sdrEm) : 'SDR: —')
@@ -22149,7 +22131,7 @@ function anBuildOppTableHTML(opps, stages) {
     return '<tr data-lead-id="'+o.id+'" onclick="anOpenOppRecord(\''+o.id+'\')" style="border-bottom:1px solid var(--divider);cursor:pointer;" onmouseover="this.style.background=\'rgba(99,102,241,0.04)\'" onmouseout="this.style.background=\'transparent\'">'
       +'<td style="padding:12px 14px;font-weight:700;color:var(--text-primary);">'+anEsc(name)+'</td>'
       +'<td data-field="company" style="padding:12px 14px;color:var(--text-secondary);cursor:text;" title="Click to edit">'+anEsc(o.company||'—')+'</td>'
-      +'<td data-field="agents" style="padding:12px 14px;cursor:text;" title="Click to edit number of agents"><span style="background:'+szMeta.bg+';color:'+szMeta.color+';border:1px solid '+szMeta.color+'33;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">'+anEsc(szLabel)+' · '+agents+'</span></td>'
+      +'<td data-field="agents" style="padding:12px 14px;cursor:text;" title="Click to edit number of agents"><span style="background:'+szMeta.bg+';color:'+szMeta.color+';border:1px solid '+szMeta.color+'33;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">'+anEsc(szLabel)+' · '+agentsDisplay+'</span></td>'
       +'<td data-field="stage" style="padding:12px 14px;cursor:text;" title="Click to edit"><span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">'+anEsc(st.label)+'</span></td>'
       +'<td data-field="value" style="padding:12px 14px;font-weight:800;color:#6366f1;cursor:text;" title="Click to edit">'+cv.display+(contractTag?' <span style="background:#f5f3ff;color:#7c3aed;border-radius:5px;padding:1px 6px;font-size:9.5px;font-weight:800;letter-spacing:0.05em;margin-left:4px;">'+contractTag+'</span>':'')+'</td>'
       +'<td data-field="closeDate" style="padding:12px 14px;color:var(--text-muted);cursor:text;" title="Click to edit">'+(o.oppCloseDate ? anDate(o.oppCloseDate) : '—')+'</td>'
