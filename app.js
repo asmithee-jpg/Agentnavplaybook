@@ -31196,8 +31196,77 @@ function buildRepCard(email) {
     + '<button onclick="openAssignLeadsModal(\'' + anEsc(email) + '\')" style="flex:1;padding:6px 0;border:1.5px solid var(--divider);border-radius:7px;background:var(--card-bg);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;font-family:var(--sans);">📋 Assign Leads</button>'
     + '<button onclick="resendInvite(\'' + anEsc(email) + '\')" style="flex:1;padding:6px 0;border:none;border-radius:7px;background:rgba(99,102,241,0.1);font-size:12px;font-weight:700;color:#6366f1;cursor:pointer;font-family:var(--sans);">📧 Resend Invite</button>'
     + '</div>'
+    + '<button onclick="openSetPasswordModal(\'' + anEsc(email) + '\')" style="width:100%;padding:6px 0;border:1.5px solid rgba(245,158,11,0.3);border-radius:7px;background:rgba(245,158,11,0.08);font-size:12px;font-weight:700;color:#b45309;cursor:pointer;font-family:var(--sans);">🔑 Set Password Directly</button>'
     + '</div>';
 }
+
+// ── SET PASSWORD DIRECTLY (bypasses fragile email-link reset flow) ────
+window.openSetPasswordModal = function(email) {
+  var old = document.getElementById('set-rep-pw-modal'); if (old) old.remove();
+  var m = document.createElement('div');
+  m.id = 'set-rep-pw-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:10001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+  m.innerHTML = '<div style="background:var(--card-bg);border-radius:16px;width:420px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,0.35);overflow:hidden;">'
+    + '<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);padding:22px 26px;display:flex;justify-content:space-between;align-items:center;">'
+    + '<div><div style="font-size:18px;font-weight:800;color:#fff;">Set Password Directly</div>'
+    + '<div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:2px;">' + anEsc(email) + '</div></div>'
+    + '<button onclick="document.getElementById(\'set-rep-pw-modal\').remove()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px;">✕</button>'
+    + '</div>'
+    + '<div style="padding:24px 26px;">'
+    + '<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:12.5px;color:var(--text-primary);line-height:1.6;">'
+    + '⚠️ This sets their password immediately — no email involved. Use this when reset emails keep expiring before they\'re clicked. Share the password with them directly and have them change it once they\'re in.'
+    + '</div>'
+    + '<label style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:5px;">New Password</label>'
+    + '<input id="set-pw-input" type="text" placeholder="At least 8 characters" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:13.5px;color:var(--text-primary);background:var(--card-bg);outline:none;font-family:var(--sans);box-sizing:border-box;margin-bottom:14px;">'
+    + '<div id="set-pw-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 13px;font-size:13px;color:#ef4444;margin-bottom:12px;"></div>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button onclick="document.getElementById(\'set-rep-pw-modal\').remove()" style="flex:1;padding:11px;border-radius:8px;border:1.5px solid var(--divider);background:transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--text-secondary);">Cancel</button>'
+    + '<button id="set-pw-submit-btn" onclick="submitSetPassword(\'' + anEsc(email) + '\')" style="flex:2;padding:11px;border-radius:8px;border:none;background:#f59e0b;color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;font-family:var(--sans);">Set Password</button>'
+    + '</div></div></div>';
+  document.body.appendChild(m);
+  m.onclick = function(e) { if (e.target === m) m.remove(); };
+  setTimeout(function(){ var f = document.getElementById('set-pw-input'); if (f) f.focus(); }, 50);
+};
+
+window.submitSetPassword = function(email) {
+  var pw  = (document.getElementById('set-pw-input')?.value || '').trim();
+  var btn = document.getElementById('set-pw-submit-btn');
+  var err = document.getElementById('set-pw-error');
+
+  if (!pw || pw.length < 8) {
+    err.textContent = 'Password must be at least 8 characters';
+    err.style.display = 'block';
+    return;
+  }
+  err.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Setting password...';
+
+  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
+  var getToken = sb ? sb.auth.getSession().then(function(r) { return (r.data && r.data.session && r.data.session.access_token) || ''; }) : Promise.resolve('');
+
+  getToken.then(function(token) {
+    return fetch('/.netlify/functions/admin-set-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ email: email, newPassword: pw })
+    });
+  }).then(function(res) {
+    return res.json().then(function(data) {
+      if (!res.ok || data.error) throw new Error(data.error || 'Could not set password');
+      return data;
+    });
+  }).then(function() {
+    var modal = document.getElementById('set-rep-pw-modal');
+    if (modal) modal.remove();
+    if (typeof showToast === 'function') showToast('Password set for ' + email + ' — share it with them directly');
+  }).catch(function(e) {
+    err.textContent = (e && e.message) ? e.message : 'Could not set password';
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Set Password';
+  });
+};
 
 // ── INVITE REP MODAL ──────────────────────────────────────────
 window.openInviteRepModal = function() {
