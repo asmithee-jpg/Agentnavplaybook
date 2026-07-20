@@ -31287,6 +31287,21 @@ window.anInviteRepClientSide = function(email, fullName, role) {
         reject(new Error(msg || 'Could not send invite'));
         return;
       }
+      // Supabase's signUp() does NOT return an error for an already-registered,
+      // confirmed email — it returns a normal-looking success with an EMPTY
+      // identities array, specifically to prevent email enumeration. If we don't
+      // check for this, we'd tell the admin an invite was sent when nothing
+      // actually went out, which is exactly what happened here.
+      var identities = result.data && result.data.user && result.data.user.identities;
+      var looksNew = !identities || identities.length > 0;
+      if (!looksNew) {
+        return sb.auth.resetPasswordForEmail(email, {
+          redirectTo: redirectTo + '#reset-password'
+        }).then(function(r2) {
+          if (r2.error) reject(new Error(r2.error.message));
+          else resolve({ existing: true, via: 'supabase' });
+        });
+      }
       resolve({ existing: false, via: 'supabase' });
     }).catch(reject);
   });
