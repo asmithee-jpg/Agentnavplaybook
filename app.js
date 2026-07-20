@@ -545,6 +545,24 @@ showSection=function(id,btn){
   if(id==='admin')setTimeout(function(){switchAdminTab('scripts');},50);if(id==='pricing')setTimeout(calcUniversal,50);var scriptSections=['pitches','coldcall','discovery','demo','closing','onboarding','objections','battlecards','talktracks'];if(scriptSections.indexOf(id)>=0)setTimeout(function(){loadMyScript(id);},50);
 };;onUserLoggedIn=function(user){if(typeof _origOnLogin3==='function')_origOnLogin3(user);updateSidebarAuth(user);setTimeout(checkAdminAccess,200);var sb=getSupabase();if(sb&&user){sb.from('rep_pitches').select('pitches').eq('user_id',user.id).single().then(function(r){if(r.data&&r.data.pitches){try{var remote=JSON.parse(r.data.pitches);var local={};try{local=JSON.parse(localStorage.getItem('my-scripts')||'{}');}catch(e){}
 Object.keys(remote).forEach(function(k){if(remote[k])local[k]=remote[k];});localStorage.setItem('my-scripts',JSON.stringify(local));}catch(e){}}});}};var _origOnLogout3=typeof onUserLoggedOut!=='undefined'?onUserLoggedOut:function(){};onUserLoggedOut=function(){if(typeof _origOnLogout3==='function')_origOnLogout3();updateSidebarAuth(null);};document.addEventListener('DOMContentLoaded',function(){calcUniversal();updateSidebarAuth(null);setTimeout(function(){if(typeof _currentUser!=='undefined'&&_currentUser){updateSidebarAuth(_currentUser);checkAdminAccess();}},1500);});
+// Full state reset on sign-out / session loss — without this, the Home dashboard
+// (greeting, lead counts, team activity) keeps showing stale data from the last
+// active session even after the sidebar correctly shows "Sign In".
+var _origOnLogout4 = onUserLoggedOut;
+onUserLoggedOut = function(){
+  if (typeof _origOnLogout4 === 'function') _origOnLogout4();
+  if (typeof AN !== 'undefined') {
+    AN.currentRepEmail = '';
+    AN.currentRep = '';
+    AN.isAdmin = false;
+    AN.leads = [];
+    AN.leadsReady = false;
+    AN.leadsLoading = false;
+    if (typeof AN.invalidateLeadCaches === 'function') AN.invalidateLeadCaches();
+  }
+  var homeSec = document.getElementById('section-home');
+  if (homeSec && homeSec.classList.contains('active') && typeof hdRender === 'function') hdRender();
+};
 
 
 // ─── inline block 1 ───────────────────────
