@@ -15011,39 +15011,56 @@ AN.save = function(cb){
       return;
     }
 
-    // Everyone shares one team row now. A non-admin's AN.leads is a scoped VIEW
-    // (only records they can see) — never write it wholesale, or it would erase
-    // every teammate's unrelated data. Always merge this rep's copy against the
-    // freshest server copy first, keeping every other record untouched.
-    sb.from('an_leads_shared').select('data').eq('team_id', 'default').maybeSingle().then(function(r){
-      var serverLeads = (r.data && Array.isArray(r.data.data)) ? r.data.data : [];
-      var byId = {};
-      serverLeads.forEach(function(l){ if(l && l.id) byId[l.id] = l; });
-      AN.leads.forEach(function(l){
-        if(!l || !l.id) return;
-        var existing = byId[l.id];
-        // This rep's local copy is what they just edited — prefer it unless the
-        // server somehow has a newer edit (e.g. a teammate saved moments ago).
-        if(!existing || anLeadUpdatedMs(l) >= anLeadUpdatedMs(existing)) byId[l.id] = l;
+    // Debounce the network write — collapse rapid-fire saves (e.g. clicking through
+    // several records in a row) into a single fetch+merge+write instead of doing a
+    // full ~25k-record round-trip per action, which was the real cause of the
+    // app feeling slow. Local persistence above still happens immediately every time.
+    window._anSaveCallbacks = window._anSaveCallbacks || [];
+    if (cb) window._anSaveCallbacks.push(cb);
+    window._anSaveWhere = where;
+    if (window._anSaveTimer) clearTimeout(window._anSaveTimer);
+    window._anSaveTimer = setTimeout(function(){
+      window._anSaveTimer = null;
+      var callbacks = window._anSaveCallbacks || [];
+      window._anSaveCallbacks = [];
+      var saveWhere = window._anSaveWhere || 'local';
+
+      // Everyone shares one team row now. A non-admin's AN.leads is a scoped VIEW
+      // (only records they can see) — never write it wholesale, or it would erase
+      // every teammate's unrelated data. Always merge this rep's copy against the
+      // freshest server copy first, keeping every other record untouched.
+      sb.from('an_leads_shared').select('data').eq('team_id', 'default').maybeSingle().then(function(r){
+        var serverLeads = (r.data && Array.isArray(r.data.data)) ? r.data.data : [];
+        var byId = {};
+        serverLeads.forEach(function(l){ if(l && l.id) byId[l.id] = l; });
+        AN.leads.forEach(function(l){
+          if(!l || !l.id) return;
+          var existing = byId[l.id];
+          // This rep's local copy is what they just edited — prefer it unless the
+          // server somehow has a newer edit (e.g. a teammate saved moments ago).
+          if(!existing || anLeadUpdatedMs(l) >= anLeadUpdatedMs(existing)) byId[l.id] = l;
+        });
+        var merged = Object.keys(byId).map(function(id){ return byId[id]; });
+        sb.from('an_leads_shared').upsert({
+          team_id: 'default',
+          data: merged,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'team_id' }).then(function(r2){
+          if(r2.error){
+            console.error('[CRM] Supabase save error:', r2.error);
+            callbacks.forEach(function(fn){ fn(true, r2.error, saveWhere); });
+          } else {
+            callbacks.forEach(function(fn){ fn(true, null, 'cloud'); });
+          }
+        }).catch(function(err2){
+          console.error('[CRM] Supabase save failed:', err2);
+          callbacks.forEach(function(fn){ fn(true, err2, saveWhere); });
+        });
+      }).catch(function(err){
+        console.error('[CRM] Supabase fetch-before-save failed:', err);
+        callbacks.forEach(function(fn){ fn(true, err, saveWhere); });
       });
-      var merged = Object.keys(byId).map(function(id){ return byId[id]; });
-      sb.from('an_leads_shared').upsert({
-        team_id: 'default',
-        data: merged,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'team_id' }).then(function(r2){
-        if(r2.error){
-          console.error('[CRM] Supabase save error:', r2.error);
-          if(cb) cb(true, r2.error, where || 'local');
-        } else if(cb) cb(true, null, 'cloud');
-      }).catch(function(err2){
-        console.error('[CRM] Supabase save failed:', err2);
-        if(cb) cb(true, err2, where || 'local');
-      });
-    }).catch(function(err){
-      console.error('[CRM] Supabase fetch-before-save failed:', err);
-      if(cb) cb(true, err, where || 'local');
-    });
+    }, 800);
   });
 };
 
