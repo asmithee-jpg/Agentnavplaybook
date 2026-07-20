@@ -14007,8 +14007,21 @@ window.anRecordDemoLifecycleEvent = function(lead, type, opts) {
 
 window.anFindDashDemoForLead = function(lead) {
   if (!lead || typeof _dash === 'undefined' || !_dash.demos) return null;
-  return _dash.demos.find(function(d) {
+  var byId = _dash.demos.find(function(d) {
     return d.leadId === lead.id || d.id === ('demo-' + lead.id);
+  });
+  if (byId) return byId;
+  // Fallback: match by identity (name + company), not just lead ID. Duplicate lead
+  // records for the same real person (from repeated imports/merges) have different
+  // IDs but represent the same actual demo — without this, every backfill run would
+  // create yet another duplicate demo entry for the same person forever.
+  var leadName = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim().toLowerCase();
+  var leadCompany = (lead.company || '').trim().toLowerCase();
+  if (!leadName && !leadCompany) return null;
+  return _dash.demos.find(function(d) {
+    var dName = (d.name || '').trim().toLowerCase();
+    var dCompany = (d.company || '').trim().toLowerCase();
+    return dName && dName === leadName && (!leadCompany || !dCompany || dCompany === leadCompany);
   }) || null;
 };
 
@@ -14238,7 +14251,7 @@ window.anBackfillDashboardDemosFromLeads = function(leads) {
       anSyncLeadDemoToDashboard(lead, action, { silentActivity: true, skipCounters: true });
       // Mark newly-created demo entries as backfill so the period filter excludes them
       if (_dash.demos) {
-        var d = _dash.demos.find(function(x) { return x.leadId === lead.id || x.id === 'demo-' + lead.id; });
+        var d = typeof anFindDashDemoForLead === 'function' ? anFindDashDemoForLead(lead) : null;
         if (d && !d._userAdded) d.source = 'backfill';
       }
     }
