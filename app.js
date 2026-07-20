@@ -109,8 +109,8 @@ function authToggleMode(){_authMode=_authMode==='signin'?'signup':'signin';docum
 async function authSubmit(){var email=(document.getElementById('authEmail')||{value:''}).value.trim();var password=document.getElementById('authPassword').value;var btn=document.getElementById('authSubmitBtn');var errEl=document.getElementById('authError');if(!email||!password){errEl.textContent='Please enter your email and password.';errEl.style.display='block';return;}
 btn.disabled=true;btn.textContent=_authMode==='signin'?'Signing in...':'Creating account...';errEl.style.display='none';errEl.style.color='';try{if(typeof loadSupabaseConfig==='function')await loadSupabaseConfig();var sb=getSupabase();if(!sb||!SUPABASE_URL||!SUPABASE_ANON_KEY){errEl.textContent='Login service not configured. In Netlify, add SUPABASE_URL and SUPABASE_ANON_KEY (Supabase → Settings → API → anon public key), then redeploy.';errEl.style.display='block';authResetBtn();return;}
 var result;if(_authMode==='signin'){result=await sb.auth.signInWithPassword({email:email,password:password});}else{result=await sb.auth.signUp({email:email,password:password});}
-if(result.error){errEl.textContent=result.error.message;errEl.style.display='block';authResetBtn();}else if(_authMode==='signup'&&result.data&&!result.data.session){errEl.style.cssText='display:block;color:var(--green);';errEl.textContent='Check your email for a confirmation link!';authResetBtn();}else if(_authMode==='signin'&&result.data&&result.data.session){_currentUser=result.data.session.user;if(typeof onUserLoggedIn==='function')onUserLoggedIn(_currentUser);if(typeof closeAuthModal==='function')closeAuthModal();authResetBtn();}}catch(e){console.error('authSubmit error:',e);errEl.textContent=(e&&e.message)?e.message:'Sign in failed. Check your connection and try again.';errEl.style.display='block';authResetBtn();}}
-function onUserLoggedIn(user){try{var email=user.email||'';var initials=email.slice(0,2).toUpperCase();var name=email.split('@')[0];var signInBtn=document.getElementById('authNavBtn');if(signInBtn)signInBtn.remove();var existing=document.getElementById('userBar');if(existing)existing.remove();var userBar=document.createElement('div');userBar.id='userBar';userBar.setAttribute('style','display:flex;align-items:center;gap:7px;background:#f4f4f5;border:1px solid #e4e4e7;border-radius:20px;padding:3px 10px 3px 4px;');var av=document.createElement('div');av.setAttribute('style','width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;');av.textContent=initials;var nm=document.createElement('span');nm.setAttribute('style','font-size:12px;font-weight:600;color:#09090b;');nm.textContent=name;var so=document.createElement('span');so.setAttribute('style','font-size:11px;color:#71717a;cursor:pointer;');so.textContent='Sign out';so.onclick=authSignOut;userBar.appendChild(av);userBar.appendChild(nm);userBar.appendChild(so);/* userBar display handled by sidebar updateSidebarAuth */loadRecapsFromSupabase();showToast('Welcome back, '+name+'!');}catch(e){console.log('onUserLoggedIn error:',e.message);}}
+if(result.error){var msg=(result.error&&typeof result.error.message==='string'&&result.error.message.trim())?result.error.message:'Sign in failed — please try again in a few minutes.';errEl.textContent=msg;errEl.style.display='block';authResetBtn();}else if(_authMode==='signup'&&result.data&&!result.data.session){errEl.style.cssText='display:block;color:var(--green);';errEl.textContent='Check your email for a confirmation link!';authResetBtn();}else if(_authMode==='signin'&&result.data&&result.data.session){_currentUser=result.data.session.user;if(typeof onUserLoggedIn==='function')onUserLoggedIn(_currentUser);if(typeof closeAuthModal==='function')closeAuthModal();authResetBtn();}}catch(e){console.error('authSubmit error:',e);var caughtMsg=(e&&typeof e.message==='string'&&e.message.trim())?e.message:'Sign in failed. Check your connection and try again.';errEl.textContent=caughtMsg;errEl.style.display='block';authResetBtn();}}
+function onUserLoggedIn(user){try{var email=user.email||'';var initials=email.slice(0,2).toUpperCase();var name=(typeof anGetRepName==='function')?anGetRepName(email):email.split('@')[0];var signInBtn=document.getElementById('authNavBtn');if(signInBtn)signInBtn.remove();var existing=document.getElementById('userBar');if(existing)existing.remove();var userBar=document.createElement('div');userBar.id='userBar';userBar.setAttribute('style','display:flex;align-items:center;gap:7px;background:#f4f4f5;border:1px solid #e4e4e7;border-radius:20px;padding:3px 10px 3px 4px;');var av=document.createElement('div');av.setAttribute('style','width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;');av.textContent=initials;var nm=document.createElement('span');nm.setAttribute('style','font-size:12px;font-weight:600;color:#09090b;');nm.textContent=name;var so=document.createElement('span');so.setAttribute('style','font-size:11px;color:#71717a;cursor:pointer;');so.textContent='Sign out';so.onclick=authSignOut;userBar.appendChild(av);userBar.appendChild(nm);userBar.appendChild(so);/* userBar display handled by sidebar updateSidebarAuth */loadRecapsFromSupabase();showToast('Welcome back, '+name+'!');}catch(e){console.log('onUserLoggedIn error:',e.message);}}
 function onUserLoggedOut(){var existing=document.getElementById('userBar');if(existing)existing.remove();showAuthNavBtn();showToast('Signed out');}
 async function authSignOut(){var sb=getSupabase();if(sb){await sb.auth.signOut();showToast('Signed out');}}
 async function saveRecapToSupabase(recap){var sb=getSupabase();if(!sb||!_currentUser){showToast('Sign in to save recaps to the cloud');return false;}
@@ -146,7 +146,7 @@ y+=6;if(discount){doc.setFillColor(255,251,235);doc.roundedRect(18,y,W-36,13,3,3
 doc.setFillColor(238,242,255);doc.roundedRect(18,y,W-36,30,4,4,'F');doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(99,102,241);doc.text('RECOMMENDED PLAN',26,y+7);doc.setFont('helvetica','bold');doc.setFontSize(16);doc.setTextColor(9,9,11);doc.text(q.planName,26,y+16);doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(82,82,91);doc.text(q.planDesc,26,y+23);doc.setFont('helvetica','bold');doc.setFontSize(26);doc.setTextColor(99,102,241);doc.text('$'+q.monthly.toLocaleString(),W-20,y+18,{align:'right'});doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(82,82,91);doc.text('/month',W-20,y+25,{align:'right'});y+=38;var rows=[['Monthly','$'+q.monthly.toLocaleString()+'/mo'],['Annual (20% off)','$'+q.annual.toLocaleString()+'/yr'],['Per Person','$'+q.perPerson+'/person'],['Contract','Month-to-month, cancel anytime']];rows.forEach(function(row,i){if(i%2===0){doc.setFillColor(248,248,250);doc.rect(18,y-3,W-36,9,'F');}doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(82,82,91);doc.text(row[0],22,y+2);doc.setFont('helvetica','bold');doc.setTextColor(9,9,11);doc.text(row[1],W-22,y+2,{align:'right'});y+=9;});y+=6;doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(9,9,11);doc.text("What's Included",18,y);y+=7;['ACA,STM,Life,Ancillary&Indemnity quoting','Full CRM with household tracking','Renewal Autopilot OEP automation','SMS with dedicated agent number','HealthSherpa & EDE integration','Policy tracker & reconciliation','Google Calendar sync','No annual contract required'].forEach(function(f,i){var col=i%2,row=Math.floor(i/2),fx=18+col*(W-36)/2,fy=y+row*8;doc.setFillColor(16,185,129);doc.circle(fx+2,fy-0.5,1,'F');doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(82,82,91);doc.text(f.length>44?f.slice(0,44)+'...':f,fx+6,fy);});y+=Math.ceil(8/2)*8+8;if(notes){doc.setFillColor(255,251,235);doc.roundedRect(18,y,W-36,13,3,3,'F');doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(120,80,0);doc.text('NOTE: ',22,y+6);doc.setFont('helvetica','normal');doc.setTextColor(82,60,0);doc.text(notes.slice(0,80),36,y+6);y+=18;}
 doc.setFillColor(248,248,250);doc.rect(0,279.4-20,W,20,'F');doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(140,140,160);doc.text('Prepared by: '+repName,18,279.4-11);doc.text('agentnav.com',18,279.4-5);doc.save('AgentNav-Quote-'+prospect.replace(/[^a-z0-9]/gi,'-')+'.pdf');showToast('PDF downloaded!');}
 // sidebar collapse removed
-function updateSidebarAuth(user){var area=document.getElementById('sidebar-auth-area');if(!area)return;if(user){var email=user.email||'';var initials=email.slice(0,2).toUpperCase();var name=email.split('@')[0];area.innerHTML='<div class="sidebar-user-area">'+'<div class="sidebar-user-avatar">'+initials+'</div>'+'<div class="sidebar-user-info">'+'<div class="sidebar-user-name">'+name+'</div>'+'<div class="sidebar-user-signout" onclick="authSignOut()">Sign out</div>'+'</div>'+'</div>';}else{area.innerHTML='<button onclick="openAuthModal()" class="sidebar-auth-btn"><span>&#128100;</span> Sign In</button>';}}
+function updateSidebarAuth(user){var area=document.getElementById('sidebar-auth-area');if(!area)return;if(user){var email=user.email||'';var initials=email.slice(0,2).toUpperCase();var name=(typeof anGetRepName==='function')?anGetRepName(email):email.split('@')[0];area.innerHTML='<div class="sidebar-user-area">'+'<div class="sidebar-user-avatar">'+initials+'</div>'+'<div class="sidebar-user-info">'+'<div class="sidebar-user-name">'+name+'</div>'+'<div class="sidebar-user-signout" onclick="authSignOut()">Sign out</div>'+'</div>'+'</div>';}else{area.innerHTML='<button onclick="openAuthModal()" class="sidebar-auth-btn"><span>&#128100;</span> Sign In</button>';}}
 var ADMIN_EMAILS=['asmithee@insurewithcompass.com'];function isAdmin(){return _currentUser&&ADMIN_EMAILS.indexOf(_currentUser.email)>=0;}
 function checkAdminAccess(){var wrap=document.getElementById('nav-admin-wrap');if(wrap)wrap.style.display=isAdmin()?'block':'none';}
 function calcUniversal(){var agents=Math.max(0,parseInt((document.getElementById('univ-agents')||{value:'1'}).value)||0);var assts=Math.max(0,parseInt((document.getElementById('univ-assistants')||{value:'0'}).value)||0);var monthly=0;var planName='';var planDesc='';var breakdown='';if(agents<=0){agents=0;}
@@ -3890,7 +3890,7 @@ window.dashLoad = function(callback) {
   if (!sb || !_currentUser) return;
 
   sb.from('sales_dashboard')
-    .select('pipeline,goals,activity,prospect,demos,activityLog,rep_email,updated_at')
+    .select('pipeline,goals,activity,prospect,demos,activity_log,rep_email,updated_at')
     .eq('user_id', _currentUser.id)
     .single()
     .then(function(result) {
@@ -3904,11 +3904,11 @@ window.dashLoad = function(callback) {
       var preferRemote = remoteUpdated > localUpdated + 2000; // 2s grace for server clock skew
 
       // Always merge activityLog by taking MAX per date+field — never lose logged calls
-      if (d.activityLog && Array.isArray(d.activityLog)) {
+      if (d.activity_log && Array.isArray(d.activity_log)) {
         if (!_dash.activityLog) _dash.activityLog = [];
         var localLogByDate = {};
         _dash.activityLog.forEach(function(e){ if(e.date) localLogByDate[e.date] = e; });
-        d.activityLog.forEach(function(re) {
+        d.activity_log.forEach(function(re) {
           if (!re || !re.date) return;
           var le = localLogByDate[re.date];
           if (!le) { _dash.activityLog.push(re); localLogByDate[re.date] = re; return; }
@@ -3952,32 +3952,45 @@ window.dashLoad = function(callback) {
 window.dashSave = function(cb) {
   var now = new Date().toISOString();
   _dash._updatedAt = now;
-  // Always save full dashboard blob locally
+  // Always save full dashboard blob locally, immediately (never debounced —
+  // local persistence should never wait)
   localStorage.setItem('sales-dashboard', JSON.stringify(_dash));
 
-  // Sync to Supabase if logged in
   var sb = typeof getSupabase === 'function' ? getSupabase() : null;
   if (!sb || !_currentUser) { if (cb) cb(true, null, 'local'); return; }
 
-  var repEmail = _currentUser.email || '';
-  sb.from('sales_dashboard')
-    .upsert({
-      user_id:      _currentUser.id,
-      rep_email:    repEmail,
-      pipeline:     _dash.pipeline     || [],
-      goals:        _dash.goals        || {},
-      activity:     _dash.activity     || {},
-      prospect:     _dash.prospect     || {},
-      demos:        _dash.demos        || [],
-      activityLog:  _dash.activityLog  || [],
-      updated_at:   now
-    }, { onConflict: 'user_id' })
-    .then(function(result) {
-      if (result.error) {
-        console.warn('Dashboard sync error:', result.error.message);
-        if (cb) cb(false, result.error, 'cloud');
-      } else if (cb) cb(true, null, 'cloud');
-    });
+  // Debounce the actual network write — if dashSave() fires many times in a
+  // burst (bulk edits, rapid clicks, etc.) collapse them into a single request
+  // using the latest _dash state, instead of firing one request per call.
+  window._dashSaveCallbacks = window._dashSaveCallbacks || [];
+  if (cb) window._dashSaveCallbacks.push(cb);
+  if (window._dashSaveTimer) clearTimeout(window._dashSaveTimer);
+  window._dashSaveTimer = setTimeout(function() {
+    window._dashSaveTimer = null;
+    var callbacks = window._dashSaveCallbacks || [];
+    window._dashSaveCallbacks = [];
+    var repEmail = _currentUser.email || '';
+    sb.from('sales_dashboard')
+      .upsert({
+        user_id:      _currentUser.id,
+        rep_email:    repEmail,
+        pipeline:     _dash.pipeline     || [],
+        goals:        _dash.goals        || {},
+        activity:     _dash.activity     || {},
+        prospect:     _dash.prospect     || {},
+        demos:        _dash.demos        || [],
+        activity_log: _dash.activityLog  || [],
+        updated_at:   _dash._updatedAt
+      }, { onConflict: 'user_id' })
+      .then(function(result) {
+        if (result.error) {
+          console.warn('Dashboard sync error:', result.error.message);
+          callbacks.forEach(function(fn) { fn(false, result.error, 'cloud'); });
+        } else {
+          callbacks.forEach(function(fn) { fn(true, null, 'cloud'); });
+        }
+      });
+  }, 600);
 };
 
 // ── Load dashboard on login ──────────────────────────────────
@@ -4772,7 +4785,7 @@ window.loadAdminRepsDashboard = function() {
   // Pull demo_recaps + sales_dashboard for rep names and activity
   Promise.all([
     sb.from('demo_recaps').select('user_id, prospect, created_at, outcome').order('created_at', { ascending: false }).limit(500),
-    sb.from('sales_dashboard').select('user_id, rep_email, pipeline, goals, activity, demos, activityLog, updated_at')
+    sb.from('sales_dashboard').select('user_id, rep_email, pipeline, goals, activity, demos, activity_log, updated_at')
   ]).then(function(results) {
     var recapResult = results[0];
     var dashResult  = results[1];
@@ -4814,7 +4827,7 @@ window.loadAdminRepsDashboard = function() {
       var pipeline = dash.pipeline || [];
       var demos    = dash.demos    || [];
       var goals    = dash.goals    || {};
-      var actLog   = dash.activityLog || [];
+      var actLog   = dash.activity_log || [];
 
       var calls   = activity.calls  || 0;
       var demosB  = activity.demos  || 0;
@@ -13828,14 +13841,14 @@ window.anFetchTeamDashActivity = function(cb) {
   cb = cb || function() {};
   var sb = typeof getSupabase === 'function' ? getSupabase() : null;
   if (!sb) { cb(AN._teamDashByRep || {}); return; }
-  sb.from('sales_dashboard').select('rep_email, activity, activityLog, demos, pipeline').then(function(r) {
+  sb.from('sales_dashboard').select('rep_email, activity, activity_log, demos, pipeline').then(function(r) {
     var byRep = {};
     (r.data || []).forEach(function(row) {
       var em = (row.rep_email || '').toLowerCase();
       if (!em) return;
       byRep[em] = {
         activity: row.activity || {},
-        activityLog: row.activityLog || [],
+        activityLog: row.activity_log || [],
         demos: row.demos || [],
         pipeline: row.pipeline || []
       };
@@ -14044,8 +14057,10 @@ window.anLoadTeamDailyLeaderboard = function(cb) {
   // Use only sales_dashboard (lightweight per-rep activity rows) + already-loaded AN.leads.
   // Never fetch an_leads here — that query pulls megabytes of lead JSON and blocks page load.
   anFetchAllTeamStats(function() {
-    sb.from('sales_dashboard').select('rep_email, activity, activityLog').then(function(r) {
-      var dashRows = (r.data && !r.error) ? r.data : [];
+    sb.from('sales_dashboard').select('rep_email, activity, activity_log').then(function(r) {
+      var dashRows = (r.data && !r.error) ? r.data.map(function(row) {
+        return { rep_email: row.rep_email, activity: row.activity, activityLog: row.activity_log };
+      }) : [];
       // Backfill from leads already in memory (no extra network call)
       if (typeof AN !== 'undefined' && AN.leads && AN.leads.length && typeof anBackfillTeamActivityFromLeads === 'function') {
         anBackfillTeamActivityFromLeads(AN.leads);
@@ -22943,6 +22958,22 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ── Helper: get rep display name from email ────────────────────
+window.anSetRepDisplayName = function(email, name) {
+  if (!email) return;
+  name = (name || '').replace(/\s+/g, ' ').trim();
+  if (typeof _repViews === 'undefined' || !_repViews) return;
+  if (!_repViews[email]) _repViews[email] = { hidden: [] };
+  var oldName = _repViews[email].displayName;
+  if (!name) { delete _repViews[email].displayName; } else { _repViews[email].displayName = name; }
+  if (name === oldName) return; // no actual change, skip a pointless save
+  saveRepViews();
+  // Refresh anywhere a name might currently be shown
+  if (typeof AN !== 'undefined' && AN.currentRepEmail === email && typeof anSyncCurrentRepName === 'function') anSyncCurrentRepName();
+  if (typeof updateSidebarAuth === 'function' && typeof _currentUser !== 'undefined' && _currentUser) updateSidebarAuth(_currentUser);
+  if (typeof renderOpportunities === 'function') renderOpportunities();
+  if (typeof showToast === 'function') showToast(name ? 'Name updated' : 'Name reset to default');
+};
+
 function anGetRepName(email) {
   if (!email) return '—';
   // Check _repViews for stored display name
@@ -31310,7 +31341,7 @@ function buildRepManagementPanel() {
 }
 
 function buildRepCard(email) {
-  var name  = email.split('@')[0];
+  var name  = typeof anGetRepName === 'function' ? anGetRepName(email) : email.split('@')[0];
   var col   = anColor ? anColor(email) : '#6366f1';
   var views = (_repViews && _repViews[email]) || {};
   var hidden = (views.hidden || []).length;
@@ -31320,7 +31351,7 @@ function buildRepCard(email) {
     + '<div style="display:flex;align-items:center;gap:10px;">'
     + '<div style="width:38px;height:38px;border-radius:50%;background:' + col + '18;border:2px solid ' + col + '33;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:' + col + ';flex-shrink:0;">' + name[0].toUpperCase() + '</div>'
     + '<div style="flex:1;min-width:0;">'
-    + '<div style="font-size:13.5px;font-weight:700;color:var(--text-primary);">' + anEsc(name) + '</div>'
+    + '<div contenteditable="true" spellcheck="false" data-rep-email="' + anEsc(email) + '" onblur="anSetRepDisplayName(this.dataset.repEmail,this.textContent)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}" title="Click to edit name" style="font-size:13.5px;font-weight:700;color:var(--text-primary);cursor:text;outline:none;border-bottom:1px dashed transparent;" onmouseover="this.style.borderBottomColor=\'' + col + '\'" onmouseout="this.style.borderBottomColor=\'transparent\'">' + anEsc(name) + '</div>'
     + '<div style="font-size:12px;color:var(--text-muted);">' + anEsc(email) + '</div>'
     + '</div>'
     + '<button onclick="removeRep(\'' + anEsc(email) + '\')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:4px;" title="Remove rep">✕</button>'
