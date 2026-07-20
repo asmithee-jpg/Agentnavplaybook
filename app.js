@@ -4,10 +4,9 @@ if(window.innerWidth<900){var sb=document.getElementById('sidebar');var ov=docum
 window.scrollTo(0,0);if(id==='personas'){setTimeout(function(){var soloBtn=document.querySelector('.persona-sel-btn[onclick*="solo"]');showSnapshot('solo',soloBtn);},0);}
 if(id==='myscripts')setTimeout(renderMyScriptsCollection,50);}
 function copyPitchScript(btn){var card=btn;while(card&&!card.classList.contains('pitch-card'))card=card.parentElement;if(!card)return;var p=card.querySelector('.pitch-quote p');if(p)qaCopy(p.textContent);}
-function copyPitchScriptHS(btn){var card=btn;while(card&&!card.classList.contains('pitch-card'))card=card.parentElement;if(!card)return;var p=card.querySelector('.pitch-quote p');if(p)copyAndOpenHubSpot(p.textContent);}
 function toggleCallMode(){var body=document.body;var toggle=document.getElementById('callModeToggle');var bar=document.getElementById('callModeBar');var isOn=body.classList.toggle('call-mode');if(toggle){toggle.classList.toggle('on',isOn);toggle.textContent=isOn?'Exit Call Mode':'🔴 On A Call Right Now';}
 if(bar)bar.classList.toggle('active',isOn);if(isOn){showScriptPicker();}else{showToast('Call Mode OFF');}}
-function copyAndOpenHubSpot(text,hsUrl){if(!text)text='';text=text.trim().replace(/^['"]/,'').replace(/['"]$/,'');navigator.clipboard.writeText(text).then(function(){showToast('Copied! Opening HubSpot...');setTimeout(function(){window.open('https://app.hubspot.com/crm','_blank');},800);}).catch(function(){window.open('https://app.hubspot.com/crm','_blank');});}
+function copyAndOpenHubSpot(text){if(!text)text='';text=text.trim().replace(/^['"]/,'').replace(/['"]$/,'');navigator.clipboard.writeText(text).then(function(){showToast('Copied!');}).catch(function(){showToast('Copy failed — try manually');});}
 function toggleTheme(){var body=document.body;var isDark=body.classList.toggle('dark-mode');body.classList.remove('light-mode');var btn=document.getElementById('themeToggleBtn');var label=document.getElementById('themeToggleLabel');if(btn)btn.classList.toggle('dark-on',isDark);if(label)label.textContent=isDark?'☀️ Light Mode':'🌙 Dark Mode';try{localStorage.setItem('agentnav-theme',isDark?'dark':'light');}catch(e){}}
 function toggleMobile(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarOverlay').classList.toggle('open');}
 var personaData={solo:{cares:'Replacing 4-5 tools at under $100/mo',pain:'OEP is manual chaos every November',pitch:'One login. One client record. Renewal Autopilot.'},small:{cares:'Team visibility + no more personal phone texting',pain:'No one can see what anyone else is doing',pitch:'Show team dashboard + Renewal Autopilot board'},large:{cares:'Process, reporting, and replacing 3-4 systems',pain:'Piecing together tools that don\'t talk to each other',pitch:'One platform. Full visibility. ACA + STM + Life + Ancillary.'},enterprise:{cares:'Standardization, compliance, multi-location control',pain:'Managing producers with no centralized system',pitch:'Salesforce-level power without Salesforce price tag'}};function showSnapshot(type,btn){var data=personaData[type];if(!data)return;document.getElementById('snapCares').textContent=data.cares;document.getElementById('snapPain').textContent=data.pain;document.getElementById('snapPitch').textContent=data.pitch;document.querySelectorAll('.persona-sel-btn').forEach(function(b){b.classList.remove('active');});document.querySelectorAll('.persona-card').forEach(function(c){c.classList.remove('selected');});if(btn){btn.classList.add('active');}
@@ -15,7 +14,7 @@ var grid=document.getElementById('personaGridWrap');var platform=document.getEle
 var typeToIdx={solo:0,small:1,large:2,enterprise:3};var idx2=typeToIdx[type];var tabs=document.querySelectorAll('.persona-sel-btn');if(tabs[idx2])tabs[idx2].classList.add('active');}
 function qaCopy(text){if(!text)return;text=text.trim().replace(/^['"]|['"]$/g,'');navigator.clipboard.writeText(text).then(function(){showToast('Copied to clipboard!');}).catch(function(){showToast('Copy failed — try manually');});}
 function showToast(msg){var toast=document.getElementById('qaToast');if(!toast)return;toast.textContent=msg;toast.classList.add('show');setTimeout(function(){toast.classList.remove('show');},2000);}
-function toggleObj(el){el.classList.toggle('open');if(el.classList.contains('open')&&!el.querySelector('.qa-bar')){var answerEl=el.querySelector('.obj-a');if(answerEl){var bar=document.createElement('div');bar.className='qa-bar';bar.style.cssText='padding:0 20px 14px;gap:6px;flex-wrap:wrap;';var copyBtn=document.createElement('button');copyBtn.className='qa-btn';copyBtn.textContent='📋 Copy Response';copyBtn.onclick=function(e){e.stopPropagation();qaCopy(answerEl.textContent);};var hsBtn=document.createElement('button');hsBtn.className='qa-btn-hs';hsBtn.textContent='🔗 Copy + Log to HubSpot';hsBtn.onclick=function(e){e.stopPropagation();copyAndOpenHubSpot(answerEl.textContent);};var coachBtn=document.createElement('button');coachBtn.className='qa-btn';coachBtn.textContent='🧠 Get Custom Reframe';coachBtn.onclick=function(e){e.stopPropagation();openCoach();};bar.appendChild(copyBtn);bar.appendChild(hsBtn);bar.appendChild(coachBtn);el.appendChild(bar);}}}
+function toggleObj(el){el.classList.toggle('open');if(el.classList.contains('open')&&!el.querySelector('.qa-bar')){var answerEl=el.querySelector('.obj-a');if(answerEl){var bar=document.createElement('div');bar.className='qa-bar';bar.style.cssText='padding:0 20px 14px;gap:6px;flex-wrap:wrap;';var copyBtn=document.createElement('button');copyBtn.className='qa-btn';copyBtn.textContent='📋 Copy Response';copyBtn.onclick=function(e){e.stopPropagation();qaCopy(answerEl.textContent);};var coachBtn=document.createElement('button');coachBtn.className='qa-btn';coachBtn.textContent='🧠 Get Custom Reframe';coachBtn.onclick=function(e){e.stopPropagation();openCoach();};bar.appendChild(copyBtn);bar.appendChild(coachBtn);el.appendChild(bar);}}}
 function toggleObj(el){el.classList.toggle('open');}
 function showComp(id,btn){document.querySelectorAll('.comp-panel').forEach(function(p){p.classList.remove('active');});document.querySelectorAll('.comp-tab').forEach(function(t){t.classList.remove('active');});var panel=document.getElementById('comp-'+id);if(panel)panel.classList.add('active');if(btn)btn.classList.add('active');}
 function showBattle(id,btn){document.querySelectorAll('.battle-panel').forEach(function(p){p.classList.remove('active');});document.querySelectorAll('.battle-tab').forEach(function(t){t.classList.remove('active');});var panel=document.getElementById('battle-'+id);if(panel)panel.classList.add('active');if(btn)btn.classList.add('active');}
@@ -33,7 +32,7 @@ base+='\n\nIMPORTANT: Address '+c.name+' by name in your scripts. Reference thei
 return(tabPrefix?tabPrefix+'\n\n':'')+base;}
 async function generateGamePlan(){var segment=(document.getElementById('f-segment')||{value:''}).value;var concern=(document.getElementById('f-concern')||{value:''}).value;var stage=(document.getElementById('f-stage')||{value:''}).value;var setup=getSelectedMS();var extra=(document.getElementById('f-extra')||{value:''}).value;if(!segment||!stage){alert('Please select a segment and deal stage.');return;}
 dealContext={segment:segment,concern:concern,stage:stage,setup:setup,extra:extra};var segMap={solo:'Solo Agent (1 agent, going independent)',small:'Small Agency (2-8 agents)',large:'Large Agency (9-20 agents)',enterprise:'Enterprise (21+ agents)'};var concernMap={already_crm:'Already has a CRM',too_expensive:'Thinks it is too expensive',switching_risk:'Worried about switching systems',too_complicated:'Thinks it looks too complicated',timing:'Bad timing / not now',not_enough_leads:'Not enough leads',happy:'Happy with current setup',just_looking:'Just looking',no_concern:'No major concern yet'};var stageMap={cold_call:'Cold call / first contact',discovery:'Discovery call',demo:'Demo call',closing:'Closing / follow-up',objection:'Handling a specific objection',ghosted:'They went quiet / ghosted'};var userMsg='Deal setup:\nSegment: '+(segMap[segment]||segment)+'\nCurrent setup: '+(setup.length>0?setup.join(', '):'Unknown')+'\nMain concern: '+(concernMap[concern]||'Not specified')+'\nDeal stage: '+(stageMap[stage]||stage)+'\nAdditional context: '+(extra||'None')+'\nMode: '+(coachMode==='deep'?'Deep Strategy - full breakdown':'Quick Mode - fast and scannable')+'\n\nGenerate my complete game plan.';if(hsContactData){var c=hsContactData.contact;userMsg+='\n\nHubSpot Contact loaded: '+c.name+' at '+(c.company||'unknown company')+', Stage: '+(c.lead_status||'unknown');}
-conversationHistory=[{role:'user',content:userMsg}];document.getElementById('coachSetup').style.display='none';var output=document.getElementById('coachOutput');output.style.display='block';output.innerHTML='<div class="loading-state"><div class="loading-spinner"></div><p>Analyzing your deal…</p></div>';document.getElementById('generateBtn').disabled=true;try{var response=await fetch('/.netlify/functions/coach',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:coachMode==='deep'?2000:1200,system:buildSystemPrompt(),messages:conversationHistory})});var rawText=await response.text();var data;try{data=JSON.parse(rawText);}catch(e){output.innerHTML='<p style="color:#dc2626;font-size:13px;padding:12px;background:#fef2f2;border-radius:8px;">Server error: '+rawText.slice(0,200)+'</p>';document.getElementById('generateBtn').disabled=false;return;}
+conversationHistory=[{role:'user',content:userMsg}];document.getElementById('coachSetup').style.display='none';var output=document.getElementById('coachOutput');output.style.display='block';output.innerHTML='<div class="loading-state"><div class="loading-spinner"></div><p>Analyzing your deal…</p></div>';document.getElementById('generateBtn').disabled=true;try{var response=await fetch('/.netlify/functions/coach',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(window._anAuthToken||'')},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:coachMode==='deep'?2000:1200,system:buildSystemPrompt(),messages:conversationHistory})});var rawText=await response.text();var data;try{data=JSON.parse(rawText);}catch(e){output.innerHTML='<p style="color:#dc2626;font-size:13px;padding:12px;background:#fef2f2;border-radius:8px;">Server error: '+rawText.slice(0,200)+'</p>';document.getElementById('generateBtn').disabled=false;return;}
 if(data.error){output.innerHTML='<p style="color:#dc2626;font-size:13px;padding:12px;background:#fef2f2;border-radius:8px;">API Error: '+JSON.stringify(data.error)+'</p>';document.getElementById('generateBtn').disabled=false;return;}
 var text='';if(data.content&&data.content.length>0){for(var i=0;i<data.content.length;i++){if(data.content[i].type==='text'){text=data.content[i].text;break;}}}
 if(!text){text='No content returned. Raw: '+JSON.stringify(data).slice(0,200);}
@@ -46,23 +45,12 @@ html+='</div>';}}
 output.innerHTML=html;}
 function showFollowup(){document.getElementById('followupArea').style.display='block';var chipMap={cold_call:['"They said they\'re too busy"','"Give me the follow-up text"','"They asked about price"'],discovery:['"They already have EZLynx"','"How do I ask about OEP pain?"','"They seem skeptical"'],demo:['"They said it looks complicated"','"They loved Renewal Autopilot"','"What to show next?"'],closing:['"Write a follow-up email"','"They want to think about it"','"How do I create urgency?"'],objection:['"Give me a stronger reframe"','"They pushed back again"','"What\'s my pivot?"'],ghosted:['"Write a re-engagement text"','"Write a breakup email"','"How long to wait?"']};var chips=chipMap[dealContext.stage]||['"Give me the exact script"','"What should I demo first?"','"How do I close this?"'];var sugEl=document.getElementById('followupSuggestions');sugEl.innerHTML='';chips.forEach(function(c){var btn=document.createElement('div');btn.className='followup-chip';btn.textContent=c;btn.onclick=function(){fillFollowup(this.textContent);};sugEl.appendChild(btn);});}
 function fillFollowup(text){if(typeof text!=='string')text=String(text);text=text.trim().replace(/^["']|["']$/g,'');document.getElementById('followupInput').value=text;document.getElementById('followupInput').focus();}
-async function sendFollowup(){var input=document.getElementById('followupInput');var msg=input.value.trim();if(!msg)return;input.value='';document.getElementById('followupSendBtn').disabled=true;conversationHistory.push({role:'user',content:msg});var output=document.getElementById('coachOutput');var thinkId='think_'+Date.now();var userDiv=document.createElement('div');userDiv.className='chat-msg';userDiv.innerHTML='<div class="chat-msg-label">You</div><div class="chat-msg-bubble user">'+msg.replace(/</g,'&lt;')+'</div>';output.appendChild(userDiv);var thinkDiv=document.createElement('div');thinkDiv.className='chat-msg';thinkDiv.id=thinkId;thinkDiv.innerHTML='<div class="chat-msg-label">Coach</div><div class="chat-msg-bubble"><div class="loading-spinner" style="width:20px;height:20px;border-width:2px;margin:0;"></div></div>';output.appendChild(thinkDiv);output.scrollTop=output.scrollHeight;try{var response=await fetch('/.netlify/functions/coach',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:800,system:buildSystemPrompt(),messages:conversationHistory})});var rawText=await response.text();var data;try{data=JSON.parse(rawText);}catch(e){data={error:rawText};}
+async function sendFollowup(){var input=document.getElementById('followupInput');var msg=input.value.trim();if(!msg)return;input.value='';document.getElementById('followupSendBtn').disabled=true;conversationHistory.push({role:'user',content:msg});var output=document.getElementById('coachOutput');var thinkId='think_'+Date.now();var userDiv=document.createElement('div');userDiv.className='chat-msg';userDiv.innerHTML='<div class="chat-msg-label">You</div><div class="chat-msg-bubble user">'+msg.replace(/</g,'&lt;')+'</div>';output.appendChild(userDiv);var thinkDiv=document.createElement('div');thinkDiv.className='chat-msg';thinkDiv.id=thinkId;thinkDiv.innerHTML='<div class="chat-msg-label">Coach</div><div class="chat-msg-bubble"><div class="loading-spinner" style="width:20px;height:20px;border-width:2px;margin:0;"></div></div>';output.appendChild(thinkDiv);output.scrollTop=output.scrollHeight;try{var response=await fetch('/.netlify/functions/coach',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(window._anAuthToken||'')},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:800,system:buildSystemPrompt(),messages:conversationHistory})});var rawText=await response.text();var data;try{data=JSON.parse(rawText);}catch(e){data={error:rawText};}
 var text='';if(data.content&&data.content.length>0){for(var fi=0;fi<data.content.length;fi++){if(data.content[fi].type==='text'){text=data.content[fi].text;break;}}}
 if(!text)text=data.error?'Error: '+JSON.stringify(data.error):('No content. Raw: '+JSON.stringify(data).slice(0,200));conversationHistory.push({role:'assistant',content:text});document.getElementById(thinkId).innerHTML='<div class="chat-msg-label">Coach</div><div class="chat-msg-bubble" style="white-space:pre-wrap;">'+text.replace(/</g,'&lt;')+'</div>';}catch(err){document.getElementById(thinkId).innerHTML='<div class="chat-msg-bubble" style="color:#dc2626;">Network error: '+err.message+'</div>';}
 output.scrollTop=output.scrollHeight;document.getElementById('followupSendBtn').disabled=false;}
 function resetCoach(){document.getElementById('coachSetup').style.display='block';var output=document.getElementById('coachOutput');output.style.display='none';output.innerHTML='';document.getElementById('followupArea').style.display='none';conversationHistory=[];}
-function hsSearch(query){clearTimeout(hsSearchTimer);var results=document.getElementById('hsSearchResults');if(!query||query.length<2){results.style.display='none';return;}
-hsSearchTimer=setTimeout(async function(){results.style.display='block';results.innerHTML='<div class="hs-result-item"><div class="hs-result-name" style="color:#8888a0;">Searching HubSpot…</div></div>';try{var res=await fetch('/.netlify/functions/hubspot?action=search&q='+encodeURIComponent(query));var data=await res.json();if(!data.contacts||data.contacts.length===0){results.innerHTML='<div class="hs-result-item"><div class="hs-result-name" style="color:#8888a0;">No contacts found</div></div>';return;}
-_hsContacts={};data.contacts.forEach(function(c){_hsContacts[c.id]=c;});results.innerHTML='';data.contacts.forEach(function(c){var item=document.createElement('div');item.className='hs-result-item';item.innerHTML='<div class="hs-result-name">'+(c.name||'Unknown')+'</div><div class="hs-result-meta">'+(c.company?c.company+' · ':'')+(c.email||'')+(c.lead_status?' · '+c.lead_status:'')+'</div>';item.onclick=function(){hsSelectContact(c.id);};results.appendChild(item);});}catch(err){results.innerHTML='<div class="hs-result-item"><div class="hs-result-name" style="color:#dc2626;">Could not reach HubSpot</div></div>';}},350);}
-async function hsSelectContact(id){var basicInfo=_hsContacts[id]||{};document.getElementById('hsSearchResults').style.display='none';if(document.getElementById('hsSearchInput'))document.getElementById('hsSearchInput').value=basicInfo.name||basicInfo.email||'';var card=document.getElementById('hsContactCard');card.style.display='block';card.innerHTML='<div style="font-size:12px;color:#8888a0;padding:8px 0;">Loading from HubSpot…</div>';document.getElementById('hsDivider').style.display='block';document.getElementById('setupSubtitle').style.display='none';try{var res=await fetch('/.netlify/functions/hubspot?action=contact&id='+id);var data=await res.json();hsContactData=data;var c=data.contact;var deals=data.deals||[];var activity=data.recentActivity||[];autoFillFromHubspot(c,deals);var stageHtml=getStageBadge(c.lead_status,deals);var dealsHtml='';if(deals.length>0){dealsHtml='<div style="margin-top:8px;"><div style="font-family:\'DM Mono\',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#8888a0;margin-bottom:4px;">Open Deals</div>';deals.forEach(function(d){dealsHtml+='<div class="hs-deal-row"><span>💼</span><span style="flex:1;font-weight:500;">'+d.name+'</span><span style="font-family:\'DM Mono\',monospace;font-size:10px;color:#8888a0;">'+(d.stage||'')+'</span></div>';});dealsHtml+='</div>';}
-var actHtml='';if(activity.length>0){actHtml='<div style="margin-top:10px;"><div style="font-family:\'DM Mono\',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#8888a0;margin-bottom:4px;">Recent Activity</div>';activity.forEach(function(a){var note=a.note||'';actHtml+='<div class="hs-activity-item">📝 '+a.date+' — '+note.slice(0,120)+(note.length>120?'…':'')+'</div>';});actHtml+='</div>';}
-card.innerHTML='<div class="hs-contact-card">'+'<div class="hs-contact-header">'+'<div><div class="hs-contact-name">'+(c.name||'')+'</div>'+'<div class="hs-contact-company">'+(c.company||'')+(c.title?' · '+c.title:'')+'</div></div>'+'<button class="hs-clear-btn" onclick="hsClearContact()">✕ Clear</button>'+'</div>'+
-stageHtml+dealsHtml+actHtml+'<div style="margin-top:8px;font-size:11px;color:#8888a0;">Contacted '+(c.times_contacted||0)+'x · '+(c.email||'')+'</div>'+'</div>';var bar=document.getElementById('hsConnectBar');bar.classList.add('connected');bar.querySelector('.hs-connect-text strong').textContent='✓ HubSpot Connected';bar.querySelector('.hs-connect-text span').textContent=(c.name||'')+' loaded';}catch(err){card.innerHTML='<div style="color:#dc2626;font-size:12px;padding:8px;">Could not load contact: '+err.message+'</div>';}}
-function getStageBadge(leadStatus,deals){var status=(leadStatus||'').toLowerCase();var stageMap={'new':'stage-new|🆕 New Lead','attempted to contact':'stage-contacted|📞 Attempted Contact','connected':'stage-qualified|✅ Connected','meeting booked':'stage-demo|📅 Meeting Booked','meeting held':'stage-demo|🎯 Meeting Held','bad timing':'stage-nurture|⏰ Bad Timing','not interested':'stage-closed-lost|❌ Not Interested','unqualified':'stage-closed-lost|🚫 Unqualified'};var entry=stageMap[status];if(!entry&&deals[0]){var ds=(deals[0].stage||'').toLowerCase().replace(/[^a-z]/g,'');var dealMap={'newlead':'stage-new|🆕 New Lead','contacted':'stage-contacted|📞 Contacted','qualified':'stage-qualified|✅ Qualified','demoscheduled':'stage-demo|📅 Demo Scheduled','democompleted':'stage-demo|🎯 Demo Completed','closedwon':'stage-closed-won|🏆 Closed Won','closedlost':'stage-closed-lost|❌ Closed Lost','nurture':'stage-nurture|🌱 Nurture'};entry=dealMap[ds];}
-if(!entry)entry='stage-default|'+(leadStatus||'Unknown');var parts=entry.split('|');return'<span class="hs-stage-badge '+parts[0]+'">'+parts[1]+'</span>';}
-function autoFillFromHubspot(contact,deals){var deal=deals[0];var stage=deal?(deal.stage||'').toLowerCase().replace(/[^a-z]/g,''):'';var leadStatus=(contact.lead_status||'').toLowerCase();var stageToSelect={'newlead':'cold_call','new':'cold_call','contacted':'cold_call','attempted to contact':'cold_call','connected':'discovery','qualified':'discovery','meeting booked':'discovery','demoscheduled':'demo','meeting held':'closing','democompleted':'closing','nurture':'ghosted','bad timing':'ghosted','not interested':'objection','unqualified':'objection'};var selectedStage=stageToSelect[stage]||stageToSelect[leadStatus]||'';if(selectedStage){var el=document.getElementById('f-stage');if(el)el.value=selectedStage;}}
-function hsClearContact(){hsContactData=null;document.getElementById('hsContactCard').style.display='none';document.getElementById('hsDivider').style.display='none';document.getElementById('setupSubtitle').style.display='block';if(document.getElementById('hsSearchInput'))document.getElementById('hsSearchInput').value='';var bar=document.getElementById('hsConnectBar');bar.classList.remove('connected');bar.querySelector('.hs-connect-text strong').textContent='Search HubSpot Contact';bar.querySelector('.hs-connect-text span').textContent='Pull real deal data for personalized coaching';}
-document.addEventListener('click',function(e){var results=document.getElementById('hsSearchResults');var input=document.getElementById('hsSearchInput');if(results&&input&&!results.contains(e.target)&&e.target!==input){results.style.display='none';}});function calcPrice(){var agentEl=document.getElementById('agentCount');var assistEl=document.getElementById('assistantCount');if(!agentEl||!assistEl)return;var agents=parseInt(agentEl.value)||20;var assistants=parseInt(assistEl.value)||4;if(agents<20){agents=20;agentEl.value=20;}
+function calcPrice(){var agentEl=document.getElementById('agentCount');var assistEl=document.getElementById('assistantCount');if(!agentEl||!assistEl)return;var agents=parseInt(agentEl.value)||20;var assistants=parseInt(assistEl.value)||4;if(agents<20){agents=20;agentEl.value=20;}
 if(agents>500){agents=500;agentEl.value=500;}
 if(assistants<4){assistants=4;assistEl.value=4;}
 var extraAgents=Math.max(0,agents-10);var agentCost=0;var tier1=Math.min(extraAgents,40);var tier2=Math.min(Math.max(extraAgents-40,0),50);var tier3=Math.min(Math.max(extraAgents-90,0),100);var tier4=Math.max(extraAgents-190,0);agentCost=(tier1*30)+(tier2*27)+(tier3*24)+(tier4*22);var extraAssistants=Math.max(0,assistants-2);var assistantCost=extraAssistants*10;var monthly=597+agentCost+assistantCost;var annual=Math.round(monthly*12*0.8);var annualSavings=Math.round(monthly*12*0.2);var totalPeople=agents+assistants;var perPerson=Math.round(monthly/totalPeople);var rateLabel=agents<=50?'$30':agents<=100?'$27 avg':agents<=200?'$24 avg':'$22 avg';document.getElementById('calcPrice').textContent='$'+monthly.toLocaleString();document.getElementById('calcPerPerson').textContent='~$'+perPerson+' per person/month';document.getElementById('calcAnnual').textContent='$'+annual.toLocaleString()+'/yr';document.getElementById('calcSavings').textContent='Save $'+annualSavings.toLocaleString()+' vs monthly';document.getElementById('breakdownAgents').querySelector('span:first-child').textContent='Additional agents ('+extraAgents+' × '+rateLabel+'/mo)';document.getElementById('breakdownAgents').querySelector('span:last-child').textContent='$'+agentCost.toLocaleString();document.getElementById('breakdownAssistants').querySelector('span:first-child').textContent='Additional assistants ('+extraAssistants+' × $10/mo)';document.getElementById('breakdownAssistants').querySelector('span:last-child').textContent='$'+assistantCost.toLocaleString();window._lastQuote={agents:agents,assistants:assistants,monthly:monthly,annual:annual,perPerson:perPerson};}
@@ -83,7 +71,7 @@ doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(82,82,91);
 doc.setFillColor(248,248,250);doc.rect(0,H-22,W,22,'F');doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(140,140,160);doc.text('Prepared by: '+repName+(repEmail?'  |  '+repEmail:''),margin,H-13);doc.text('agentnav.com  |  Questions? Reply to this email or call your rep directly.',margin,H-7);doc.setFont('helvetica','bold');doc.setTextColor(99,102,241);doc.text('AgentNav',W-margin,H-10,{align:'right'});var filename='AgentNav-Quote-'+prospect.replace(/[^a-z0-9]/gi,'-')+'.pdf';doc.save(filename);showToast('Quote PDF downloaded!');}catch(err){showToast('Error: '+err.message);console.error(err);}
 btn.textContent='Download Quote as PDF';btn.disabled=false;}
 async function generateDemoRecap(){var prospect=(document.getElementById('recap-prospect')||{value:''}).value.trim();var segment=(document.getElementById('recap-segment')||{value:''}).value;var outcome=(document.getElementById('recap-outcome')||{value:''}).value;var prospectWords=document.getElementById('recap-prospect-words').value.trim();var covered=(document.getElementById('recap-covered')||{value:''}).value.trim();var objections=(document.getElementById('recap-objections')||{value:''}).value.trim();if(!prospect||!prospectWords){showToast('Add prospect name and what they said first');return;}
-var btn=document.getElementById('recap-btn');btn.textContent='Analyzing demo...';btn.disabled=true;var segmentMap={solo:'Solo Agent',small:'Small Agency (2-8 agents)',large:'Large Agency (9-20 agents)',enterprise:'Enterprise (21+ agents)'};var outcomeMap={strong:'Strong interest - ready to close',warm:'Warm - needs follow-up',cold:'Cold - more convincing needed',lost:'Not moving forward'};var promptParts=['You are an elite sales coach reviewing a demo recap for AgentNav, a health insurance broker platform.','PROSPECT: '+prospect,'SEGMENT: '+(segmentMap[segment]||'Unknown'),'DEMO OUTCOME: '+(outcomeMap[outcome]||'Unknown'),'WHAT THE PROSPECT SAID (their exact words):',prospectWords,'WHAT WAS COVERED IN THE DEMO:',covered||'Not specified','OBJECTIONS / HESITATIONS:',objections||'None noted','Please provide your analysis in EXACTLY this format:','DEMO SUMMARY','[2-3 sentences. What happened. Who they are, what resonated, where they are in the decision.]','KEYWORDS','[Extract 6-12 keywords from the PROSPECT OWN WORDS. Comma-separated. Use their exact words.]','NEXT BEST ACTIONS','[3-5 specific actions for the rep in the next 24 hours. Include exact language to use.]','FOLLOW-UP EMAIL','[Write a complete follow-up email. Subject line first, then body. Under 150 words. Reference their specific words.]','Be direct, specific, and use the prospect actual language whenever possible.'];var prompt=promptParts.join('\n\n');try{var response=await fetch('/.netlify/functions/coach',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1200,system:'You are an elite B2B sales coach. You give specific, directive, actionable coaching based on real deal data. You extract exact prospect language and use it in your recommendations. You never give generic advice.',messages:[{role:'user',content:prompt}]})});var data=await response.json();var text='';if(data.content){for(var _ci=0;_ci<data.content.length;_ci++){if(data.content[_ci].type==='text'){text=data.content[_ci].text;break;}}}
+var btn=document.getElementById('recap-btn');btn.textContent='Analyzing demo...';btn.disabled=true;var segmentMap={solo:'Solo Agent',small:'Small Agency (2-8 agents)',large:'Large Agency (9-20 agents)',enterprise:'Enterprise (21+ agents)'};var outcomeMap={strong:'Strong interest - ready to close',warm:'Warm - needs follow-up',cold:'Cold - more convincing needed',lost:'Not moving forward'};var promptParts=['You are an elite sales coach reviewing a demo recap for AgentNav, a health insurance broker platform.','PROSPECT: '+prospect,'SEGMENT: '+(segmentMap[segment]||'Unknown'),'DEMO OUTCOME: '+(outcomeMap[outcome]||'Unknown'),'WHAT THE PROSPECT SAID (their exact words):',prospectWords,'WHAT WAS COVERED IN THE DEMO:',covered||'Not specified','OBJECTIONS / HESITATIONS:',objections||'None noted','Please provide your analysis in EXACTLY this format:','DEMO SUMMARY','[2-3 sentences. What happened. Who they are, what resonated, where they are in the decision.]','KEYWORDS','[Extract 6-12 keywords from the PROSPECT OWN WORDS. Comma-separated. Use their exact words.]','NEXT BEST ACTIONS','[3-5 specific actions for the rep in the next 24 hours. Include exact language to use.]','FOLLOW-UP EMAIL','[Write a complete follow-up email. Subject line first, then body. Under 150 words. Reference their specific words.]','Be direct, specific, and use the prospect actual language whenever possible.'];var prompt=promptParts.join('\n\n');try{var response=await fetch('/.netlify/functions/coach',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(window._anAuthToken||'')},body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1200,system:'You are an elite B2B sales coach. You give specific, directive, actionable coaching based on real deal data. You extract exact prospect language and use it in your recommendations. You never give generic advice.',messages:[{role:'user',content:prompt}]})});var data=await response.json();var text='';if(data.content){for(var _ci=0;_ci<data.content.length;_ci++){if(data.content[_ci].type==='text'){text=data.content[_ci].text;break;}}}
 if(!text){showToast('No response from AI - try again');btn.textContent='Generate Recap + Extract Keywords';btn.disabled=false;return;}
 function extractSection(txt,header){var idx=txt.indexOf(header);if(idx===-1)return'';var start=idx+header.length;var nextHeaders=['DEMO SUMMARY','KEYWORDS','NEXT BEST ACTIONS','FOLLOW-UP EMAIL'];var end=txt.length;for(var i=0;i<nextHeaders.length;i++){var ni=txt.indexOf(nextHeaders[i],start);if(ni!==-1&&ni<end&&ni>idx)end=ni;}
 return txt.slice(start,end).trim();}
@@ -101,7 +89,7 @@ return _supabase;}
 function authResetBtn(){var btn=document.getElementById('authSubmitBtn');if(!btn)return;btn.disabled=false;btn.textContent=_authMode==='signin'?'Sign In':'Create Account';}
 document.addEventListener('DOMContentLoaded',function(){showAuthNavBtn();loadSupabaseConfig().finally(function(){var sbCheckCount=0;var sbCheckInterval=setInterval(function(){sbCheckCount++;var sb=getSupabase();if(sb||sbCheckCount>20){clearInterval(sbCheckInterval);if(!sb)return;initSupabaseAuth(sb);}},200);});});function showAuthNavBtn(){/* Sidebar handles Sign In — no floating button needed */}
 function initSupabaseAuth(sb){var hash=window.location.hash;if(hash&&hash.includes('access_token')&&!hash.includes('type=recovery')&&!hash.includes('type=invite')){setTimeout(function(){sb.auth.getSession().then(function(result){if(result.data&&result.data.session){_currentUser=result.data.session.user;onUserLoggedIn(_currentUser);window.history.replaceState({},document.title,window.location.pathname);showToast('Email confirmed! Welcome to AgentNav Sales Coach.');}});},500);return;}
-sb.auth.getSession().then(function(result){if(result.data&&result.data.session){_currentUser=result.data.session.user;onUserLoggedIn(_currentUser);}});sb.auth.onAuthStateChange(function(event,session){if(event==='SIGNED_IN'&&session){_currentUser=session.user;onUserLoggedIn(_currentUser);closeAuthModal();}else if(event==='SIGNED_OUT'){_currentUser=null;onUserLoggedOut();}});}
+sb.auth.getSession().then(function(result){if(result.data&&result.data.session){_currentUser=result.data.session.user;window._anAuthToken=result.data.session.access_token||'';onUserLoggedIn(_currentUser);}});sb.auth.onAuthStateChange(function(event,session){if(event==='SIGNED_IN'&&session){_currentUser=session.user;window._anAuthToken=session.access_token||'';onUserLoggedIn(_currentUser);closeAuthModal();}else if(event==='SIGNED_OUT'){_currentUser=null;window._anAuthToken='';onUserLoggedOut();}else if(event==='TOKEN_REFRESHED'&&session){window._anAuthToken=session.access_token||'';}});}
 function openAuthModal(){document.getElementById('authModal').classList.add('open');}
 function closeAuthModal(){document.getElementById('authModal').classList.remove('open');}
 function authSkip(){closeAuthModal();showToast('Browsing as guest — sign in to save recaps to the cloud');}
@@ -403,8 +391,8 @@ function addUserTalkTrack(){var situation=prompt('When does this talk track appl
 function editUserTalkTrack(idx){var tracks=getUserTalkTracks();var track=tracks[idx];if(!track)return;var newSit=prompt('When does this apply?',track.situation||'');if(newSit===null)return;var newTitle=prompt('Track title:',track.title||'');if(newTitle===null)return;var newBody=prompt('What do you say? (Your talk track):',track.body||'');if(newBody===null)return;tracks[idx]={situation:newSit.trim(),title:newTitle.trim(),body:newBody.trim()};saveUserTalkTracks(tracks);renderUserTalkTracks();showToast('Talk track saved!');}
 function deleteUserTalkTrack(idx){if(!confirm('Delete this talk track?'))return;var tracks=getUserTalkTracks();tracks.splice(idx,1);saveUserTalkTracks(tracks);renderUserTalkTracks();}
 async function researchCompetitor(){var input=document.getElementById('bc-competitor-input');var output=document.getElementById('bc-research-output');var btn=document.getElementById('bc-research-btn');var competitor=(input&&input.value.trim())||'';if(!competitor){showToast('Enter a competitor name first');return;}
-if(!output||!btn)return;btn.disabled=true;btn.textContent='⏳ Researching...';output.style.display='block';output.innerHTML='<div style="padding:16px;color:rgba(255,255,255,0.6);font-size:13px;display:flex;align-items:center;gap:8px;"><div class="loading-spinner" style="width:18px;height:18px;border-width:2px;border-color:rgba(255,255,255,0.2);border-top-color:#6366f1;margin:0;"></div>Searching the web for '+competitor+'...</div>';try{var response=await fetch('/.netlify/functions/coach',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:'You are a competitive intelligence researcher for AgentNav, a health insurance broker platform. When given a competitor name, research and provide a structured battle card. Use web search tool to find current information about the competitor. Format your response EXACTLY as:\n\nTIER: [Direct / Adjacent / Indirect]\nDESCRIPTION: [1-2 sentence description]\nSTRENGTH: [Their main strength]\nWEAKNESS: [Their true weakness vs AgentNav]\nACKNOWLEDGE: [One sentence to say that acknowledges their strength]\nWIN_WHEN: [bullet 1]\nWIN_WHEN: [bullet 2]\nWIN_WHEN: [bullet 3]\nLOSE_WHEN: [bullet 1]\nLOSE_WHEN: [bullet 2]\nREFRAME: [One reframe sentence to say on a call]',messages:[{role:'user',content:'Research this competitor for AgentNav battle card: '+competitor+'. Use web search to find current info about their product, pricing, strengths and weaknesses. Focus on the health insurance broker market.'}],tools:[{type:'web_search_20250305',name:'web_search'}]})});var data=await response.json();var text='';if(data.content){for(var i=0;i<data.content.length;i++){if(data.content[i].type==='text'){text+=data.content[i].text;}}}
-if(!text||text.length<50){var r2=await fetch('/.netlify/functions/coach',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:800,system:'You are a competitive intelligence researcher for AgentNav, a health insurance broker platform. Format response exactly as specified.',messages:[{role:'user',content:'Create a battle card for: '+competitor+'. AgentNav sells to health insurance brokers — ACA, STM, Life, Ancillary. Format:\n\nTIER: [Direct / Adjacent / Indirect]\nDESCRIPTION: [1-2 sentence]\nSTRENGTH: [their main strength]\nWEAKNESS: [weakness vs AgentNav]\nACKNOWLEDGE: [acknowledge their strength]\nWIN_WHEN: [bullet 1]\nWIN_WHEN: [bullet 2]\nWIN_WHEN: [bullet 3]\nLOSE_WHEN: [bullet 1]\nLOSE_WHEN: [bullet 2]\nREFRAME: [reframe line]'}]})});var d2=await r2.json();if(d2.content)d2.content.forEach(function(b){if(b.type==='text')text+=b.text;});}
+if(!output||!btn)return;btn.disabled=true;btn.textContent='⏳ Researching...';output.style.display='block';output.innerHTML='<div style="padding:16px;color:rgba(255,255,255,0.6);font-size:13px;display:flex;align-items:center;gap:8px;"><div class="loading-spinner" style="width:18px;height:18px;border-width:2px;border-color:rgba(255,255,255,0.2);border-top-color:#6366f1;margin:0;"></div>Searching the web for '+competitor+'...</div>';try{var response=await fetch('/.netlify/functions/coach',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(window._anAuthToken||'')},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:'You are a competitive intelligence researcher for AgentNav, a health insurance broker platform. When given a competitor name, research and provide a structured battle card. Use web search tool to find current information about the competitor. Format your response EXACTLY as:\n\nTIER: [Direct / Adjacent / Indirect]\nDESCRIPTION: [1-2 sentence description]\nSTRENGTH: [Their main strength]\nWEAKNESS: [Their true weakness vs AgentNav]\nACKNOWLEDGE: [One sentence to say that acknowledges their strength]\nWIN_WHEN: [bullet 1]\nWIN_WHEN: [bullet 2]\nWIN_WHEN: [bullet 3]\nLOSE_WHEN: [bullet 1]\nLOSE_WHEN: [bullet 2]\nREFRAME: [One reframe sentence to say on a call]',messages:[{role:'user',content:'Research this competitor for AgentNav battle card: '+competitor+'. Use web search to find current info about their product, pricing, strengths and weaknesses. Focus on the health insurance broker market.'}],tools:[{type:'web_search_20250305',name:'web_search'}]})});var data=await response.json();var text='';if(data.content){for(var i=0;i<data.content.length;i++){if(data.content[i].type==='text'){text+=data.content[i].text;}}}
+if(!text||text.length<50){var r2=await fetch('/.netlify/functions/coach',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(window._anAuthToken||'')},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:800,system:'You are a competitive intelligence researcher for AgentNav, a health insurance broker platform. Format response exactly as specified.',messages:[{role:'user',content:'Create a battle card for: '+competitor+'. AgentNav sells to health insurance brokers — ACA, STM, Life, Ancillary. Format:\n\nTIER: [Direct / Adjacent / Indirect]\nDESCRIPTION: [1-2 sentence]\nSTRENGTH: [their main strength]\nWEAKNESS: [weakness vs AgentNav]\nACKNOWLEDGE: [acknowledge their strength]\nWIN_WHEN: [bullet 1]\nWIN_WHEN: [bullet 2]\nWIN_WHEN: [bullet 3]\nLOSE_WHEN: [bullet 1]\nLOSE_WHEN: [bullet 2]\nREFRAME: [reframe line]'}]})});var d2=await r2.json();if(d2.content)d2.content.forEach(function(b){if(b.type==='text')text+=b.text;});}
 var bc=parseBattleCardText(text,competitor);renderNewBattleCard(bc,competitor);if(input)input.value='';}catch(err){output.innerHTML='<div style="padding:12px;color:#fca5a5;font-size:13px;">Could not research competitor. Check your connection. Error: '+err.message+'</div>';}
 btn.disabled=false;btn.textContent='🤖 Research + Add Card';}
 function parseBattleCardText(text,name){var get=function(key){var re=new RegExp(key+':[ \\t]*(.+)','i');var m=text.match(re);return m?m[1].trim():'';};var getAll=function(key){var re=new RegExp(key+':[ \\t]*(.+)','ig');var results=[];var m;while((m=re.exec(text))!==null)results.push(m[1].trim());return results;};return{name:name,tier:get('TIER')||'Adjacent',description:get('DESCRIPTION')||'',strength:get('STRENGTH')||'',weakness:get('WEAKNESS')||'',acknowledge:get('ACKNOWLEDGE')||'',winWhen:getAll('WIN_WHEN'),loseWhen:getAll('LOSE_WHEN'),reframe:get('REFRAME')||''};}
@@ -2045,7 +2033,7 @@ window.seTranslateScriptToLang = function(sourceSteps, langCode, callback) {
 
   fetch('/.netlify/functions/coach', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._anAuthToken||'') },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 2000,
@@ -2689,7 +2677,7 @@ window.seAskAI = function() {
 
   fetch('/.netlify/functions/coach', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._anAuthToken||'') },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 1000,
@@ -3493,7 +3481,7 @@ window.compAskAI = function(compId, prefilledMsg) {
 
   fetch('/.netlify/functions/coach', {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
+    headers: {'Content-Type':'application/json','Authorization':'Bearer '+(window._anAuthToken||'')},
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 800,
@@ -3770,7 +3758,7 @@ window.seOfferTranslate = function(langCode, langLabel, mode) {
 
   fetch('/.netlify/functions/coach', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._anAuthToken||'') },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 1200,
@@ -8102,7 +8090,7 @@ window.dashAskAI = function() {
   var tB = document.createElement('div');
   tB.id = tid; tB.style.cssText = 'background:rgba(255,255,255,0.06);border-radius:8px;padding:8px 11px;font-size:12px;color:rgba(255,255,255,0.5);margin-right:8px;';
   tB.textContent = 'Thinking...'; msgs.appendChild(tB); msgs.scrollTop = msgs.scrollHeight;
-  fetch('/.netlify/functions/coach', { method:'POST', headers:{'Content-Type':'application/json'},
+  fetch('/.netlify/functions/coach', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+(window._anAuthToken||'')},
     body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:800, system:system, messages:[{role:'user',content:q}] })
   }).then(function(r){return r.json();}).then(function(data){
     var text = '';
@@ -8470,207 +8458,6 @@ window.setChartRange = function(r) {
 
 console.log('[SDR METRICS] Conversion funnel + day analysis loaded.');
 
-// ─── inline block 17 ───────────────────────
-// ============================================================
-// HubSpot Dashboard Integration
-// Pulls deals, pipeline, contacts from HubSpot via Netlify proxy
-// ============================================================
-
-// ── HubSpot API helper ───────────────────────────────────────
-function hsCall(action, params, cb) {
-  var url = '/.netlify/functions/hubspot?action=' + action;
-  if (params) {
-    Object.keys(params).forEach(function(k) {
-      url += '&' + k + '=' + encodeURIComponent(params[k]);
-    });
-  }
-  fetch(url)
-    .then(function(r) { return r.json(); })
-    .then(function(data) { cb(null, data); })
-    .catch(function(e) { cb(e.message, null); });
-}
-
-// ── Map HubSpot stage labels to our pipeline stages ──────────
-function mapHSStage(label) {
-  var l = (label || '').toLowerCase();
-  if (l.includes('appoint') || l.includes('demo') || l.includes('meeting') || l.includes('scheduled')) return 'Demo Booked';
-  if (l.includes('proposal') || l.includes('sent') || l.includes('quote'))  return 'Proposal Sent';
-  if (l.includes('won') || l.includes('closed won'))  return 'Closed Won';
-  if (l.includes('lost') || l.includes('closed lost')) return 'Closed Lost';
-  if (l.includes('qualified') || l.includes('connect') || l.includes('contact')) return 'Prospecting';
-  return label || 'Prospecting';
-}
-
-// ── Sync HubSpot pipeline into _dash.pipeline ────────────────
-window.syncHubSpotPipeline = function(cb) {
-  hsCall('pipeline-summary', {}, function(err, data) {
-    if (err || !data || !data.deals) {
-      if (cb) cb(err || 'No data');
-      return;
-    }
-
-    // Convert HubSpot deals to our format — tagged so we can separate them
-    var hsDeals = data.deals.map(function(d) {
-      var size = 'solo';
-      if (d.amount >= 500) size = 'large';
-      else if (d.amount >= 200) size = 'small';
-      return {
-        id:       'd-' + d.id,
-        name:     d.name,
-        state:    '',
-        size:     size,
-        stage:    mapHSStage(d.stage),
-        amount:   d.amount,
-        notes:    '',
-        hsId:     d.id,
-        _fromHubSpot: true,   // tag so dashboard can exclude them
-        added:    d.created || new Date().toISOString()
-      };
-    });
-
-    // Keep AgentNav-native deals, replace only HS-tagged ones
-    var nativeDeals = (_dash.pipeline || []).filter(function(d){ return !d._fromHubSpot; });
-    _dash.pipeline = nativeDeals.concat(hsDeals);
-    _dash.hsLastSync = new Date().toISOString();
-    dashSave();
-    if (cb) cb(null, hsDeals);
-  });
-};
-
-// ── HubSpot panel in Overview tab ────────────────────────────
-function buildHubSpotSyncCard() {
-  var lastSync = _dash.hsLastSync
-    ? 'Last synced ' + new Date(_dash.hsLastSync).toLocaleTimeString('en-US', {hour:'numeric',minute:'2-digit'})
-    : 'Not synced yet';
-
-  return '<div style="background:linear-gradient(135deg,#ff7a59,#ff5c35);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">'
-    + '<div style="display:flex;align-items:center;gap:10px;">'
-    + '<div style="width:32px;height:32px;background:rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">🔗</div>'
-    + '<div>'
-    + '<div style="font-size:13px;font-weight:700;color:#fff;">HubSpot Connected</div>'
-    + '<div style="font-size:11px;color:rgba(255,255,255,0.7);" id="hs-sync-status">' + lastSync + '</div>'
-    + '</div></div>'
-    + '<div style="display:flex;gap:8px;">'
-    + '<button onclick="doHSSyncPipeline()" id="hs-sync-btn" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);border-radius:7px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">↻ Sync Pipeline</button>'
-    + '<button onclick="openHSContactSearch()" style="background:#fff;color:#ff5c35;border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Search Contacts</button>'
-    + '</div></div>';
-}
-
-window.doHSSyncPipeline = function() {
-  var btn = document.getElementById('hs-sync-btn');
-  var status = document.getElementById('hs-sync-status');
-  if (btn) { btn.textContent = 'Syncing...'; btn.disabled = true; }
-  if (status) status.textContent = 'Syncing from HubSpot...';
-
-  syncHubSpotPipeline(function(err, deals) {
-    if (err) {
-      if (status) status.textContent = 'Sync failed: ' + err;
-      if (btn) { btn.textContent = '↻ Sync Pipeline'; btn.disabled = false; }
-      return;
-    }
-    if (status) status.textContent = 'Synced ' + deals.length + ' deals · ' + new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-    if (btn) { btn.textContent = '↻ Sync Pipeline'; btn.disabled = false; }
-    // Refresh pipeline card
-    var pipeList = document.getElementById('dash-pipeline-list');
-    if (pipeList) pipeList.innerHTML = buildPipelineHTML();
-    if (typeof showToast === 'function') showToast('Synced ' + deals.length + ' deals from HubSpot!');
-  });
-};
-
-// ── HubSpot Contact Search Modal ─────────────────────────────
-window.openHSContactSearch = function() {
-  var old = document.getElementById('hs-contact-modal');
-  if (old) old.remove();
-
-  var ov = document.createElement('div');
-  ov.id = 'hs-contact-modal';
-  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
-
-  ov.innerHTML = '<div style="background:#fff;border-radius:14px;padding:24px;width:580px;max-width:95vw;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
-    + '<div style="font-size:16px;font-weight:800;color:#09090b;">HubSpot Contacts</div>'
-    + '<button onclick="document.getElementById(\'hs-contact-modal\').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#a1a1aa;">&#x2715;</button>'
-    + '</div>'
-    + '<div style="display:flex;gap:8px;margin-bottom:16px;">'
-    + '<input id="hs-search-input" type="text" placeholder="Search by name or company..." '
-    + 'style="flex:1;border:1.5px solid #e4e4e7;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;" '
-    + 'onkeydown="if(event.key===\'Enter\') doHSSearch()">'
-    + '<button onclick="doHSSearch()" style="background:#ff5c35;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Search</button>'
-    + '</div>'
-    + '<div id="hs-results" style="min-height:100px;">'
-    + '<div style="text-align:center;padding:40px;color:#a1a1aa;font-size:13px;">Search for a contact to see their HubSpot data</div>'
-    + '</div>'
-    + '</div>';
-
-  document.body.appendChild(ov);
-  ov.onclick = function(e) { if (e.target === ov) ov.remove(); };
-  setTimeout(function() { var i = document.getElementById('hs-search-input'); if (i) i.focus(); }, 50);
-};
-
-window.doHSSearch = function() {
-  var inp = document.getElementById('hs-search-input');
-  var results = document.getElementById('hs-results');
-  if (!inp || !results) return;
-  var q = inp.value.trim();
-  if (!q) return;
-
-  results.innerHTML = '<div style="text-align:center;padding:30px;color:#a1a1aa;font-size:13px;">Searching HubSpot...</div>';
-
-  hsCall('contacts', { search: q }, function(err, data) {
-    if (err || !data) {
-      results.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:16px;">Error: ' + (err || 'No response') + '</div>';
-      return;
-    }
-    var contacts = data.contacts || [];
-    if (!contacts.length) {
-      results.innerHTML = '<div style="text-align:center;padding:30px;color:#a1a1aa;font-size:13px;">No contacts found for "' + q + '"</div>';
-      return;
-    }
-
-    results.innerHTML = '<div style="font-size:11px;color:#a1a1aa;margin-bottom:8px;">' + contacts.length + ' result' + (contacts.length!==1?'s':'') + '</div>'
-      + '<div style="display:flex;flex-direction:column;gap:8px;">'
-      + contacts.map(function(c) {
-          var statusColor = c.status === 'customer' ? '#10b981' : c.status === 'lead' ? '#6366f1' : '#a1a1aa';
-          return '<div style="background:#f8f8fa;border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;">'
-            + '<div style="width:36px;height:36px;border-radius:50%;background:#ff5c35;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0;">'
-            + (c.name ? c.name[0].toUpperCase() : '?') + '</div>'
-            + '<div style="flex:1;min-width:0;">'
-            + '<div style="font-size:13px;font-weight:700;color:#09090b;">' + c.name + '</div>'
-            + '<div style="font-size:11px;color:#71717a;">' + (c.company ? c.company + ' · ' : '') + (c.email || '') + '</div>'
-            + '<div style="font-size:11px;color:#71717a;">' + (c.state ? c.state + ' · ' : '') + (c.phone ? anFormatPhone(c.phone) : '') + '</div>'
-            + '</div>'
-            + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
-            + '<span style="font-size:10px;font-weight:700;color:' + statusColor + ';background:' + statusColor + '18;padding:2px 8px;border-radius:10px;">' + (c.status || 'contact') + '</span>'
-            + '<button onclick="useHSContact(' + JSON.stringify(c).replace(/"/g,"'") + ')" style="background:#6366f1;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Use as Prospect</button>'
-            + '</div>'
-            + '</div>';
-        }).join('')
-      + '</div>';
-  });
-};
-
-window.useHSContact = function(contact) {
-  // Set as current prospect context
-  if (!_dash.prospect) _dash.prospect = {};
-  _dash.prospect.name  = contact.name + (contact.company ? ' — ' + contact.company : '');
-  _dash.prospect.state = contact.state || _dash.prospect.state || '';
-  dashSave();
-
-  // Update prospect card inputs if visible
-  var nameInp = document.getElementById('dash-prospect-name');
-  var stateEl = document.getElementById('dash-state-select');
-  if (nameInp) nameInp.value = _dash.prospect.name;
-  if (stateEl && contact.state) stateEl.value = contact.state;
-
-  // Close modal
-  var modal = document.getElementById('hs-contact-modal');
-  if (modal) modal.remove();
-
-  if (typeof showToast === 'function') showToast('Prospect set to ' + contact.name);
-};
-
-// ── Inject HubSpot sync card into Overview pane ──────────────
-console.log('[HUBSPOT] Dashboard integration loaded.');
 
 // ─── inline block 18 ───────────────────────
 // ============================================================
@@ -12674,7 +12461,7 @@ window.aiSend = function() {
 
   fetch('/.netlify/functions/coach', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._anAuthToken||'') },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 1500,
@@ -20179,7 +19966,7 @@ window.anRunNamePronounce = function(leadId, quiet) {
   if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
   fetch('/.netlify/functions/name-pronounce', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._anAuthToken||'') },
     body: JSON.stringify({
       firstName: lead.firstName || '',
       lastName: lead.lastName || '',
@@ -20272,7 +20059,7 @@ window.anRunLeadResearch = function(leadId) {
   var name = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim();
   fetch('/.netlify/functions/lead-research', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._anAuthToken||'') },
     body: JSON.stringify({ name: name, company: lead.company || '', email: lead.email || '', phone: lead.phone || '',
       state: typeof anResolveLeadState === 'function' ? anResolveLeadState(lead) : (lead.state || '') })
   }).then(function(res) { return res.json(); })
@@ -31467,10 +31254,14 @@ window.anInviteRepClientSide = function(email, fullName, role) {
 };
 
 window.anInviteRepViaNetlify = function(email, fullName, role, invitedBy) {
-  return fetch('/.netlify/functions/invite', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: email, fullName: fullName, role: role, invitedBy: invitedBy })
+  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
+  var getToken = sb ? sb.auth.getSession().then(function(r) { return (r.data && r.data.session && r.data.session.access_token) || ''; }) : Promise.resolve('');
+  return getToken.then(function(token) {
+    return fetch('/.netlify/functions/invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ email: email, fullName: fullName, role: role })
+    });
   }).then(function(res) {
     return res.text().then(function(text) {
       var data = null;
