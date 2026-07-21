@@ -15062,7 +15062,22 @@ AN.save = function(cb){
       // every teammate's unrelated data. Always merge this rep's copy against the
       // freshest server copy first, keeping every other record untouched.
       sb.from('an_leads_shared').select('data').eq('team_id', 'default').maybeSingle().then(function(r){
-        var serverLeads = (r.data && Array.isArray(r.data.data)) ? r.data.data : [];
+        // CRITICAL: never treat a failed/empty fetch as "the shared table has no
+        // data" — that silently wipes out every other record when we write back.
+        // If we can't confirm what's actually there, abort this save entirely
+        // rather than risk overwriting the whole team's data with an incomplete
+        // local subset.
+        if (r.error) {
+          console.error('[CRM] Could not verify current shared data before saving — aborting to avoid data loss:', r.error);
+          callbacks.forEach(function(fn){ fn(false, r.error, saveWhere); });
+          return;
+        }
+        if (!r.data || !Array.isArray(r.data.data)) {
+          console.error('[CRM] Shared data fetch returned nothing unexpectedly — aborting save to avoid data loss.');
+          callbacks.forEach(function(fn){ fn(false, new Error('Refused to save: could not confirm existing data'), saveWhere); });
+          return;
+        }
+        var serverLeads = r.data.data;
         var byId = {};
         serverLeads.forEach(function(l){ if(l && l.id) byId[l.id] = l; });
         AN.leads.forEach(function(l){
@@ -15073,6 +15088,13 @@ AN.save = function(cb){
           if(!existing || anLeadUpdatedMs(l) >= anLeadUpdatedMs(existing)) byId[l.id] = l;
         });
         var merged = Object.keys(byId).map(function(id){ return byId[id]; });
+        // Second safety net: if this write would shrink the dataset by more than
+        // 10%, something is wrong — abort rather than silently delete records.
+        if (serverLeads.length > 50 && merged.length < serverLeads.length * 0.9) {
+          console.error('[CRM] Refusing to save: merge would shrink shared data from ' + serverLeads.length + ' to ' + merged.length + ' records.');
+          callbacks.forEach(function(fn){ fn(false, new Error('Refused to save: would delete too many records'), saveWhere); });
+          return;
+        }
         sb.from('an_leads_shared').upsert({
           team_id: 'default',
           data: merged,
