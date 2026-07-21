@@ -37623,13 +37623,13 @@ window.anRenderScorecard = function() {
 
   var repCols = repEmails.map(function(email) {
     var nm = typeof anGetRepName === 'function' ? anGetRepName(email) : email.split('@')[0];
-    return '<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;">'
-      + '<div contenteditable="true" spellcheck="false" data-rep-email="' + anEsc(email) + '" onblur="anSetRepDisplayName(this.dataset.repEmail,this.textContent)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}" title="Click to edit this rep\'s name" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);text-align:right;line-height:1.35;word-break:break-word;cursor:text;outline:none;border-bottom:1px dashed transparent;" onmouseover="this.style.borderBottomColor=\'#6366f1\'" onmouseout="this.style.borderBottomColor=\'transparent\'">' + anEsc(nm) + '</div>'
-      + '<button onclick="anScorecardExcludeRep(\'' + email + '\')" title="Leave ' + anEsc(nm) + ' out of this plan" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;padding:0;flex-shrink:0;">\u2715</button>'
+    return '<div style="display:flex;align-items:center;justify-content:center;gap:5px;width:100%;">'
+      + '<div contenteditable="true" spellcheck="false" data-rep-email="' + anEsc(email) + '" onblur="anSetRepDisplayName(this.dataset.repEmail,this.textContent)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}" title="Click to edit this rep\'s name" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:95px;cursor:text;outline:none;border-bottom:1px dashed transparent;" onmouseover="this.style.borderBottomColor=\'#6366f1\'" onmouseout="this.style.borderBottomColor=\'transparent\'">' + anEsc(nm) + '</div>'
+      + '<button onclick="anScorecardExcludeRep(\'' + email + '\')" title="Leave ' + anEsc(nm) + ' out of this plan" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;padding:0;width:14px;height:14px;flex:0 0 14px;line-height:1;">\u2715</button>'
       + '</div>';
   }).join('');
 
-  var colTemplate = '160px 130px ' + repEmails.map(function(){ return '140px'; }).join(' ') + ' 32px 32px';
+  var colTemplate = '160px 130px ' + repEmails.map(function(){ return '150px'; }).join(' ') + ' 32px 32px';
 
   function buildRowsForCategory(catId) {
     return (s.rows || []).filter(function(r) { return r.category === catId; }).map(function(row) {
@@ -37677,13 +37677,13 @@ window.anRenderScorecard = function() {
     + (excludedChips ? '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">' + excludedChips + '</div>' : '')
     + '</div>'
     + '<div style="background:var(--card-bg);border:1px solid var(--divider);border-radius:14px;padding:20px;margin-bottom:20px;overflow-x:auto;">'
-    + '<div style="display:grid;grid-template-columns:' + colTemplate + ';gap:8px;align-items:end;padding-bottom:8px;border-bottom:2px solid var(--divider);margin-bottom:4px;min-width:' + (600 + repEmails.length * 140) + 'px;">'
+    + '<div style="display:grid;grid-template-columns:' + colTemplate + ';gap:8px;align-items:end;padding-bottom:8px;border-bottom:2px solid var(--divider);margin-bottom:4px;min-width:' + (600 + repEmails.length * 150) + 'px;">'
     + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Metric</div>'
     + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);text-align:right;">Target</div>'
     + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);text-align:right;">Team Total</div>'
     + repCols + '<span></span><span></span>'
     + '</div>'
-    + '<div style="min-width:' + (600 + repEmails.length * 140) + 'px;">' + categoryBlocks + '</div>'
+    + '<div style="min-width:' + (600 + repEmails.length * 150) + 'px;">' + categoryBlocks + '</div>'
     + '<div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">'
     + '<button onclick="anScorecardAddRow()" style="padding:9px 16px;border-radius:8px;border:1.5px dashed var(--divider);background:transparent;color:var(--text-secondary);font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--sans);">+ Add custom metric</button>'
     + '<button onclick="anScorecardPullAll()" style="padding:9px 16px;border-radius:8px;border:1.5px solid #6366f1;background:transparent;color:#6366f1;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans);">\u21bb Pull All From App</button>'
