@@ -15103,6 +15103,24 @@ AN.save = function(cb){
           if(!existing || anLeadUpdatedMs(l) >= anLeadUpdatedMs(existing)) byId[l.id] = l;
         });
         var merged = Object.keys(byId).map(function(id){ return byId[id]; });
+
+        // Permanent backstop against duplicate records piling back up: collapse any
+        // leads that share the same name+company down to whichever was updated most
+        // recently. This runs on every save, so however duplicates keep getting
+        // created elsewhere, they get cleaned up here instead of accumulating.
+        var identityBest = {};
+        var noIdentity = [];
+        merged.forEach(function(l){
+          if (!l) return;
+          var nameKey = ((l.firstName || '') + ' ' + (l.lastName || '')).trim().toLowerCase();
+          var companyKey = (l.company || '').trim().toLowerCase();
+          if (!nameKey && !companyKey) { noIdentity.push(l); return; }
+          var idKey = nameKey + '|' + companyKey;
+          var existingBest = identityBest[idKey];
+          if (!existingBest || anLeadUpdatedMs(l) >= anLeadUpdatedMs(existingBest)) identityBest[idKey] = l;
+        });
+        merged = Object.keys(identityBest).map(function(k){ return identityBest[k]; }).concat(noIdentity);
+
         // Second safety net: if this write would shrink the dataset by more than
         // 10%, something is wrong — abort rather than silently delete records.
         if (serverLeads.length > 50 && merged.length < serverLeads.length * 0.9) {
@@ -22693,6 +22711,7 @@ window.renderOpportunities = function() {
     +'</div>'
     +'<div style="position:relative;"><span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;color:var(--text-muted);">🔍</span>'
     +'<input type="search" class="opp-search" placeholder="Search deals..." value="'+anEsc(AN.oppSearchQ||'')+'" oninput="AN.oppSearchQ=this.value;renderOpportunities()"></div>'
+    +'<button type="button" onclick="anDownloadDealsPDF()" style="padding:8px 14px;border-radius:8px;border:1.5px solid var(--divider);background:var(--card-bg);color:var(--text-secondary);font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--sans);white-space:nowrap;">📄 Download PDF</button>'
     +'</div>';
 
   var mainView = oppView === 'table' ? anBuildOppTableHTML(opps, stages)
@@ -36728,6 +36747,7 @@ function anReportDateRange(rangeKey, customFrom, customTo) {
     case 'last_30': var l30=new Date(today); l30.setDate(l30.getDate()-30); return { from:fmt(l30), to:t, label:'Last 30 Days' };
     case 'last_90': var l90=new Date(today); l90.setDate(l90.getDate()-90); return { from:fmt(l90), to:t, label:'Last 90 Days' };
     case 'this_year': return { from:fmt(startOfYear), to:t, label:'This Year' };
+    case 'all_time': return { from:'2020-01-01', to:t, label:'All Time' };
     case 'custom': return { from:customFrom||t, to:customTo||t, label:(customFrom||t)+' – '+(customTo||t) };
     default: return { from:t, to:t, label:'Today' };
   }
@@ -37018,6 +37038,25 @@ window.anBuildActivityPDF = function(range, repFilter, author) {
 };
 
 // ── PIPELINE REPORT ───────────────────────────────────────────
+// One-click PDF download directly from the Deals page — reuses the same
+// Pipeline Report builder as the full Report Builder, just with sensible
+// defaults (whole current pipeline, all reps) so there's nothing to configure.
+window.anDownloadDealsPDF = function() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    if (typeof showToast === 'function') showToast('PDF engine loading \u2014 try again');
+    return;
+  }
+  try {
+    var range = anReportDateRange('all_time');
+    var author = (typeof _currentUser !== 'undefined' && _currentUser && _currentUser.email) || 'AgentNav';
+    anBuildPipelinePDF(range, 'all', author);
+    if (typeof showToast === 'function') showToast('Deals PDF downloaded');
+  } catch (err) {
+    console.error('[Deals PDF] Failed to generate:', err);
+    if (typeof showToast === 'function') showToast('Could not generate PDF: ' + err.message);
+  }
+};
+
 window.anBuildPipelinePDF = function(range, repFilter, author) {
   var doc = rptNewDoc();
   var M = doc._M, CW = doc._CW;
@@ -37198,6 +37237,15 @@ window.anBuildPipelinePDF = function(range, repFilter, author) {
   var filename = 'AgentNav-Pipeline-Report-' + range.from + '.pdf';
   doc.save(filename);
 };
+
+// Expose the PDF layout helpers globally so other features (e.g. the Sales
+// Scorecard) can reuse the same report styling instead of reimplementing it.
+window.rptNewDoc = rptNewDoc;
+window.rptHeader = rptHeader;
+window.rptSectionTitle = rptSectionTitle;
+window.rptStatRow = rptStatRow;
+window.rptCheckPage = rptCheckPage;
+window.rptFooter = rptFooter;
 
 })(); // end IIFE
 
