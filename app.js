@@ -37976,7 +37976,8 @@ window.anRenderScorecard = function() {
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">'
     + '<div style="font-size:14px;font-weight:800;color:var(--text-primary);">Chart</div>'
     + '<div style="display:flex;gap:8px;">'
-    + '<button onclick="anScorecardDownloadPDF()" style="padding:8px 14px;border-radius:8px;border:1.5px solid var(--divider);background:var(--card-bg);color:var(--text-secondary);font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--sans);">\u2b07 Download PDF</button>'
+    + '<button onclick="anScorecardDownloadPDF()" style="padding:8px 14px;border-radius:8px;border:1.5px solid var(--divider);background:var(--card-bg);color:var(--text-secondary);font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--sans);">\u2b07 Scorecard Only</button>'
+    + '<button onclick="anBuildExecutiveReportPDF()" style="padding:8px 14px;border-radius:8px;border:1.5px solid #6366f1;background:#eef2ff;color:#4338ca;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans);">\ud83d\udcce Full Executive Report</button>'
     + '<button onclick="anScorecardEmailToLeadership()" style="padding:8px 14px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans);">\u2709 Email to Leadership</button>'
     + '</div></div>'
     + anScorecardChartSettingsHTML()
@@ -38081,6 +38082,220 @@ window.anScorecardEmailToLeadership = function() {
     window.location.href = 'mailto:' + encodeURIComponent(to) + '?subject=' + subject + '&body=' + body;
   }, 400);
   if (typeof showToast === 'function') showToast('PDF downloaded \u2014 attach it in the email that just opened');
+};
+
+// ── EXECUTIVE REPORT — Scorecard + full Deal Pipeline in one polished PDF ──
+window.anBuildExecutiveReportPDF = function() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    if (typeof showToast === 'function') showToast('PDF engine loading \u2014 try again');
+    return;
+  }
+  try {
+    var s = window._anScorecard;
+    if (!s.dateFrom || !s.dateTo) {
+      if (typeof showToast === 'function') showToast('Open the Scorecard tab and pick a date range first');
+      return;
+    }
+    var doc = rptNewDoc();
+    var M = doc._M, CW = doc._CW;
+    var author = (typeof _currentUser !== 'undefined' && _currentUser && _currentUser.email) || 'AgentNav';
+    var rangeLabel = s.preset === 'custom' ? 'Custom Range' : (s.preset || 'this_week').replace(/_/g, ' ');
+    var y = rptHeader(doc, 'Executive Report', rangeLabel.replace(/\b\w/g, function(c){ return c.toUpperCase(); }) + ' \u2014 Scorecard & Deal Pipeline', author, { label: s.dateFrom + ' to ' + s.dateTo });
+
+    // ═══ SECTION 1: SALES SCORECARD ═══
+    y = rptCheckPage(doc, y, 16);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(67, 56, 202);
+    doc.text('1. Sales Scorecard', M, y);
+    y += 8;
+
+    var allRepEmails = (typeof _repViews !== 'undefined' && _repViews) ? Object.keys(_repViews) : [];
+    var excluded = s.excludedReps || [];
+    var repEmails = allRepEmails.filter(function(e) { return excluded.indexOf(e) < 0; });
+
+    CATEGORIES.forEach(function(cat) {
+      var rows = (s.rows || []).filter(function(r) { return r.category === cat.id; });
+      if (!rows.length) return;
+      y = rptCheckPage(doc, y, 16 + rows.length * 9);
+      y = rptSectionTitle(doc, y, cat.label);
+      rows.forEach(function(row) {
+        var ac = attainmentColor(row.team, row.target);
+        var color = ac === '#10b981' ? [16, 185, 129] : ac === '#f59e0b' ? [245, 158, 11] : ac === '#ef4444' ? [239, 68, 68] : [9, 9, 11];
+        var valueStr = String(row.team || '\u2014');
+        if (row.target) valueStr += '  (target: ' + row.target + ')';
+        if (repEmails.length) {
+          var repStr = repEmails.map(function(email) {
+            var nm = typeof anGetRepName === 'function' ? anGetRepName(email) : email.split('@')[0];
+            return nm + ': ' + ((row.reps || {})[email] || '\u2014');
+          }).join('  \u00b7  ');
+          valueStr += '   [' + repStr + ']';
+        }
+        y = rptCheckPage(doc, y, 12);
+        y = rptStatRow(doc, y, row.label || '(untitled metric)', valueStr, color);
+      });
+      y += 4;
+    });
+
+    var chartCanvases = Array.prototype.slice.call(document.querySelectorAll('#scorecard-charts-grid canvas'));
+    if (chartCanvases.length) {
+      y = rptCheckPage(doc, y, 20);
+      y = rptSectionTitle(doc, y, 'Scorecard Charts');
+      var chartW = (CW - 8) / 2;
+      var chartH = chartW * 0.62;
+      for (var ci = 0; ci < chartCanvases.length; ci += 2) {
+        y = rptCheckPage(doc, y, chartH + 6);
+        try { doc.addImage(chartCanvases[ci].toDataURL('image/png'), 'PNG', M, y, chartW, chartH); } catch (e) {}
+        if (chartCanvases[ci + 1]) {
+          try { doc.addImage(chartCanvases[ci + 1].toDataURL('image/png'), 'PNG', M + chartW + 8, y, chartW, chartH); } catch (e) {}
+        }
+        y += chartH + 8;
+      }
+    }
+
+    // ═══ SECTION 2: DEAL PIPELINE ═══
+    doc.addPage();
+    doc.setFillColor(238, 242, 255); doc.rect(0, 0, doc._W, 6, 'F');
+    y = 16;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(67, 56, 202);
+    doc.text('2. Deal Pipeline', M, y);
+    y += 10;
+
+    var leads = (typeof AN !== 'undefined' && AN.leads) ? AN.leads : [];
+    var opps = leads.filter(function(l) { return typeof anIsOpportunity === 'function' && anIsOpportunity(l); });
+    var stageLabels = { demo: 'Demo Set', demo_complete: 'Demo Completed', showed: 'Demo Showed', proposal: 'Proposal Sent', negotiating: 'Negotiating', won: 'Closed Won', lost: 'Closed Lost' };
+    var stageColors = { won: [16, 185, 129], lost: [239, 68, 68], demo: [99, 102, 241], demo_complete: [139, 92, 246], showed: [234, 88, 12], proposal: [245, 158, 11] };
+    var stageCounts = {}, stageMRR = {};
+    var totalOpenMRR = 0, totalWonMRR = 0;
+    var repPipeline = {};
+
+    opps.forEach(function(l) {
+      var st = l.status || 'demo';
+      stageCounts[st] = (stageCounts[st] || 0) + 1;
+      var mrr = typeof anOppContractValue === 'function' ? anOppContractValue(l).monthlyEquivalent : (l.oppMRR || 79);
+      stageMRR[st] = (stageMRR[st] || 0) + mrr;
+      if (st !== 'lost') totalOpenMRR += mrr;
+      if (st === 'won') totalWonMRR += mrr;
+      var owner = (l._repEmail || '').toLowerCase() || 'unassigned';
+      if (!repPipeline[owner]) repPipeline[owner] = { open: 0, won: 0, openMRR: 0, wonMRR: 0 };
+      if (st !== 'lost') { repPipeline[owner].open++; repPipeline[owner].openMRR += mrr; }
+      if (st === 'won') { repPipeline[owner].won++; repPipeline[owner].wonMRR += mrr; }
+    });
+
+    var openOpps = opps.filter(function(l) { return l.status !== 'lost' && l.status !== 'won'; });
+    var wonOpps = opps.filter(function(l) { return l.status === 'won'; });
+    y = rptSectionTitle(doc, y, 'Pipeline Summary');
+    var tileW2 = (CW - 9) / 4;
+    var t2 = [
+      { label: 'Open Deals', val: openOpps.length, col: [99, 102, 241] },
+      { label: 'Open MRR', val: '$' + Math.round(totalOpenMRR - totalWonMRR).toLocaleString(), col: [139, 92, 246] },
+      { label: 'Closed Won', val: wonOpps.length, col: [16, 185, 129] },
+      { label: 'Won MRR', val: '$' + Math.round(totalWonMRR).toLocaleString(), col: [22, 163, 74] }
+    ];
+    t2.forEach(function(t, i) {
+      var tx = M + i * (tileW2 + 3);
+      doc.setFillColor(t.col[0], t.col[1], t.col[2]);
+      doc.roundedRect(tx, y, tileW2, 22, 3, 3, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(String(t.val).length > 6 ? 14 : 20); doc.setTextColor(255, 255, 255);
+      doc.text(String(t.val), tx + tileW2 / 2, y + 13, { align: 'center' });
+      doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
+      doc.text(t.label.toUpperCase(), tx + tileW2 / 2, y + 19, { align: 'center' });
+    });
+    y += 28;
+
+    var wr = (wonOpps.length + openOpps.length) > 0 ? Math.round(wonOpps.length / (wonOpps.length + openOpps.length) * 100) : 0;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(82, 82, 91);
+    doc.text('Win rate: ' + wr + '%  \u00b7  Total deals: ' + opps.length, M, y);
+    y += 10;
+
+    y = rptCheckPage(doc, y, 20);
+    y = rptSectionTitle(doc, y, 'By Stage');
+    var allStages = Object.keys(stageCounts).filter(function(st) { return stageCounts[st] > 0; });
+    var stageColX = [M + 3, M + CW * 0.55, M + CW * 0.75, M + CW];
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(113, 113, 122);
+    doc.text('Stage', stageColX[0], y + 4);
+    doc.text('Deals', stageColX[2], y + 4, { align: 'right' });
+    doc.text('MRR', stageColX[3], y + 4, { align: 'right' });
+    doc.setDrawColor(228, 228, 231); doc.line(M, y + 7, M + CW, y + 7);
+    y += 10;
+    allStages.forEach(function(st) {
+      y = rptCheckPage(doc, y, 10);
+      var col = stageColors[st] || [9, 9, 11];
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(col[0], col[1], col[2]);
+      doc.text(stageLabels[st] || st, stageColX[0], y + 4);
+      doc.setTextColor(9, 9, 11);
+      doc.text(String(stageCounts[st]), stageColX[2], y + 4, { align: 'right' });
+      doc.text('$' + Math.round(stageMRR[st]).toLocaleString(), stageColX[3], y + 4, { align: 'right' });
+      doc.setDrawColor(243, 244, 246); doc.setLineWidth(0.2); doc.line(M, y + 7, M + CW, y + 7);
+      y += 9;
+    });
+    y += 4;
+
+    var repKeys = Object.keys(repPipeline);
+    if (repKeys.length > 1) {
+      y = rptCheckPage(doc, y, 20);
+      y = rptSectionTitle(doc, y, 'Rep Pipeline');
+      var repColX = [M + 3, M + CW * 0.42, M + CW * 0.58, M + CW * 0.75, M + CW];
+      var repHeaders = ['Rep', 'Open', 'Won', 'Open MRR', 'Won MRR'];
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(113, 113, 122);
+      repHeaders.forEach(function(h, i) { doc.text(h, repColX[i], y + 4, i > 0 ? { align: 'right' } : {}); });
+      doc.setDrawColor(228, 228, 231); doc.line(M, y + 7, M + CW, y + 7);
+      y += 10;
+      repKeys.sort(function(a, b) { return repPipeline[b].openMRR - repPipeline[a].openMRR; });
+      repKeys.forEach(function(rep) {
+        y = rptCheckPage(doc, y, 10);
+        var rp = repPipeline[rep];
+        var name = typeof anGetRepName === 'function' ? anGetRepName(rep) : rep.split('@')[0];
+        var vals = [name, rp.open, rp.won, '$' + Math.round(rp.openMRR).toLocaleString(), '$' + Math.round(rp.wonMRR).toLocaleString()];
+        vals.forEach(function(v, i) {
+          doc.setFont('helvetica', i === 0 ? 'bold' : 'normal'); doc.setFontSize(9.5); doc.setTextColor(9, 9, 11);
+          doc.text(String(v), repColX[i], y + 4, i > 0 ? { align: 'right' } : {});
+        });
+        doc.setDrawColor(243, 244, 246); doc.setLineWidth(0.2); doc.line(M, y + 7, M + CW, y + 7);
+        y += 9;
+      });
+      y += 4;
+    }
+
+    y = rptCheckPage(doc, y, 20);
+    y = rptSectionTitle(doc, y, 'Deal Detail (' + opps.length + ' deals)');
+    var dealColX = [M + 3, M + CW * 0.40, M + CW * 0.60, M + CW * 0.78, M + CW];
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(113, 113, 122);
+    ['Contact / Company', 'Stage', 'Owner', 'MRR'].forEach(function(h, i) { doc.text(h, dealColX[i], y + 4, i > 2 ? { align: 'right' } : {}); });
+    doc.setDrawColor(228, 228, 231); doc.line(M, y + 7, M + CW, y + 7);
+    y += 10;
+
+    var oppsSorted = opps.slice().sort(function(a, b) {
+      var order = { won: 0, proposal: 1, showed: 2, demo_complete: 3, demo: 4, lost: 5 };
+      return (order[a.status] || 99) - (order[b.status] || 99);
+    });
+    oppsSorted.forEach(function(l) {
+      y = rptCheckPage(doc, y, 11);
+      var name = ((l.firstName || '') + ' ' + (l.lastName || '')).trim() || l.company || 'Contact';
+      var co = l.company || '';
+      var displayName = name + (co && co !== name ? ' \u00b7 ' + co : '');
+      if (displayName.length > 34) displayName = displayName.slice(0, 32) + '\u2026';
+      var st2 = l.status || 'demo';
+      var stCol = stageColors[st2] || [9, 9, 11];
+      var ownerName = l._repEmail ? (typeof anGetRepName === 'function' ? anGetRepName(l._repEmail) : l._repEmail.split('@')[0]) : '\u2014';
+      var mrr2 = typeof anOppContractValue === 'function' ? anOppContractValue(l).monthlyEquivalent : (l.oppMRR || 79);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(9, 9, 11);
+      doc.text(displayName, dealColX[0], y + 4);
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(stCol[0], stCol[1], stCol[2]);
+      doc.text(stageLabels[st2] || st2, dealColX[1], y + 4);
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(82, 82, 91);
+      doc.text(ownerName, dealColX[2], y + 4);
+      doc.setTextColor(9, 9, 11);
+      doc.text('$' + Math.round(mrr2).toLocaleString(), dealColX[3], y + 4, { align: 'right' });
+      doc.setDrawColor(243, 244, 246); doc.setLineWidth(0.2); doc.line(M, y + 7, M + CW, y + 7);
+      y += 9;
+    });
+
+    rptFooter(doc);
+    doc.save('AgentNav-Executive-Report-' + s.dateFrom + '-to-' + s.dateTo + '.pdf');
+    if (typeof showToast === 'function') showToast('Executive Report downloaded');
+  } catch (err) {
+    console.error('[Executive Report] Failed to generate:', err);
+    if (typeof showToast === 'function') showToast('Could not generate report: ' + err.message);
+  }
 };
 
 })();
