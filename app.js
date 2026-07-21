@@ -37590,108 +37590,134 @@ function attainmentColor(team, target) {
   return '#ef4444';                  // well behind
 }
 
+// Recolor a single row's Team Total box in place — no DOM rebuild, so typing/tabbing
+// never gets interrupted the way a full re-render would.
+window.anScorecardRecolorRow = function(rowId) {
+  var s = window._anScorecard;
+  var row = (s.rows || []).find(function(r) { return r.id === rowId; });
+  if (!row) return;
+  var input = document.getElementById('scorecard-input-' + rowId + '-team');
+  if (!input) return;
+  var color = attainmentColor(row.team, row.target) || 'var(--divider)';
+  var textColor = attainmentColor(row.team, row.target) || '#6366f1';
+  input.style.borderColor = color;
+  input.style.color = textColor;
+};
+
 var PIE_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#14b8a6'];
 
-window.anScorecardUpdateChart = function() {
-  var canvas = document.getElementById('scorecard-chart');
-  if (!canvas || !window.Chart) return;
-  var s = window._anScorecard;
-  var type = s.chartType || 'bar';
-  var mode = s.chartMode || 'raw';
-  var usesPercent = mode === 'percent' && (type === 'bar' || type === 'horizontalBar' || type === 'line');
-
-  var allRows = (s.rows || []).filter(function(r) { return numOnly(r.team) !== null; });
-  var rows = s.chartMetricIds === null ? allRows : allRows.filter(function(r) { return s.chartMetricIds.indexOf(r.id) >= 0; });
-  // % of Target mode only makes sense for rows that actually have a target set
-  if (usesPercent) rows = rows.filter(function(r) { return numOnly(r.target) !== null && numOnly(r.target) !== 0; });
-
-  var labels = rows.map(function(r) { return r.label || r.id; });
-  var actuals = rows.map(function(r) { return numOnly(r.team) || 0; });
-  var targets = rows.map(function(r) { return numOnly(r.target); });
-  if (s.chart) { s.chart.destroy(); s.chart = null; }
-  if (!rows.length) return;
-
-  var config;
+function anScorecardBuildChartConfig(row, type, mode) {
+  var label = row.label || row.id;
+  var actual = numOnly(row.team) || 0;
+  var target = numOnly(row.target);
+  var usesPercent = mode === 'percent' && target !== null && target !== 0 && (type === 'bar' || type === 'horizontalBar' || type === 'line');
 
   if (type === 'pie' || type === 'doughnut') {
-    // Pie/doughnut show proportions of one dataset — Target isn't a second slice set,
-    // it doesn't make sense to compare two full pies, so this shows Actual values only.
-    config = {
+    // A single-metric pie/doughnut works best as a goal-progress ring: how much of
+    // the target has been reached vs. what's left, rather than one meaningless slice.
+    if (target) {
+      var achieved = Math.min(actual, target);
+      var remaining = Math.max(0, target - actual);
+      var overColor = actual >= target ? '#10b981' : '#6366f1';
+      return {
+        type: type,
+        data: {
+          labels: ['Achieved', 'Remaining to Target'],
+          datasets: [{ data: [achieved, remaining], backgroundColor: [overColor, '#e4e4e7'] }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }, title: { display: true, text: label + ': ' + actual + ' / ' + target } } }
+      };
+    }
+    return {
       type: type,
-      data: {
-        labels: labels,
-        datasets: [{ data: actuals, backgroundColor: labels.map(function(_, i) { return PIE_COLORS[i % PIE_COLORS.length]; }) }]
-      },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+      data: { labels: [label], datasets: [{ data: [actual || 1], backgroundColor: ['#6366f1'] }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }, title: { display: true, text: label + ': ' + actual } } }
     };
-  } else if (usesPercent) {
-    // % of Target — puts every metric on the same 0-100%+ scale regardless of its
-    // real-world units, so a metric in the thousands (calls) doesn't visually erase
-    // one in single digits (demos) or one that's a percentage already (show rate).
-    var pctValues = rows.map(function(r) {
-      var a = numOnly(r.team) || 0, t = numOnly(r.target);
-      return Math.round((a / t) * 100);
-    });
-    var pctColors = pctValues.map(function(p) {
-      if (p >= 100) return '#10b981';
-      if (p >= 70) return '#f59e0b';
-      return '#ef4444';
-    });
-    config = {
+  }
+
+  if (usesPercent) {
+    var pct = Math.round((actual / target) * 100);
+    var pctColor = pct >= 100 ? '#10b981' : pct >= 70 ? '#f59e0b' : '#ef4444';
+    return {
       type: type === 'line' ? 'line' : 'bar',
       data: {
-        labels: labels,
+        labels: [label],
         datasets: [
-          { label: '% of Target', data: pctValues, backgroundColor: pctColors, borderColor: pctColors, borderRadius: 6, fill: type === 'line' ? false : undefined },
-          { label: 'Target (100%)', data: labels.map(function(){ return 100; }), backgroundColor: 'rgba(161,161,170,0.35)', borderColor: '#a1a1aa', borderDash: type === 'line' ? [5,5] : undefined, borderRadius: 6, type: type === 'line' ? 'line' : undefined }
+          { label: '% of Target', data: [pct], backgroundColor: [pctColor], borderColor: pctColor, borderRadius: 6 },
+          { label: 'Target (100%)', data: [100], backgroundColor: 'rgba(161,161,170,0.35)', borderColor: '#a1a1aa' }
         ]
       },
       options: {
         indexAxis: type === 'horizontalBar' ? 'y' : 'x',
         responsive: true, maintainAspectRatio: false,
-        scales: { y: { beginAtZero: true, title: { display: true, text: '% of Target' } } },
-        plugins: { legend: { position: 'bottom' } }
+        scales: { y: { beginAtZero: true } },
+        plugins: { legend: { position: 'bottom' }, title: { display: true, text: label } }
       }
-    };
-  } else if (type === 'line') {
-    config = {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [
-          { label: 'Actual', data: actuals, borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.1)', tension: 0.3, fill: true },
-          { label: 'Target', data: targets, borderColor: '#a1a1aa', backgroundColor: 'transparent', borderDash: [5, 5], tension: 0.3 }
-        ]
-      },
-      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: 'bottom' } } }
-    };
-  } else if (type === 'horizontalBar') {
-    config = {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [
-          { label: 'Actual', data: actuals, backgroundColor: '#6366f1', borderRadius: 6 },
-          { label: 'Target', data: targets, backgroundColor: '#e4e4e7', borderRadius: 6 }
-        ]
-      },
-      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } }, plugins: { legend: { position: 'bottom' } } }
-    };
-  } else {
-    config = {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [
-          { label: 'Actual', data: actuals, backgroundColor: '#6366f1', borderRadius: 6 },
-          { label: 'Target', data: targets, backgroundColor: '#e4e4e7', borderRadius: 6 }
-        ]
-      },
-      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: 'bottom' } } }
     };
   }
 
-  s.chart = new Chart(canvas.getContext('2d'), config);
+  if (type === 'line') {
+    return {
+      type: 'line',
+      data: {
+        labels: [label],
+        datasets: [
+          { label: 'Actual', data: [actual], borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.15)', pointRadius: 6, fill: true },
+          { label: 'Target', data: [target], borderColor: '#a1a1aa', backgroundColor: 'transparent', pointRadius: 6, borderDash: [5, 5] }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: 'bottom' }, title: { display: true, text: label } } }
+    };
+  }
+
+  return {
+    type: 'bar',
+    data: {
+      labels: [label],
+      datasets: [
+        { label: 'Actual', data: [actual], backgroundColor: '#6366f1', borderRadius: 6 },
+        { label: 'Target', data: [target], backgroundColor: '#e4e4e7', borderRadius: 6 }
+      ]
+    },
+    options: {
+      indexAxis: type === 'horizontalBar' ? 'y' : 'x',
+      responsive: true, maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true } },
+      plugins: { legend: { position: 'bottom' }, title: { display: true, text: label } }
+    }
+  };
+}
+
+window.anScorecardUpdateChart = function() {
+  var grid = document.getElementById('scorecard-charts-grid');
+  if (!grid || !window.Chart) return;
+  var s = window._anScorecard;
+  var type = s.chartType || 'bar';
+  var mode = s.chartMode || 'raw';
+
+  // Destroy every existing chart instance before rebuilding
+  (s.charts || []).forEach(function(c) { try { c.destroy(); } catch (e) {} });
+  s.charts = [];
+
+  var allRows = (s.rows || []).filter(function(r) { return numOnly(r.team) !== null; });
+  var rows = s.chartMetricIds === null ? allRows : allRows.filter(function(r) { return s.chartMetricIds.indexOf(r.id) >= 0; });
+
+  grid.innerHTML = '';
+  if (!rows.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text-muted);font-size:13px;padding:20px;text-align:center;">Add a value to a metric above to see its chart here.</div>';
+    return;
+  }
+
+  rows.forEach(function(row) {
+    var card = document.createElement('div');
+    card.style.cssText = 'background:var(--card-bg);border:1px solid var(--divider);border-radius:10px;padding:12px;height:240px;';
+    var canvas = document.createElement('canvas');
+    canvas.id = 'scorecard-chart-' + row.id;
+    card.appendChild(canvas);
+    grid.appendChild(card);
+    var config = anScorecardBuildChartConfig(row, type, mode);
+    s.charts.push(new Chart(canvas.getContext('2d'), config));
+  });
 };
 
 function anScorecardChartSettingsHTML() {
@@ -37787,7 +37813,7 @@ window.anRenderScorecard = function() {
     return (s.rows || []).filter(function(r) { return r.category === catId; }).map(function(row) {
       var isDefault = !!row.metric;
       var color = attainmentColor(row.team, row.target);
-      var teamCell = '<input id="scorecard-input-' + row.id + '-team" value="' + anEsc(row.team || '') + '" placeholder="\u2014" oninput="anScorecardUpdateField(\'' + row.id + '\',\'team\',this.value)" onchange="anScorecardUpdateChart()" style="border:1.5px solid ' + (color || 'var(--divider)') + ';border-radius:7px;padding:6px 9px;font-size:13px;font-weight:700;color:' + (color || '#6366f1') + ';text-align:right;background:var(--card-bg);outline:none;font-family:var(--sans);width:100%;">';
+      var teamCell = '<input id="scorecard-input-' + row.id + '-team" value="' + anEsc(row.team || '') + '" placeholder="\u2014" oninput="anScorecardUpdateField(\'' + row.id + '\',\'team\',this.value);anScorecardRecolorRow(\'' + row.id + '\')" onchange="anScorecardUpdateChart()" style="border:1.5px solid ' + (color || 'var(--divider)') + ';border-radius:7px;padding:6px 9px;font-size:13px;font-weight:700;color:' + (color || '#6366f1') + ';text-align:right;background:var(--card-bg);outline:none;font-family:var(--sans);width:100%;">';
       var repCells = repEmails.map(function(email) {
         var val = (row.reps || {})[email] || '';
         var safeId = 'scorecard-input-' + row.id + '-' + email.replace(/[^a-z0-9]/gi, '');
@@ -37795,7 +37821,7 @@ window.anRenderScorecard = function() {
       }).join('');
       return '<div style="display:grid;grid-template-columns:' + colTemplate + ';gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--divider);">'
         + '<input value="' + anEsc(row.label) + '" placeholder="Metric name" oninput="anScorecardUpdateField(\'' + row.id + '\',\'label\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;font-size:13px;font-weight:600;color:var(--text-primary);padding:4px 0;outline:none;font-family:var(--sans);">'
-        + '<input value="' + anEsc(row.target || '') + '" placeholder="Target" oninput="anScorecardUpdateField(\'' + row.id + '\',\'target\',this.value)" onchange="anRenderScorecard()" style="border:1.5px solid var(--divider);border-radius:7px;padding:6px 9px;font-size:12.5px;font-weight:600;color:var(--text-primary);text-align:right;background:var(--card-bg);outline:none;font-family:var(--sans);width:100%;">'
+        + '<input value="' + anEsc(row.target || '') + '" placeholder="Target" oninput="anScorecardUpdateField(\'' + row.id + '\',\'target\',this.value);anScorecardRecolorRow(\'' + row.id + '\')" style="border:1.5px solid var(--divider);border-radius:7px;padding:6px 9px;font-size:12.5px;font-weight:600;color:var(--text-primary);text-align:right;background:var(--card-bg);outline:none;font-family:var(--sans);width:100%;">'
         + teamCell
         + repCells
         + (isDefault ? '<button onclick="anScorecardPullMetric(\'' + row.id + '\')" title="Pull team total from app" style="background:#eef2ff;border:none;border-radius:7px;color:#6366f1;cursor:pointer;font-size:13px;padding:6px;">\u21bb</button>' : '<span></span>')
@@ -37852,7 +37878,7 @@ window.anRenderScorecard = function() {
     + '<button onclick="anScorecardEmailToLeadership()" style="padding:8px 14px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans);">\u2709 Email to Leadership</button>'
     + '</div></div>'
     + anScorecardChartSettingsHTML()
-    + '<div style="height:280px;margin-top:14px;"><canvas id="scorecard-chart"></canvas></div>'
+    + '<div id="scorecard-charts-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:14px;"></div>'
     + '</div>'
     + '<div style="background:var(--card-bg);border:1px solid var(--divider);border-radius:14px;padding:20px;">'
     + '<div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:10px;">Saved Scorecards</div>'
@@ -37904,18 +37930,27 @@ window.anScorecardDownloadPDF = function() {
     y += 4;
   });
 
-  // Embed the live chart as an image
-  var canvas = document.getElementById('scorecard-chart');
-  if (canvas) {
-    try {
-      y = rptCheckPage(doc, y, 90);
-      var imgData = canvas.toDataURL('image/png');
-      var imgW = CW;
-      var imgH = imgW * (canvas.height / canvas.width);
-      if (imgH > 80) { imgH = 80; imgW = imgH * (canvas.width / canvas.height); }
-      doc.addImage(imgData, 'PNG', M, y, imgW, imgH);
-      y += imgH + 8;
-    } catch (e) { /* chart not ready — skip embedding rather than fail the whole PDF */ }
+  // Embed each individual metric chart as an image, two per row
+  var chartCanvases = Array.prototype.slice.call(document.querySelectorAll('#scorecard-charts-grid canvas'));
+  if (chartCanvases.length) {
+    y = rptCheckPage(doc, y, 20);
+    y = rptSectionTitle(doc, y, 'Charts');
+    var chartW = (CW - 8) / 2;
+    var chartH = chartW * 0.62;
+    for (var ci = 0; ci < chartCanvases.length; ci += 2) {
+      y = rptCheckPage(doc, y, chartH + 6);
+      try {
+        var img1 = chartCanvases[ci].toDataURL('image/png');
+        doc.addImage(img1, 'PNG', M, y, chartW, chartH);
+      } catch (e) {}
+      if (chartCanvases[ci + 1]) {
+        try {
+          var img2 = chartCanvases[ci + 1].toDataURL('image/png');
+          doc.addImage(img2, 'PNG', M + chartW + 8, y, chartW, chartH);
+        } catch (e) {}
+      }
+      y += chartH + 8;
+    }
   }
 
   rptFooter(doc);
