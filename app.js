@@ -5265,14 +5265,11 @@ function getActivityForPeriod(period) {
   var result = { calls:0, demos:0, closes:0 };
   var useTeam = typeof AN !== 'undefined' && AN.isAdmin && typeof anGetTeamViewScope === 'function' && !anGetTeamViewScope();
   if (useTeam && typeof anGetScopedActivityLog === 'function') {
-    var savedRange = typeof _dashTimeRange !== 'undefined' ? _dashTimeRange : null;
     var savedGoal = typeof _goalPeriod !== 'undefined' ? _goalPeriod : null;
-    if (period === 'today') _dashTimeRange = 'day';
-    else if (period === 'week') _dashTimeRange = 'week';
-    else if (period === 'month') _dashTimeRange = 'month';
+    window._anGoalDateOverride = period; // 'today' | 'week' | 'month'
     _goalPeriod = period;
     var scoped = anGetScopedActivityLog();
-    if (savedRange !== null) _dashTimeRange = savedRange;
+    window._anGoalDateOverride = null;
     if (savedGoal !== null) _goalPeriod = savedGoal;
     scoped.forEach(function(e) {
       result.calls += e.calls || 0;
@@ -8612,6 +8609,28 @@ function getDateRangeDates() {
 
 // Override getActivityDates to use new range
 window.getActivityDates = function() {
+  // getActivityForPeriod() sets a dedicated override flag to scope whichever
+  // Activity Goals tab (Today/Week/Month) is active. This must take priority over
+  // the separate chart date-range dropdown (_dateRange.preset) — otherwise both
+  // controls end up reading the same range and show identical numbers no matter
+  // which one you click, which is exactly the bug that was happening here.
+  // (Deliberately NOT using _dashTimeRange for this — that variable is already used
+  // elsewhere for an unrelated chart's own range toggle and is always set to a
+  // truthy default, so it can't reliably signal "an override is active" here.)
+  if (window._anGoalDateOverride) {
+    var now = new Date();
+    var end = new Date(now); end.setHours(23, 59, 59, 999);
+    var start = new Date(now); start.setHours(0, 0, 0, 0);
+    if (window._anGoalDateOverride === 'week') start.setDate(start.getDate() - 6);
+    else if (window._anGoalDateOverride === 'month') start.setDate(start.getDate() - 29);
+    var dates = [];
+    var cur = new Date(start); cur.setHours(12, 0, 0, 0);
+    while (cur <= end) {
+      dates.push(cur.toISOString().split('T')[0]);
+      cur.setDate(cur.getDate() + 1);
+    }
+    return dates;
+  }
   return getDateRangeDates();
 };
 
