@@ -5972,9 +5972,17 @@ window.anGetScopedActivityLog = function() {
     var byDate = {};
     dates.forEach(function(d) { byDate[d] = { date: d, calls: 0, demos: 0, closes: 0, calls_by_hour: {}, pickups_by_hour: {}, demos_by_hour: {} }; });
     var pool = (typeof AN !== 'undefined' && AN.leads) ? AN.leads : [];
+    var seenCallSigs = {};
     pool.forEach(function(lead) {
       var owner = (lead._repEmail || '').toLowerCase();
+      var leadIdentity = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim().toLowerCase() + '|' + (lead.company || '').trim().toLowerCase();
       (lead.callLog || []).forEach(function(c) {
+        // Duplicate lead records (from repeated imports/merges) can carry copies of
+        // the same call log entries. Dedupe by (person + when + outcome) so the same
+        // real call is never counted twice just because the lead exists twice.
+        var sig = leadIdentity + '|' + (c.date || '') + '|' + (c.time || '') + '|' + (c.outcome || '');
+        if (seenCallSigs[sig]) return;
+        seenCallSigs[sig] = true;
         var matchedDate = null;
         Object.keys(byDate).forEach(function(d) {
           if (typeof anCallOnLocalDate === 'function' ? anCallOnLocalDate(c, d) : c.date === d) matchedDate = d;
@@ -6013,8 +6021,13 @@ window.anGetScopedActivityLog = function() {
     var teamByDate = {};
     dates.forEach(function(d) { teamByDate[d] = { date: d, calls: 0, demos: 0, closes: 0, calls_by_hour: {}, pickups_by_hour: {}, demos_by_hour: {} }; });
     if (typeof AN !== 'undefined' && AN.leads && AN.leads.length) {
+      var seenTeamCallSigs = {};
       AN.leads.forEach(function(lead) {
+        var leadIdentityTeam = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim().toLowerCase() + '|' + (lead.company || '').trim().toLowerCase();
         (lead.callLog || []).forEach(function(c) {
+          var teamSig = leadIdentityTeam + '|' + (c.date || '') + '|' + (c.time || '') + '|' + (c.outcome || '');
+          if (seenTeamCallSigs[teamSig]) return;
+          seenTeamCallSigs[teamSig] = true;
           var matchedDate = null;
           Object.keys(teamByDate).forEach(function(d) {
             if (typeof anCallOnLocalDate === 'function' ? anCallOnLocalDate(c, d) : c.date === d) matchedDate = d;
