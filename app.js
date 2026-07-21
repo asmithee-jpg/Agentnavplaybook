@@ -38001,8 +38001,8 @@ window.anScorecardDownloadPDF = function() {
     var s = window._anScorecard;
     var doc = rptNewDoc();
     var M = doc._M, CW = doc._CW;
-    var rangeLabel = s.preset === 'custom' ? (s.dateFrom + ' to ' + s.dateTo) : (s.preset || 'this_week').replace(/_/g, ' ');
-    var y = rptHeader(doc, 'Sales Scorecard', rangeLabel.replace(/\b\w/g, function(c){ return c.toUpperCase(); }), (typeof _currentUser !== 'undefined' && _currentUser && _currentUser.email) || 'AgentNav', { label: s.dateFrom + ' \u2192 ' + s.dateTo });
+    var rangeLabel = s.preset === 'custom' ? 'Custom Range' : (s.preset || 'this_week').replace(/_/g, ' ');
+    var y = rptHeader(doc, 'Sales Scorecard', rangeLabel.replace(/\b\w/g, function(c){ return c.toUpperCase(); }), (typeof _currentUser !== 'undefined' && _currentUser && _currentUser.email) || 'AgentNav', { label: s.dateFrom + ' to ' + s.dateTo });
 
     var allRepEmails = (typeof _repViews !== 'undefined' && _repViews) ? Object.keys(_repViews) : [];
     var excluded = s.excludedReps || [];
