@@ -37236,8 +37236,22 @@ window._anScorecard = {
   dateFrom: null,
   dateTo: null,
   rows: null,
+  excludedReps: [],
   savedId: null,
   chart: null
+};
+
+window.anScorecardExcludeRep = function(email) {
+  var s = window._anScorecard;
+  s.excludedReps = s.excludedReps || [];
+  if (s.excludedReps.indexOf(email) < 0) s.excludedReps.push(email);
+  anRenderScorecard();
+};
+
+window.anScorecardIncludeRep = function(email) {
+  var s = window._anScorecard;
+  s.excludedReps = (s.excludedReps || []).filter(function(e) { return e !== email; });
+  anRenderScorecard();
 };
 
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
@@ -37404,6 +37418,7 @@ window.anScorecardSave = function() {
     date_from: s.dateFrom,
     date_to: s.dateTo,
     rows: s.rows,
+    excluded_reps: s.excludedReps || [],
     created_by: _currentUser.email,
     updated_at: new Date().toISOString()
   };
@@ -37445,6 +37460,7 @@ window.anScorecardOpenSaved = function(id) {
     s.dateFrom = r.data.date_from;
     s.dateTo = r.data.date_to;
     s.rows = r.data.rows && r.data.rows.length ? r.data.rows : defaultRows();
+    s.excludedReps = r.data.excluded_reps || [];
     anRenderScorecard();
   });
 };
@@ -37458,8 +37474,9 @@ window.anScorecardSetPreset = function(preset) {
   s.dateTo = range.to;
   s.savedId = null;
   s.rows = defaultRows();
+  s.excludedReps = [];
   anScorecardLoadForRange(s.dateFrom, s.dateTo, function(saved) {
-    if (saved) { s.savedId = saved.id; s.rows = saved.rows && saved.rows.length ? saved.rows : s.rows; }
+    if (saved) { s.savedId = saved.id; s.rows = saved.rows && saved.rows.length ? saved.rows : s.rows; s.excludedReps = saved.excluded_reps || []; }
     anRenderScorecard();
   });
 };
@@ -37474,8 +37491,9 @@ window.anScorecardSetCustomRange = function() {
   s.dateTo = to;
   s.savedId = null;
   s.rows = defaultRows();
+  s.excludedReps = [];
   anScorecardLoadForRange(from, to, function(saved) {
-    if (saved) { s.savedId = saved.id; s.rows = saved.rows && saved.rows.length ? saved.rows : s.rows; }
+    if (saved) { s.savedId = saved.id; s.rows = saved.rows && saved.rows.length ? saved.rows : s.rows; s.excludedReps = saved.excluded_reps || []; }
     anRenderScorecard();
   });
 };
@@ -37581,7 +37599,16 @@ window.anRenderScorecard = function() {
   }
   if (!s.rows) s.rows = defaultRows();
 
-  var repEmails = typeof anGetKnownRepEmails === 'function' ? anGetKnownRepEmails() : [];
+  var allRepEmails = (typeof _repViews !== 'undefined' && _repViews) ? Object.keys(_repViews) : [];
+  var excludedReps = s.excludedReps || [];
+  var repEmails = allRepEmails.filter(function(e) { return excludedReps.indexOf(e) < 0; });
+  var excludedChips = excludedReps.filter(function(e) { return allRepEmails.indexOf(e) >= 0; }).map(function(email) {
+    var nm = typeof anGetRepName === 'function' ? anGetRepName(email) : email.split('@')[0];
+    return '<span style="display:inline-flex;align-items:center;gap:6px;background:var(--body-bg);border:1px dashed var(--divider);border-radius:20px;padding:4px 10px;font-size:12px;color:var(--text-muted);">'
+      + anEsc(nm) + ' not in this plan'
+      + '<button onclick="anScorecardIncludeRep(\'' + email + '\')" style="background:none;border:none;color:#6366f1;cursor:pointer;font-size:11px;font-weight:700;padding:0;">+ Add back</button>'
+      + '</span>';
+  }).join(' ');
 
   var presets = [
     ['this_week', 'This Week'], ['last_week', 'Last Week'],
@@ -37596,10 +37623,13 @@ window.anRenderScorecard = function() {
 
   var repCols = repEmails.map(function(email) {
     var nm = typeof anGetRepName === 'function' ? anGetRepName(email) : email.split('@')[0];
-    return '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);text-align:right;">' + anEsc(nm) + '</div>';
+    return '<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;">'
+      + '<div contenteditable="true" spellcheck="false" data-rep-email="' + anEsc(email) + '" onblur="anSetRepDisplayName(this.dataset.repEmail,this.textContent)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}" title="Click to edit this rep\'s name" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);text-align:right;line-height:1.35;word-break:break-word;cursor:text;outline:none;border-bottom:1px dashed transparent;" onmouseover="this.style.borderBottomColor=\'#6366f1\'" onmouseout="this.style.borderBottomColor=\'transparent\'">' + anEsc(nm) + '</div>'
+      + '<button onclick="anScorecardExcludeRep(\'' + email + '\')" title="Leave ' + anEsc(nm) + ' out of this plan" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;padding:0;flex-shrink:0;">\u2715</button>'
+      + '</div>';
   }).join('');
 
-  var colTemplate = '160px 130px ' + repEmails.map(function(){ return '110px'; }).join(' ') + ' 32px 32px';
+  var colTemplate = '160px 130px ' + repEmails.map(function(){ return '140px'; }).join(' ') + ' 32px 32px';
 
   function buildRowsForCategory(catId) {
     return (s.rows || []).filter(function(r) { return r.category === catId; }).map(function(row) {
@@ -37644,15 +37674,16 @@ window.anRenderScorecard = function() {
     + '<button onclick="anScorecardSetCustomRange()" style="padding:7px 14px;border-radius:7px;border:none;background:var(--body-bg);color:var(--text-secondary);font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--sans);">Apply</button>'
     + '</div>'
     + '<div style="margin-top:10px;font-size:12px;color:var(--text-muted);">Showing: <strong style="color:var(--text-primary);">' + s.dateFrom + ' \u2192 ' + s.dateTo + '</strong>' + (s.savedId ? ' \u00b7 <span style="color:#10b981;">Saved scorecard loaded</span>' : ' \u00b7 <span style="color:#f59e0b;">Not yet saved for this range</span>') + '</div>'
+    + (excludedChips ? '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">' + excludedChips + '</div>' : '')
     + '</div>'
     + '<div style="background:var(--card-bg);border:1px solid var(--divider);border-radius:14px;padding:20px;margin-bottom:20px;overflow-x:auto;">'
-    + '<div style="display:grid;grid-template-columns:' + colTemplate + ';gap:8px;padding-bottom:8px;border-bottom:2px solid var(--divider);margin-bottom:4px;min-width:' + (600 + repEmails.length * 110) + 'px;">'
+    + '<div style="display:grid;grid-template-columns:' + colTemplate + ';gap:8px;align-items:end;padding-bottom:8px;border-bottom:2px solid var(--divider);margin-bottom:4px;min-width:' + (600 + repEmails.length * 140) + 'px;">'
     + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Metric</div>'
     + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);text-align:right;">Target</div>'
     + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);text-align:right;">Team Total</div>'
     + repCols + '<span></span><span></span>'
     + '</div>'
-    + '<div style="min-width:' + (600 + repEmails.length * 110) + 'px;">' + categoryBlocks + '</div>'
+    + '<div style="min-width:' + (600 + repEmails.length * 140) + 'px;">' + categoryBlocks + '</div>'
     + '<div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">'
     + '<button onclick="anScorecardAddRow()" style="padding:9px 16px;border-radius:8px;border:1.5px dashed var(--divider);background:transparent;color:var(--text-secondary);font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--sans);">+ Add custom metric</button>'
     + '<button onclick="anScorecardPullAll()" style="padding:9px 16px;border-radius:8px;border:1.5px solid #6366f1;background:transparent;color:#6366f1;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans);">\u21bb Pull All From App</button>'
