@@ -37538,10 +37538,10 @@ window.anScorecardPullAll = function() {
   if (typeof showToast === 'function') showToast('Pulling all metrics from the app\u2026');
 };
 
-window.anScorecardAddRow = function() {
+window.anScorecardAddRow = function(category) {
   var s = window._anScorecard;
   s.rows = s.rows || [];
-  s.rows.push({ id: 'custom-' + Date.now(), category: 'revenue', label: '', metric: null, target: '', team: '', reps: {} });
+  s.rows.push({ id: 'custom-' + Date.now(), category: category || 'revenue', label: '', metric: null, target: '', team: '', reps: {} });
   anRenderScorecard();
 };
 
@@ -37624,12 +37624,12 @@ window.anRenderScorecard = function() {
   var repCols = repEmails.map(function(email) {
     var nm = typeof anGetRepName === 'function' ? anGetRepName(email) : email.split('@')[0];
     return '<div style="display:flex;align-items:center;justify-content:center;gap:5px;width:100%;">'
-      + '<div contenteditable="true" spellcheck="false" data-rep-email="' + anEsc(email) + '" onblur="anSetRepDisplayName(this.dataset.repEmail,this.textContent)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}" title="Click to edit this rep\'s name" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:95px;cursor:text;outline:none;border-bottom:1px dashed transparent;" onmouseover="this.style.borderBottomColor=\'#6366f1\'" onmouseout="this.style.borderBottomColor=\'transparent\'">' + anEsc(nm) + '</div>'
+      + '<div contenteditable="true" spellcheck="false" data-rep-email="' + anEsc(email) + '" onblur="anSetRepDisplayName(this.dataset.repEmail,this.textContent)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}" title="Click to edit this rep\'s name" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);text-align:center;white-space:nowrap;cursor:text;outline:none;border-bottom:1px dashed transparent;" onmouseover="this.style.borderBottomColor=\'#6366f1\'" onmouseout="this.style.borderBottomColor=\'transparent\'">' + anEsc(nm) + '</div>'
       + '<button onclick="anScorecardExcludeRep(\'' + email + '\')" title="Leave ' + anEsc(nm) + ' out of this plan" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;padding:0;width:14px;height:14px;flex:0 0 14px;line-height:1;">\u2715</button>'
       + '</div>';
   }).join('');
 
-  var colTemplate = '160px 130px ' + repEmails.map(function(){ return '150px'; }).join(' ') + ' 32px 32px';
+  var colTemplate = '160px 130px 150px ' + repEmails.map(function(){ return 'minmax(150px, 1fr)'; }).join(' ') + ' 32px 32px';
 
   function buildRowsForCategory(catId) {
     return (s.rows || []).filter(function(r) { return r.category === catId; }).map(function(row) {
@@ -37642,14 +37642,12 @@ window.anRenderScorecard = function() {
         return '<input id="' + safeId + '" value="' + anEsc(val) + '" placeholder="\u2014" oninput="anScorecardUpdateField(\'' + row.id + '\',\'reps\',this.value,\'' + email + '\')" style="border:1.5px solid var(--divider);border-radius:7px;padding:6px 9px;font-size:12.5px;font-weight:600;color:var(--text-secondary);text-align:right;background:var(--card-bg);outline:none;font-family:var(--sans);width:100%;">';
       }).join('');
       return '<div style="display:grid;grid-template-columns:' + colTemplate + ';gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--divider);">'
-        + (isDefault
-            ? '<div style="font-size:13px;font-weight:600;color:var(--text-primary);">' + anEsc(row.label) + '</div>'
-            : '<input value="' + anEsc(row.label) + '" placeholder="Custom metric" oninput="anScorecardUpdateField(\'' + row.id + '\',\'label\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;font-size:13px;font-weight:600;color:var(--text-primary);padding:4px 0;outline:none;font-family:var(--sans);">')
-        + '<input value="' + anEsc(row.target || '') + '" placeholder="Target" oninput="anScorecardUpdateField(\'' + row.id + '\',\'target\',this.value)" onchange="anRenderScorecard()" style="border:1.5px solid var(--divider);border-radius:7px;padding:6px 9px;font-size:12.5px;color:var(--text-muted);text-align:right;background:var(--body-bg);outline:none;font-family:var(--sans);width:100%;">'
+        + '<input value="' + anEsc(row.label) + '" placeholder="Metric name" oninput="anScorecardUpdateField(\'' + row.id + '\',\'label\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;font-size:13px;font-weight:600;color:var(--text-primary);padding:4px 0;outline:none;font-family:var(--sans);">'
+        + '<input value="' + anEsc(row.target || '') + '" placeholder="Target" oninput="anScorecardUpdateField(\'' + row.id + '\',\'target\',this.value)" onchange="anRenderScorecard()" style="border:1.5px solid var(--divider);border-radius:7px;padding:6px 9px;font-size:12.5px;font-weight:600;color:var(--text-primary);text-align:right;background:var(--card-bg);outline:none;font-family:var(--sans);width:100%;">'
         + teamCell
         + repCells
         + (isDefault ? '<button onclick="anScorecardPullMetric(\'' + row.id + '\')" title="Pull team total from app" style="background:#eef2ff;border:none;border-radius:7px;color:#6366f1;cursor:pointer;font-size:13px;padding:6px;">\u21bb</button>' : '<span></span>')
-        + (isDefault ? '<span></span>' : '<button onclick="anScorecardRemoveRow(\'' + row.id + '\')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;">\u2715</button>')
+        + '<button onclick="anScorecardRemoveRow(\'' + row.id + '\')" title="Remove this metric" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;">\u2715</button>'
         + '</div>';
     }).join('');
   }
@@ -37685,7 +37683,9 @@ window.anRenderScorecard = function() {
     + '</div>'
     + '<div style="min-width:' + (600 + repEmails.length * 150) + 'px;">' + categoryBlocks + '</div>'
     + '<div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">'
-    + '<button onclick="anScorecardAddRow()" style="padding:9px 16px;border-radius:8px;border:1.5px dashed var(--divider);background:transparent;color:var(--text-secondary);font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--sans);">+ Add custom metric</button>'
+    + '<button onclick="anScorecardAddRow(\'activity\')" style="padding:9px 14px;border-radius:8px;border:1.5px dashed var(--divider);background:transparent;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);">+ Add Activity metric</button>'
+    + '<button onclick="anScorecardAddRow(\'conversion\')" style="padding:9px 14px;border-radius:8px;border:1.5px dashed var(--divider);background:transparent;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);">+ Add Conversion metric</button>'
+    + '<button onclick="anScorecardAddRow(\'revenue\')" style="padding:9px 14px;border-radius:8px;border:1.5px dashed var(--divider);background:transparent;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);">+ Add Revenue metric</button>'
     + '<button onclick="anScorecardPullAll()" style="padding:9px 16px;border-radius:8px;border:1.5px solid #6366f1;background:transparent;color:#6366f1;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans);">\u21bb Pull All From App</button>'
     + '<div style="flex:1;"></div>'
     + '<button onclick="anScorecardSave()" style="padding:9px 20px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);">Save Scorecard</button>'
@@ -37693,7 +37693,12 @@ window.anRenderScorecard = function() {
     + '<div style="font-size:11.5px;color:var(--text-muted);margin-top:12px;">Type a Target for any row to see it color-coded (green = on track, amber = behind, red = well behind). Click \u21bb to pull a number from the app, or just type your own \u2014 the chart below updates as you go.</div>'
     + '</div>'
     + '<div style="background:var(--card-bg);border:1px solid var(--divider);border-radius:14px;padding:20px;margin-bottom:20px;">'
-    + '<div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:10px;">Actual vs Target</div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:10px;">'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text-primary);">Actual vs Target</div>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button onclick="anScorecardDownloadPDF()" style="padding:8px 14px;border-radius:8px;border:1.5px solid var(--divider);background:var(--card-bg);color:var(--text-secondary);font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--sans);">\u2b07 Download PDF</button>'
+    + '<button onclick="anScorecardEmailToLeadership()" style="padding:8px 14px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans);">\u2709 Email to Leadership</button>'
+    + '</div></div>'
     + '<div style="height:280px;"><canvas id="scorecard-chart"></canvas></div>'
     + '</div>'
     + '<div style="background:var(--card-bg);border:1px solid var(--divider);border-radius:14px;padding:20px;">'
@@ -37703,6 +37708,83 @@ window.anRenderScorecard = function() {
 
   anScorecardLoadHistory();
   setTimeout(anScorecardUpdateChart, 50);
+};
+
+// ── PDF export — reuses the app's existing report-building toolkit ──
+window.anScorecardDownloadPDF = function() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    if (typeof showToast === 'function') showToast('PDF engine loading \u2014 try again');
+    return;
+  }
+  var s = window._anScorecard;
+  var doc = rptNewDoc();
+  var M = doc._M, CW = doc._CW;
+  var rangeLabel = s.preset === 'custom' ? (s.dateFrom + ' to ' + s.dateTo) : s.preset.replace(/_/g, ' ');
+  var y = rptHeader(doc, 'Sales Scorecard', rangeLabel.replace(/\b\w/g, function(c){ return c.toUpperCase(); }), (_currentUser && _currentUser.email) || 'AgentNav', { label: s.dateFrom + ' \u2192 ' + s.dateTo });
+
+  var allRepEmails = (typeof _repViews !== 'undefined' && _repViews) ? Object.keys(_repViews) : [];
+  var excluded = s.excludedReps || [];
+  var repEmails = allRepEmails.filter(function(e) { return excluded.indexOf(e) < 0; });
+
+  CATEGORIES.forEach(function(cat) {
+    var rows = (s.rows || []).filter(function(r) { return r.category === cat.id; });
+    if (!rows.length) return;
+    y = rptCheckPage(doc, y, 16 + rows.length * 9);
+    y = rptSectionTitle(doc, y, cat.label);
+    rows.forEach(function(row) {
+      var color = attainmentColor(row.team, row.target) === '#10b981' ? [16, 185, 129]
+        : attainmentColor(row.team, row.target) === '#f59e0b' ? [245, 158, 11]
+        : attainmentColor(row.team, row.target) === '#ef4444' ? [239, 68, 68]
+        : [9, 9, 11];
+      var valueStr = (row.team || '\u2014');
+      if (row.target) valueStr += '  (target: ' + row.target + ')';
+      if (repEmails.length) {
+        var repStr = repEmails.map(function(email) {
+          var nm = typeof anGetRepName === 'function' ? anGetRepName(email) : email.split('@')[0];
+          return nm + ': ' + ((row.reps || {})[email] || '\u2014');
+        }).join('  \u00b7  ');
+        valueStr += '   [' + repStr + ']';
+      }
+      y = rptCheckPage(doc, y, 12);
+      y = rptStatRow(doc, y, row.label || '(untitled metric)', valueStr, color);
+    });
+    y += 4;
+  });
+
+  // Embed the live chart as an image
+  var canvas = document.getElementById('scorecard-chart');
+  if (canvas) {
+    try {
+      y = rptCheckPage(doc, y, 90);
+      var imgData = canvas.toDataURL('image/png');
+      var imgW = CW;
+      var imgH = imgW * (canvas.height / canvas.width);
+      if (imgH > 80) { imgH = 80; imgW = imgH * (canvas.width / canvas.height); }
+      doc.addImage(imgData, 'PNG', M, y, imgW, imgH);
+      y += imgH + 8;
+    } catch (e) { /* chart not ready — skip embedding rather than fail the whole PDF */ }
+  }
+
+  rptFooter(doc);
+  doc.save('AgentNav-Scorecard-' + s.dateFrom + '-to-' + s.dateTo + '.pdf');
+  if (typeof showToast === 'function') showToast('Scorecard PDF downloaded');
+};
+
+window.anScorecardEmailToLeadership = function() {
+  var s = window._anScorecard;
+  var to = window.prompt('Send to which email address(es)? Separate multiple with commas.', localStorage.getItem('an-scorecard-leadership-emails') || '');
+  if (to === null) return;
+  localStorage.setItem('an-scorecard-leadership-emails', to);
+  anScorecardDownloadPDF();
+  var subject = encodeURIComponent('Sales Scorecard \u2014 ' + s.dateFrom + ' to ' + s.dateTo);
+  var body = encodeURIComponent(
+    'Hi team,\n\nAttached is the sales scorecard for ' + s.dateFrom + ' to ' + s.dateTo + '.\n\n' +
+    'IMPORTANT: the PDF just downloaded to your computer \u2014 please attach it to this email before sending (your email app can\'t auto-attach downloaded files).\n\nThanks,\n'
+  );
+  window.setTimeout(function() {
+    window.location.href = 'mailto:' + encodeURIComponent(to) + '?subject=' + subject + '&body=' + body;
+  }, 400);
+  if (typeof showToast === 'function') showToast('PDF downloaded \u2014 attach it in the email that just opened');
 };
 
 })();
