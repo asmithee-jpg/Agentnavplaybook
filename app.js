@@ -37239,6 +37239,8 @@ window._anScorecard = {
   excludedReps: [],
   chartType: 'bar',
   chartMode: 'raw', // 'raw' | 'percent'
+  chartSwapOrder: false,
+  chartShowLabels: true,
   chartMetricIds: null, // null = show all metrics that have a value
   savedId: null,
   chart: null
@@ -37251,6 +37253,16 @@ window.anScorecardSetChartType = function(type) {
 
 window.anScorecardSetChartMode = function(mode) {
   window._anScorecard.chartMode = mode;
+  anScorecardUpdateChart();
+};
+
+window.anScorecardToggleSwapOrder = function(checked) {
+  window._anScorecard.chartSwapOrder = checked;
+  anScorecardUpdateChart();
+};
+
+window.anScorecardToggleShowLabels = function(checked) {
+  window._anScorecard.chartShowLabels = checked;
   anScorecardUpdateChart();
 };
 
@@ -37447,6 +37459,8 @@ window.anScorecardSave = function() {
     excluded_reps: s.excludedReps || [],
     chart_type: s.chartType || 'bar',
     chart_mode: s.chartMode || 'raw',
+    chart_swap_order: !!s.chartSwapOrder,
+    chart_show_labels: s.chartShowLabels !== false,
     chart_metric_ids: s.chartMetricIds,
     created_by: _currentUser.email,
     updated_at: new Date().toISOString()
@@ -37489,7 +37503,7 @@ window.anScorecardOpenSaved = function(id) {
     s.dateFrom = r.data.date_from;
     s.dateTo = r.data.date_to;
     s.rows = r.data.rows && r.data.rows.length ? r.data.rows : defaultRows();
-    s.excludedReps = r.data.excluded_reps || []; s.chartType = r.data.chart_type || 'bar'; s.chartMode = r.data.chart_mode || 'raw'; s.chartMetricIds = r.data.chart_metric_ids;
+    s.excludedReps = r.data.excluded_reps || []; s.chartType = r.data.chart_type || 'bar'; s.chartMode = r.data.chart_mode || 'raw'; s.chartSwapOrder = !!r.data.chart_swap_order; s.chartShowLabels = r.data.chart_show_labels !== false; s.chartMetricIds = r.data.chart_metric_ids;
     anRenderScorecard();
   });
 };
@@ -37505,7 +37519,7 @@ window.anScorecardSetPreset = function(preset) {
   s.rows = defaultRows();
   s.excludedReps = [];
   anScorecardLoadForRange(s.dateFrom, s.dateTo, function(saved) {
-    if (saved) { s.savedId = saved.id; s.rows = saved.rows && saved.rows.length ? saved.rows : s.rows; s.excludedReps = saved.excluded_reps || []; s.chartType = saved.chart_type || 'bar'; s.chartMode = saved.chart_mode || 'raw'; s.chartMetricIds = saved.chart_metric_ids; } else { s.chartType = 'bar'; s.chartMode = 'raw'; s.chartMetricIds = null; }
+    if (saved) { s.savedId = saved.id; s.rows = saved.rows && saved.rows.length ? saved.rows : s.rows; s.excludedReps = saved.excluded_reps || []; s.chartType = saved.chart_type || 'bar'; s.chartMode = saved.chart_mode || 'raw'; s.chartSwapOrder = !!saved.chart_swap_order; s.chartShowLabels = saved.chart_show_labels !== false; s.chartMetricIds = saved.chart_metric_ids; } else { s.chartType = 'bar'; s.chartMode = 'raw'; s.chartSwapOrder = false; s.chartShowLabels = true; s.chartMetricIds = null; }
     anRenderScorecard();
   });
 };
@@ -37522,7 +37536,7 @@ window.anScorecardSetCustomRange = function() {
   s.rows = defaultRows();
   s.excludedReps = [];
   anScorecardLoadForRange(from, to, function(saved) {
-    if (saved) { s.savedId = saved.id; s.rows = saved.rows && saved.rows.length ? saved.rows : s.rows; s.excludedReps = saved.excluded_reps || []; s.chartType = saved.chart_type || 'bar'; s.chartMode = saved.chart_mode || 'raw'; s.chartMetricIds = saved.chart_metric_ids; } else { s.chartType = 'bar'; s.chartMode = 'raw'; s.chartMetricIds = null; }
+    if (saved) { s.savedId = saved.id; s.rows = saved.rows && saved.rows.length ? saved.rows : s.rows; s.excludedReps = saved.excluded_reps || []; s.chartType = saved.chart_type || 'bar'; s.chartMode = saved.chart_mode || 'raw'; s.chartSwapOrder = !!saved.chart_swap_order; s.chartShowLabels = saved.chart_show_labels !== false; s.chartMetricIds = saved.chart_metric_ids; } else { s.chartType = 'bar'; s.chartMode = 'raw'; s.chartSwapOrder = false; s.chartShowLabels = true; s.chartMetricIds = null; }
     anRenderScorecard();
   });
 };
@@ -37606,11 +37620,45 @@ window.anScorecardRecolorRow = function(rowId) {
 
 var PIE_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#14b8a6'];
 
-function anScorecardBuildChartConfig(row, type, mode) {
+// Lightweight custom data-label plugin — draws the value directly on each bar/point.
+// No external dependency needed; registered once, controlled per-chart via a flag
+// stashed in options.plugins.anLabels.
+var _anLabelsPluginRegistered = false;
+function anScorecardEnsureLabelsPlugin() {
+  if (_anLabelsPluginRegistered || !window.Chart) return;
+  Chart.register({
+    id: 'anScorecardLabels',
+    afterDatasetsDraw: function(chart) {
+      var opts = chart.options.plugins && chart.options.plugins.anLabels;
+      if (!opts || !opts.enabled) return;
+      var ctx = chart.ctx;
+      ctx.save();
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillStyle = '#374151';
+      ctx.textAlign = 'center';
+      chart.data.datasets.forEach(function(ds, dsIndex) {
+        var meta = chart.getDatasetMeta(dsIndex);
+        meta.data.forEach(function(el, i) {
+          var raw = ds.data[i];
+          if (raw === null || raw === undefined) return;
+          var text = opts.suffix ? (raw + opts.suffix) : String(raw);
+          var pos = el.tooltipPosition ? el.tooltipPosition() : el;
+          ctx.fillText(text, pos.x, pos.y - 6);
+        });
+      });
+      ctx.restore();
+    }
+  });
+  _anLabelsPluginRegistered = true;
+}
+
+function anScorecardBuildChartConfig(row, type, mode, swapOrder, showLabels) {
+  anScorecardEnsureLabelsPlugin();
   var label = row.label || row.id;
   var actual = numOnly(row.team) || 0;
   var target = numOnly(row.target);
   var usesPercent = mode === 'percent' && target !== null && target !== 0 && (type === 'bar' || type === 'horizontalBar' || type === 'line');
+  var labelsPlugin = { enabled: !!showLabels, suffix: '' };
 
   if (type === 'pie' || type === 'doughnut') {
     // A single-metric pie/doughnut works best as a goal-progress ring: how much of
@@ -37619,12 +37667,12 @@ function anScorecardBuildChartConfig(row, type, mode) {
       var achieved = Math.min(actual, target);
       var remaining = Math.max(0, target - actual);
       var overColor = actual >= target ? '#10b981' : '#6366f1';
+      var slices = swapOrder
+        ? { labels: ['Remaining to Target', 'Achieved'], data: [remaining, achieved], colors: ['#e4e4e7', overColor] }
+        : { labels: ['Achieved', 'Remaining to Target'], data: [achieved, remaining], colors: [overColor, '#e4e4e7'] };
       return {
         type: type,
-        data: {
-          labels: ['Achieved', 'Remaining to Target'],
-          datasets: [{ data: [achieved, remaining], backgroundColor: [overColor, '#e4e4e7'] }]
-        },
+        data: { labels: slices.labels, datasets: [{ data: slices.data, backgroundColor: slices.colors }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }, title: { display: true, text: label + ': ' + actual + ' / ' + target } } }
       };
     }
@@ -37638,52 +37686,53 @@ function anScorecardBuildChartConfig(row, type, mode) {
   if (usesPercent) {
     var pct = Math.round((actual / target) * 100);
     var pctColor = pct >= 100 ? '#10b981' : pct >= 70 ? '#f59e0b' : '#ef4444';
+    labelsPlugin.suffix = '%';
+    var pctDatasets = [
+      { label: '% of Target', data: [pct], backgroundColor: [pctColor], borderColor: pctColor, borderRadius: 6 },
+      { label: 'Target (100%)', data: [100], backgroundColor: 'rgba(161,161,170,0.35)', borderColor: '#a1a1aa' }
+    ];
+    if (swapOrder) pctDatasets.reverse();
     return {
       type: type === 'line' ? 'line' : 'bar',
-      data: {
-        labels: [label],
-        datasets: [
-          { label: '% of Target', data: [pct], backgroundColor: [pctColor], borderColor: pctColor, borderRadius: 6 },
-          { label: 'Target (100%)', data: [100], backgroundColor: 'rgba(161,161,170,0.35)', borderColor: '#a1a1aa' }
-        ]
-      },
+      data: { labels: [label], datasets: pctDatasets },
       options: {
         indexAxis: type === 'horizontalBar' ? 'y' : 'x',
         responsive: true, maintainAspectRatio: false,
         scales: { y: { beginAtZero: true } },
-        plugins: { legend: { position: 'bottom' }, title: { display: true, text: label } }
+        plugins: { legend: { position: 'bottom' }, title: { display: true, text: label }, anLabels: labelsPlugin }
       }
     };
   }
 
   if (type === 'line') {
+    var lineDatasets = [
+      { label: 'Actual', data: [actual], borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.15)', pointRadius: 6, fill: true },
+      { label: 'Target', data: [target], borderColor: '#a1a1aa', backgroundColor: 'transparent', pointRadius: 6, borderDash: [5, 5] }
+    ];
+    if (swapOrder) lineDatasets.reverse();
     return {
       type: 'line',
-      data: {
-        labels: [label],
-        datasets: [
-          { label: 'Actual', data: [actual], borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.15)', pointRadius: 6, fill: true },
-          { label: 'Target', data: [target], borderColor: '#a1a1aa', backgroundColor: 'transparent', pointRadius: 6, borderDash: [5, 5] }
-        ]
-      },
-      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: 'bottom' }, title: { display: true, text: label } } }
+      data: { labels: [label], datasets: lineDatasets },
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: 'bottom' }, title: { display: true, text: label }, anLabels: labelsPlugin } }
     };
   }
 
+  var barDatasets = [
+    { label: 'Actual', data: [actual], backgroundColor: '#6366f1', borderRadius: 6 },
+    { label: 'Target', data: [target], backgroundColor: '#e4e4e7', borderRadius: 6 }
+  ];
+  if (swapOrder) barDatasets.reverse();
   return {
     type: 'bar',
     data: {
       labels: [label],
-      datasets: [
-        { label: 'Actual', data: [actual], backgroundColor: '#6366f1', borderRadius: 6 },
-        { label: 'Target', data: [target], backgroundColor: '#e4e4e7', borderRadius: 6 }
-      ]
+      datasets: barDatasets
     },
     options: {
       indexAxis: type === 'horizontalBar' ? 'y' : 'x',
       responsive: true, maintainAspectRatio: false,
       scales: { y: { beginAtZero: true } },
-      plugins: { legend: { position: 'bottom' }, title: { display: true, text: label } }
+      plugins: { legend: { position: 'bottom' }, title: { display: true, text: label }, anLabels: labelsPlugin }
     }
   };
 }
@@ -37715,7 +37764,7 @@ window.anScorecardUpdateChart = function() {
     canvas.id = 'scorecard-chart-' + row.id;
     card.appendChild(canvas);
     grid.appendChild(card);
-    var config = anScorecardBuildChartConfig(row, type, mode);
+    var config = anScorecardBuildChartConfig(row, type, mode, s.chartSwapOrder, s.chartShowLabels);
     s.charts.push(new Chart(canvas.getContext('2d'), config));
   });
 };
@@ -37763,6 +37812,11 @@ function anScorecardChartSettingsHTML() {
     + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:6px;">Metrics to Show</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;">' + (checkboxes || '<span style="font-size:12px;color:var(--text-muted);">Add a metric above first</span>') + '</div>'
     + (modeSupported && s.chartMode === 'percent' ? '<div style="font-size:11px;color:var(--text-muted);margin-top:8px;">Only metrics with a Target set can show in % of Target mode.</div>' : '')
+    + '</div>'
+    + '<div>'
+    + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:6px;">Chart Options</div>'
+    + '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);cursor:pointer;margin-bottom:6px;"><input type="checkbox" ' + (s.chartSwapOrder ? 'checked' : '') + ' onchange="anScorecardToggleSwapOrder(this.checked)" style="cursor:pointer;">Swap left/right order</label>'
+    + '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);cursor:pointer;"><input type="checkbox" ' + (s.chartShowLabels ? 'checked' : '') + ' onchange="anScorecardToggleShowLabels(this.checked)" style="cursor:pointer;">Show value labels on chart</label>'
     + '</div>'
     + '</div>';
 }
@@ -37895,67 +37949,73 @@ window.anScorecardDownloadPDF = function() {
     if (typeof showToast === 'function') showToast('PDF engine loading \u2014 try again');
     return;
   }
-  var s = window._anScorecard;
-  var doc = rptNewDoc();
-  var M = doc._M, CW = doc._CW;
-  var rangeLabel = s.preset === 'custom' ? (s.dateFrom + ' to ' + s.dateTo) : s.preset.replace(/_/g, ' ');
-  var y = rptHeader(doc, 'Sales Scorecard', rangeLabel.replace(/\b\w/g, function(c){ return c.toUpperCase(); }), (_currentUser && _currentUser.email) || 'AgentNav', { label: s.dateFrom + ' \u2192 ' + s.dateTo });
+  try {
+    var s = window._anScorecard;
+    var doc = rptNewDoc();
+    var M = doc._M, CW = doc._CW;
+    var rangeLabel = s.preset === 'custom' ? (s.dateFrom + ' to ' + s.dateTo) : (s.preset || 'this_week').replace(/_/g, ' ');
+    var y = rptHeader(doc, 'Sales Scorecard', rangeLabel.replace(/\b\w/g, function(c){ return c.toUpperCase(); }), (typeof _currentUser !== 'undefined' && _currentUser && _currentUser.email) || 'AgentNav', { label: s.dateFrom + ' \u2192 ' + s.dateTo });
 
-  var allRepEmails = (typeof _repViews !== 'undefined' && _repViews) ? Object.keys(_repViews) : [];
-  var excluded = s.excludedReps || [];
-  var repEmails = allRepEmails.filter(function(e) { return excluded.indexOf(e) < 0; });
+    var allRepEmails = (typeof _repViews !== 'undefined' && _repViews) ? Object.keys(_repViews) : [];
+    var excluded = s.excludedReps || [];
+    var repEmails = allRepEmails.filter(function(e) { return excluded.indexOf(e) < 0; });
 
-  CATEGORIES.forEach(function(cat) {
-    var rows = (s.rows || []).filter(function(r) { return r.category === cat.id; });
-    if (!rows.length) return;
-    y = rptCheckPage(doc, y, 16 + rows.length * 9);
-    y = rptSectionTitle(doc, y, cat.label);
-    rows.forEach(function(row) {
-      var color = attainmentColor(row.team, row.target) === '#10b981' ? [16, 185, 129]
-        : attainmentColor(row.team, row.target) === '#f59e0b' ? [245, 158, 11]
-        : attainmentColor(row.team, row.target) === '#ef4444' ? [239, 68, 68]
-        : [9, 9, 11];
-      var valueStr = (row.team || '\u2014');
-      if (row.target) valueStr += '  (target: ' + row.target + ')';
-      if (repEmails.length) {
-        var repStr = repEmails.map(function(email) {
-          var nm = typeof anGetRepName === 'function' ? anGetRepName(email) : email.split('@')[0];
-          return nm + ': ' + ((row.reps || {})[email] || '\u2014');
-        }).join('  \u00b7  ');
-        valueStr += '   [' + repStr + ']';
-      }
-      y = rptCheckPage(doc, y, 12);
-      y = rptStatRow(doc, y, row.label || '(untitled metric)', valueStr, color);
+    CATEGORIES.forEach(function(cat) {
+      var rows = (s.rows || []).filter(function(r) { return r.category === cat.id; });
+      if (!rows.length) return;
+      y = rptCheckPage(doc, y, 16 + rows.length * 9);
+      y = rptSectionTitle(doc, y, cat.label);
+      rows.forEach(function(row) {
+        var ac = attainmentColor(row.team, row.target);
+        var color = ac === '#10b981' ? [16, 185, 129]
+          : ac === '#f59e0b' ? [245, 158, 11]
+          : ac === '#ef4444' ? [239, 68, 68]
+          : [9, 9, 11];
+        var valueStr = String(row.team || '\u2014');
+        if (row.target) valueStr += '  (target: ' + row.target + ')';
+        if (repEmails.length) {
+          var repStr = repEmails.map(function(email) {
+            var nm = typeof anGetRepName === 'function' ? anGetRepName(email) : email.split('@')[0];
+            return nm + ': ' + ((row.reps || {})[email] || '\u2014');
+          }).join('  \u00b7  ');
+          valueStr += '   [' + repStr + ']';
+        }
+        y = rptCheckPage(doc, y, 12);
+        y = rptStatRow(doc, y, row.label || '(untitled metric)', valueStr, color);
+      });
+      y += 4;
     });
-    y += 4;
-  });
 
-  // Embed each individual metric chart as an image, two per row
-  var chartCanvases = Array.prototype.slice.call(document.querySelectorAll('#scorecard-charts-grid canvas'));
-  if (chartCanvases.length) {
-    y = rptCheckPage(doc, y, 20);
-    y = rptSectionTitle(doc, y, 'Charts');
-    var chartW = (CW - 8) / 2;
-    var chartH = chartW * 0.62;
-    for (var ci = 0; ci < chartCanvases.length; ci += 2) {
-      y = rptCheckPage(doc, y, chartH + 6);
-      try {
-        var img1 = chartCanvases[ci].toDataURL('image/png');
-        doc.addImage(img1, 'PNG', M, y, chartW, chartH);
-      } catch (e) {}
-      if (chartCanvases[ci + 1]) {
+    // Embed each individual metric chart as an image, two per row
+    var chartCanvases = Array.prototype.slice.call(document.querySelectorAll('#scorecard-charts-grid canvas'));
+    if (chartCanvases.length) {
+      y = rptCheckPage(doc, y, 20);
+      y = rptSectionTitle(doc, y, 'Charts');
+      var chartW = (CW - 8) / 2;
+      var chartH = chartW * 0.62;
+      for (var ci = 0; ci < chartCanvases.length; ci += 2) {
+        y = rptCheckPage(doc, y, chartH + 6);
         try {
-          var img2 = chartCanvases[ci + 1].toDataURL('image/png');
-          doc.addImage(img2, 'PNG', M + chartW + 8, y, chartW, chartH);
-        } catch (e) {}
+          var img1 = chartCanvases[ci].toDataURL('image/png');
+          doc.addImage(img1, 'PNG', M, y, chartW, chartH);
+        } catch (e) { console.warn('[Scorecard PDF] Could not embed chart image:', e); }
+        if (chartCanvases[ci + 1]) {
+          try {
+            var img2 = chartCanvases[ci + 1].toDataURL('image/png');
+            doc.addImage(img2, 'PNG', M + chartW + 8, y, chartW, chartH);
+          } catch (e) { console.warn('[Scorecard PDF] Could not embed chart image:', e); }
+        }
+        y += chartH + 8;
       }
-      y += chartH + 8;
     }
-  }
 
-  rptFooter(doc);
-  doc.save('AgentNav-Scorecard-' + s.dateFrom + '-to-' + s.dateTo + '.pdf');
-  if (typeof showToast === 'function') showToast('Scorecard PDF downloaded');
+    rptFooter(doc);
+    doc.save('AgentNav-Scorecard-' + s.dateFrom + '-to-' + s.dateTo + '.pdf');
+    if (typeof showToast === 'function') showToast('Scorecard PDF downloaded');
+  } catch (err) {
+    console.error('[Scorecard PDF] Failed to generate:', err);
+    if (typeof showToast === 'function') showToast('Could not generate PDF: ' + err.message);
+  }
 };
 
 window.anScorecardEmailToLeadership = function() {
