@@ -12692,9 +12692,24 @@ function loadRepViews() {
 function saveRepViews() {
   localStorage.setItem('agentnav-rep-views', JSON.stringify(_repViews));
   var sb = (typeof getSupabase === 'function') ? getSupabase() : null;
-  if (sb && _currentUser) {
-    sb.from('admin_content').upsert({ key:'rep_views', value:JSON.stringify(_repViews), updated_by:_currentUser.email, updated_at:new Date().toISOString() }, { onConflict:'key' }).then(function(){});
-  }
+  if (!sb || !_currentUser) return;
+  // Never blindly overwrite the shared rep list — fetch the current version first
+  // and merge, so one rep's incomplete local copy (e.g. loaded before the cloud
+  // fetch finished) can't silently wipe out every other rep's entry.
+  sb.from('admin_content').select('value').eq('key', 'rep_views').then(function(r) {
+    var remote = {};
+    if (r.data && r.data[0]) {
+      try { remote = JSON.parse(r.data[0].value) || {}; } catch (e) { remote = {}; }
+    }
+    var merged = Object.assign({}, remote, _repViews);
+    _repViews = merged;
+    localStorage.setItem('agentnav-rep-views', JSON.stringify(_repViews));
+    sb.from('admin_content').upsert({ key: 'rep_views', value: JSON.stringify(merged), updated_by: _currentUser.email, updated_at: new Date().toISOString() }, { onConflict: 'key' }).then(function(){});
+  }).catch(function() {
+    // If we can't confirm the current shared state, still save locally (already
+    // done above) but skip the cloud write rather than risk overwriting blind.
+    console.error('[REP VIEWS] Could not verify shared data before saving — skipped cloud write to avoid data loss.');
+  });
 }
 
 // ── Apply rep view restrictions ───────────────────────────────
@@ -22884,6 +22899,24 @@ window.anSetRepDisplayName = function(email, name) {
   if (typeof showToast === 'function') showToast(name ? 'Name updated' : 'Name reset to default');
 };
 
+window.anGetRepTitle = function(email) {
+  if (typeof _repViews === 'undefined' || !_repViews || !_repViews[email]) return '';
+  return _repViews[email].title || '';
+};
+
+window.anSetRepTitle = function(email, title) {
+  if (!email) return;
+  title = (title || '').replace(/\s+/g, ' ').trim();
+  if (typeof _repViews === 'undefined' || !_repViews) return;
+  if (!_repViews[email]) _repViews[email] = { hidden: [] };
+  var oldTitle = _repViews[email].title;
+  if (!title) { delete _repViews[email].title; } else { _repViews[email].title = title; }
+  if (title === oldTitle) return;
+  saveRepViews();
+  if (typeof renderOpportunities === 'function') renderOpportunities();
+  if (typeof showToast === 'function') showToast(title ? 'Title updated' : 'Title cleared');
+};
+
 function anGetRepName(email) {
   if (!email) return '—';
   // Check _repViews for stored display name
@@ -31254,6 +31287,7 @@ function buildRepCard(email) {
   var name  = typeof anGetRepName === 'function' ? anGetRepName(email) : email.split('@')[0];
   var col   = anColor ? anColor(email) : '#6366f1';
   var views = (_repViews && _repViews[email]) || {};
+  var title = views.title || '';
   var hidden = (views.hidden || []).length;
   var leadCount = typeof AN !== 'undefined' ? AN.leads.filter(function(l){ return l._repEmail === email; }).length : 0;
 
@@ -31261,7 +31295,10 @@ function buildRepCard(email) {
     + '<div style="display:flex;align-items:center;gap:10px;">'
     + '<div style="width:38px;height:38px;border-radius:50%;background:' + col + '18;border:2px solid ' + col + '33;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:' + col + ';flex-shrink:0;">' + name[0].toUpperCase() + '</div>'
     + '<div style="flex:1;min-width:0;">'
+    + '<div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">'
     + '<div contenteditable="true" spellcheck="false" data-rep-email="' + anEsc(email) + '" onblur="anSetRepDisplayName(this.dataset.repEmail,this.textContent)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}" title="Click to edit name" style="font-size:13.5px;font-weight:700;color:var(--text-primary);cursor:text;outline:none;border-bottom:1px dashed transparent;" onmouseover="this.style.borderBottomColor=\'' + col + '\'" onmouseout="this.style.borderBottomColor=\'transparent\'">' + anEsc(name) + '</div>'
+    + '<div contenteditable="true" spellcheck="false" data-rep-email="' + anEsc(email) + '" data-placeholder="+ title" onblur="anSetRepTitle(this.dataset.repEmail,this.textContent)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}" title="Click to edit title (e.g. SDR, AE)" style="font-size:11px;font-weight:600;color:' + col + ';cursor:text;outline:none;border-bottom:1px dashed transparent;" onmouseover="this.style.borderBottomColor=\'' + col + '\'" onmouseout="this.style.borderBottomColor=\'transparent\'">' + (title ? anEsc(title) : '') + '</div>'
+    + '</div>'
     + '<div style="font-size:12px;color:var(--text-muted);">' + anEsc(email) + '</div>'
     + '</div>'
     + '<button onclick="removeRep(\'' + anEsc(email) + '\')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:4px;" title="Remove rep">✕</button>'
