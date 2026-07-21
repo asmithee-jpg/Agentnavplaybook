@@ -136,7 +136,7 @@ doc.setFillColor(248,248,250);doc.rect(0,279.4-20,W,20,'F');doc.setFont('helveti
 // sidebar collapse removed
 function updateSidebarAuth(user){var area=document.getElementById('sidebar-auth-area');console.log('[AUTH] updateSidebarAuth called with user:',user?user.email:null,'| element found:',!!area);if(!area)return;if(user){var email=user.email||'';var initials=email.slice(0,2).toUpperCase();var name=(typeof anGetRepName==='function')?anGetRepName(email):email.split('@')[0];area.innerHTML='<div class="sidebar-user-area">'+'<div class="sidebar-user-avatar">'+initials+'</div>'+'<div class="sidebar-user-info">'+'<div class="sidebar-user-name">'+name+'</div>'+'<div class="sidebar-user-signout" onclick="authSignOut()">Sign out</div>'+'</div>'+'</div>';}else{area.innerHTML='<button onclick="openAuthModal()" class="sidebar-auth-btn"><span>&#128100;</span> Sign In</button>';}}
 var ADMIN_EMAILS=['asmithee@insurewithcompass.com'];function isAdmin(){return _currentUser&&ADMIN_EMAILS.indexOf(_currentUser.email)>=0;}
-function checkAdminAccess(){var wrap=document.getElementById('nav-admin-wrap');if(wrap)wrap.style.display=isAdmin()?'block':'none';}
+function checkAdminAccess(){var wrap=document.getElementById('nav-admin-wrap');if(wrap)wrap.style.display=isAdmin()?'block':'none';var scWrap=document.getElementById('nav-scorecard-wrap');if(scWrap)scWrap.style.display=isAdmin()?'inline':'none';}
 function calcUniversal(){var agents=Math.max(0,parseInt((document.getElementById('univ-agents')||{value:'1'}).value)||0);var assts=Math.max(0,parseInt((document.getElementById('univ-assistants')||{value:'0'}).value)||0);var monthly=0;var planName='';var planDesc='';var breakdown='';if(agents<=0){agents=0;}
 if(agents===0){monthly=0;planName='Enter agents above';planDesc='';breakdown='';}else if(agents===1){monthly=79+assts*25;planName='Independent Agent';planDesc='1 agent';breakdown='$79 flat + '+assts+' assistants @ $25';}else if(agents<=4){monthly=247+assts*25;planName='Small Agency';planDesc=agents+' agents';breakdown='$247 flat + '+assts+' assistants @ $25';}else if(agents<=10){monthly=597+assts*25;planName='Large Agency';planDesc=agents+' agents';breakdown='$597 flat + '+assts+' assistants @ $25';}else if(agents<=50){monthly=agents*30+assts*15;planName='Enterprise';planDesc=agents+' agents @ $30/ea';breakdown=agents+' × $30 + '+assts+' assts × $15';}else if(agents<=100){monthly=agents*27+assts*12;planName='Enterprise';planDesc=agents+' agents @ $27/ea';breakdown=agents+' × $27 + '+assts+' assts × $12';}else if(agents<=200){monthly=agents*24+assts*10;planName='Enterprise';planDesc=agents+' agents @ $24/ea';breakdown=agents+' × $24 + '+assts+' assts × $10';}else if(agents<=500){monthly=agents*22+assts*8;planName='Enterprise';planDesc=agents+' agents @ $22/ea';breakdown=agents+' × $22 + '+assts+' assts × $8';}else if(agents<=10000){monthly=agents*20+assts*7;planName='Enterprise (Scale)';planDesc=agents+' agents @ $20/ea';breakdown=agents+' × $20 + '+assts+' assts × $7';}else{monthly=agents*18+assts*6;planName='Enterprise (Large Scale)';planDesc=agents+' agents @ $18/ea';breakdown=agents.toLocaleString()+' × $18 + '+assts+' assts × $6 — confirm with sales';}
 var annual=Math.round(monthly*12*0.8);var savings=Math.round(monthly*12*0.2);var perPerson=agents+assts>0?Math.round(monthly/(agents+assts)):0;var set=function(id,val){var el=document.getElementById(id);if(el)el.textContent=val;};set('univ-plan-name',planName);set('univ-plan-desc',planDesc);set('univ-monthly',monthly>0?'$'+monthly.toLocaleString():'—');set('univ-annual',annual>0?'$'+annual.toLocaleString()+'/yr':'—');set('univ-per-person',perPerson>0?'$'+perPerson:'—');set('univ-savings',savings>0?'Save $'+savings.toLocaleString():'—');set('univ-breakdown',breakdown);}
@@ -26582,6 +26582,17 @@ window.showSection = function(id, btn) {
       setTimeout(anRenderFieldInsights, 30);
     }
   }
+  if (id === 'scorecard') {
+    if (typeof anEnsureLeadsLoaded === 'function') {
+      anEnsureLeadsLoaded(function() {
+        if (typeof anScorecardSetPreset === 'function' && window._anScorecard && !window._anScorecard.dateFrom) {
+          anScorecardSetPreset(window._anScorecard.preset || 'this_week');
+        } else if (typeof anRenderScorecard === 'function') {
+          anRenderScorecard();
+        }
+      });
+    }
+  }
 };
 
 // ── Auto-render when signed in ────────────────────────────────
@@ -37189,3 +37200,478 @@ window.anBuildPipelinePDF = function(range, repFilter, author) {
 };
 
 })(); // end IIFE
+
+
+// ═══════════════════════════════════════════════════════════════
+// SALES SCORECARD — admin-editable, blank by default. Every number
+// (team total AND each rep's own) can be pulled from real app data
+// or typed in directly. Targets + color-coded goal attainment. A
+// live chart updates as values change.
+// ═══════════════════════════════════════════════════════════════
+(function() {
+
+var CATEGORIES = [
+  { id: 'activity',   label: 'Activity (Effort)' },
+  { id: 'conversion', label: 'Conversion (Efficiency)' },
+  { id: 'revenue',    label: 'Revenue (Outcome)' }
+];
+
+function defaultRows() {
+  return [
+    { id: 'calls_made',      category: 'activity',   label: 'Calls Made',                metric: 'calls_made',      target: '', team: '', reps: {} },
+    { id: 'demos_booked',    category: 'activity',   label: 'Demos Booked',              metric: 'demos_booked',    target: '', team: '', reps: {} },
+    { id: 'emails_sent',     category: 'activity',   label: 'Emails Sent',                metric: null,              target: '', team: '', reps: {} },
+    { id: 'show_rate',       category: 'conversion', label: 'Show Rate',                  metric: 'show_rate',       target: '', team: '', reps: {} },
+    { id: 'close_rate',      category: 'conversion', label: 'Close Rate (Demo → Won)',    metric: 'close_rate',      target: '', team: '', reps: {} },
+    { id: 'lead_to_demo',    category: 'conversion', label: 'Lead → Demo Rate',           metric: 'lead_to_demo',    target: '', team: '', reps: {} },
+    { id: 'deals_closed',    category: 'revenue',    label: 'Deals Closed',               metric: 'deals_closed',    target: '', team: '', reps: {} },
+    { id: 'new_mrr',         category: 'revenue',    label: 'New MRR Closed',             metric: 'new_mrr',         target: '', team: '', reps: {} },
+    { id: 'avg_deal_size',   category: 'revenue',    label: 'Avg Deal Size (MRR)',        metric: 'avg_deal_size',   target: '', team: '', reps: {} },
+    { id: 'pipeline_value',  category: 'revenue',    label: 'Total Pipeline Value (now)', metric: 'pipeline_value',  target: '', team: '', reps: {} }
+  ];
+}
+
+window._anScorecard = {
+  preset: 'this_week',
+  dateFrom: null,
+  dateTo: null,
+  rows: null,
+  savedId: null,
+  chart: null
+};
+
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+function toISODate(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+function numOnly(v) {
+  if (v === null || v === undefined || v === '') return null;
+  var n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+  return isNaN(n) ? null : n;
+}
+
+window.anScorecardPresetRange = function(preset) {
+  var now = new Date();
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var from, to;
+  if (preset === 'this_week') {
+    var dow = (today.getDay() + 6) % 7;
+    from = new Date(today); from.setDate(today.getDate() - dow);
+    to = today;
+  } else if (preset === 'last_week') {
+    var dow2 = (today.getDay() + 6) % 7;
+    to = new Date(today); to.setDate(today.getDate() - dow2 - 1);
+    from = new Date(to); from.setDate(to.getDate() - 6);
+  } else if (preset === 'this_month') {
+    from = new Date(today.getFullYear(), today.getMonth(), 1);
+    to = today;
+  } else if (preset === 'last_month') {
+    from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    to = new Date(today.getFullYear(), today.getMonth(), 0);
+  } else if (preset === 'this_quarter') {
+    var q = Math.floor(today.getMonth() / 3);
+    from = new Date(today.getFullYear(), q * 3, 1);
+    to = today;
+  } else if (preset === 'last_quarter') {
+    var q2 = Math.floor(today.getMonth() / 3) - 1;
+    var qy = today.getFullYear();
+    if (q2 < 0) { q2 = 3; qy -= 1; }
+    from = new Date(qy, q2 * 3, 1);
+    to = new Date(qy, q2 * 3 + 3, 0);
+  } else if (preset === 'this_year') {
+    from = new Date(today.getFullYear(), 0, 1);
+    to = today;
+  } else if (preset === 'last_year') {
+    from = new Date(today.getFullYear() - 1, 0, 1);
+    to = new Date(today.getFullYear() - 1, 11, 31);
+  } else {
+    from = today; to = today;
+  }
+  return { from: toISODate(from), to: toISODate(to) };
+};
+
+// ── Metric computation — pass repEmail to scope to one rep, omit/null for team total ──
+window.anScorecardComputeMetric = function(metric, from, to, repEmail, cb) {
+  var fromMs = new Date(from + 'T00:00:00').getTime();
+  var toMs = new Date(to + 'T23:59:59').getTime();
+  function inRange(dateStr) {
+    if (!dateStr) return false;
+    var t = new Date(dateStr).getTime();
+    return !isNaN(t) && t >= fromMs && t <= toMs;
+  }
+  var repFilter = repEmail ? repEmail.toLowerCase() : null;
+
+  if (metric === 'calls_made') {
+    var pool = (typeof AN !== 'undefined' && AN.leads) ? AN.leads : [];
+    var seen = {}, count = 0;
+    pool.forEach(function(lead) {
+      if (repFilter && (lead._repEmail || '').toLowerCase() !== repFilter) return;
+      var identity = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim().toLowerCase() + '|' + (lead.company || '').trim().toLowerCase();
+      (lead.callLog || []).forEach(function(c) {
+        var sig = identity + '|' + (c.date || '') + '|' + (c.time || '') + '|' + (c.outcome || '');
+        if (seen[sig]) return;
+        seen[sig] = true;
+        if (inRange(c.date)) count++;
+      });
+    });
+    cb(count);
+    return;
+  }
+
+  if (metric === 'deals_closed' || metric === 'new_mrr' || metric === 'avg_deal_size' || metric === 'close_rate') {
+    var leads = (typeof AN !== 'undefined' && AN.leads) ? AN.leads : [];
+    var scoped = repFilter ? leads.filter(function(l) { return (l._repEmail || '').toLowerCase() === repFilter; }) : leads;
+    var won = scoped.filter(function(l) {
+      if (!l || l.status !== 'won') return false;
+      return inRange(l.closedAt || l.updated);
+    });
+    if (metric === 'deals_closed') { cb(won.length); return; }
+    var totalMRR = won.reduce(function(s, l) {
+      return s + (typeof anOppContractValue === 'function' ? anOppContractValue(l).monthlyEquivalent : (l.oppMRR || 0));
+    }, 0);
+    if (metric === 'new_mrr') { cb(Math.round(totalMRR)); return; }
+    if (metric === 'avg_deal_size') { cb(won.length ? Math.round(totalMRR / won.length) : 0); return; }
+    if (metric === 'close_rate') {
+      var demoedLeads = scoped.filter(function(l) { return l && l.isOpportunity && inRange(l.convertedToOppAt || l.updated); });
+      cb(demoedLeads.length ? Math.round((won.length / demoedLeads.length) * 100) : 0);
+      return;
+    }
+  }
+
+  if (metric === 'lead_to_demo') {
+    var leads2 = (typeof AN !== 'undefined' && AN.leads) ? AN.leads : [];
+    var scoped2 = repFilter ? leads2.filter(function(l) { return (l._repEmail || '').toLowerCase() === repFilter; }) : leads2;
+    var newLeads = scoped2.filter(function(l) { return l && inRange(l.created); });
+    var demoed = scoped2.filter(function(l) { return l && l.isOpportunity && inRange(l.convertedToOppAt || l.updated); });
+    cb(newLeads.length ? Math.round((demoed.length / newLeads.length) * 100) : 0);
+    return;
+  }
+
+  if (metric === 'pipeline_value') {
+    var leads3 = (typeof AN !== 'undefined' && AN.leads) ? AN.leads : [];
+    var scoped3 = repFilter ? leads3.filter(function(l) { return (l._repEmail || '').toLowerCase() === repFilter; }) : leads3;
+    var active = scoped3.filter(function(l) { return l && l.isOpportunity && l.status !== 'won' && l.status !== 'lost'; });
+    var total = active.reduce(function(s, l) {
+      return s + (typeof anOppContractValue === 'function' ? anOppContractValue(l).monthlyEquivalent : (l.oppMRR || 0));
+    }, 0);
+    cb(Math.round(total));
+    return;
+  }
+
+  if (metric === 'demos_booked' || metric === 'demos_completed' || metric === 'show_rate') {
+    if (typeof anFetchTeamDashActivity !== 'function') { cb(0); return; }
+    anFetchTeamDashActivity(function(byRep) {
+      var booked = 0, completed = 0;
+      var emails = repFilter ? [repFilter] : Object.keys(byRep || {});
+      emails.forEach(function(email) {
+        var rd = (byRep || {})[email];
+        if (!rd) return;
+        (rd.demos || []).forEach(function(d) {
+          if (d.source === 'backfill') return;
+          if (inRange(d.bookedDate)) booked++;
+          if (d.status === 'showed' && inRange(d.completedDate || d.bookedDate)) completed++;
+        });
+      });
+      if (metric === 'demos_booked') cb(booked);
+      else if (metric === 'demos_completed') cb(completed);
+      else cb(booked > 0 ? Math.round((completed / booked) * 100) : 0);
+    });
+    return;
+  }
+
+  cb('');
+};
+
+function formatMetricValue(metric, val) {
+  if (metric === 'show_rate' || metric === 'close_rate' || metric === 'lead_to_demo') return val + '%';
+  if (metric === 'new_mrr' || metric === 'avg_deal_size' || metric === 'pipeline_value') return '$' + (typeof anFmtMoney === 'function' ? anFmtMoney(val) : val) + '/mo';
+  return String(val);
+}
+
+// ── Persistence ──────────────────────────────────────────────
+window.anScorecardLoadForRange = function(from, to, cb) {
+  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
+  if (!sb) { cb(null); return; }
+  sb.from('sales_scorecards').select('*').eq('date_from', from).eq('date_to', to).order('updated_at', { ascending: false }).limit(1).then(function(r) {
+    cb(r.data && r.data.length ? r.data[0] : null);
+  }).catch(function() { cb(null); });
+};
+
+window.anScorecardSave = function() {
+  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
+  if (!sb || !_currentUser) { if (typeof showToast === 'function') showToast('Sign in required to save'); return; }
+  var s = window._anScorecard;
+  var payload = {
+    label: s.preset === 'custom' ? (s.dateFrom + ' \u2192 ' + s.dateTo) : s.preset.replace(/_/g, ' '),
+    date_from: s.dateFrom,
+    date_to: s.dateTo,
+    rows: s.rows,
+    created_by: _currentUser.email,
+    updated_at: new Date().toISOString()
+  };
+  var q = s.savedId
+    ? sb.from('sales_scorecards').update(payload).eq('id', s.savedId)
+    : sb.from('sales_scorecards').insert(payload).select().single();
+  q.then(function(r) {
+    if (r.error) { if (typeof showToast === 'function') showToast('Could not save: ' + r.error.message); return; }
+    if (!s.savedId && r.data) s.savedId = Array.isArray(r.data) ? r.data[0].id : r.data.id;
+    if (typeof showToast === 'function') showToast('Scorecard saved');
+    anScorecardLoadHistory();
+  }).catch(function(e) { if (typeof showToast === 'function') showToast('Could not save: ' + e.message); });
+};
+
+window.anScorecardLoadHistory = function() {
+  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
+  var el = document.getElementById('scorecard-history');
+  if (!sb || !el) return;
+  sb.from('sales_scorecards').select('id,label,date_from,date_to,updated_at').order('updated_at', { ascending: false }).limit(15).then(function(r) {
+    var items = r.data || [];
+    if (!items.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:12.5px;padding:10px 0;">No saved scorecards yet.</div>'; return; }
+    el.innerHTML = items.map(function(it) {
+      return '<div onclick="anScorecardOpenSaved(\'' + it.id + '\')" style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12.5px;" onmouseover="this.style.background=\'var(--body-bg)\'" onmouseout="this.style.background=\'transparent\'">'
+        + '<span style="font-weight:600;color:var(--text-primary);text-transform:capitalize;">' + anEsc(it.label) + '</span>'
+        + '<span style="color:var(--text-muted);">' + it.date_from + ' \u2192 ' + it.date_to + '</span>'
+        + '</div>';
+    }).join('');
+  });
+};
+
+window.anScorecardOpenSaved = function(id) {
+  var sb = typeof getSupabase === 'function' ? getSupabase() : null;
+  if (!sb) return;
+  sb.from('sales_scorecards').select('*').eq('id', id).single().then(function(r) {
+    if (!r.data) return;
+    var s = window._anScorecard;
+    s.savedId = r.data.id;
+    s.preset = 'custom';
+    s.dateFrom = r.data.date_from;
+    s.dateTo = r.data.date_to;
+    s.rows = r.data.rows && r.data.rows.length ? r.data.rows : defaultRows();
+    anRenderScorecard();
+  });
+};
+
+// ── UI ────────────────────────────────────────────────────────
+window.anScorecardSetPreset = function(preset) {
+  var s = window._anScorecard;
+  s.preset = preset;
+  var range = anScorecardPresetRange(preset);
+  s.dateFrom = range.from;
+  s.dateTo = range.to;
+  s.savedId = null;
+  s.rows = defaultRows();
+  anScorecardLoadForRange(s.dateFrom, s.dateTo, function(saved) {
+    if (saved) { s.savedId = saved.id; s.rows = saved.rows && saved.rows.length ? saved.rows : s.rows; }
+    anRenderScorecard();
+  });
+};
+
+window.anScorecardSetCustomRange = function() {
+  var from = document.getElementById('scorecard-from').value;
+  var to = document.getElementById('scorecard-to').value;
+  if (!from || !to) return;
+  var s = window._anScorecard;
+  s.preset = 'custom';
+  s.dateFrom = from;
+  s.dateTo = to;
+  s.savedId = null;
+  s.rows = defaultRows();
+  anScorecardLoadForRange(from, to, function(saved) {
+    if (saved) { s.savedId = saved.id; s.rows = saved.rows && saved.rows.length ? saved.rows : s.rows; }
+    anRenderScorecard();
+  });
+};
+
+window.anScorecardUpdateField = function(rowId, field, value, repEmail) {
+  var s = window._anScorecard;
+  var row = (s.rows || []).find(function(r) { return r.id === rowId; });
+  if (!row) return;
+  if (field === 'reps' && repEmail) {
+    row.reps = row.reps || {};
+    row.reps[repEmail] = value;
+  } else {
+    row[field] = value;
+  }
+  anScorecardUpdateChart();
+};
+
+window.anScorecardPullMetric = function(rowId, repEmail) {
+  var s = window._anScorecard;
+  var row = (s.rows || []).find(function(r) { return r.id === rowId; });
+  if (!row || !row.metric) return;
+  var inputId = repEmail ? 'scorecard-input-' + rowId + '-' + repEmail.replace(/[^a-z0-9]/gi, '') : 'scorecard-input-' + rowId + '-team';
+  var input = document.getElementById(inputId);
+  if (input) input.value = '\u2026';
+  anScorecardComputeMetric(row.metric, s.dateFrom, s.dateTo, repEmail || null, function(val) {
+    var display = formatMetricValue(row.metric, val);
+    if (repEmail) { row.reps = row.reps || {}; row.reps[repEmail] = display; }
+    else { row.team = display; }
+    if (input) input.value = display;
+    anScorecardUpdateChart();
+  });
+};
+
+window.anScorecardPullAll = function() {
+  var s = window._anScorecard;
+  var reps = typeof anGetKnownRepEmails === 'function' ? anGetKnownRepEmails() : [];
+  (s.rows || []).forEach(function(row) {
+    if (!row.metric) return;
+    anScorecardPullMetric(row.id, null);
+    reps.forEach(function(email) { anScorecardPullMetric(row.id, email); });
+  });
+  if (typeof showToast === 'function') showToast('Pulling all metrics from the app\u2026');
+};
+
+window.anScorecardAddRow = function() {
+  var s = window._anScorecard;
+  s.rows = s.rows || [];
+  s.rows.push({ id: 'custom-' + Date.now(), category: 'revenue', label: '', metric: null, target: '', team: '', reps: {} });
+  anRenderScorecard();
+};
+
+window.anScorecardRemoveRow = function(rowId) {
+  var s = window._anScorecard;
+  s.rows = (s.rows || []).filter(function(r) { return r.id !== rowId; });
+  anRenderScorecard();
+};
+
+// Goal attainment color: compares team value against target when both are numeric
+function attainmentColor(team, target) {
+  var t = numOnly(team), g = numOnly(target);
+  if (t === null || g === null || g === 0) return null;
+  var ratio = t / g;
+  if (ratio >= 1) return '#10b981';   // on track / ahead
+  if (ratio >= 0.7) return '#f59e0b'; // behind but close
+  return '#ef4444';                  // well behind
+}
+
+window.anScorecardUpdateChart = function() {
+  var canvas = document.getElementById('scorecard-chart');
+  if (!canvas || !window.Chart) return;
+  var s = window._anScorecard;
+  var rows = (s.rows || []).filter(function(r) { return numOnly(r.team) !== null; });
+  var labels = rows.map(function(r) { return r.label || r.id; });
+  var actuals = rows.map(function(r) { return numOnly(r.team) || 0; });
+  var targets = rows.map(function(r) { return numOnly(r.target); });
+  if (s.chart) { s.chart.destroy(); s.chart = null; }
+  if (!rows.length) return;
+  s.chart = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'Actual', data: actuals, backgroundColor: '#6366f1', borderRadius: 6 },
+        { label: 'Target', data: targets, backgroundColor: '#e4e4e7', borderRadius: 6 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true } },
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+};
+
+window.anRenderScorecard = function() {
+  var root = document.getElementById('scorecard-root');
+  if (!root) return;
+  var s = window._anScorecard;
+  if (!s.dateFrom || !s.dateTo) {
+    var range = anScorecardPresetRange(s.preset);
+    s.dateFrom = range.from; s.dateTo = range.to;
+  }
+  if (!s.rows) s.rows = defaultRows();
+
+  var repEmails = typeof anGetKnownRepEmails === 'function' ? anGetKnownRepEmails() : [];
+
+  var presets = [
+    ['this_week', 'This Week'], ['last_week', 'Last Week'],
+    ['this_month', 'This Month'], ['last_month', 'Last Month'],
+    ['this_quarter', 'This Quarter'], ['last_quarter', 'Last Quarter'],
+    ['this_year', 'This Year'], ['last_year', 'Last Year']
+  ];
+  var presetBtns = presets.map(function(p) {
+    var active = s.preset === p[0];
+    return '<button onclick="anScorecardSetPreset(\'' + p[0] + '\')" style="padding:7px 13px;border-radius:8px;border:1.5px solid ' + (active ? '#6366f1' : 'var(--divider)') + ';background:' + (active ? '#6366f1' : 'var(--card-bg)') + ';color:' + (active ? '#fff' : 'var(--text-secondary)') + ';font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--sans);white-space:nowrap;">' + p[1] + '</button>';
+  }).join('');
+
+  var repCols = repEmails.map(function(email) {
+    var nm = typeof anGetRepName === 'function' ? anGetRepName(email) : email.split('@')[0];
+    return '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);text-align:right;">' + anEsc(nm) + '</div>';
+  }).join('');
+
+  var colTemplate = '160px 130px ' + repEmails.map(function(){ return '110px'; }).join(' ') + ' 32px 32px';
+
+  function buildRowsForCategory(catId) {
+    return (s.rows || []).filter(function(r) { return r.category === catId; }).map(function(row) {
+      var isDefault = !!row.metric;
+      var color = attainmentColor(row.team, row.target);
+      var teamCell = '<input id="scorecard-input-' + row.id + '-team" value="' + anEsc(row.team || '') + '" placeholder="\u2014" oninput="anScorecardUpdateField(\'' + row.id + '\',\'team\',this.value)" onchange="anScorecardUpdateChart()" style="border:1.5px solid ' + (color || 'var(--divider)') + ';border-radius:7px;padding:6px 9px;font-size:13px;font-weight:700;color:' + (color || '#6366f1') + ';text-align:right;background:var(--card-bg);outline:none;font-family:var(--sans);width:100%;">';
+      var repCells = repEmails.map(function(email) {
+        var val = (row.reps || {})[email] || '';
+        var safeId = 'scorecard-input-' + row.id + '-' + email.replace(/[^a-z0-9]/gi, '');
+        return '<input id="' + safeId + '" value="' + anEsc(val) + '" placeholder="\u2014" oninput="anScorecardUpdateField(\'' + row.id + '\',\'reps\',this.value,\'' + email + '\')" style="border:1.5px solid var(--divider);border-radius:7px;padding:6px 9px;font-size:12.5px;font-weight:600;color:var(--text-secondary);text-align:right;background:var(--card-bg);outline:none;font-family:var(--sans);width:100%;">';
+      }).join('');
+      return '<div style="display:grid;grid-template-columns:' + colTemplate + ';gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--divider);">'
+        + (isDefault
+            ? '<div style="font-size:13px;font-weight:600;color:var(--text-primary);">' + anEsc(row.label) + '</div>'
+            : '<input value="' + anEsc(row.label) + '" placeholder="Custom metric" oninput="anScorecardUpdateField(\'' + row.id + '\',\'label\',this.value)" style="border:none;border-bottom:1px solid var(--divider);background:transparent;font-size:13px;font-weight:600;color:var(--text-primary);padding:4px 0;outline:none;font-family:var(--sans);">')
+        + '<input value="' + anEsc(row.target || '') + '" placeholder="Target" oninput="anScorecardUpdateField(\'' + row.id + '\',\'target\',this.value)" onchange="anRenderScorecard()" style="border:1.5px solid var(--divider);border-radius:7px;padding:6px 9px;font-size:12.5px;color:var(--text-muted);text-align:right;background:var(--body-bg);outline:none;font-family:var(--sans);width:100%;">'
+        + teamCell
+        + repCells
+        + (isDefault ? '<button onclick="anScorecardPullMetric(\'' + row.id + '\')" title="Pull team total from app" style="background:#eef2ff;border:none;border-radius:7px;color:#6366f1;cursor:pointer;font-size:13px;padding:6px;">\u21bb</button>' : '<span></span>')
+        + (isDefault ? '<span></span>' : '<button onclick="anScorecardRemoveRow(\'' + row.id + '\')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;">\u2715</button>')
+        + '</div>';
+    }).join('');
+  }
+
+  var categoryBlocks = CATEGORIES.map(function(cat) {
+    var rowsHTML = buildRowsForCategory(cat.id);
+    if (!rowsHTML) return '';
+    return '<div style="margin-bottom:22px;">'
+      + '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#6366f1;margin-bottom:6px;">' + cat.label + '</div>'
+      + rowsHTML
+      + '</div>';
+  }).join('');
+
+  root.innerHTML = '<div class="page-header"><div class="page-label">Leadership View</div><h1>Sales Scorecard</h1></div>'
+    + '<div style="background:var(--card-bg);border:1px solid var(--divider);border-radius:14px;padding:20px;margin-bottom:20px;">'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">' + presetBtns + '</div>'
+    + '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">'
+    + '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Custom range</span>'
+    + '<input type="date" id="scorecard-from" value="' + s.dateFrom + '" style="border:1.5px solid var(--divider);border-radius:7px;padding:6px 9px;font-size:12.5px;font-family:var(--sans);background:var(--card-bg);color:var(--text-primary);">'
+    + '<span style="color:var(--text-muted);">\u2192</span>'
+    + '<input type="date" id="scorecard-to" value="' + s.dateTo + '" style="border:1.5px solid var(--divider);border-radius:7px;padding:6px 9px;font-size:12.5px;font-family:var(--sans);background:var(--card-bg);color:var(--text-primary);">'
+    + '<button onclick="anScorecardSetCustomRange()" style="padding:7px 14px;border-radius:7px;border:none;background:var(--body-bg);color:var(--text-secondary);font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--sans);">Apply</button>'
+    + '</div>'
+    + '<div style="margin-top:10px;font-size:12px;color:var(--text-muted);">Showing: <strong style="color:var(--text-primary);">' + s.dateFrom + ' \u2192 ' + s.dateTo + '</strong>' + (s.savedId ? ' \u00b7 <span style="color:#10b981;">Saved scorecard loaded</span>' : ' \u00b7 <span style="color:#f59e0b;">Not yet saved for this range</span>') + '</div>'
+    + '</div>'
+    + '<div style="background:var(--card-bg);border:1px solid var(--divider);border-radius:14px;padding:20px;margin-bottom:20px;overflow-x:auto;">'
+    + '<div style="display:grid;grid-template-columns:' + colTemplate + ';gap:8px;padding-bottom:8px;border-bottom:2px solid var(--divider);margin-bottom:4px;min-width:' + (600 + repEmails.length * 110) + 'px;">'
+    + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Metric</div>'
+    + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);text-align:right;">Target</div>'
+    + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);text-align:right;">Team Total</div>'
+    + repCols + '<span></span><span></span>'
+    + '</div>'
+    + '<div style="min-width:' + (600 + repEmails.length * 110) + 'px;">' + categoryBlocks + '</div>'
+    + '<div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">'
+    + '<button onclick="anScorecardAddRow()" style="padding:9px 16px;border-radius:8px;border:1.5px dashed var(--divider);background:transparent;color:var(--text-secondary);font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--sans);">+ Add custom metric</button>'
+    + '<button onclick="anScorecardPullAll()" style="padding:9px 16px;border-radius:8px;border:1.5px solid #6366f1;background:transparent;color:#6366f1;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans);">\u21bb Pull All From App</button>'
+    + '<div style="flex:1;"></div>'
+    + '<button onclick="anScorecardSave()" style="padding:9px 20px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);">Save Scorecard</button>'
+    + '</div>'
+    + '<div style="font-size:11.5px;color:var(--text-muted);margin-top:12px;">Type a Target for any row to see it color-coded (green = on track, amber = behind, red = well behind). Click \u21bb to pull a number from the app, or just type your own \u2014 the chart below updates as you go.</div>'
+    + '</div>'
+    + '<div style="background:var(--card-bg);border:1px solid var(--divider);border-radius:14px;padding:20px;margin-bottom:20px;">'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:10px;">Actual vs Target</div>'
+    + '<div style="height:280px;"><canvas id="scorecard-chart"></canvas></div>'
+    + '</div>'
+    + '<div style="background:var(--card-bg);border:1px solid var(--divider);border-radius:14px;padding:20px;">'
+    + '<div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:10px;">Saved Scorecards</div>'
+    + '<div id="scorecard-history"><div style="color:var(--text-muted);font-size:12.5px;">Loading\u2026</div></div>'
+    + '</div>';
+
+  anScorecardLoadHistory();
+  setTimeout(anScorecardUpdateChart, 50);
+};
+
+})();
