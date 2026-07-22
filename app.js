@@ -13400,6 +13400,14 @@ window.anSyncDemoToOpportunity = function(demo) {
 
 window.anSyncAllPipelineDealsToOpportunities = function(opts) {
   opts = opts || {};
+  // Disabled by default. This legacy sync (matching an old internal pipeline list
+  // against current leads, mainly by a stale internal ID) has been the actual
+  // source of deals duplicating and deleted deals reappearing on reload — every
+  // automatic run risked spawning fresh duplicate records. AN.leads is now the
+  // single source of truth for the Deals board, so this no longer needs to run
+  // automatically. Pass { forceRun: true } to run it manually if ever needed.
+  if (!opts.forceRun) return;
+
   if (typeof _dash === 'undefined' || !_dash.pipeline || typeof AN === 'undefined') return;
   var changed = false;
   (_dash.pipeline || []).forEach(function(deal) {
@@ -15136,7 +15144,11 @@ AN.save = function(cb){
           var nameKey = ((l.firstName || '') + ' ' + (l.lastName || '')).trim().toLowerCase();
           var companyKey = (l.company || '').trim().toLowerCase();
           if (!nameKey && !companyKey) { noIdentity.push(l); return; }
-          var idKey = nameKey + '|' + companyKey;
+          // Name alone, not name+company — duplicate copies of the same person have
+          // been found with inconsistent company values (one real, one just a
+          // placeholder repeating the person's own name), which let them slip past
+          // a stricter name+company match.
+          var idKey = nameKey || companyKey;
           var existingBest = identityBest[idKey];
           if (!existingBest || anLeadUpdatedMs(l) >= anLeadUpdatedMs(existingBest)) identityBest[idKey] = l;
         });
@@ -26734,8 +26746,18 @@ window.toggleSidebar = function() {
 var _AN_ONBOARD_KEY = 'agentnav-display-name-set';
 
 function anShowOnboardingModal(user) {
-  if (localStorage.getItem(_AN_ONBOARD_KEY)) return; // already done
+  if (localStorage.getItem(_AN_ONBOARD_KEY)) return; // already done on this browser
   if (!user || !user.email) return;
+
+  // The local flag above never syncs across browsers/devices/incognito sessions,
+  // so it alone can't tell whether this person already set their name elsewhere.
+  // Check the real, cloud-synced name instead — if it's already set, this isn't
+  // actually a first-time user, so just record that locally too and skip the modal.
+  var already = (typeof _repViews !== 'undefined' && _repViews && _repViews[user.email] && _repViews[user.email].displayName);
+  if (already) {
+    localStorage.setItem(_AN_ONBOARD_KEY, '1');
+    return;
+  }
 
   var existing = document.getElementById('an-onboard-modal');
   if (existing) existing.remove();
@@ -26795,7 +26817,7 @@ var _origOULI_onboard = window.onUserLoggedIn;
 window.onUserLoggedIn = function(user) {
   if (typeof _origOULI_onboard === 'function') _origOULI_onboard(user);
   // Show onboarding if first time
-  setTimeout(function() { anShowOnboardingModal(user); }, 800);
+  setTimeout(function() { anShowOnboardingModal(user); }, 1500);
 };
 
 // ============================================================
