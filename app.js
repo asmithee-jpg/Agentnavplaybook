@@ -13289,6 +13289,27 @@ window.anSyncPipelineDealToOpportunity = function(deal) {
       lastName = parsed.lastName;
       if (!company && !lastName) company = name;
     }
+
+    // Before creating a brand new lead, check whether this person already exists
+    // anywhere in AN.leads. deal.leadId can go stale (e.g. after a data cleanup,
+    // a merge, or the person being deleted and re-added under a new ID) — without
+    // this check, every sync of a stale deal.leadId silently spawns a fresh
+    // duplicate instead of finding the real record, which is exactly what kept
+    // making deleted/duplicate deals reappear on every page load.
+    var nameKeyLookup = (firstName + ' ' + lastName).trim().toLowerCase();
+    if (nameKeyLookup) {
+      var existingByIdentity = AN.leads.find(function(l) {
+        if (!l) return false;
+        var lNameKey = ((l.firstName || '') + ' ' + (l.lastName || '')).trim().toLowerCase();
+        return lNameKey === nameKeyLookup;
+      });
+      if (existingByIdentity) {
+        lead = existingByIdentity;
+        deal.leadId = lead.id; // heal the stale reference so this doesn't recur
+      }
+    }
+  }
+  if (!lead && AN.leads) {
     var repEmail = (deal.aeEmail || deal.sdrEmail || AN.currentRepEmail || '').toLowerCase();
     lead = {
       id: 'lead-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
