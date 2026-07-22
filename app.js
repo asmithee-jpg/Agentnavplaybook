@@ -14641,6 +14641,16 @@ function anDedupeOpportunityLeads(arr) {
   var removed = Object.keys(removeIds).length;
   if (!removed) return arr;
   if (typeof console !== 'undefined') console.info('[CRM] Merged ' + removed + ' duplicate opportunit' + (removed === 1 ? 'y' : 'ies'));
+  // Per-row storage won't clean up a duplicate's row just because it's excluded
+  // from the next save — explicitly delete it, or it lingers in the database
+  // forever and can resurface later (e.g. re-fetched by something else).
+  var sbDedupeDel = typeof getSupabase === 'function' ? getSupabase() : null;
+  var removedIdList = Object.keys(removeIds);
+  if (sbDedupeDel && removedIdList.length) {
+    sbDedupeDel.from('crm_leads').delete().in('id', removedIdList).then(function(){}).catch(function(e){
+      console.warn('[CRM] Could not delete merged-duplicate rows from cloud (non-fatal):', e);
+    });
+  }
   return arr.filter(function(l) { return !removeIds[l.id]; });
 }
 
@@ -15008,17 +15018,30 @@ function anFinishCloudLeadLoad(sb, cb){
     if(cb) cb();
   }
 
-  // Everyone reads the same shared team row — there's exactly one copy of the truth.
-  // Non-admins still only ever SEE their own/visible records, enforced by
+  // Everyone reads the same shared team data — there's exactly one copy of the
+  // truth. Non-admins still only ever SEE their own/visible records, enforced by
   // anEnforceRepLeadScope() below, but the underlying data is never siloed per-account.
-  sb.from('an_leads_shared').select('data').eq('team_id', 'default').maybeSingle().then(function(r){
-    var rows = (r.data && Array.isArray(r.data.data)) ? [{ data: r.data.data }] : [];
+  // Stored as one row PER LEAD (not one giant blob for the whole team) so reads
+  // and writes stay fast no matter how large the dataset gets — paginate through
+  // in batches since there are more rows than a single request returns.
+  function fetchAllCrmLeads(offset, acc, done) {
+    sb.from('crm_leads').select('data').eq('team_id', 'default').range(offset, offset + 999).then(function(r){
+      if (r.error) { done(null, r.error); return; }
+      var batch = r.data || [];
+      acc = acc.concat(batch);
+      if (batch.length < 1000) { done(acc, null); }
+      else { fetchAllCrmLeads(offset + 1000, acc, done); }
+    }).catch(function(err){ done(null, err); });
+  }
+  fetchAllCrmLeads(0, [], function(rows, err){
+    if (err) {
+      console.warn('[CRM] Supabase load failed, using local cache:', err);
+      anApplyOwnerPatches(AN.leads);
+      anEnforceRepLeadScope();
+      if(cb) cb();
+      return;
+    }
     mergeCloudLeads(anParseLeadsFromSupabaseRows(rows));
-  }).catch(function(err){
-    console.warn('[CRM] Supabase load failed, using local cache:', err);
-    anApplyOwnerPatches(AN.leads);
-    anEnforceRepLeadScope();
-    if(cb) cb();
   });
 }
 
@@ -15088,9 +15111,8 @@ AN.save = function(cb){
     }
 
     // Debounce the network write — collapse rapid-fire saves (e.g. clicking through
-    // several records in a row) into a single fetch+merge+write instead of doing a
-    // full ~25k-record round-trip per action, which was the real cause of the
-    // app feeling slow. Local persistence above still happens immediately every time.
+    // several records in a row) into a single round-trip instead of one per action.
+    // Local persistence above still happens immediately every time.
     window._anSaveCallbacks = window._anSaveCallbacks || [];
     if (cb) window._anSaveCallbacks.push(cb);
     window._anSaveWhere = where;
@@ -15101,85 +15123,76 @@ AN.save = function(cb){
       window._anSaveCallbacks = [];
       var saveWhere = window._anSaveWhere || 'local';
 
-      // Everyone shares one team row now. A non-admin's AN.leads is a scoped VIEW
-      // (only records they can see) — never write it wholesale, or it would erase
-      // every teammate's unrelated data. Always merge this rep's copy against the
-      // freshest server copy first, keeping every other record untouched.
-      sb.from('an_leads_shared').select('data').eq('team_id', 'default').maybeSingle().then(function(r){
-        // CRITICAL: never treat a failed/empty fetch as "the shared table has no
-        // data" — that silently wipes out every other record when we write back.
-        // If we can't confirm what's actually there, abort this save entirely
-        // rather than risk overwriting the whole team's data with an incomplete
-        // local subset.
-        if (r.error) {
-          console.error('[CRM] Could not verify current shared data before saving — aborting to avoid data loss:', r.error);
-          callbacks.forEach(function(fn){ fn(false, r.error, saveWhere); });
-          return;
+      // Leads are stored one row per lead now (not one giant blob for the whole
+      // team), so we only need to upsert the specific rows this session knows
+      // about — Postgres handles each row independently, so this can never
+      // overwrite or erase anything belonging to a teammate's own edits.
+      var identityBest = {};
+      var noIdentity = [];
+      var dropped = [];
+      AN.leads.forEach(function(l){
+        if (!l || !l.id) return;
+        var nameKey = ((l.firstName || '') + ' ' + (l.lastName || '')).trim().toLowerCase();
+        var companyKey = (l.company || '').trim().toLowerCase();
+        if (!nameKey && !companyKey) { noIdentity.push(l); return; }
+        // Name alone, not name+company — duplicate copies of the same person have
+        // been found with inconsistent company values, which let them slip past
+        // a stricter name+company match.
+        var idKey = nameKey || companyKey;
+        var existingBest = identityBest[idKey];
+        if (!existingBest) {
+          identityBest[idKey] = l;
+        } else if (anLeadUpdatedMs(l) >= anLeadUpdatedMs(existingBest)) {
+          dropped.push(existingBest);
+          identityBest[idKey] = l;
+        } else {
+          dropped.push(l);
         }
-        if (!r.data || !Array.isArray(r.data.data)) {
-          console.error('[CRM] Shared data fetch returned nothing unexpectedly — aborting save to avoid data loss.');
-          callbacks.forEach(function(fn){ fn(false, new Error('Refused to save: could not confirm existing data'), saveWhere); });
-          return;
-        }
-        var serverLeads = r.data.data;
-        var byId = {};
-        serverLeads.forEach(function(l){ if(l && l.id) byId[l.id] = l; });
-        AN.leads.forEach(function(l){
-          if(!l || !l.id) return;
-          var existing = byId[l.id];
-          // This rep's local copy is what they just edited — prefer it unless the
-          // server somehow has a newer edit (e.g. a teammate saved moments ago).
-          if(!existing || anLeadUpdatedMs(l) >= anLeadUpdatedMs(existing)) byId[l.id] = l;
-        });
-        var merged = Object.keys(byId).map(function(id){ return byId[id]; });
+      });
+      var toSave = Object.keys(identityBest).map(function(k){ return identityBest[k]; }).concat(noIdentity);
 
-        // Permanent backstop against duplicate records piling back up: collapse any
-        // leads that share the same name+company down to whichever was updated most
-        // recently. This runs on every save, so however duplicates keep getting
-        // created elsewhere, they get cleaned up here instead of accumulating.
-        var identityBest = {};
-        var noIdentity = [];
-        merged.forEach(function(l){
-          if (!l) return;
-          var nameKey = ((l.firstName || '') + ' ' + (l.lastName || '')).trim().toLowerCase();
-          var companyKey = (l.company || '').trim().toLowerCase();
-          if (!nameKey && !companyKey) { noIdentity.push(l); return; }
-          // Name alone, not name+company — duplicate copies of the same person have
-          // been found with inconsistent company values (one real, one just a
-          // placeholder repeating the person's own name), which let them slip past
-          // a stricter name+company match.
-          var idKey = nameKey || companyKey;
-          var existingBest = identityBest[idKey];
-          if (!existingBest || anLeadUpdatedMs(l) >= anLeadUpdatedMs(existingBest)) identityBest[idKey] = l;
-        });
-        merged = Object.keys(identityBest).map(function(k){ return identityBest[k]; }).concat(noIdentity);
+      // Reflect the dedup into this session's own in-memory state too, so the UI
+      // doesn't keep showing a duplicate that was just cleaned up server-side.
+      if (dropped.length) {
+        var droppedIds = {};
+        dropped.forEach(function(l){ if (l && l.id) droppedIds[l.id] = true; });
+        AN.leads = AN.leads.filter(function(l){ return l && !droppedIds[l.id]; });
+        if (typeof AN.invalidateLeadCaches === 'function') AN.invalidateLeadCaches();
+      }
 
-        // Second safety net: if this write would shrink the dataset by more than
-        // 10%, something is wrong — abort rather than silently delete records.
-        if (serverLeads.length > 50 && merged.length < serverLeads.length * 0.9) {
-          console.error('[CRM] Refusing to save: merge would shrink shared data from ' + serverLeads.length + ' to ' + merged.length + ' records.');
-          callbacks.forEach(function(fn){ fn(false, new Error('Refused to save: would delete too many records'), saveWhere); });
-          return;
-        }
-        sb.from('an_leads_shared').upsert({
-          team_id: 'default',
-          data: merged,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'team_id' }).then(function(r2){
-          if(r2.error){
-            console.error('[CRM] Supabase save error:', r2.error);
-            callbacks.forEach(function(fn){ fn(true, r2.error, saveWhere); });
-          } else {
-            callbacks.forEach(function(fn){ fn(true, null, 'cloud'); });
+      var rows = toSave.filter(function(l){ return l && l.id; }).map(function(l){
+        return { id: l.id, team_id: 'default', data: l, updated_at: new Date().toISOString() };
+      });
+
+      function upsertBatch(i){
+        if (i >= rows.length) { deleteDroppedRows(); return; }
+        var batch = rows.slice(i, i + 500);
+        sb.from('crm_leads').upsert(batch, { onConflict: 'id' }).then(function(r){
+          if (r.error) {
+            console.error('[CRM] Supabase save error:', r.error);
+            callbacks.forEach(function(fn){ fn(true, r.error, saveWhere); });
+            return;
           }
+          upsertBatch(i + 500);
         }).catch(function(err2){
           console.error('[CRM] Supabase save failed:', err2);
           callbacks.forEach(function(fn){ fn(true, err2, saveWhere); });
         });
-      }).catch(function(err){
-        console.error('[CRM] Supabase fetch-before-save failed:', err);
-        callbacks.forEach(function(fn){ fn(true, err, saveWhere); });
-      });
+      }
+
+      function deleteDroppedRows(){
+        var dropIds = dropped.map(function(l){ return l && l.id; }).filter(Boolean);
+        if (!dropIds.length) { callbacks.forEach(function(fn){ fn(true, null, 'cloud'); }); return; }
+        sb.from('crm_leads').delete().in('id', dropIds).then(function(){
+          callbacks.forEach(function(fn){ fn(true, null, 'cloud'); });
+        }).catch(function(err3){
+          console.warn('[CRM] Could not clean up duplicate rows (non-fatal, will retry next save):', err3);
+          callbacks.forEach(function(fn){ fn(true, null, 'cloud'); });
+        });
+      }
+
+      if (!rows.length) { deleteDroppedRows(); return; }
+      upsertBatch(0);
     }, 800);
   });
 };
@@ -17019,6 +17032,10 @@ window.anCloseLeadModal = function(leadId) {
     var ph = ((document.getElementById('alf-ph') || {}).value || '').trim();
     if (!fn && !ln && !co && !ph) {
       AN.leads = AN.leads.filter(function(l){ return l.id !== leadId; });
+      var sbDraftDel = typeof getSupabase === 'function' ? getSupabase() : null;
+      if (sbDraftDel) {
+        sbDraftDel.from('crm_leads').delete().eq('id', leadId).then(function(){}).catch(function(){});
+      }
       if (typeof AN.save === 'function') AN.save();
     }
     delete lead._isDraftNew;
@@ -17073,6 +17090,13 @@ window.anDeleteOpportunity = function(id) {
     if (list && typeof buildPipelineHTML === 'function') list.innerHTML = buildPipelineHTML();
   }
   refreshOppUI();
+
+  var sbDel = typeof getSupabase === 'function' ? getSupabase() : null;
+  if (sbDel) {
+    sbDel.from('crm_leads').delete().eq('id', id).then(function(){}).catch(function(e){
+      console.warn('[CRM] Could not delete lead row from cloud (non-fatal):', e);
+    });
+  }
 
   AN.save(function() {
     refreshOppUI();
@@ -17213,6 +17237,12 @@ window.anDeleteSelected = function(){
   var ids = AN.selectedIds.slice();
   AN.leads = AN.leads.filter(function(l){ return ids.indexOf(l.id) < 0; });
   AN.selectedIds = [];
+  var sbBulkDel = typeof getSupabase === 'function' ? getSupabase() : null;
+  if (sbBulkDel && ids.length) {
+    sbBulkDel.from('crm_leads').delete().in('id', ids).then(function(){}).catch(function(e){
+      console.warn('[CRM] Could not bulk-delete lead rows from cloud (non-fatal):', e);
+    });
+  }
   AN.save(function(){
     renderLeadsTable();
     anUpdateBulkBar();
