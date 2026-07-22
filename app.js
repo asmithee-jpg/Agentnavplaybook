@@ -14995,6 +14995,23 @@ AN.load = function(cb){
 
 function anFinishCloudLeadLoad(sb, cb){
   if(typeof _currentUser === 'undefined' || !_currentUser){ if(cb) cb(); return; }
+
+  // Guard against concurrent overlapping loads — several things can independently
+  // trigger this (auth events, retries, reconciliation checks), and letting them
+  // race in parallel means dozens of duplicate requests hit the database at once,
+  // which is what was actually causing the timeouts/500s and partial-looking data.
+  window._anCloudLeadLoadCallbacks = window._anCloudLeadLoadCallbacks || [];
+  if (cb) window._anCloudLeadLoadCallbacks.push(cb);
+  if (window._anCloudLeadLoadInProgress) return;
+  window._anCloudLeadLoadInProgress = true;
+  var _origCb = cb;
+  cb = function() {
+    window._anCloudLeadLoadInProgress = false;
+    var queued = window._anCloudLeadLoadCallbacks || [];
+    window._anCloudLeadLoadCallbacks = [];
+    queued.forEach(function(fn) { if (fn) fn(); });
+  };
+
   anRememberRepUserId(_currentUser);
   AN.isAdmin = _currentUser.email === AN_CRM_ADMIN_EMAIL;
   AN.currentRepEmail = _currentUser.email;
@@ -15004,6 +15021,12 @@ function anFinishCloudLeadLoad(sb, cb){
 
   function mergeCloudLeads(cloudLeads){
     if(cloudLeads && cloudLeads.length){
+      // Record what the cloud confirmed as of this load — if a local copy turns
+      // out to be genuinely newer (an unsynced local edit), it just won't match
+      // this recorded value and will correctly be treated as dirty on next save.
+      window._anSyncedUpdatedTimes = window._anSyncedUpdatedTimes || {};
+      cloudLeads.forEach(function(l){ if (l && l.id) window._anSyncedUpdatedTimes[l.id] = l.updated || ''; });
+
       var local = AN.leads || [];
       AN.leads = anApplyOwnerPatches(anMergeLeadsPreferNewer(local, cloudLeads));
       AN.invalidateLeadCaches();
@@ -15160,7 +15183,18 @@ AN.save = function(cb){
         if (typeof AN.invalidateLeadCaches === 'function') AN.invalidateLeadCaches();
       }
 
-      var rows = toSave.filter(function(l){ return l && l.id; }).map(function(l){
+      // Only sync leads that actually changed since we last successfully synced
+      // them — re-uploading the entire dataset (tens of thousands of records) on
+      // every single edit was flooding the database with unnecessary requests and
+      // was very likely what caused the overlapping-request storm and 500s.
+      window._anSyncedUpdatedTimes = window._anSyncedUpdatedTimes || {};
+      var dirty = toSave.filter(function(l){
+        if (!l || !l.id) return false;
+        var lastSynced = window._anSyncedUpdatedTimes[l.id];
+        return lastSynced === undefined || lastSynced !== (l.updated || '');
+      });
+
+      var rows = dirty.map(function(l){
         return { id: l.id, team_id: 'default', data: l, updated_at: new Date().toISOString() };
       });
 
@@ -15173,6 +15207,7 @@ AN.save = function(cb){
             callbacks.forEach(function(fn){ fn(true, r.error, saveWhere); });
             return;
           }
+          batch.forEach(function(row){ window._anSyncedUpdatedTimes[row.id] = row.data.updated || ''; });
           upsertBatch(i + 500);
         }).catch(function(err2){
           console.error('[CRM] Supabase save failed:', err2);
