@@ -13425,6 +13425,13 @@ window.anSyncAllPipelineDealsToOpportunities = function(opts) {
 
 window.anSyncAllDemosToOpportunities = function(opts) {
   opts = opts || {};
+  // Disabled by default. This was re-recording a fresh "booked"/"completed"
+  // lifecycle event — dated TODAY — for every existing demo on every automatic
+  // run, regardless of when the demo actually happened. That's exactly what was
+  // inflating "Team Activity — Today" with demos that were really from weeks
+  // earlier. Pass { forceRun: true } to run it manually if ever needed.
+  if (!opts.forceRun) return;
+
   if (typeof _dash === 'undefined' || !_dash.demos || typeof AN === 'undefined') return;
   if (typeof anLinkDemosToLeads === 'function') anLinkDemosToLeads();
   var changed = false;
@@ -14248,8 +14255,8 @@ window.anRecordDemoBooked = function(lead, opts) {
   if (!lead) return;
   opts = opts || {};
   var hadBooked = (lead.demoLifecycle || []).some(function(e) { return e.type === 'booked'; });
-  anRecordDemoLifecycleEvent(lead, 'booked', opts);
-  if (!opts.silentDashBook) anSyncLeadDemoToDashboard(lead, 'booked', opts);
+  if (!hadBooked) anRecordDemoLifecycleEvent(lead, 'booked', opts);
+  if (!opts.silentDashBook) anSyncLeadDemoToDashboard(lead, 'booked', hadBooked ? { skipCounters: true } : opts);
   lead.updated = new Date().toISOString();
   return !hadBooked;
 };
@@ -14258,7 +14265,7 @@ window.anRecordDemoCompleted = function(lead, opts) {
   if (!lead) return;
   opts = opts || {};
   var already = (lead.demoLifecycle || []).some(function(e) { return e.type === 'completed'; });
-  anRecordDemoLifecycleEvent(lead, 'completed', opts);
+  if (!already) anRecordDemoLifecycleEvent(lead, 'completed', opts);
   anSyncLeadDemoToDashboard(lead, 'showed', already ? { skipCounters: true } : opts);
   lead.updated = new Date().toISOString();
 };
