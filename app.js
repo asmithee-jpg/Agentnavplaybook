@@ -14173,6 +14173,15 @@ window.anSyncLeadDemoToDashboard = function(lead, action, syncOpts) {
   var leadName = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || lead.company || 'Lead';
   var existing = anFindDashDemoForLead(lead);
 
+  // Before falling back to "today" for a missing date, check whether the lead's
+  // own lifecycle history already records the real date — falling straight to
+  // today whenever the top-level field isn't set was exactly what caused old,
+  // already-completed demos to get counted as happening today.
+  function realDateFor(type) {
+    var ev = (lead.demoLifecycle || []).find(function(e) { return e.type === type; });
+    return (ev && ev.demoDate) || (ev && ev.date) || '';
+  }
+
   if (action === 'booked') {
     if (!existing) {
       _dash.demos.push({
@@ -14184,7 +14193,7 @@ window.anSyncLeadDemoToDashboard = function(lead, action, syncOpts) {
         scheduledDate: lead.demoDate || today,
         scheduledTime: lead.demoTime || '',
         status: 'booked',
-        bookedDate: lead.demoBookedAt ? String(lead.demoBookedAt).slice(0, 10) : today,
+        bookedDate: (lead.demoBookedAt ? String(lead.demoBookedAt).slice(0, 10) : '') || realDateFor('booked') || today,
         notes: '',
         _userAdded: true
       });
@@ -14197,7 +14206,7 @@ window.anSyncLeadDemoToDashboard = function(lead, action, syncOpts) {
     }
   } else if (action === 'showed') {
     if (!existing) {
-      var bookDate = lead.demoBookedAt ? String(lead.demoBookedAt).slice(0, 10) : today;
+      var bookDate = (lead.demoBookedAt ? String(lead.demoBookedAt).slice(0, 10) : '') || realDateFor('booked') || realDateFor('completed') || today;
       _dash.demos.push({
         id: 'demo-' + lead.id,
         leadId: lead.id,
@@ -14208,7 +14217,7 @@ window.anSyncLeadDemoToDashboard = function(lead, action, syncOpts) {
         scheduledTime: lead.demoTime || '',
         status: 'showed',
         bookedDate: bookDate,
-        completedDate: lead.demoCompletedAt ? String(lead.demoCompletedAt).slice(0, 10) : today,
+        completedDate: (lead.demoCompletedAt ? String(lead.demoCompletedAt).slice(0, 10) : '') || realDateFor('completed') || today,
         notes: '',
         _userAdded: true
       });
@@ -14217,7 +14226,7 @@ window.anSyncLeadDemoToDashboard = function(lead, action, syncOpts) {
     if (existing) {
       var wasShowed = existing.status === 'showed';
       existing.status = 'showed';
-      existing.completedDate = existing.completedDate || (lead.demoCompletedAt ? String(lead.demoCompletedAt).slice(0, 10) : today);
+      existing.completedDate = existing.completedDate || (lead.demoCompletedAt ? String(lead.demoCompletedAt).slice(0, 10) : '') || realDateFor('completed') || today;
       existing.name = leadName;
       if (lead.sdrEmail) existing.sdrEmail = lead.sdrEmail;
       if (lead.aeEmail) existing.aeEmail = lead.aeEmail;
@@ -14239,7 +14248,7 @@ window.anSyncLeadDemoToDashboard = function(lead, action, syncOpts) {
     if (existing) {
       existing.convertedToOpp = true;
       if (existing.status === 'booked') existing.status = 'showed';
-      existing.completedDate = existing.completedDate || today;
+      existing.completedDate = existing.completedDate || realDateFor('completed') || today;
     }
     if (!syncOpts.skipCounters) {
       if (!_dash.activityLog) _dash.activityLog = [];
