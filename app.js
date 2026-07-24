@@ -13889,7 +13889,6 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
       if (typeof anCallOnLocalDate === 'function' ? !anCallOnLocalDate(c, today) : c.date !== today) return;
       var callRep = anCallLogRep(c, lead);
       bump(callRep, 'calls', 1);
-      if (typeof anCallCountsAsDemo === 'function' ? anCallCountsAsDemo(c) : c.outcome === 'demo') bump(callRep, 'demos', 1);
       if (c.outcome === 'won') bump(callRep, 'closes', 1);
     });
     (lead.demoLifecycle || []).forEach(function(ev) {
@@ -13907,9 +13906,10 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
       return typeof anActivityEntryOnDate === 'function' ? anActivityEntryOnDate(e, today) : e.date === today;
     });
     if (entry) {
+      // demos/showed intentionally NOT taken from this legacy counter — it has
+      // proven unreliable (double-counted elsewhere in the app); the demoLifecycle
+      // events above are the trustworthy source for those two fields.
       maxField(em, 'calls', entry.calls || 0);
-      maxField(em, 'demos', entry.demos || 0);
-      maxField(em, 'showed', entry.demos_showed || 0);
       maxField(em, 'closes', entry.closes || 0);
     }
   });
@@ -13918,8 +13918,6 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
       var day = (AN._teamActivityByRep[em] || {})[today];
       if (!day) return;
       maxField(em, 'calls', day.calls || 0);
-      maxField(em, 'demos', day.demos || 0);
-      maxField(em, 'showed', day.showed || 0);
       maxField(em, 'closes', day.closes || 0);
     });
   }
@@ -13931,8 +13929,6 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
       });
       if (!entry) return;
       maxField(em, 'calls', entry.calls || 0);
-      maxField(em, 'demos', entry.demos || 0);
-      maxField(em, 'showed', entry.demos_showed || 0);
       maxField(em, 'closes', entry.closes || 0);
     });
   }
@@ -13940,8 +13936,6 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
   if (myEmail && typeof anRepDashActivityForDate === 'function') {
     var mine = anRepDashActivityForDate(myEmail, today);
     maxField(myEmail, 'calls', mine.calls || 0);
-    maxField(myEmail, 'demos', mine.demos || 0);
-    maxField(myEmail, 'showed', mine.showed || 0);
     maxField(myEmail, 'closes', mine.closes || 0);
   }
   var rows = Object.keys(byEmail).map(function(em) {
@@ -13995,7 +13989,7 @@ window.anRenderDailyLeaderboardHTML = function(rows) {
       + '<div style="font-size:26px;font-weight:900;color:#6366f1;line-height:1;">' + totDemos + '</div>'
       + '<div style="font-size:10px;font-weight:700;color:#4338ca;text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;">Demos Set</div>'
     + '</div>'
-    + '<div style="'+tileStyle+'background:#fff7ed;border:1px solid #fed7aa;">'
+    + '<div style="'+tileStyle+'background:#fff7ed;border:1px solid #fed7aa;" title="Includes demos that were booked on an earlier day and happened today — this can be a different set of demos than \'Demos Set\' above.">'
       + '<div style="font-size:26px;font-weight:900;color:#ea580c;line-height:1;">' + totShowed + '</div>'
       + '<div style="font-size:10px;font-weight:700;color:#c2410c;text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;">Showed</div>'
     + '</div>'
@@ -27027,7 +27021,7 @@ window.anGetDashMessage = function(name, when) {
       { msg: '🏆 Golden hour. This is when the reps who actually want it separate from the ones who don\'t.', sub: '' },
       { msg: '🏆 One more dial. You\'ve been saying that all day. Mean it this time.', sub: '' },
       { msg: '🏆 It\'s not too late to have a great day. One call can change everything.', sub: '' },
-      { msg: '🏆 Friday\'s paycheck is built on Thursday\'s 4pm calls. Remember that.', sub: '' },
+      { msg: '🏆 Your paycheck is built on hours like this one. Remember that.', sub: '' },
       { msg: '🏆 End-of-day callbacks are gold. People are wrapping up and ready to make decisions.', sub: '' },
       { msg: '🏆 Close something today. The version of you at 6pm will thank you.', sub: '' },
       { msg: '🏆 Last stretch, ' + firstName + '. Make it count. These are the calls that fill the trophy case.', sub: '' },
@@ -27243,13 +27237,18 @@ function coEnsureSyncedFromLeads(done) {
         id: 'co-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
         name: cn,
         industry: 'Insurance Agency',
-        notes: '', website: '', lifecycleStage: '',
+        notes: '', website: '',
+        phone: l.phone || '',
+        lifecycleStage: '',
         ownerEmail: (l._repEmail || '').toLowerCase(),
-        created: new Date().toISOString(),
+        created: l.created || new Date().toISOString(),
         updated: new Date().toISOString(),
         updatedBy: (AN.currentRepEmail || '')
       });
       compMap[key] = companies[companies.length - 1];
+      changed = true;
+    } else if (!compMap[key].phone && l.phone) {
+      compMap[key].phone = l.phone;
       changed = true;
     }
     if (compMap[key] && l.companyId !== compMap[key].id) {
@@ -27441,22 +27440,51 @@ function coSave(data, callback) {
   coUpdateSyncBadge();
 
   var sb = typeof getSupabase === 'function' ? getSupabase() : null;
-  if (sb && typeof _currentUser !== 'undefined' && _currentUser) {
-    sb.from('admin_content').upsert(
-      { key: 'companies', value: raw, updated_by: _currentUser.email, updated_at: new Date().toISOString() },
-      { onConflict: 'key' }
-    ).then(function(r) {
-      CO.syncStatus = r.error ? 'error' : 'synced';
-      CO.lastSynced = new Date().toISOString();
-      coUpdateSyncBadge();
-      if (r.error && typeof showToast === 'function') showToast('Company save failed — kept locally');
-      if (callback) callback(r);
-    });
-  } else {
+  if (!sb || typeof _currentUser === 'undefined' || !_currentUser) {
     CO.syncStatus = 'local';
     coUpdateSyncBadge();
     if (callback) callback(null);
+    return;
   }
+
+  // Never blindly overwrite the shared company list — fetch the current cloud
+  // version first and merge by id, so an incomplete or stale local view can't
+  // silently erase real companies that exist in the cloud but weren't loaded
+  // into this particular session yet.
+  sb.from('admin_content').select('value').eq('key', 'companies').then(function(r) {
+    var remote = [];
+    if (r.data && r.data[0] && r.data[0].value) {
+      try { remote = JSON.parse(r.data[0].value) || []; } catch (e) { remote = []; }
+    }
+    var byId = {};
+    remote.forEach(function(c) { if (c && c.id) byId[c.id] = c; });
+    data.forEach(function(c) {
+      if (!c || !c.id) return;
+      var existing = byId[c.id];
+      if (!existing || new Date(c.updated || 0).getTime() >= new Date(existing.updated || 0).getTime()) {
+        byId[c.id] = c;
+      }
+    });
+    var merged = Object.keys(byId).map(function(k) { return byId[k]; });
+    _coData = merged;
+    localStorage.setItem(CO_KEY, JSON.stringify(merged));
+
+    sb.from('admin_content').upsert(
+      { key: 'companies', value: JSON.stringify(merged), updated_by: _currentUser.email, updated_at: new Date().toISOString() },
+      { onConflict: 'key' }
+    ).then(function(r2) {
+      CO.syncStatus = r2.error ? 'error' : 'synced';
+      CO.lastSynced = new Date().toISOString();
+      coUpdateSyncBadge();
+      if (r2.error && typeof showToast === 'function') showToast('Company save failed — kept locally');
+      if (callback) callback(r2);
+    });
+  }).catch(function() {
+    console.warn('[Companies] Could not verify current shared data before saving — kept locally only, will retry next save.');
+    CO.syncStatus = 'error';
+    coUpdateSyncBadge();
+    if (callback) callback(null);
+  });
 }
 
 // Color palette for company avatars
