@@ -19399,9 +19399,19 @@ window.showSection = function(id, btn){
       if (typeof renderLeadsTable === 'function') renderLeadsTable();
       return;
     }
-    setTimeout(function(){
-      if(typeof renderCRM==='function') renderCRM();
-    }, 0);
+    // Wait for the load (and its dedup pass) to actually finish before building
+    // the stats bar/table — rendering immediately from whatever's in memory at
+    // this exact instant could catch a transient, not-yet-deduplicated snapshot,
+    // which is what was causing status counts to add up to more than the total.
+    if (typeof anEnsureLeadsLoaded === 'function') {
+      anEnsureLeadsLoaded(function() {
+        if (typeof renderCRM === 'function') renderCRM();
+      });
+    } else {
+      setTimeout(function(){
+        if(typeof renderCRM==='function') renderCRM();
+      }, 0);
+    }
   }
 };
 
