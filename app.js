@@ -13793,10 +13793,9 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
       return typeof anActivityEntryOnDate === 'function' ? anActivityEntryOnDate(e, today) : e.date === today;
     });
     if (entry) {
-      // demos/showed intentionally NOT taken from this legacy counter — it has
-      // proven unreliable (double-counted elsewhere in the app); the demoLifecycle
-      // events above are the trustworthy source for those two fields.
-      maxField(em, 'calls', entry.calls || 0);
+      // calls/demos/showed intentionally NOT taken from this legacy counter — it
+      // has repeatedly proven unreliable (historically inflated elsewhere in the
+      // app); the callLog/demoLifecycle scans above are the trustworthy source.
       maxField(em, 'closes', entry.closes || 0);
     }
   });
@@ -13804,7 +13803,6 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
     Object.keys(AN._teamActivityByRep).forEach(function(em) {
       var day = (AN._teamActivityByRep[em] || {})[today];
       if (!day) return;
-      maxField(em, 'calls', day.calls || 0);
       maxField(em, 'closes', day.closes || 0);
     });
   }
@@ -13815,14 +13813,12 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
         return typeof anActivityEntryOnDate === 'function' ? anActivityEntryOnDate(e, today) : e.date === today;
       });
       if (!entry) return;
-      maxField(em, 'calls', entry.calls || 0);
       maxField(em, 'closes', entry.closes || 0);
     });
   }
   var myEmail = anActiveRepEmail();
   if (myEmail && typeof anRepDashActivityForDate === 'function') {
     var mine = anRepDashActivityForDate(myEmail, today);
-    maxField(myEmail, 'calls', mine.calls || 0);
     maxField(myEmail, 'closes', mine.closes || 0);
   }
   var rows = Object.keys(byEmail).map(function(em) {
@@ -14174,7 +14170,12 @@ window.anHydrateDemoLifecycle = function(lead) {
   if (!lead) return lead;
   if (!lead.demoLifecycle) lead.demoLifecycle = [];
   if (lead.demoDate && !lead.demoBookedAt) {
-    var bookAt = lead.convertedAt || lead.updated || lead.created || new Date().toISOString();
+    // lead.updated is NOT a safe fallback here — it gets refreshed to "right now"
+    // by almost every save/merge/dedup pass, so using it meant a lead missing its
+    // booked history would keep getting a fresh "booked today" event stamped on
+    // every single page load, even though the real historical date (lead.demoDate)
+    // was sitting right there the whole time.
+    var bookAt = lead.convertedAt || (lead.demoDate ? lead.demoDate + 'T12:00:00.000Z' : '') || lead.created || new Date().toISOString();
     lead.demoBookedAt = bookAt;
     if (!lead.demoLifecycle.some(function(e) { return e.type === 'booked'; })) {
       lead.demoLifecycle.push({
