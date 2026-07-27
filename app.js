@@ -13787,7 +13787,13 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
       if (c.outcome === 'won') bump(callRep, 'closes', 1);
     });
     (lead.demoLifecycle || []).forEach(function(ev) {
-      var d = ev.date || String(ev.at || '').slice(0, 10);
+      // Trust ev.demoDate over ev.date/ev.at when they disagree — demoDate is the
+      // field specifically meant to hold the real, historical date this demo
+      // actually happened. We've found multiple separate bugs elsewhere in the
+      // app that can corrupt ev.date/ev.at into showing "today" regardless of
+      // when the demo really was, so this is a defensive check at the counting
+      // level rather than trying to prevent every possible way that can happen.
+      var d = (ev.demoDate && ev.demoDate.length >= 10) ? ev.demoDate.slice(0, 10) : (ev.date || String(ev.at || '').slice(0, 10));
       if (d !== today) return;
       if (ev.type === 'booked') bump(owner, 'demos', 1);
       if (ev.type === 'completed') bump(owner, 'showed', 1);
