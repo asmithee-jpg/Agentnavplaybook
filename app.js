@@ -4,10 +4,6 @@ if(window.innerWidth<900){var sb=document.getElementById('sidebar');var ov=docum
 window.scrollTo(0,0);if(id==='personas'){setTimeout(function(){var soloBtn=document.querySelector('.persona-sel-btn[onclick*="solo"]');showSnapshot('solo',soloBtn);},0);}
 if(id==='myscripts')setTimeout(renderMyScriptsCollection,50);}
 function copyPitchScript(btn){var card=btn;while(card&&!card.classList.contains('pitch-card'))card=card.parentElement;if(!card)return;var p=card.querySelector('.pitch-quote p');if(p)qaCopy(p.textContent);}
-function toggleCallMode(){var body=document.body;var toggle=document.getElementById('callModeToggle');var bar=document.getElementById('callModeBar');var isOn=body.classList.toggle('call-mode');if(toggle){toggle.classList.toggle('on',isOn);toggle.textContent=isOn?'Exit Call Mode':'🔴 On A Call Right Now';}
-if(bar)bar.classList.toggle('active',isOn);if(isOn){showScriptPicker();}else{showToast('Call Mode OFF');}}
-function copyAndOpenHubSpot(text){if(!text)text='';text=text.trim().replace(/^['"]/,'').replace(/['"]$/,'');navigator.clipboard.writeText(text).then(function(){showToast('Copied!');}).catch(function(){showToast('Copy failed — try manually');});}
-function toggleTheme(){var body=document.body;var isDark=body.classList.toggle('dark-mode');body.classList.remove('light-mode');var btn=document.getElementById('themeToggleBtn');var label=document.getElementById('themeToggleLabel');if(btn)btn.classList.toggle('dark-on',isDark);if(label)label.textContent=isDark?'☀️ Light Mode':'🌙 Dark Mode';try{localStorage.setItem('agentnav-theme',isDark?'dark':'light');}catch(e){}}
 function toggleMobile(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarOverlay').classList.toggle('open');}
 var personaData={solo:{cares:'Replacing 4-5 tools at under $100/mo',pain:'OEP is manual chaos every November',pitch:'One login. One client record. Renewal Autopilot.'},small:{cares:'Team visibility + no more personal phone texting',pain:'No one can see what anyone else is doing',pitch:'Show team dashboard + Renewal Autopilot board'},large:{cares:'Process, reporting, and replacing 3-4 systems',pain:'Piecing together tools that don\'t talk to each other',pitch:'One platform. Full visibility. ACA + STM + Life + Ancillary.'},enterprise:{cares:'Standardization, compliance, multi-location control',pain:'Managing producers with no centralized system',pitch:'Salesforce-level power without Salesforce price tag'}};function showSnapshot(type,btn){var data=personaData[type];if(!data)return;document.getElementById('snapCares').textContent=data.cares;document.getElementById('snapPain').textContent=data.pain;document.getElementById('snapPitch').textContent=data.pitch;document.querySelectorAll('.persona-sel-btn').forEach(function(b){b.classList.remove('active');});document.querySelectorAll('.persona-card').forEach(function(c){c.classList.remove('selected');});if(btn){btn.classList.add('active');}
 var grid=document.getElementById('personaGridWrap');var platform=document.getElementById('platformSectionWrap');if(grid)grid.classList.add('visible');if(platform)platform.classList.add('visible');var selector=document.querySelector('.persona-selector');if(selector)selector.classList.add('has-selection');var cardMap={solo:'blue',small:'green',large:'amber',enterprise:'purple'};var cls=cardMap[type];if(cls){var card=document.querySelector('.persona-card.'+cls);if(card)card.classList.add('selected');}
@@ -54,13 +50,7 @@ function calcPrice(){var agentEl=document.getElementById('agentCount');var assis
 if(agents>500){agents=500;agentEl.value=500;}
 if(assistants<4){assistants=4;assistEl.value=4;}
 var extraAgents=Math.max(0,agents-10);var agentCost=0;var tier1=Math.min(extraAgents,40);var tier2=Math.min(Math.max(extraAgents-40,0),50);var tier3=Math.min(Math.max(extraAgents-90,0),100);var tier4=Math.max(extraAgents-190,0);agentCost=(tier1*30)+(tier2*27)+(tier3*24)+(tier4*22);var extraAssistants=Math.max(0,assistants-2);var assistantCost=extraAssistants*10;var monthly=597+agentCost+assistantCost;var annual=Math.round(monthly*12*0.8);var annualSavings=Math.round(monthly*12*0.2);var totalPeople=agents+assistants;var perPerson=Math.round(monthly/totalPeople);var rateLabel=agents<=50?'$30':agents<=100?'$27 avg':agents<=200?'$24 avg':'$22 avg';document.getElementById('calcPrice').textContent='$'+monthly.toLocaleString();document.getElementById('calcPerPerson').textContent='~$'+perPerson+' per person/month';document.getElementById('calcAnnual').textContent='$'+annual.toLocaleString()+'/yr';document.getElementById('calcSavings').textContent='Save $'+annualSavings.toLocaleString()+' vs monthly';document.getElementById('breakdownAgents').querySelector('span:first-child').textContent='Additional agents ('+extraAgents+' × '+rateLabel+'/mo)';document.getElementById('breakdownAgents').querySelector('span:last-child').textContent='$'+agentCost.toLocaleString();document.getElementById('breakdownAssistants').querySelector('span:first-child').textContent='Additional assistants ('+extraAssistants+' × $10/mo)';document.getElementById('breakdownAssistants').querySelector('span:last-child').textContent='$'+assistantCost.toLocaleString();window._lastQuote={agents:agents,assistants:assistants,monthly:monthly,annual:annual,perPerson:perPerson};}
-function adjustAgents(delta){var el=document.getElementById('agentCount');if(!el)return;var val=(parseInt(el.value)||20)+delta;el.value=Math.max(20,val);var assistEl=document.getElementById('assistantCount');var assistants=Math.max(4,Math.ceil(el.value/5));if(assistEl)assistEl.value=assistants;calcPrice();}
-function adjustAssistants(delta){var el=document.getElementById('assistantCount');if(!el)return;var val=(parseInt(el.value)||4)+delta;el.value=Math.max(4,val);calcPrice();}
-function copyCustomQuote(){var agentEl=document.getElementById('agentCount');var assistEl=document.getElementById('assistantCount');var agents=agentEl?agentEl.value:'20';var assistants=assistEl?assistEl.value:'4';var price=document.getElementById('calcPrice')?document.getElementById('calcPrice').textContent:'';var perPerson=document.getElementById('calcPerPerson')?document.getElementById('calcPerPerson').textContent:'';var annual=document.getElementById('calcAnnual')?document.getElementById('calcAnnual').textContent:'';var quote='AgentNav Enterprise Quote\n'+'─────────────────────────\n'+'Team size: '+agents+' agents + '+assistants+' assistants\n'+'Monthly: '+price+'/month ('+perPerson+')\n'+'Annual (20% off): '+annual+'\n\n'+'Includes: White-label branding, role-based permissions, performance tracking, '+'priority support, dedicated onboarding, CRM, ACA/STM/Life/Ancillary/Indemnity quoting, '+'Renewal Autopilot, SMS messaging, Google Calendar sync.\n\n'+'No annual contract required. Cancel anytime.';navigator.clipboard.writeText(quote).then(function(){showToast('Custom quote copied!');});}
 document.addEventListener('DOMContentLoaded',function(){calcPrice();});
-function openQuoteModal(){var q=window._lastQuote||{};if(q.agents){document.getElementById('qf-agents').value=q.agents;document.getElementById('qf-assistants').value=q.assistants;}
-updateQuotePreview();document.getElementById('quoteModal').classList.add('open');}
-function openQuoteModalWithPlan(plan){var planAgents={solo:1,small:4,large:10};var planAssistants={solo:0,small:1,large:2};document.getElementById('qf-agents').value=planAgents[plan]||1;document.getElementById('qf-assistants').value=planAssistants[plan]||0;updateQuotePreview();document.getElementById('quoteModal').classList.add('open');}
 function closeQuoteModal(){document.getElementById('quoteModal').classList.remove('open');}
 document.getElementById('quoteModal').addEventListener('click',function(e){if(e.target===this)closeQuoteModal();});function getQuoteCalc(agents,assistants){agents=parseInt(agents)||1;assistants=parseInt(assistants)||0;var monthly,planName;if(agents===1&&assistants<=1){monthly=79+(assistants*25);planName='Independent Agent';}else if(agents<=4&&assistants<=1){monthly=247+(Math.max(0,agents-4)*60)+(Math.max(0,assistants-1)*15);planName='Small Agency';}else if(agents<=10&&assistants<=2){monthly=597+(Math.max(0,agents-10)*55)+(Math.max(0,assistants-2)*10);planName='Large Agency';}else{var extraAgents=Math.max(0,agents-10);var agentCost=0;var t1=Math.min(extraAgents,40);var t2=Math.min(Math.max(extraAgents-40,0),50);var t3=Math.min(Math.max(extraAgents-90,0),100);var t4=Math.max(extraAgents-190,0);agentCost=t1*30+t2*27+t3*24+t4*22;var extraAssistants=Math.max(0,assistants-2);monthly=597+agentCost+(extraAssistants*10);planName='Enterprise';}
 var annual=Math.round(monthly*12*0.8);var perPerson=Math.round(monthly/Math.max(1,agents+assistants));return{planName:planName,monthly:monthly,annual:annual,perPerson:perPerson};}
@@ -117,10 +107,6 @@ else if(agents<=10){monthly=597+Math.max(0,agents-10)*55+Math.max(0,assistants-2
 else{var ex=Math.max(0,agents-10);var t1=Math.min(ex,40),t2=Math.min(Math.max(ex-40,0),50),t3=Math.min(Math.max(ex-90,0),100),t4=Math.max(ex-190,0);monthly=597+t1*30+t2*27+t3*24+t4*22+Math.max(0,assistants-2)*10;planName='Enterprise';planDesc=agents+' agents + '+assistants+' assistants';}
 return{planName:planName,planDesc:planDesc,monthly:monthly,annual:Math.round(monthly*12*0.8),perPerson:Math.round(monthly/Math.max(1,agents+assistants))};}
 function updateQuotePreview2(){var agentEl=document.getElementById('qb-agents');var assistEl=document.getElementById('qb-assistants');if(!agentEl||!assistEl)return;var agents=parseInt(agentEl.value)||1;var assistants=parseInt(assistEl.value)||0;var q=getQuoteCalc2(agents,assistants);var n=document.getElementById('qb-plan-name'),d=document.getElementById('qb-plan-desc'),p=document.getElementById('qb-price-display');if(n)n.textContent=q.planName;if(d)d.textContent=q.planDesc;if(p)p.textContent='$'+q.monthly.toLocaleString();}
-function adjustQBAgents(delta){var el=document.getElementById('qb-agents');if(!el)return;el.value=Math.max(1,Math.min(500,(parseInt(el.value)||1)+delta));updateQuotePreview2();}
-function adjustQBAssistants(delta){var el=document.getElementById('qb-assistants');if(!el)return;el.value=Math.max(0,(parseInt(el.value)||0)+delta);updateQuotePreview2();}
-function setQuotePlan(plan){var plans={solo:[1,0],small:[4,1],large:[10,2],enterprise:[20,4]};var v=plans[plan]||[1,0];var a=document.getElementById('qb-agents'),b=document.getElementById('qb-assistants');if(a)a.value=v[0];if(b)b.value=v[1];updateQuotePreview2();}
-function useEnterpriseQuote(){var agentEl=document.getElementById('agentCount');var assistEl=document.getElementById('assistantCount');var agents=agentEl?agentEl.value:20;var assts=assistEl?assistEl.value:4;var a=document.getElementById('qb-agents'),b=document.getElementById('qb-assistants');if(a)a.value=agents;if(b)b.value=assts;updateQuotePreview2();showToast('Enterprise price applied!');}
 function generateQuotePDF2(){var g=function(id){var el=document.getElementById(id);return el?el.value:'';};var fname=g('qb-fname').trim();var lname=g('qb-lname').trim();var agency=g('qb-agency').trim();var email=g('qb-email').trim();var phone=g('qb-phone').trim();var repName=g('qb-repname').trim()||'AgentNav Sales';var notes=g('qb-notes').trim();var discount=typeof getDiscountText==='function'?getDiscountText():'';var agents=parseInt(g('qb-agents')||g('univ-agents')||'1')||1;var assistants=parseInt(g('qb-assistants')||g('univ-assistants')||'0')||0;var prospect=((fname+' '+lname).trim()||agency)||'Valued Prospect';var q=typeof getQuoteCalc2==='function'?getQuoteCalc2(agents,assistants):(function(){var m=0,pn='Custom';if(agents===1){m=79+assistants*25;pn='Independent Agent';}
 else if(agents<=4){m=247+assistants*25;pn='Small Agency';}
 else if(agents<=10){m=597+assistants*25;pn='Large Agency';}
@@ -171,10 +157,6 @@ if(sectionKey==='battlecards'){setTimeout(function(){var guideBody=document.quer
 if(sectionKey==='talktracks'){setTimeout(function(){var guideBody=document.querySelector('#guide-right-talktracks .guide-panel-body');if(!guideBody)return;var pre=guideBody.querySelector('#tt-panel-prewritten');var mine=guideBody.querySelector('#tt-panel-mine');if(pre)pre.style.display='block';if(mine)mine.style.display='none';},50);}}
 function closeSplitGuide(sectionKey,btn){var wrap=document.getElementById('guide-wrap-'+sectionKey);if(!wrap)return;var mspId=MSP_MAP[sectionKey];var mspEl=mspId?document.getElementById(mspId):null;if(mspEl&&wrap.contains(mspEl)){wrap.parentNode.insertBefore(mspEl,wrap);}else{var leftDiv=wrap.querySelector('.guide-split-left');if(leftDiv){while(leftDiv.firstChild)wrap.parentNode.insertBefore(leftDiv.firstChild,wrap);}}
 wrap.remove();_guideOpen[sectionKey]=false;if(btn){var label={pitches:'📖 Prebuilt Pitches',coldcall:'📖 Prebuilt Call Guide',discovery:'📖 Prebuilt Call Guide',demo:'📖 Prebuilt Call Guide',closing:'📖 Prebuilt Call Guide',onboarding:'📖 Prebuilt Call Guide',objections:'📖 Prebuilt Objections',battlecards:'📖 Prebuilt Battle Cards',talktracks:'📖 Prebuilt Talk Tracks'}[sectionKey]||'📖 Prebuilt Guide';btn.style.background='#0f0f17';btn.style.borderColor='#0f0f17';btn.textContent=label;}}
-function showCompetitorResult(bc,container){var tierColor=bc.tier==='Direct'?'#ef4444':bc.tier==='Indirect'?'#a1a1aa':'#f59e0b';container.innerHTML='<div style="background:#fff;border:1.5px solid #e4e4e7;border-radius:12px;overflow:hidden;">'+'<div style="padding:14px 18px;background:#fafafa;border-bottom:1px solid #e4e4e7;display:flex;align-items:center;justify-content:space-between;">'+'<div><div style="font-size:14px;font-weight:700;color:#09090b;">✅ '+bc.name+'</div>'+'<div style="font-size:12px;color:#71717a;">'+(bc.tagline||'')+'</div></div>'+'<div style="display:flex;gap:8px;">'+'<span style="background:'+tierColor+';color:#fff;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;">'+bc.tier+'</span>'+'<button onclick="addUserCompCard('+JSON.stringify(bc).replace(/"/g,'&quot;')+')" style="background:#6366f1;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">+ Add to Battle Cards</button>'+'</div>'+'</div>'+'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">'+'<div style="padding:16px;border-right:1px solid #f0f0f0;">'+'<div style="font-size:10px;font-weight:700;color:#6366f1;letter-spacing:0.1em;margin-bottom:8px;">ACKNOWLEDGE</div>'+'<div style="font-style:italic;color:#52525b;font-size:13px;margin-bottom:12px;">"'+(bc.acknowledge||'')+'"</div>'+'<div style="font-size:10px;font-weight:700;color:#ef4444;letter-spacing:0.1em;margin-bottom:6px;">THEIR STRENGTH</div>'+'<div style="font-size:13px;color:#52525b;margin-bottom:12px;">'+(bc.strength||'')+'</div>'+'<div style="font-size:10px;font-weight:700;color:#10b981;letter-spacing:0.1em;margin-bottom:6px;">THEIR WEAKNESS VS AGENTNAV</div>'+'<div style="font-size:13px;color:#52525b;">'+(bc.weakness||'')+'</div>'+'</div>'+'<div style="padding:16px;">'+'<div style="font-size:10px;font-weight:700;color:#10b981;letter-spacing:0.1em;margin-bottom:8px;">YOU WIN WHEN</div>'+
-(bc.winWhen||[]).map(function(w){return'<div style="font-size:12.5px;color:#09090b;margin-bottom:5px;padding-left:12px;border-left:2px solid #10b981;">'+w+'</div>';}).join('')+'<div style="font-size:10px;font-weight:700;color:#ef4444;letter-spacing:0.1em;margin:12px 0 8px;">YOU LOSE WHEN</div>'+
-(bc.loseWhen||[]).map(function(l){return'<div style="font-size:12.5px;color:#09090b;margin-bottom:5px;padding-left:12px;border-left:2px solid #ef4444;">'+l+'</div>';}).join('')+
-(bc.reframe?'<div style="margin-top:12px;background:#f8f8fa;border-radius:8px;padding:10px 12px;font-size:12px;color:#52525b;font-style:italic;">"'+bc.reframe+'"</div>':'')+'</div>'+'</div>'+'</div>';}
 function addUserCompCard(bc){try{var cards=JSON.parse(localStorage.getItem('user-comp-cards')||'[]');cards.push(bc);localStorage.setItem('user-comp-cards',JSON.stringify(cards));showToast(bc.name+' added to battle cards!');}catch(e){}}
 var seScripts=[],seCurrentId=null,seDirty=false,seAutoTimer=null,seDragEl=null;var SE_TEMPLATES={coldcall:{name:'Cold Call Script',type:'coldcall',steps:[{title:'Opening (0:00-0:15)',body:'Hey [Name], this is [Your name] from AgentNav. Quick question - we built a platform for health brokers: ACA and STM quoting, full CRM, SMS, and Renewal Autopilot that automates your entire OEP. Worth two minutes?'},{title:'Earn the minute (0:15-0:45)',body:'What does your OEP process look like right now? Running it manually or do you have something in place?'},{title:'Connect pain to feature (0:45-1:30)',body:'[Repeat back what they said.] That is exactly the problem we solve. [Name one specific feature that addresses their pain.]'},{title:'Soft pitch (1:30-2:00)',body:'AgentNav is the only platform built for health brokers - ACA quoting, HealthSherpa, Renewal Autopilot, CRM, SMS, all in one place. Starts at $79 per month.'},{title:'Close for meeting (2:00-2:30)',body:'I would love to show you a 15-minute demo. Do you have time Thursday or Friday?'}]},discovery:{name:'Discovery Call Script',type:'discovery',steps:[{title:'Set the agenda',body:'Thanks for making time. I want to spend most of this call learning about how you are set up right now. Then if I think AgentNav could help, I will be honest about that. Sound good?'},{title:'Current setup',body:'Walk me through your agency. How big is your team? What tools for quoting, CRM, SMS, enrollment? How are you managing renewals?'},{title:'Find the pain',body:'What does your OEP look like? How many clients are you manually reaching out to in November? How many slip through?'},{title:'Qualify',body:'What percentage of your book is ACA vs other lines? Do you use HealthSherpa or EDE? Looking to grow the team this year?'},{title:'Set up the demo',body:'Based on what you told me, here is what I want to show you: [Name 2-3 specific features]. Does that sound right?'}]},demo:{name:'Demo Meeting Script',type:'demo',steps:[{title:'Confirm discovery',body:'Before I share my screen - last time you mentioned [pain point]. Is that still the main thing you want to see solved today?'},{title:'Client record',body:'This is where a client lives - everything in one place. Medical history, Rx, FPL tracking, policy history, SMS thread, calendar.'},{title:'Renewal Autopilot',body:'Every renewal client has a status. For each one with Autopilot on, the system sends the campaign, collects preferences, and generates a new quote. You just review and approve.'},{title:'Quoting',body:'ACA, STM, Life, Ancillary, Indemnity - all quoted side by side. Pull from HealthSherpa or EDE directly. One-click to send the proposal.'},{title:'Close',body:'What questions do you have? [Pause.] Based on what you saw today, what would need to be true for this to be a yes?'}]},objections:{name:'Objection Handling',type:'objections',steps:[{title:'"Too expensive"',body:'What are you paying right now for CRM, quoting, SMS, and enrollment combined? Most agents are at $200-400 per month. AgentNav replaces all of it for $79.'},{title:'"Need to think about it"',body:'Totally fair. What specifically do you want to think through? Price, timing, or something you want to verify?'},{title:'"Happy with what we have"',body:'What does your OEP process look like? How many clients did you lose last November because they fell through? That is what Renewal Autopilot eliminates.'},{title:'"Need to talk to my partner"',body:'Of course. Can we get them on a quick call together this week?'},{title:'"Not the right time"',body:'When is? Agents who switch before OEP go in with Autopilot already configured.'}]}};var SE_GROUPS=[{label:'Before The Call',types:['coldcall','discovery']},{label:'On The Call',types:['demo','closing','onboarding']},{label:'Reference',types:['objections','talktracks']},{label:'My Scripts',types:['custom']}];var SE_TYPE_LABELS={coldcall:'Cold Call',discovery:'Discovery',demo:'Demo Meeting',closing:'Closing',onboarding:'Onboarding',objections:'Objections',talktracks:'Talk Track',custom:'Custom'};var SE_SUGGESTIONS={coldcall:['Rewrite step 1 to sound more natural','Make the pitch under 30 words','Add a line for when they say they are happy with their setup'],discovery:['Write 3 follow-up questions for step 2','Add a question about how they handle renewals','Make the agenda line more conversational'],demo:['Rewrite Renewal Autopilot step for a solo agent','Add a line for when they compare to EZLynx','Write a closing line that creates urgency'],objections:['Write a response for when they bring up HawkSoft','Make the price objection shorter','Add a response for not ready until after OEP'],custom:['Improve the flow of this script','Make this more conversational','Suggest a stronger opening line']};function seLoad(){try{seScripts=JSON.parse(localStorage.getItem('se2')||'[]')}catch(e){seScripts=[]}}
 function sePersist(){localStorage.setItem('se2',JSON.stringify(seScripts))}
@@ -5210,7 +5192,10 @@ function dashGetDemosCompletedCount() {
 
 function dashBuildActivityStatTilesHTML() {
   var act = dashGetScopedActivityTotals();
-  var booked = Math.max(act.demos, dashGetDemosBookedCount());
+  // Not taking Math.max() against act.demos anymore — that legacy counter has
+  // repeatedly proven unreliable, and Math.max meant an old inflated number could
+  // always win over the correct, freshly-computed demos-array count below.
+  var booked = dashGetDemosBookedCount();
   var completed = dashGetDemosCompletedCount();
   var showRate = getShowRate(dashGetScopedDemos('scheduledDate'));
   return ''
@@ -5234,11 +5219,6 @@ function dashBuildDealsStatTilesHTML() {
     + buildStatTile('Closed Won', closedWon, '#10b981', 'deals');
 }
 
-function dashBuildTopStatTilesHTML(pane) {
-  pane = pane || window._dashChartPane || 'activity';
-  if (pane === 'deals') return dashBuildDealsStatTilesHTML();
-  return dashBuildActivityStatTilesHTML();
-}
 
 function dashRefreshTopStatTiles() {
   var mainTab = window._dashActiveTab || 0;
@@ -6005,13 +5985,11 @@ window.anGetScopedActivityLog = function() {
         }
       });
     });
-    anMergeTeamActivityIntoByDate(byDate, dates, scope === '__mine__' ? anActiveRepEmail() : (scope || '__all__'));
-    if (typeof anMergeTeamDashIntoByDate === 'function') {
-      anMergeTeamDashIntoByDate(byDate, dates, scope === '__mine__' ? anActiveRepEmail() : (scope || '__all__'));
-    }
-    if (typeof anMergeLocalActivityLogIntoByDate === 'function') {
-      anMergeLocalActivityLogIntoByDate(byDate, dates, scope === '__mine__' ? '__mine__' : (scope || '__all__'));
-    }
+    // Note: intentionally NOT merging in AN._teamActivityByRep / AN._teamDashByRep /
+    // local activityLog here anymore — those legacy counters have repeatedly proven
+    // unreliable (historically inflated from bugs elsewhere), and merging them in
+    // via Math.max() meant an old bad number could always "win" over the correct,
+    // freshly-computed count above, no matter how clean the real data actually is.
     return dates.map(function(d) { return byDate[d]; });
   }
   if (useTeam) {
@@ -6042,13 +6020,8 @@ window.anGetScopedActivityLog = function() {
         });
       });
     }
-    anMergeTeamActivityIntoByDate(teamByDate, dates, '__all__');
-    if (typeof anMergeTeamDashIntoByDate === 'function') {
-      anMergeTeamDashIntoByDate(teamByDate, dates, '__all__');
-    }
-    if (typeof anMergeLocalActivityLogIntoByDate === 'function') {
-      anMergeLocalActivityLogIntoByDate(teamByDate, dates, '__all__');
-    }
+    // Same reasoning as above — no longer merging in the legacy counters, which
+    // could resurrect old inflated numbers even when the real data is clean.
     return dates.map(function(d) { return teamByDate[d]; });
   }
   return _dash.activityLog || [];
@@ -6452,35 +6425,6 @@ window.delActivityDay=function(dt){
 };
 
 // ── Hotzone HTML builder ──────────────────────────────────────
-function buildHotzoneHTML() {
-  var data=buildHotzoneChartData();
-  var slots=[{l:'Early Morning',h:[7,8],e:'🌅'},{l:'Morning',h:[9,10,11],e:'☀️'},{l:'Midday',h:[12,13],e:'🕛'},{l:'Afternoon',h:[14,15,16],e:'🌤️'},{l:'Late Day',h:[17,18,19],e:'🌇'}];
-  var total=data.values.reduce(function(s,v){return s+v;},0);
-  var medals=['🥇','🥈','🥉'];
-  var topCards=data.topHours.length
-    ?'<div style="margin-bottom:20px;"><div style="font-size:11px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px;">🔥 Your Hottest Hours</div>'
-      +'<div style="display:grid;grid-template-columns:repeat('+Math.max(1,data.topHours.length)+',1fr);gap:10px;margin-bottom:16px;">'
-      +data.topHours.map(function(h,i){var a=h<12?'am':'pm';var h12=h>12?h-12:(h===0?12:h);var c=['#f59e0b','#6366f1','#10b981'][i];return '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:20px;margin-bottom:4px;">'+medals[i]+'</div><div style="font-size:22px;font-weight:800;color:'+c+';">'+h12+a+'</div><div style="font-size:11px;color:#71717a;margin-top:2px;">'+(data.hourData[h]||0)+' calls</div></div>';}).join('')
-      +'</div></div>'
-    :'<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px;margin-bottom:16px;font-size:12px;color:#92400e;">Use the + Calls button throughout the day and hotzone data will build up over time.</div>';
-  var slotRows=slots.map(function(slot){
-    var sc=slot.h.reduce(function(s,h){return s+(data.hourData[h]||0);},0);
-    var pct=total>0?Math.round(sc/total*100):0;
-    return '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">'
-      +'<div style="width:130px;font-size:12px;font-weight:600;color:#09090b;display:flex;align-items:center;gap:6px;"><span>'+slot.e+'</span><span>'+slot.l+'</span></div>'
-      +'<div style="flex:1;background:#f4f4f5;border-radius:20px;height:8px;overflow:hidden;"><div style="background:'+(pct>=30?'#10b981':pct>=20?'#6366f1':'#e4e4e7')+';height:8px;border-radius:20px;width:'+pct+'%;transition:width 0.4s;"></div></div>'
-      +'<div style="width:56px;text-align:right;font-size:12px;font-weight:700;color:#09090b;">'+sc+' calls</div>'
-      +'<div style="width:34px;text-align:right;font-size:11px;color:#71717a;">'+pct+'%</div>'
-      +'</div>';
-  }).join('');
-  return '<div>'+topCards
-    +'<div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:18px;margin-bottom:16px;">'
-    +'<div style="font-size:11px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Calls by Hour of Day</div>'
-    +'<canvas id="chart-hotzone" height="180"></canvas></div>'
-    +'<div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:18px;">'
-    +'<div style="font-size:11px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Activity by Time of Day</div>'
-    +slotRows+'</div></div>';
-}
 
 // ── Demo tracker HTML builders ────────────────────────────────
 function buildDemoListHTML() {
@@ -8087,25 +8031,6 @@ function buildBySizeCardEl() {
   return card;
 }
 
-function buildAICard() {
-  var card = document.createElement('div');
-  card.style.cssText = 'background:#0f0f17;border:1px solid rgba(99,102,241,0.2);border-radius:14px;overflow:hidden;';
-  var hasCtx = _dash.prospect && _dash.prospect.state && _dash.prospect.size;
-  card.innerHTML = '<div style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;">'
-    +'<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">🧠</span>'
-    +'<div><div style="font-size:13px;font-weight:700;color:#fff;">AI Sales Coach</div>'
-    +'<div id="dash-ai-ctx" style="font-size:11px;color:rgba(255,255,255,0.4);">'+(hasCtx?'Context: '+_dash.prospect.state+' \u00b7 '+getSizeLabel(_dash.prospect.size):'Set state + size above for context-aware coaching')+'</div></div></div>'
-    +'<button onclick="dashClearAI()" style="font-size:10px;color:rgba(255,255,255,0.3);background:none;border:none;cursor:pointer;font-family:inherit;">Clear</button>'
-    +'</div>'
-    +'<div id="dash-ai-msgs" style="min-height:80px;max-height:280px;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:8px;">'+buildDashAISuggestions()+'</div>'
-    +'<div style="display:flex;gap:8px;padding:10px 18px;border-top:1px solid rgba(255,255,255,0.07);">'
-    +'<input id="dash-ai-input" type="text" placeholder="Ask anything about your prospect, state market, or how to position..." '
-    +'style="flex:1;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:7px;padding:9px 12px;font-size:12px;color:#fff;font-family:inherit;outline:none;" '
-    +'onkeydown="if(event.key===\'Enter\'){dashAskAI();}">'
-    +'<button onclick="dashAskAI()" style="background:#6366f1;color:#fff;border:none;border-radius:7px;padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Ask</button>'
-    +'</div>';
-  return card;
-}
 
 window.dashClearAI = function() {
   var msgs = document.getElementById('dash-ai-msgs');
@@ -9448,8 +9373,6 @@ function getMyRates() {
   return r;
 }
 
-function getSmallMo(agents) { return 247 + Math.max(0, (agents||4)-4)*60; }
-function getLargeMo(agents) { return 597 + Math.max(0, (agents||10)-10)*55; }
 
 // Get actual conversion rates from activity log
 function getMyConversionRates() {
@@ -11549,49 +11472,6 @@ function oneMoreCard(label, perClose, monthlyRec, ct, color) {
 }
 
 // ── 4. SALES DASHBOARD GOAL PLANNER (no commission) ──────────
-function buildGoalPlannerSection() {
-  var conv = getMyConversionRates();
-
-  return '<div style="background:#fff;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;margin-bottom:20px;">'
-    + '<div style="padding:14px 18px;border-bottom:1px solid #e4e4e7;background:#f8f8fa;display:flex;align-items:center;justify-content:space-between;">'
-    + '<div><div style="font-size:10px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:0.12em;">Goal Planner</div>'
-    + '<div style="font-size:11px;color:#71717a;margin-top:1px;">Set a close target — see the calls and demos needed to get there</div></div>'
-    + (conv.hasRealData ? '<span style="font-size:10px;color:#10b981;font-weight:600;">✓ Using your real rates</span>' : '<span style="font-size:10px;color:#a1a1aa;">Using default rates</span>')
-    + '</div>'
-    + '<div style="padding:16px 18px;">'
-
-    // Conversion rates row
-    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;padding:12px;background:#f8f8fa;border-radius:10px;">'
-    + '<div style="text-align:center;">'
-    + '<div style="font-size:9px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Call → Demo Rate</div>'
-    + '<input id="gp-call-demo" type="number" value="'+Math.round(conv.callToDemo*1000)/10+'" min="0.1" max="100" step="0.1" oninput="updateGoalPlanner()" '
-    + 'style="width:70px;border:1.5px solid #e4e4e7;border-radius:6px;padding:5px 8px;font-size:16px;font-weight:700;color:#6366f1;text-align:center;font-family:inherit;outline:none;">'
-    + '<span style="font-size:12px;color:#6366f1;">%</span>'
-    + '</div>'
-    + '<div style="text-align:center;">'
-    + '<div style="font-size:9px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Demo → Close Rate</div>'
-    + '<input id="gp-demo-close" type="number" value="'+Math.round(conv.demoToClose*100)+'" min="1" max="100" step="1" oninput="updateGoalPlanner()" '
-    + 'style="width:70px;border:1.5px solid #e4e4e7;border-radius:6px;padding:5px 8px;font-size:16px;font-weight:700;color:#10b981;text-align:center;font-family:inherit;outline:none;">'
-    + '<span style="font-size:12px;color:#10b981;">%</span>'
-    + '</div>'
-    + '<div style="text-align:center;">'
-    + '<div style="font-size:9px;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Calls per Demo</div>'
-    + '<div style="font-size:20px;font-weight:800;color:#8b5cf6;" id="gp-calls-per-demo">'+conv.callsPerDemo+'</div>'
-    + '</div>'
-    + '</div>'
-
-    // Goal input row
-    + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">'
-    + '<div style="font-size:13px;font-weight:700;color:#09090b;">Monthly Close Target:</div>'
-    + '<input id="gp-close-target" type="number" value="3" min="1" oninput="updateGoalPlanner()" '
-    + 'style="width:60px;border:1.5px solid #6366f1;border-radius:8px;padding:7px 10px;font-size:18px;font-weight:700;color:#6366f1;text-align:center;font-family:inherit;outline:none;">'
-    + '<span style="font-size:13px;color:#71717a;">closes/month</span>'
-    + '</div>'
-
-    // Plan output
-    + '<div id="gp-output"></div>'
-    + '</div></div>';
-}
 
 window.updateGoalPlanner = function() {
   var gpOut = document.getElementById('gp-output');
@@ -14712,39 +14592,6 @@ function anParseLeadsFromSupabaseRows(rows){
   return anNormalizeLeads(merged);
 }
 
-function anFetchRepUserIdMap(sb, cb){
-  if(AN._repUserIdMap && AN._repUserIdMapTime && (Date.now() - AN._repUserIdMapTime) < 120000){
-    if(cb) cb(AN._repUserIdMap);
-    return;
-  }
-  Promise.all([
-    sb.from('an_leads').select('user_id, rep_email'),
-    sb.from('sales_dashboard').select('user_id, rep_email')
-  ]).then(function(results){
-    var map = {};
-    function add(uid, email){
-      if(!uid || !email || email.indexOf('@') < 1) return;
-      map[email.toLowerCase()] = uid;
-    }
-    (results[0].data || []).forEach(function(r){ add(r.user_id, r.rep_email); });
-    (results[1].data || []).forEach(function(r){ add(r.user_id, r.rep_email); });
-    if(typeof loadRepViews === 'function') loadRepViews();
-    if(typeof _repViews !== 'undefined'){
-      Object.keys(_repViews).forEach(function(em){
-        if(_repViews[em] && _repViews[em].userId) add(_repViews[em].userId, em);
-      });
-    }
-    if(typeof _currentUser !== 'undefined' && _currentUser && _currentUser.id && _currentUser.email){
-      add(_currentUser.id, _currentUser.email);
-    }
-    AN._repUserIdMap = map;
-    AN._repUserIdMapTime = Date.now();
-    if(cb) cb(map);
-  }).catch(function(err){
-    console.warn('[CRM] Rep user map fetch failed:', err);
-    if(cb) cb(AN._repUserIdMap || {});
-  });
-}
 
 // Superseded by the shared an_leads_shared table — every rep already reads/writes
 // the same store, so there's no longer anything to distribute to individual rows.
@@ -15038,7 +14885,26 @@ function anFinishCloudLeadLoad(sb, cb){
       cloudLeads.forEach(function(l){ if (l && l.id) window._anSyncedUpdatedTimes[l.id] = l.updated || ''; });
 
       var local = AN.leads || [];
-      AN.leads = anApplyOwnerPatches(anMergeLeadsPreferNewer(local, cloudLeads));
+      var merged = anApplyOwnerPatches(anMergeLeadsPreferNewer(local, cloudLeads));
+
+      // Collapse any duplicate-identity leads (same name) right here at load time
+      // too, not just on save — a stale local cache merged with a clean cloud copy
+      // can still momentarily produce duplicates in memory, which was causing
+      // things like "Team Activity" to intermittently double-count real demos
+      // depending on exactly what was cached when the page loaded.
+      var identityBest = {};
+      var noIdentity = [];
+      merged.forEach(function(l){
+        if (!l || !l.id) return;
+        var nameKey = ((l.firstName || '') + ' ' + (l.lastName || '')).trim().toLowerCase();
+        var companyKey = (l.company || '').trim().toLowerCase();
+        if (!nameKey && !companyKey) { noIdentity.push(l); return; }
+        var idKey = nameKey || companyKey;
+        var existingBest = identityBest[idKey];
+        if (!existingBest || anLeadUpdatedMs(l) >= anLeadUpdatedMs(existingBest)) identityBest[idKey] = l;
+      });
+      AN.leads = Object.keys(identityBest).map(function(k){ return identityBest[k]; }).concat(noIdentity);
+
       AN.invalidateLeadCaches();
       // Defer IDB write — don't block UI render
       if(AN.leads.length > 1500 || localStorage.getItem('an-crm-leads-idb') === '1'){
@@ -18050,10 +17916,6 @@ function anScoreHeaderField(header){
   return best;
 }
 
-function anGuessField(header){
-  var best = anScoreHeaderField(header);
-  return best && best.score >= AN_IMPORT_MATCH_MIN_SCORE ? best.field : '';
-}
 
 function csvLine(line){
   var r = [], c = '', q = false;
@@ -19141,16 +19003,6 @@ function anFindDuplicateMatches(c, index){
   return out;
 }
 
-function anClassifyImportBatch(contacts, index){
-  if(!index) index = anBuildDuplicateIndex(AN.leads);
-  var duplicates = [], newOnes = [];
-  contacts.forEach(function(c){
-    var matches = anFindDuplicateMatches(c, index);
-    if(matches.length) duplicates.push({ contact: c, matches: matches });
-    else newOnes.push(c);
-  });
-  return { duplicates: duplicates, newOnes: newOnes };
-}
 
 function anClassifyImportBatchChunked(contacts, onDone, onProgress){
   var index = anBuildDuplicateIndex(AN.leads);
@@ -27247,6 +27099,11 @@ function coEnsureSyncedFromLeads(done) {
   AN.leads.forEach(function(l) {
     var cn = (l.company || '').trim();
     if (!cn || !coIsValidCompanyName(cn)) return;
+    // A solo agent with no real company just gets their own name defaulted into
+    // the company field elsewhere in the app — that's not a real account with
+    // multiple people under it, so it shouldn't get its own company shell here.
+    var ownName = ((l.firstName || '') + ' ' + (l.lastName || '')).trim().toLowerCase();
+    if (ownName && cn.toLowerCase() === ownName) return;
     var key = coNormName(cn);
     if (!compMap[key]) {
       companies.push({
@@ -27304,7 +27161,23 @@ function coMergeCompanies(local, remote) {
     var rT = new Date(c.updated || c.created || 0).getTime();
     map[c.id] = rT >= eT ? Object.assign({}, existing, c) : existing;
   });
-  return Object.keys(map).map(function(id) { return map[id]; });
+  var merged = Object.keys(map).map(function(id) { return map[id]; });
+
+  // By-id merging alone doesn't catch it when a stale local cache and the cloud
+  // each have their own separately-created record for the same real company
+  // (same name, different id) — collapse those here too, at load time, so
+  // duplicates never even make it to the screen in the first place.
+  var byName = {};
+  var noName = [];
+  merged.forEach(function(c) {
+    var key = (c && c.name || '').trim().toLowerCase();
+    if (!key) { noName.push(c); return; }
+    var existing = byName[key];
+    if (!existing || new Date(c.updated || c.created || 0).getTime() >= new Date(existing.updated || existing.created || 0).getTime()) {
+      byName[key] = c;
+    }
+  });
+  return Object.keys(byName).map(function(k) { return byName[k]; }).concat(noName);
 }
 
 function coUpdateSyncBadge() {
@@ -27482,6 +27355,24 @@ function coSave(data, callback) {
       }
     });
     var merged = Object.keys(byId).map(function(k) { return byId[k]; });
+
+    // Merging by id alone isn't enough — if two sessions each independently
+    // "discover" the same company (because their own local cache didn't know
+    // about it yet), each creates a fresh record with a different id, and those
+    // survive side-by-side as genuine duplicates. Collapse by name too, keeping
+    // whichever copy was updated most recently.
+    var byName = {};
+    var noName = [];
+    merged.forEach(function(c) {
+      var key = (c && c.name || '').trim().toLowerCase();
+      if (!key) { noName.push(c); return; }
+      var existing = byName[key];
+      if (!existing || new Date(c.updated || 0).getTime() >= new Date(existing.updated || 0).getTime()) {
+        byName[key] = c;
+      }
+    });
+    merged = Object.keys(byName).map(function(k) { return byName[k]; }).concat(noName);
+
     _coData = merged;
     localStorage.setItem(CO_KEY, JSON.stringify(merged));
 
@@ -27764,44 +27655,6 @@ function coTableViewFast(companies, statsMap) {
     +'<tbody>'+rows+'</tbody></table></div>';
 }
 
-function coTableView(companies, statsMap) {
-  if (!companies.length) {
-    return coKanbanView(companies, statsMap);
-  }
-  var items = companies.map(function(co) {
-    return { co: co, stats: statsMap[co.id] || coGetCompanyStats(co.name, co, co.id) };
-  });
-  items = coSortCompanyItems(items);
-  var th = function(label, w) {
-    return '<th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);border-bottom:2px solid var(--divider);white-space:nowrap;'+(w?'width:'+w+';':'')+'">'+label+'</th>';
-  };
-  var rows = items.map(function(item, i) {
-    var co = item.co;
-    var stats = item.stats;
-    var owner = stats.ownerEmail && typeof anGetRepName === 'function' ? anGetRepName(stats.ownerEmail) : (stats.ownerEmail ? stats.ownerEmail.split('@')[0] : 'AgentNav');
-    var stage = CO_STAGES.find(function(s) { return s.id === (coNormalizeLifecycleStage(stats.lifecycle) || 'prospecting'); }) || CO_STAGES[0];
-    var lastAct = stats.lastActivity ? (typeof anTimeAgo === 'function' ? anTimeAgo(stats.lastActivity) : stats.lastActivity) : '—';
-    var created = co.created ? (typeof anDate === 'function' ? anDate(co.created) : String(co.created).slice(0, 10)) : '—';
-    var phone = (stats.leads && stats.leads[0] && stats.leads[0].phone) ? (typeof anFormatPhone === 'function' ? anFormatPhone(stats.leads[0].phone) : stats.leads[0].phone) : '—';
-    var rowBg = i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.012)';
-    var active = _coSelected === co.id;
-    return '<tr class="co-table-row'+(active?' active':'')+'" data-co-id="'+co.id+'" style="border-bottom:1px solid var(--divider);background:'+(active?'rgba(99,102,241,0.06)':rowBg)+';cursor:pointer;" onclick="coOpenCompanyPanel(\''+co.id+'\')" onmouseover="if(!'+active+')this.style.background=\'rgba(99,102,241,0.04)\'" onmouseout="this.style.background=\''+(active?'rgba(99,102,241,0.06)':rowBg)+'\'">'
-      +'<td style="padding:11px 14px;" onclick="event.stopPropagation()"><input type="checkbox" class="co-cb" data-id="'+co.id+'"'+(CO.selectedIds.indexOf(co.id)>=0?' checked':'')+' onchange="coToggleSelect(\''+co.id+'\',this.checked)" style="accent-color:#6366f1;width:14px;height:14px;"></td>'
-      +'<td style="padding:11px 14px;"><div style="display:flex;align-items:center;gap:10px;min-width:0;"><div class="co-co-avatar" style="background:'+coColor(co.name)+';width:30px;height:30px;font-size:13px;border-radius:7px;">'+co.name.charAt(0).toUpperCase()+'</div><span style="font-size:13.5px;font-weight:700;color:#6366f1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+coEsc(co.name)+'</span></div></td>'
-      +'<td style="padding:11px 14px;font-size:13px;color:var(--text-secondary);white-space:nowrap;">'+coEsc(owner)+'</td>'
-      +'<td style="padding:11px 14px;font-size:12.5px;color:var(--text-muted);white-space:nowrap;">'+created+'</td>'
-      +'<td style="padding:11px 14px;font-size:12.5px;color:var(--text-muted);">'+coEsc(phone)+'</td>'
-      +'<td style="padding:11px 14px;font-size:12.5px;color:var(--text-muted);white-space:nowrap;">'+coEsc(lastAct)+'</td>'
-      +'<td style="padding:11px 14px;font-size:12.5px;color:var(--text-secondary);">'+(stats.state ? coEsc(stats.state) : '—')+'</td>'
-      +'<td style="padding:11px 14px;"><span style="background:'+stage.color+'18;color:'+stage.color+';border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap;">'+stage.label+'</span></td>'
-      +(function(){ var cd2 = typeof getCoData==='function' ? getCoData(co.name) : {}; return '<td style="padding:11px 14px;">'+(typeof anAgencyTierBadgeHtml==='function' ? anAgencyTierBadgeHtml(cd2.agentCount,{showUnknown:true,fallbackLeads:stats.leads}) : '—')+'</td>'; })()
-      +'<td style="padding:11px 14px;font-size:13px;color:var(--text-secondary);text-align:center;">'+stats.totalContacts+'</td>'
-      +'</tr>';
-  }).join('');
-  return '<div class="co-table-wrap"><table style="width:100%;border-collapse:collapse;font-size:13.5px;">'
-    +'<thead><tr style="background:var(--body-bg);">'+th('', '40px')+th('Company name')+th('Company owner')+th('Create date')+th('Phone number')+th('Last activity')+th('State')+th('Lifecycle')+th('Size')+th('Contacts', '72px')+'</tr></thead>'
-    +'<tbody>'+rows+'</tbody></table></div>';
-}
 
 window.coSetView = function(view) {
   CO.currentView = view === 'board' ? 'board' : 'table';
