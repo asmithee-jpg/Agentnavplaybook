@@ -26652,9 +26652,15 @@ document.addEventListener('DOMContentLoaded', function() {
     anAddNavTooltips();
     var homeSec = document.getElementById('section-home');
     if (homeSec && homeSec.classList.contains('active')) {
-      hdRender();
+      // Don't render immediately here — that was rendering from whatever
+      // partial data happened to be loaded at that exact instant, which is
+      // exactly what caused Team Activity to show a different (wrong) number
+      // on every refresh depending on timing. Wait for the load to actually
+      // finish, then render once from the real, complete data.
       if (typeof anEnsureLeadsLoaded === 'function') {
         anEnsureLeadsLoaded(function(){ hdRender(); });
+      } else {
+        hdRender();
       }
     }
   }, 400);
