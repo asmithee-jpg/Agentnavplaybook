@@ -13069,8 +13069,16 @@ window.anSyncOpportunityToPipeline = function(lead, opts) {
 };
 
 window.anSyncAllOpportunitiesToPipeline = function(opts) {
-  if (typeof AN === 'undefined' || !Array.isArray(AN.leads)) return;
   opts = opts || {};
+  // Disabled by default — same reasoning as the other two "sync all" functions
+  // already disabled above. anSyncOpportunityToPipeline silently sets
+  // lead.convertedAt to "right now" for any opportunity missing it, and running
+  // that automatically on every load for the whole team's leads is what kept
+  // re-stamping old, already-converted opportunities as if they converted today.
+  // Pass { forceRun: true } to run it manually if ever genuinely needed.
+  if (!opts.forceRun) return;
+
+  if (typeof AN === 'undefined' || !Array.isArray(AN.leads)) return;
   AN.leads.forEach(function(lead) {
     if (typeof anIsOpportunityRecord === 'function' && anIsOpportunityRecord(lead)) {
       anSyncOpportunityToPipeline(lead, { skipSave: true, skipRefresh: true });
