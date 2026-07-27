@@ -24661,10 +24661,12 @@ window.mcmRenderFollowupForm = function(leadId) {
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">'
     +'<div><div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.35);margin-bottom:4px;">DATE</div>'
     +'<input id="mcm-fu-date" type="date" value="'+overlay._followupDate+'" onchange="var o=document.getElementById(\'mcm-overlay\');if(o)o._followupDate=this.value;" '
-    +'style="width:100%;background:rgba(255,255,255,0.06);border:1.5px solid rgba(6,182,212,0.35);border-radius:8px;padding:9px 10px;font-size:12px;color:#fff;font-family:inherit;box-sizing:border-box;"></div>'
+    +'style="width:100%;background:rgba(255,255,255,0.12);border:1.5px solid rgba(103,232,249,0.55);border-radius:8px;padding:9px 10px;font-size:13px;color:#fff;font-family:inherit;box-sizing:border-box;cursor:pointer;color-scheme:dark;" '
+    +'onmouseover="this.style.background=\'rgba(255,255,255,0.18)\';this.style.borderColor=\'#67e8f9\'" onmouseout="this.style.background=\'rgba(255,255,255,0.12)\';this.style.borderColor=\'rgba(103,232,249,0.55)\'"></div>'
     +'<div><div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.35);margin-bottom:4px;">TIME</div>'
     +'<input id="mcm-fu-time" type="time" value="'+overlay._followupTime+'" onchange="var o=document.getElementById(\'mcm-overlay\');if(o)o._followupTime=this.value;" '
-    +'style="width:100%;background:rgba(255,255,255,0.06);border:1.5px solid rgba(6,182,212,0.35);border-radius:8px;padding:9px 10px;font-size:12px;color:#fff;font-family:inherit;box-sizing:border-box;"></div>'
+    +'style="width:100%;background:rgba(255,255,255,0.12);border:1.5px solid rgba(103,232,249,0.55);border-radius:8px;padding:9px 10px;font-size:13px;color:#fff;font-family:inherit;box-sizing:border-box;cursor:pointer;color-scheme:dark;" '
+    +'onmouseover="this.style.background=\'rgba(255,255,255,0.18)\';this.style.borderColor=\'#67e8f9\'" onmouseout="this.style.background=\'rgba(255,255,255,0.12)\';this.style.borderColor=\'rgba(103,232,249,0.55)\'"></div>'
     +'</div>'
     +'<div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.35);margin-bottom:6px;">HOW</div>'
     +'<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">'
@@ -25026,16 +25028,25 @@ window.mcmSave = function(leadId, opts) {
 
   var demoJustBooked = false;
   if (mode === 'lead' && (outcome === 'demo' || newStatus === 'booked_demo')) {
-    if (!mcmApplyDemoToLead(lead, overlay)) {
+    if (overlay && overlay._demoSaved) {
+      // Already booked this demo once this session (e.g. via the Demo Booked
+      // follow-through popup) — don't re-run the booking just because Save/Next
+      // got clicked afterward for the same lead. That double-call was exactly
+      // what was creating two demo records for one real action.
+      lead.isOpportunity = false;
+      lead.status = 'booked_demo';
+      newStatus = 'booked_demo';
+    } else if (!mcmApplyDemoToLead(lead, overlay)) {
       mcmRenderDemoForm(leadId);
       if (typeof showToast === 'function') showToast('Pick demo date, time & timezone first');
       return false;
+    } else {
+      lead.isOpportunity = false;
+      lead.status = 'booked_demo';
+      newStatus = 'booked_demo';
+      demoJustBooked = true;
+      if (overlay) overlay._demoSaved = true;
     }
-    lead.isOpportunity = false;
-    lead.status = 'booked_demo';
-    newStatus = 'booked_demo';
-    demoJustBooked = true;
-    if (overlay) overlay._demoSaved = true;
   } else if ((outcome === 'callback' || newStatus === 'followup') && mode === 'lead') {
     if (!mcmApplyFollowupToLead(lead, overlay)) {
       mcmRenderFollowupForm(leadId);
@@ -25074,6 +25085,13 @@ window.mcmSave = function(leadId, opts) {
   lead.callLog.unshift(entry);
   lead.lastContactDate = entry.date;
   lead.updated = now.toISOString();
+
+  // The filtered-leads cache is keyed partly on AN.leads.length, which doesn't
+  // change when an existing lead's status is updated (like just now, to
+  // booked_demo) — without invalidating it here, the Lead Pipeline kept showing
+  // whatever cached view existed before this status change, so the lead would
+  // seem to vanish from wherever it should now show up.
+  if (typeof AN !== 'undefined' && typeof AN.invalidateLeadCaches === 'function') AN.invalidateLeadCaches();
 
   if (typeof AN !== 'undefined' && AN.save) AN.save();
   if (typeof renderLeadsTable === 'function') renderLeadsTable();
