@@ -38443,6 +38443,25 @@ function lsPickCurrentLeadId() {
   return mine.length ? mine[0].id : (AN.leads && AN.leads[0] && AN.leads[0].id);
 }
 
+function lsBuildBusinessInfoCard(lead) {
+  if (!lead.company) return '';
+  var others = (typeof coGetLeadsForCompany === 'function' ? coGetLeadsForCompany(lead.company) : [])
+    .filter(function(l) { return l.id !== lead.id; });
+
+  return '<div class="ls-card">'
+    + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:8px;">\ud83c\udfe2 ' + anEsc(lead.company) + '</div>'
+    + (others.length
+        ? others.slice(0, 5).map(function(o) {
+            var oName = ((o.firstName || '') + ' ' + (o.lastName || '')).trim() || 'Unknown';
+            return '<div onclick="renderLeadSessionPage(\'' + o.id + '\')" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--divider);cursor:pointer;">'
+              + '<div><div style="font-size:12px;font-weight:600;color:var(--text-primary);">' + anEsc(oName) + '</div>'
+              + (o.phone ? '<div style="font-size:10.5px;color:var(--text-muted);">' + anEsc(anFormatPhone(o.phone)) + '</div>' : '')
+              + '</div><span style="color:#6366f1;font-size:11px;">\u2192</span></div>';
+          }).join('')
+        : '<div style="font-size:11.5px;color:var(--text-muted);">No other contacts on file at this company yet.</div>')
+    + '</div>';
+}
+
 function lsBuildLeftColumn(lead) {
   var name = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || lead.company || 'Lead';
   var initials = (name.match(/\b\w/g) || ['?']).slice(0, 2).join('').toUpperCase();
@@ -38453,10 +38472,14 @@ function lsBuildLeftColumn(lead) {
   var scoreColor = scoreVal >= 70 ? '#10b981' : scoreVal >= 45 ? '#f59e0b' : '#a1a1aa';
   var dataPoints = ['firstName','lastName','phone','email','company','state','size'].filter(function(k){ return !!lead[k]; }).length;
 
+  var TZ_LABELS = { EST:'Eastern Time (ET)', CST:'Central Time (CT)', MST:'Mountain Time (MT)', PST:'Pacific Time (PT)', AKT:'Alaska Time (AKT)', HST:'Hawaii Time (HT)' };
+  var tzCode = lead.demoTz || (typeof anTzFromState === 'function' ? anTzFromState(lead.state) : null);
+  var tzLabel = tzCode ? (TZ_LABELS[tzCode] || tzCode) : 'Timezone unknown';
+
   var rows = [
-    { icon: '📞', val: lead.phone ? anFormatPhone(lead.phone) : '', label: '', action: '' },
-    { icon: '✉️', val: lead.email || '', label: 'Email', action: lead.email ? 'window.location.href=\'mailto:'+anEsc(lead.email)+'\'' : '' },
-    { icon: '🕐', val: lead.demoTz || 'Timezone unknown', label: '' },
+    { icon: '📞', val: lead.phone ? anFormatPhone(lead.phone) : '', label: '', action: '', copyVal: lead.phone || '' },
+    { icon: '✉️', val: lead.email || '', label: 'Email', action: lead.email ? 'window.location.href=\'mailto:'+anEsc(lead.email)+'\'' : '', copyVal: lead.email || '' },
+    { icon: '🕐', val: tzLabel, label: '' },
     { icon: '🏢', val: lead.company || 'No Company Listed', label: '' },
     { icon: '🌐', val: lead.website || 'No Website', label: '' }
   ];
@@ -38470,8 +38493,12 @@ function lsBuildLeftColumn(lead) {
     + '<div class="ls-card">'
     + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">'
     + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Lead Summary</div>'
+    + '<span style="display:flex;align-items:center;gap:6px;">'
     + (isNew ? '<span style="background:#ecfdf5;color:#059669;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;">New Lead</span>' : '')
+    + '<button onclick="lsToggleEditSummary(\'' + lead.id + '\')" title="Edit" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;">\u270f\ufe0f</button>'
+    + '</span>'
     + '</div>'
+    + '<div id="ls-summary-view">'
     + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">'
     + '<div style="width:44px;height:44px;border-radius:50%;background:#ede9fe;color:#7c3aed;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0;">' + anEsc(initials) + '</div>'
     + '<div><div style="font-weight:700;font-size:15px;color:var(--text-primary);">' + anEsc(name) + '</div>'
@@ -38481,10 +38508,25 @@ function lsBuildLeftColumn(lead) {
     + rows.map(function(r) {
         return '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-top:1px solid var(--divider);font-size:12.5px;">'
           + '<span style="color:var(--text-secondary);">' + r.icon + ' ' + (r.val ? anEsc(r.val) : '<span style=\"color:var(--text-muted);\">' + anEsc(r.label || 'Unknown') + '</span>') + '</span>'
+          + '<span style="display:flex;align-items:center;gap:6px;">'
+          + (r.copyVal ? '<button onclick="navigator.clipboard.writeText(\'' + anEsc(r.copyVal).replace(/'/g,"\\'") + '\');if(typeof showToast===\'function\')showToast(\'Copied\')" title="Copy" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;padding:2px;">📋</button>' : '')
           + (r.label && r.val ? '<button onclick="' + r.action + '" style="background:none;border:none;color:#6366f1;font-size:11px;font-weight:700;cursor:pointer;">' + r.label + '</button>' : '')
+          + '</span>'
           + '</div>';
       }).join('')
     + '</div>'
+    + '<div id="ls-summary-edit" style="display:none;">'
+    + ['firstName','lastName','phone','email','company'].map(function(f) {
+        var labels = { firstName:'First Name', lastName:'Last Name', phone:'Phone', email:'Email', company:'Company' };
+        return '<label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin:8px 0 3px;">' + labels[f] + '</label>'
+          + '<input id="ls-edit-' + f + '" type="text" value="' + anEsc(lead[f] || '') + '" style="width:100%;padding:7px 9px;border:1px solid var(--divider);border-radius:7px;font-size:12.5px;font-family:inherit;box-sizing:border-box;">';
+      }).join('')
+    + '<div style="display:flex;gap:8px;margin-top:12px;">'
+    + '<button onclick="lsToggleEditSummary(\'' + lead.id + '\')" style="flex:1;background:var(--body-bg);border:1px solid var(--divider);border-radius:7px;padding:8px;font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;">Cancel</button>'
+    + '<button onclick="lsSaveSummaryEdit(\'' + lead.id + '\')" style="flex:1;background:#6366f1;color:#fff;border:none;border-radius:7px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;">Save</button>'
+    + '</div></div>'
+    + '</div>'
+    + lsBuildBusinessInfoCard(lead)
 
     + '<div class="ls-card" style="text-align:center;">'
     + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:10px;text-align:left;">AI Lead Score</div>'
@@ -38587,6 +38629,21 @@ window.renderLeadSessionPage = function(leadId) {
   if (!AN.leads || !AN.leads.length) {
     if (typeof anEnsureLeadsLoaded === 'function') { anEnsureLeadsLoaded(function(){ renderLeadSessionPage(leadId); }); return; }
   }
+
+  // Don't silently jump into a random lead if there's no active call queue —
+  // that's exactly what made this page feel like it "just auto-opens
+  // something." Show a clear entry point instead.
+  var activeQ = typeof anGetActiveCallQueue === 'function' ? anGetActiveCallQueue() : null;
+  if (!leadId && (!activeQ || !activeQ.ids || !activeQ.ids.length)) {
+    root.innerHTML = '<div style="padding:80px 40px;text-align:center;">'
+      + '<div style="font-size:40px;margin-bottom:14px;">\ud83c\udfa7</div>'
+      + '<div style="font-size:17px;font-weight:700;color:var(--text-primary);margin-bottom:6px;">No active call session</div>'
+      + '<div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Start one to begin working through your leads.</div>'
+      + '<button onclick="anOpenCallSessionSetup()" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;">\ud83d\udcde Start a Call Session</button>'
+      + '</div>';
+    return;
+  }
+
   leadId = leadId || lsPickCurrentLeadId();
   var lead = AN.leads.find(function(l) { return l.id === leadId; });
   if (!lead) { root.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text-muted);">No lead available to start a session.</div>'; return; }
@@ -38656,6 +38713,13 @@ window.renderLeadSessionPage = function(leadId) {
 };
 
 function lsGetScriptSteps() {
+  if (window._lsActiveScriptId && typeof seScripts !== 'undefined' && seScripts.length) {
+    var picked = seScripts.find(function(s) { return s.id === window._lsActiveScriptId; });
+    if (picked && typeof anNormalizeScriptSteps === 'function') {
+      var normalized = anNormalizeScriptSteps(picked.steps);
+      if (normalized && normalized.length) return normalized;
+    }
+  }
   if (typeof SE_TEMPLATES !== 'undefined' && SE_TEMPLATES.coldcall && SE_TEMPLATES.coldcall.steps) {
     return SE_TEMPLATES.coldcall.steps;
   }
@@ -38732,6 +38796,13 @@ function lsBuildCenterColumn(lead) {
         return '<button id="ls-outcome-' + o.v + '" onclick="lsSetOutcome(\'' + o.v + '\',\'' + lead.id + '\')" style="background:var(--body-bg);border:1.5px solid var(--divider);border-radius:7px;padding:6px 3px;font-size:10.5px;font-weight:600;color:var(--text-secondary);cursor:pointer;">' + o.l + '</button>';
       }).join('')
     + '</div>'
+    + '<div id="ls-second-stage" style="display:none;margin-bottom:8px;padding-top:8px;border-top:1px solid var(--divider);">'
+    + '<div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:6px;">How did it go?</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;">'
+    + '<button onclick="lsSetSecondStage(\'contacted\',\'' + lead.id + '\')" style="background:#ecfdf5;border:1.5px solid #a7f3d0;border-radius:7px;padding:6px 3px;font-size:10.5px;font-weight:600;color:#059669;cursor:pointer;">Interested</button>'
+    + '<button onclick="lsSetSecondStage(\'not_interested\',\'' + lead.id + '\')" style="background:#fef2f2;border:1.5px solid #fecaca;border-radius:7px;padding:6px 3px;font-size:10.5px;font-weight:600;color:#dc2626;cursor:pointer;">Not Interested</button>'
+    + '<button onclick="lsSetSecondStage(\'followup\',\'' + lead.id + '\')" style="background:#eef2ff;border:1.5px solid #c7d2fe;border-radius:7px;padding:6px 3px;font-size:10.5px;font-weight:600;color:#4f46e5;cursor:pointer;">Call Later</button>'
+    + '</div></div>'
     + '<button onclick="lsSaveAndNext(\'' + lead.id + '\')" style="width:100%;background:#10b981;color:#fff;border:none;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;">Save & Next Lead \u2192</button>'
     + '</div></div>';
 }
@@ -38749,10 +38820,18 @@ function lsRenderScriptStep() {
   var lead = overlay && overlay._leadId ? AN.leads.find(function(l) { return l.id === overlay._leadId; }) : null;
   var bodyText = lsPersonalize(steps[step] ? steps[step].body : '', lead || {});
 
-  card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+  var scriptOptions = '<option value=""' + (!window._lsActiveScriptId ? ' selected' : '') + '>Cold Call Script (built-in)</option>'
+    + ((typeof seScripts !== 'undefined' ? seScripts : []).filter(function(s) { return s.type === 'coldcall'; }).map(function(s) {
+        return '<option value="' + anEsc(s.id) + '"' + (window._lsActiveScriptId === s.id ? ' selected' : '') + '>' + anEsc(s.name || 'Untitled') + '</option>';
+      }).join(''));
+
+  card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">'
     + '<div style="font-size:12px;font-weight:800;color:var(--text-primary);">\ud83d\udcc4 Script</div>'
-    + '<div style="font-size:10.5px;color:var(--text-muted);">Cold Call Script (built-in)</div>'
-    + '</div>'
+    + '<div style="display:flex;align-items:center;gap:8px;">'
+    + '<select onchange="lsSwitchScript(this.value)" style="font-size:11px;border:1px solid var(--divider);border-radius:6px;padding:4px 8px;background:var(--body-bg);color:var(--text-primary);font-family:inherit;">' + scriptOptions + '</select>'
+    + '<button onclick="showSection(\'scripteditor\',null)" style="background:none;border:1px solid var(--divider);border-radius:6px;padding:4px 9px;font-size:10.5px;font-weight:600;color:var(--text-secondary);cursor:pointer;">Edit</button>'
+    + '<button onclick="showSection(\'scripteditor\',null);if(typeof seNewScript===\'function\')setTimeout(seNewScript,50);" style="background:none;border:1px solid var(--divider);border-radius:6px;padding:4px 9px;font-size:10.5px;font-weight:600;color:var(--text-secondary);cursor:pointer;">+ New</button>'
+    + '</div></div>'
     + '<div style="display:flex;gap:4px;margin-bottom:8px;">'
     + steps.map(function(s, i) {
         return '<div style="flex:1;height:4px;border-radius:3px;background:' + (i <= step ? '#6366f1' : 'var(--divider)') + ';"></div>';
@@ -38764,6 +38843,13 @@ function lsRenderScriptStep() {
     + '<button onclick="lsScriptStep(1)" style="background:#6366f1;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight:700;cursor:pointer;">' + (step < steps.length - 1 ? 'Next Step \u2192' : 'Restart \u21ba') + '</button>'
     + '</div>';
 }
+
+window.lsSwitchScript = function(scriptId) {
+  window._lsActiveScriptId = scriptId || null;
+  var card = document.getElementById('ls-script-card');
+  if (card) card.dataset.step = 0;
+  lsRenderScriptStep();
+};
 
 window.lsScriptStep = function(dir) {
   var card = document.getElementById('ls-script-card');
@@ -38781,6 +38867,7 @@ window.lsStartCall = function(leadId) {
 };
 
 window.lsSetOutcome = function(outcome, leadId) {
+  if (outcome === 'demo') { lsShowDemoScheduler(leadId); return; }
   if (typeof mcmSetOutcome === 'function') mcmSetOutcome(outcome, leadId);
   document.querySelectorAll('[id^="ls-outcome-"]').forEach(function(btn) {
     btn.style.background = 'var(--body-bg)';
@@ -38789,6 +38876,100 @@ window.lsSetOutcome = function(outcome, leadId) {
   });
   var active = document.getElementById('ls-outcome-' + outcome);
   if (active) { active.style.background = '#eef2ff'; active.style.borderColor = '#6366f1'; active.style.color = '#6366f1'; }
+
+  var secondStage = document.getElementById('ls-second-stage');
+  if (secondStage) secondStage.style.display = (outcome === 'pickup') ? 'block' : 'none';
+};
+
+window.lsShowDemoScheduler = function(leadId) {
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (!lead) return;
+  var overlay = document.getElementById('mcm-overlay');
+  if (overlay && typeof mcmEnterDemoScheduling === 'function') mcmEnterDemoScheduling(leadId); // keeps the real state machine in sync
+
+  var now = new Date();
+  var defaultDate = now.toISOString().slice(0, 10);
+  var existing = document.getElementById('ls-demo-modal');
+  if (existing) existing.remove();
+
+  var modal = document.createElement('div');
+  modal.id = 'ls-demo-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = '<div style="background:#fff;border-radius:14px;padding:24px;width:360px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
+    + '<div style="font-size:16px;font-weight:800;color:var(--text-primary);margin-bottom:4px;">\ud83c\udfaf Book Demo</div>'
+    + '<div style="font-size:12.5px;color:var(--text-muted);margin-bottom:16px;">Pick a date and time for ' + anEsc((lead.firstName || 'this lead')) + '\'s demo.</div>'
+    + '<label style="display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;">Date</label>'
+    + '<input id="ls-demo-date" type="date" value="' + defaultDate + '" style="width:100%;padding:9px;border:1.5px solid var(--divider);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:12px;box-sizing:border-box;">'
+    + '<label style="display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;">Time</label>'
+    + '<input id="ls-demo-time" type="time" value="10:00" style="width:100%;padding:9px;border:1.5px solid var(--divider);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:16px;box-sizing:border-box;">'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button onclick="document.getElementById(\'ls-demo-modal\').remove()" style="flex:1;background:var(--body-bg);border:1px solid var(--divider);border-radius:8px;padding:10px;font-size:13px;font-weight:600;color:var(--text-secondary);cursor:pointer;">Cancel</button>'
+    + '<button onclick="lsConfirmDemoBooking(\'' + leadId + '\')" style="flex:1;background:#10b981;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">Confirm</button>'
+    + '</div></div>';
+  document.body.appendChild(modal);
+};
+
+window.lsConfirmDemoBooking = function(leadId) {
+  var dateEl = document.getElementById('ls-demo-date');
+  var timeEl = document.getElementById('ls-demo-time');
+  var date = dateEl ? dateEl.value : '';
+  var time = timeEl ? timeEl.value : '';
+  if (!date || !time) { if (typeof showToast === 'function') showToast('Pick a date and time first'); return; }
+
+  var overlay = document.getElementById('mcm-overlay');
+  if (overlay) {
+    // Feed straight into the same real fields the hidden engine reads, so this
+    // books correctly into stats, shout-outs, and the dashboard exactly like
+    // the original flow always did.
+    overlay._demoDate = date;
+    overlay._demoTime = time;
+    overlay._demoTz = (typeof Intl !== 'undefined') ? Intl.DateTimeFormat().resolvedOptions().timeZone : '';
+    if (typeof mcmOpenDemoFollowThroughModal === 'function') mcmOpenDemoFollowThroughModal(leadId);
+  }
+  var modal = document.getElementById('ls-demo-modal');
+  if (modal) modal.remove();
+
+  document.querySelectorAll('[id^="ls-outcome-"]').forEach(function(btn) {
+    btn.style.background = 'var(--body-bg)'; btn.style.borderColor = 'var(--divider)'; btn.style.color = 'var(--text-secondary)';
+  });
+  var active = document.getElementById('ls-outcome-demo');
+  if (active) { active.style.background = '#fffbeb'; active.style.borderColor = '#f59e0b'; active.style.color = '#f59e0b'; }
+  if (typeof showToast === 'function') showToast('Demo booked for ' + date + ' at ' + time);
+};
+
+window.lsSetSecondStage = function(status, leadId) {
+  if (typeof mcmSetStatus === 'function') mcmSetStatus(status, leadId);
+  if (typeof showToast === 'function') {
+    var labels = { contacted: 'Marked Interested', not_interested: 'Marked Not Interested', followup: 'Set to follow up later' };
+    showToast(labels[status] || 'Status updated');
+  }
+};
+
+window.lsToggleEditSummary = function(leadId) {
+  var view = document.getElementById('ls-summary-view');
+  var edit = document.getElementById('ls-summary-edit');
+  if (!view || !edit) return;
+  var showingEdit = edit.style.display !== 'none';
+  view.style.display = showingEdit ? 'block' : 'none';
+  edit.style.display = showingEdit ? 'none' : 'block';
+};
+
+window.lsSaveSummaryEdit = function(leadId) {
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (!lead) return;
+  ['firstName', 'lastName', 'phone', 'email', 'company'].forEach(function(f) {
+    var el = document.getElementById('ls-edit-' + f);
+    if (el) lead[f] = el.value.trim();
+  });
+  lead.updated = new Date().toISOString();
+  // Same cache-invalidation gap we found and fixed elsewhere in the app —
+  // without this, other pages could keep showing the pre-edit snapshot.
+  if (typeof AN.invalidateLeadCaches === 'function') AN.invalidateLeadCaches();
+  if (typeof AN.save === 'function') AN.save();
+
+  var leftCol = document.getElementById('ls-left-col');
+  if (leftCol) leftCol.innerHTML = lsBuildLeftColumn(lead);
+  if (typeof showToast === 'function') showToast('Lead updated');
 };
 
 window.lsSaveAndNext = function(leadId) {
