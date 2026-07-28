@@ -13636,8 +13636,19 @@ window.anMergeTeamDashIntoByDate = function(byDate, dates, repFilter) {
 
 window.anFetchTeamDashActivity = function(cb) {
   cb = cb || function() {};
+  window._anTeamDashCallbacks = window._anTeamDashCallbacks || [];
+  window._anTeamDashCallbacks.push(cb);
+  if (window._anTeamDashFetchInProgress) return;
+  window._anTeamDashFetchInProgress = true;
+
   var sb = typeof getSupabase === 'function' ? getSupabase() : null;
-  if (!sb) { cb(AN._teamDashByRep || {}); return; }
+  function finish(result) {
+    window._anTeamDashFetchInProgress = false;
+    var queued = window._anTeamDashCallbacks || [];
+    window._anTeamDashCallbacks = [];
+    queued.forEach(function(fn) { fn(result); });
+  }
+  if (!sb) { finish(AN._teamDashByRep || {}); return; }
   sb.from('sales_dashboard').select('rep_email, activity, activity_log, demos, pipeline').then(function(r) {
     var byRep = {};
     (r.data || []).forEach(function(row) {
@@ -13651,10 +13662,10 @@ window.anFetchTeamDashActivity = function(cb) {
       };
     });
     AN._teamDashByRep = byRep;
-    cb(byRep);
+    finish(byRep);
   }).catch(function(err) {
     console.warn('[Team dash] Cloud fetch failed:', err);
-    cb(AN._teamDashByRep || {});
+    finish(AN._teamDashByRep || {});
   });
 };
 
@@ -14939,7 +14950,11 @@ function anFinishCloudLeadLoad(sb, cb){
   // and writes stay fast no matter how large the dataset gets — paginate through
   // in batches since there are more rows than a single request returns.
   function fetchAllCrmLeads(offset, acc, done) {
-    sb.from('crm_leads').select('data').eq('team_id', 'default').range(offset, offset + 999).then(function(r){
+    // Explicit stable ordering is required for correct pagination — without it,
+    // Postgres doesn't guarantee the same row order across requests, which can
+    // cause rows near page boundaries to be skipped or duplicated between pages,
+    // producing a slightly different total lead count on every single load.
+    sb.from('crm_leads').select('data').eq('team_id', 'default').order('id', { ascending: true }).range(offset, offset + 999).then(function(r){
       if (r.error) { done(null, r.error); return; }
       var batch = r.data || [];
       acc = acc.concat(batch);
