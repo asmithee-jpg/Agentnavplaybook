@@ -38612,48 +38612,188 @@ window.renderLeadSessionPage = function(leadId) {
     + '</div>'
     + '<div style="display:grid;grid-template-columns:260px 1fr 280px;gap:18px;padding:20px 32px;align-items:start;">'
     + '<div id="ls-left-col">' + lsBuildLeftColumn(lead) + '</div>'
-    + '<div id="ls-center-col" style="min-height:400px;background:var(--card-bg);border:1px solid var(--divider);border-radius:12px;overflow:hidden;"></div>'
+    + '<div id="ls-center-col" style="display:flex;flex-direction:column;gap:16px;">' + lsBuildCenterColumn(lead) + '</div>'
     + '<div id="ls-right-col">' + lsBuildRightColumn(lead) + '</div>'
     + '</div>';
 
-  // Reuse the existing call-mode engine for the center panel (AI Coach, script,
-  // outcome logging all already work correctly there) — build it normally, then
-  // move it from its usual full-screen modal position into our center column,
-  // and strip the modal-specific styling/body class so it displays inline.
+  lsRenderScriptStep();
+
+  // Keep the real call-mode engine alive in the background — hidden, never shown
+  // — purely so its state-tracking (current outcome, call queue position, demo
+  // scheduling flow) keeps working correctly. Every button in our own fresh UI
+  // above calls straight into that same real engine (mcmSetOutcome, mcmSave,
+  // mcmSaveAndNext, etc.), so functionality is 100% real even though none of
+  // that engine's own dark UI is ever displayed.
   if (typeof openMobileCallMode === 'function') {
     openMobileCallMode(leadId);
     setTimeout(function() {
       var wrap = document.getElementById('mcm-panel-wrap');
-      var center = document.getElementById('ls-center-col');
-      if (wrap && center) {
-        center.appendChild(wrap);
-        wrap.style.position = 'static';
-        wrap.style.width = '100%';
-        wrap.style.height = 'auto';
-        wrap.style.maxWidth = 'none';
-        var overlay = document.getElementById('mcm-overlay');
-        if (overlay) { overlay.style.height = 'auto'; overlay.style.minHeight = '400px'; }
-        document.body.classList.remove('call-panel-open');
-        // Session timer intentionally removed from this view
-        var timer = document.getElementById('mcm-call-timer') || document.querySelector('#mcm-call-header [id*="timer" i]');
-        if (timer) timer.style.display = 'none';
-        // The separate "Lead Profile" side panel (#an-cs-lead-panel) renders with
-        // its own fixed, viewport-relative positioning independent of the panel
-        // we just moved — that's what was causing it to float on top of this
-        // page as a stray overlapping popup. It's redundant with our own left
-        // column anyway, so just keep it fully collapsed/hidden on this page.
-        document.body.classList.add('call-lead-collapsed');
-        var leadPanel = document.getElementById('an-cs-lead-panel');
-        if (leadPanel) leadPanel.remove();
-        var leadToggleBtn = document.getElementById('mcm-lead-toggle');
-        if (leadToggleBtn) leadToggleBtn.style.display = 'none';
-        // Also hide the reused panel's own mini goals widget — it duplicates
-        // our dedicated right-column "Today's Goals" panel.
-        var goalsSlot = document.getElementById('mcm-day-goals-slot');
-        if (goalsSlot) goalsSlot.style.display = 'none';
-      }
+      if (wrap) wrap.style.display = 'none';
+      document.body.classList.remove('call-panel-open');
+      document.body.classList.add('call-lead-collapsed');
+      var leadPanel = document.getElementById('an-cs-lead-panel');
+      if (leadPanel) leadPanel.remove();
     }, 30);
   }
+};
+
+function lsGetScriptSteps() {
+  if (typeof SE_TEMPLATES !== 'undefined' && SE_TEMPLATES.coldcall && SE_TEMPLATES.coldcall.steps) {
+    return SE_TEMPLATES.coldcall.steps;
+  }
+  return [{ title: 'Opening', body: 'Hey [Name], this is [Your name] from AgentNav. Quick question \u2014 worth two minutes?' }];
+}
+
+function lsPersonalize(text, lead) {
+  var name = (lead.firstName || '').trim() || 'there';
+  var rep = (typeof _currentUser !== 'undefined' && _currentUser && _currentUser.user_metadata && _currentUser.user_metadata.full_name) || (typeof AN !== 'undefined' && AN.currentRep) || 'your rep';
+  return (text || '').replace(/\[Name\]/g, name).replace(/\[Your name\]/g, rep);
+}
+
+function lsBuildTalkingPoints(lead) {
+  var points = [];
+  if (lead.state) points.push('They are located in ' + lead.state);
+  else points.push('Location unknown \u2014 ask early to tailor the pitch');
+  if (!lead.company) points.push('No agency listed \u2014 ask about their setup');
+  else points.push('Works with ' + lead.company + ' \u2014 reference it directly');
+  points.push('Ask if they currently write ACA business');
+  points.push('Mention Renewal Autopilot\u2122');
+  points.push('Mention quoting + CRM + SMS');
+  points.push('Ask what system they use today');
+  return points.slice(0, 6);
+}
+
+function lsBuildCenterColumn(lead) {
+  var phone = lead.phone ? anFormatPhone(lead.phone) : 'No phone on file';
+  var telHref = lead.phone ? "tel:" + anTelPhone(lead.phone) : '';
+  var steps = lsGetScriptSteps();
+  var talkingPoints = lsBuildTalkingPoints(lead);
+  var opening = lsPersonalize(steps[0] ? steps[0].body : '', lead);
+
+  var outcomes = [
+    { v: 'pickup', l: '\ud83d\udcde Picked Up', c: '#10b981' },
+    { v: 'noanswer', l: '\ud83d\udcf5 No Answer', c: '#a1a1aa' },
+    { v: 'voicemail', l: '\ud83d\udcec Voicemail', c: '#6366f1' },
+    { v: 'emailed', l: '\u2709\ufe0f Sent Email', c: '#8b5cf6' },
+    { v: 'demo', l: '\ud83c\udfaf Book Demo', c: '#f59e0b' },
+    { v: 'demo_complete', l: '\u2705 Demo Completed', c: '#06b6d4' },
+    { v: 'callback', l: '\u23f0 Follow Up', c: '#06b6d4' }
+  ];
+
+  return '<div class="ls-card">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">'
+    + '<div style="display:flex;align-items:center;gap:14px;">'
+    + '<button id="ls-call-btn" onclick="lsStartCall(\'' + lead.id + '\')" style="width:52px;height:52px;border-radius:50%;background:#10b981;border:none;cursor:pointer;font-size:22px;color:#fff;display:flex;align-items:center;justify-content:center;">\ud83d\udcde</button>'
+    + '<div><div style="font-weight:700;font-size:14px;color:var(--text-primary);">Ready to Call</div>'
+    + '<div id="ls-call-phone" style="font-size:18px;font-weight:800;color:var(--text-primary);">' + anEsc(phone) + '</div>'
+    + '<div style="font-size:11.5px;color:var(--text-muted);">Click the button to start calling</div></div>'
+    + '</div>'
+    + '<div style="text-align:right;">'
+    + '<div style="font-size:11px;color:var(--text-muted);">Call Timer</div>'
+    + '<div id="ls-call-timer" style="font-size:20px;font-weight:800;color:var(--text-primary);">00:00</div>'
+    + '<div id="ls-call-timer-label" style="font-size:11px;color:var(--text-muted);">Call not started yet</div>'
+    + '</div></div></div>'
+
+    + '<div class="ls-card">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
+    + '<div style="font-size:13px;font-weight:800;color:var(--text-primary);">\ud83e\udde0 AI Coach <span style="background:#eef2ff;color:#6366f1;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:8px;margin-left:4px;">Beta</span></div>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">'
+    + '<div><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:8px;">Top Talking Points</div>'
+    + talkingPoints.map(function(p) { return '<div style="display:flex;gap:7px;font-size:12.5px;color:var(--text-secondary);padding:3px 0;"><span style="color:#10b981;">\u2713</span>' + anEsc(p) + '</div>'; }).join('')
+    + '</div>'
+    + '<div><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#6366f1;margin-bottom:8px;">\ud83d\udca1 Suggested Opening</div>'
+    + '<div style="background:#eef2ff;border-radius:10px;padding:12px;font-size:12.5px;color:var(--text-primary);line-height:1.5;">' + anEsc(opening) + '</div>'
+    + '</div></div></div>'
+
+    + '<div class="ls-card" id="ls-script-card" data-step="0"></div>'
+
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">'
+    + '<div class="ls-card">'
+    + '<div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:8px;">Notes</div>'
+    + '<textarea id="ls-notes-input" placeholder="Type your notes here..." style="width:100%;min-height:90px;border:1px solid var(--divider);border-radius:8px;padding:10px;font-size:12.5px;font-family:inherit;resize:vertical;background:var(--body-bg);color:var(--text-primary);">' + anEsc(lead.notes || '') + '</textarea>'
+    + '</div>'
+    + '<div class="ls-card">'
+    + '<div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:8px;">Disposition / Outcome</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px;">'
+    + outcomes.map(function(o) {
+        return '<button id="ls-outcome-' + o.v + '" onclick="lsSetOutcome(\'' + o.v + '\',\'' + lead.id + '\')" style="background:var(--body-bg);border:1.5px solid var(--divider);border-radius:8px;padding:8px;font-size:11.5px;font-weight:600;color:var(--text-secondary);cursor:pointer;">' + o.l + '</button>';
+      }).join('')
+    + '</div>'
+    + '<button onclick="lsSaveAndNext(\'' + lead.id + '\')" style="width:100%;background:#10b981;color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;">Save & Next Lead \u2192</button>'
+    + '</div></div>';
+}
+
+function lsRenderScriptStep() {
+  var card = document.getElementById('ls-script-card');
+  if (!card) return;
+  var step = parseInt(card.dataset.step || '0', 10);
+  var steps = lsGetScriptSteps();
+  if (step >= steps.length) step = steps.length - 1;
+  if (step < 0) step = 0;
+  card.dataset.step = step;
+
+  var overlay = document.getElementById('mcm-overlay');
+  var lead = overlay && overlay._leadId ? AN.leads.find(function(l) { return l.id === overlay._leadId; }) : null;
+  var bodyText = lsPersonalize(steps[step] ? steps[step].body : '', lead || {});
+
+  card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
+    + '<div style="font-size:13px;font-weight:800;color:var(--text-primary);">\ud83d\udcc4 Script</div>'
+    + '<div style="font-size:11.5px;color:var(--text-muted);">Cold Call Script (built-in)</div>'
+    + '</div>'
+    + '<div style="display:flex;gap:4px;margin-bottom:14px;">'
+    + steps.map(function(s, i) {
+        return '<div style="flex:1;height:5px;border-radius:3px;background:' + (i <= step ? '#6366f1' : 'var(--divider)') + ';"></div>';
+      }).join('')
+    + '</div>'
+    + '<div style="background:#eef2ff;border-radius:10px;padding:14px;font-size:13px;color:var(--text-primary);line-height:1.55;margin-bottom:10px;">' + anEsc(bodyText) + '</div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+    + '<span style="font-size:11.5px;color:var(--text-muted);">Step ' + (step + 1) + ' of ' + steps.length + '</span>'
+    + '<button onclick="lsScriptStep(1)" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12.5px;font-weight:700;cursor:pointer;">' + (step < steps.length - 1 ? 'Next Step \u2192' : 'Restart \u21ba') + '</button>'
+    + '</div>';
+}
+
+window.lsScriptStep = function(dir) {
+  var card = document.getElementById('ls-script-card');
+  if (!card) return;
+  var step = parseInt(card.dataset.step || '0', 10);
+  var steps = lsGetScriptSteps();
+  step = (step + dir >= steps.length) ? 0 : step + dir;
+  card.dataset.step = step;
+  lsRenderScriptStep();
+};
+
+window.lsStartCall = function(leadId) {
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (lead && lead.phone && typeof anTelPhone === 'function') window.location.href = 'tel:' + anTelPhone(lead.phone);
+  var label = document.getElementById('ls-call-timer-label');
+  if (label) label.textContent = 'Call in progress...';
+  if (window._lsCallTimer) clearInterval(window._lsCallTimer);
+  var start = Date.now();
+  window._lsCallTimer = setInterval(function() {
+    var el = document.getElementById('ls-call-timer');
+    if (!el) { clearInterval(window._lsCallTimer); return; }
+    var secs = Math.floor((Date.now() - start) / 1000);
+    el.textContent = String(Math.floor(secs / 60)).padStart(2, '0') + ':' + String(secs % 60).padStart(2, '0');
+  }, 1000);
+};
+
+window.lsSetOutcome = function(outcome, leadId) {
+  if (typeof mcmSetOutcome === 'function') mcmSetOutcome(outcome, leadId);
+  document.querySelectorAll('[id^="ls-outcome-"]').forEach(function(btn) {
+    btn.style.background = 'var(--body-bg)';
+    btn.style.borderColor = 'var(--divider)';
+    btn.style.color = 'var(--text-secondary)';
+  });
+  var active = document.getElementById('ls-outcome-' + outcome);
+  if (active) { active.style.background = '#eef2ff'; active.style.borderColor = '#6366f1'; active.style.color = '#6366f1'; }
+};
+
+window.lsSaveAndNext = function(leadId) {
+  var notesEl = document.getElementById('ls-notes-input');
+  var hiddenNotes = document.getElementById('mcm-note');
+  if (notesEl && hiddenNotes) hiddenNotes.value = notesEl.value;
+  if (typeof mcmSaveAndNext === 'function') mcmSaveAndNext(leadId);
 };
 
 window.lsGoToAdjacent = function(dir) {
