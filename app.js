@@ -29153,7 +29153,18 @@ window.anAdvanceCallQueue = function(completedId){
     anEndCallSession(true, queue.mode);
     return false;
   }
-  setTimeout(function(){ openMobileCallMode(nextId); }, 180);
+  setTimeout(function(){
+    // If our new Lead Session page is the active section, render into it —
+    // otherwise this was opening the old dark modal directly and nothing on
+    // screen ever changed, even though the queue itself was actually advancing
+    // correctly underneath.
+    var lsSection = document.getElementById('section-leadsession');
+    if (lsSection && lsSection.classList.contains('active') && typeof renderLeadSessionPage === 'function') {
+      renderLeadSessionPage(nextId);
+    } else {
+      openMobileCallMode(nextId);
+    }
+  }, 180);
   return true;
 };
 
@@ -30032,6 +30043,15 @@ window.mcmNextLead = function(leadId){
   if (overlay && overlay._keyHandler) document.removeEventListener('keydown', overlay._keyHandler);
   mcmCloseCallPanelOnly();
 
+  function goTo(nextLeadId) {
+    var lsSection = document.getElementById('section-leadsession');
+    if (lsSection && lsSection.classList.contains('active') && typeof renderLeadSessionPage === 'function') {
+      renderLeadSessionPage(nextLeadId);
+    } else {
+      openMobileCallMode(nextLeadId);
+    }
+  }
+
   var activeQ = typeof anGetActiveCallQueue === 'function' ? anGetActiveCallQueue() : null;
   if (activeQ && activeQ.ids && activeQ.ids.length) {
     var idx = activeQ.ids.indexOf(leadId);
@@ -30045,13 +30065,13 @@ window.mcmNextLead = function(leadId){
         if (activeQ.completed.indexOf(activeQ.ids[i]) < 0) { nextId = activeQ.ids[i]; break; }
       }
     }
-    if (nextId) setTimeout(function(){ openMobileCallMode(nextId); }, 180);
+    if (nextId) setTimeout(function(){ goTo(nextId); }, 180);
     else if (typeof showToast === 'function') showToast('All queue leads logged — end session or review completed');
   } else {
     var leads = AN.leads.filter(function(l){ return l.status !== 'won' && l.status !== 'lost'; });
     var idx2 = leads.findIndex(function(l){ return l.id === leadId; });
     var next = leads[idx2 + 1];
-    if (next) setTimeout(function(){ openMobileCallMode(next.id); }, 180);
+    if (next) setTimeout(function(){ goTo(next.id); }, 180);
     else if (typeof showToast === 'function') showToast('No more leads in list');
   }
 };
@@ -38868,7 +38888,8 @@ window.lsStartCall = function(leadId) {
 
 window.lsSetOutcome = function(outcome, leadId) {
   if (outcome === 'demo') { lsShowDemoScheduler(leadId); return; }
-  if (typeof mcmSetOutcome === 'function') mcmSetOutcome(outcome, leadId);
+  if (outcome === 'callback') { lsShowFollowupScheduler(leadId); }
+  else if (typeof mcmSetOutcome === 'function') mcmSetOutcome(outcome, leadId);
   document.querySelectorAll('[id^="ls-outcome-"]').forEach(function(btn) {
     btn.style.background = 'var(--body-bg)';
     btn.style.borderColor = 'var(--divider)';
@@ -38938,11 +38959,57 @@ window.lsConfirmDemoBooking = function(leadId) {
 };
 
 window.lsSetSecondStage = function(status, leadId) {
+  if (status === 'followup') { lsShowFollowupScheduler(leadId); return; }
   if (typeof mcmSetStatus === 'function') mcmSetStatus(status, leadId);
   if (typeof showToast === 'function') {
-    var labels = { contacted: 'Marked Interested', not_interested: 'Marked Not Interested', followup: 'Set to follow up later' };
+    var labels = { contacted: 'Marked Interested', not_interested: 'Marked Not Interested' };
     showToast(labels[status] || 'Status updated');
   }
+};
+
+window.lsShowFollowupScheduler = function(leadId) {
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (!lead) return;
+  if (typeof mcmSetStatus === 'function') mcmSetStatus('followup', leadId);
+
+  var tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+  var defaultDate = tomorrow.toISOString().slice(0, 10);
+  var existing = document.getElementById('ls-followup-modal');
+  if (existing) existing.remove();
+
+  var modal = document.createElement('div');
+  modal.id = 'ls-followup-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = '<div style="background:#fff;border-radius:14px;padding:24px;width:360px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
+    + '<div style="font-size:16px;font-weight:800;color:var(--text-primary);margin-bottom:4px;">\u23f0 Call Later</div>'
+    + '<div style="font-size:12.5px;color:var(--text-muted);margin-bottom:16px;">When should we follow up with ' + anEsc((lead.firstName || 'this lead')) + '?</div>'
+    + '<label style="display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;">Date</label>'
+    + '<input id="ls-fu-date" type="date" value="' + defaultDate + '" style="width:100%;padding:9px;border:1.5px solid var(--divider);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:12px;box-sizing:border-box;">'
+    + '<label style="display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;">Time</label>'
+    + '<input id="ls-fu-time" type="time" value="14:00" style="width:100%;padding:9px;border:1.5px solid var(--divider);border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:16px;box-sizing:border-box;">'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button onclick="document.getElementById(\'ls-followup-modal\').remove()" style="flex:1;background:var(--body-bg);border:1px solid var(--divider);border-radius:8px;padding:10px;font-size:13px;font-weight:600;color:var(--text-secondary);cursor:pointer;">Cancel</button>'
+    + '<button onclick="lsConfirmFollowup(\'' + leadId + '\')" style="flex:1;background:#6366f1;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">Confirm</button>'
+    + '</div></div>';
+  document.body.appendChild(modal);
+};
+
+window.lsConfirmFollowup = function(leadId) {
+  var dateEl = document.getElementById('ls-fu-date');
+  var timeEl = document.getElementById('ls-fu-time');
+  var date = dateEl ? dateEl.value : '';
+  var time = timeEl ? timeEl.value : '';
+  if (!date) { if (typeof showToast === 'function') showToast('Pick a date first'); return; }
+
+  var overlay = document.getElementById('mcm-overlay');
+  if (overlay) {
+    overlay._followupDate = date;
+    overlay._followupTime = time || '14:00';
+    overlay._followupMethod = 'call';
+  }
+  var modal = document.getElementById('ls-followup-modal');
+  if (modal) modal.remove();
+  if (typeof showToast === 'function') showToast('Follow-up set for ' + date + (time ? ' at ' + time : ''));
 };
 
 window.lsToggleEditSummary = function(leadId) {
