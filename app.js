@@ -29078,7 +29078,11 @@ window.anStartCallSession = function(ids, mode, scriptId, stateFilter){
     }
     showToast((mode === 'opportunity' ? 'Deal' : 'Lead') + ' session started — ' + ids.length + ' queued' + stateNote);
   }
-  openMobileCallMode(ids[0]);
+  if (mode === 'lead' && typeof showSection === 'function') {
+    showSection('leadsession', null);
+  } else {
+    openMobileCallMode(ids[0]);
+  }
 };
 
 window.anResumeCallSession = function(mode){
@@ -29104,7 +29108,11 @@ window.anResumeCallSession = function(mode){
       if (typeof showToast === 'function') showToast('Record not found — reopen pipeline');
       return;
     }
-    openMobileCallMode(nextId);
+    if (queue.mode === 'lead' && typeof showSection === 'function') {
+      showSection('leadsession', null);
+    } else {
+      openMobileCallMode(nextId);
+    }
     if (typeof showToast === 'function') showToast((queue.mode === 'opportunity' ? 'Deal' : 'Lead') + ' session resumed');
   });
 };
@@ -38458,7 +38466,7 @@ function lsBuildLeftColumn(lead) {
   if (lead.state) tags.push(lead.state);
   (lead.tags || []).forEach(function(t){ tags.push(t); });
 
-  return '<div style="display:flex;flex-direction:column;gap:14px;">'
+  return '<div style="display:flex;flex-direction:column;gap:10px;">'
     + '<div class="ls-card">'
     + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">'
     + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Lead Summary</div>'
@@ -38527,7 +38535,7 @@ function lsBuildRightColumn(lead) {
 
   var nearbyCount = (typeof _coData !== 'undefined' && Array.isArray(_coData)) ? _coData.filter(function(c) { return c.state === lead.state; }).length : 0;
 
-  return '<div style="display:flex;flex-direction:column;gap:14px;">'
+  return '<div style="display:flex;flex-direction:column;gap:10px;">'
     + '<div class="ls-card">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
     + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Today\'s Goals</div>'
@@ -38593,26 +38601,30 @@ window.renderLeadSessionPage = function(leadId) {
   if (!document.getElementById('ls-styles')) {
     var style = document.createElement('style');
     style.id = 'ls-styles';
-    style.textContent = '.ls-card{background:var(--card-bg);border:1px solid var(--divider);border-radius:12px;padding:16px;}'
+    style.textContent = '.ls-card{background:var(--card-bg);border:1px solid var(--divider);border-radius:10px;padding:12px 14px;}'
       + '.ls-qa-btn{display:flex;align-items:center;gap:8px;background:var(--body-bg);border:1px solid var(--divider);border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:600;color:var(--text-secondary);cursor:pointer;text-align:left;font-family:inherit;}'
-      + '.ls-qa-btn:hover{background:#eef2ff;color:#6366f1;}';
+      + '.ls-qa-btn:hover{background:#eef2ff;color:#6366f1;}'
+      // Pure-CSS safety net: hide the old dark call panel and its lead-profile
+      // sidekick whenever this page is active, no matter how long the JS above
+      // takes to catch up — this can never leave the old dark UI visible.
+      + '#section-leadsession.active ~ * #mcm-panel-wrap, #section-leadsession.active #mcm-panel-wrap, body:has(#section-leadsession.active) #mcm-panel-wrap, body:has(#section-leadsession.active) #an-cs-lead-panel { display:none !important; }';
     document.head.appendChild(style);
   }
 
   root.innerHTML =
-    '<div style="padding:20px 32px;border-bottom:1px solid var(--divider);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">'
-    + '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Outreach Session \u2014 Cold Calls</div>'
-    + '<h1 style="margin:2px 0 0;font-size:22px;">Lead Session</h1></div>'
+    '<div style="padding:12px 24px;border-bottom:1px solid var(--divider);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">'
+    + '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Outreach Session \u2014 Cold Calls</div>'
+    + '<h1 style="margin:1px 0 0;font-size:18px;">Lead Session</h1></div>'
     + '<div style="display:flex;align-items:center;gap:14px;">'
-    + '<button onclick="lsGoToAdjacent(-1)" style="background:var(--body-bg);border:1px solid var(--divider);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:14px;">\u2039</button>'
-    + '<span style="font-size:13px;color:var(--text-secondary);">Lead <strong style="color:var(--text-primary);">' + pos + '</strong> of ' + total + '</span>'
-    + '<button onclick="lsGoToAdjacent(1)" style="background:var(--body-bg);border:1px solid var(--divider);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:14px;">\u203a</button>'
+    + '<button onclick="lsGoToAdjacent(-1)" style="background:var(--body-bg);border:1px solid var(--divider);border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:13px;">\u2039</button>'
+    + '<span style="font-size:12.5px;color:var(--text-secondary);">Lead <strong style="color:var(--text-primary);">' + pos + '</strong> of ' + total + '</span>'
+    + '<button onclick="lsGoToAdjacent(1)" style="background:var(--body-bg);border:1px solid var(--divider);border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:13px;">\u203a</button>'
     + '</div>'
-    + '<button onclick="lsEndSession()" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;">\u23f9 End Session</button>'
+    + '<button onclick="lsEndSession()" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;">\u23f9 End Session</button>'
     + '</div>'
-    + '<div style="display:grid;grid-template-columns:260px 1fr 280px;gap:18px;padding:20px 32px;align-items:start;">'
+    + '<div style="display:grid;grid-template-columns:230px 1fr 250px;gap:14px;padding:14px 24px;align-items:start;">'
     + '<div id="ls-left-col">' + lsBuildLeftColumn(lead) + '</div>'
-    + '<div id="ls-center-col" style="display:flex;flex-direction:column;gap:16px;">' + lsBuildCenterColumn(lead) + '</div>'
+    + '<div id="ls-center-col" style="display:flex;flex-direction:column;gap:10px;">' + lsBuildCenterColumn(lead) + '</div>'
     + '<div id="ls-right-col">' + lsBuildRightColumn(lead) + '</div>'
     + '</div>';
 
@@ -38626,14 +38638,20 @@ window.renderLeadSessionPage = function(leadId) {
   // that engine's own dark UI is ever displayed.
   if (typeof openMobileCallMode === 'function') {
     openMobileCallMode(leadId);
-    setTimeout(function() {
+    var lsHideAttempts = 0;
+    (function lsHideOldPanel() {
+      lsHideAttempts++;
       var wrap = document.getElementById('mcm-panel-wrap');
-      if (wrap) wrap.style.display = 'none';
-      document.body.classList.remove('call-panel-open');
-      document.body.classList.add('call-lead-collapsed');
       var leadPanel = document.getElementById('an-cs-lead-panel');
-      if (leadPanel) leadPanel.remove();
-    }, 30);
+      if (wrap) {
+        wrap.style.display = 'none';
+        document.body.classList.remove('call-panel-open');
+        document.body.classList.add('call-lead-collapsed');
+        if (leadPanel) leadPanel.remove();
+        return; // found and hidden — done
+      }
+      if (lsHideAttempts < 20) setTimeout(lsHideOldPanel, 50); // keep trying for up to ~1s
+    })();
   }
 };
 
@@ -38680,47 +38698,41 @@ function lsBuildCenterColumn(lead) {
     { v: 'callback', l: '\u23f0 Follow Up', c: '#06b6d4' }
   ];
 
-  return '<div class="ls-card">'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">'
-    + '<div style="display:flex;align-items:center;gap:14px;">'
-    + '<button id="ls-call-btn" onclick="lsStartCall(\'' + lead.id + '\')" style="width:52px;height:52px;border-radius:50%;background:#10b981;border:none;cursor:pointer;font-size:22px;color:#fff;display:flex;align-items:center;justify-content:center;">\ud83d\udcde</button>'
-    + '<div><div style="font-weight:700;font-size:14px;color:var(--text-primary);">Ready to Call</div>'
-    + '<div id="ls-call-phone" style="font-size:18px;font-weight:800;color:var(--text-primary);">' + anEsc(phone) + '</div>'
-    + '<div style="font-size:11.5px;color:var(--text-muted);">Click the button to start calling</div></div>'
-    + '</div>'
-    + '<div style="text-align:right;">'
-    + '<div style="font-size:11px;color:var(--text-muted);">Call Timer</div>'
-    + '<div id="ls-call-timer" style="font-size:20px;font-weight:800;color:var(--text-primary);">00:00</div>'
-    + '<div id="ls-call-timer-label" style="font-size:11px;color:var(--text-muted);">Call not started yet</div>'
-    + '</div></div></div>'
+  return '<div class="ls-card" style="padding:12px 16px;">'
+    + '<div style="display:flex;align-items:center;gap:12px;">'
+    + '<button id="ls-call-btn" onclick="lsStartCall(\'' + lead.id + '\')" style="width:40px;height:40px;border-radius:50%;background:#10b981;border:none;cursor:pointer;font-size:17px;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">\ud83d\udcde</button>'
+    + '<div style="flex:1;min-width:0;"><span style="font-weight:700;font-size:13px;color:var(--text-primary);">Ready to Call</span>'
+    + '<span style="font-size:15px;font-weight:800;color:var(--text-primary);margin-left:10px;">' + anEsc(phone) + '</span>'
+    + '<div style="font-size:11px;color:var(--text-muted);">Click the button to start calling</div></div>'
+    + '</div></div>'
 
     + '<div class="ls-card">'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
-    + '<div style="font-size:13px;font-weight:800;color:var(--text-primary);">\ud83e\udde0 AI Coach <span style="background:#eef2ff;color:#6366f1;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:8px;margin-left:4px;">Beta</span></div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+    + '<div style="font-size:12px;font-weight:800;color:var(--text-primary);">\ud83e\udde0 AI Coach <span style="background:#eef2ff;color:#6366f1;font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px;">Beta</span></div>'
     + '</div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">'
-    + '<div><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:8px;">Top Talking Points</div>'
-    + talkingPoints.map(function(p) { return '<div style="display:flex;gap:7px;font-size:12.5px;color:var(--text-secondary);padding:3px 0;"><span style="color:#10b981;">\u2713</span>' + anEsc(p) + '</div>'; }).join('')
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">'
+    + '<div><div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:5px;">Top Talking Points</div>'
+    + talkingPoints.slice(0, 4).map(function(p) { return '<div style="display:flex;gap:6px;font-size:11.5px;color:var(--text-secondary);padding:1px 0;line-height:1.4;"><span style="color:#10b981;">\u2713</span>' + anEsc(p) + '</div>'; }).join('')
     + '</div>'
-    + '<div><div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#6366f1;margin-bottom:8px;">\ud83d\udca1 Suggested Opening</div>'
-    + '<div style="background:#eef2ff;border-radius:10px;padding:12px;font-size:12.5px;color:var(--text-primary);line-height:1.5;">' + anEsc(opening) + '</div>'
+    + '<div><div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#6366f1;margin-bottom:5px;">\ud83d\udca1 Suggested Opening</div>'
+    + '<div style="background:#eef2ff;border-radius:8px;padding:9px;font-size:11.5px;color:var(--text-primary);line-height:1.4;">' + anEsc(opening) + '</div>'
     + '</div></div></div>'
 
     + '<div class="ls-card" id="ls-script-card" data-step="0"></div>'
 
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">'
+    + '<div style="display:grid;grid-template-columns:1fr 1.3fr;gap:12px;">'
     + '<div class="ls-card">'
-    + '<div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:8px;">Notes</div>'
-    + '<textarea id="ls-notes-input" placeholder="Type your notes here..." style="width:100%;min-height:90px;border:1px solid var(--divider);border-radius:8px;padding:10px;font-size:12.5px;font-family:inherit;resize:vertical;background:var(--body-bg);color:var(--text-primary);">' + anEsc(lead.notes || '') + '</textarea>'
+    + '<div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:6px;">Notes</div>'
+    + '<textarea id="ls-notes-input" placeholder="Type your notes here..." style="width:100%;min-height:56px;border:1px solid var(--divider);border-radius:8px;padding:8px;font-size:11.5px;font-family:inherit;resize:vertical;background:var(--body-bg);color:var(--text-primary);">' + anEsc(lead.notes || '') + '</textarea>'
     + '</div>'
     + '<div class="ls-card">'
-    + '<div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:8px;">Disposition / Outcome</div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px;">'
+    + '<div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:6px;">Disposition / Outcome</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px;">'
     + outcomes.map(function(o) {
-        return '<button id="ls-outcome-' + o.v + '" onclick="lsSetOutcome(\'' + o.v + '\',\'' + lead.id + '\')" style="background:var(--body-bg);border:1.5px solid var(--divider);border-radius:8px;padding:8px;font-size:11.5px;font-weight:600;color:var(--text-secondary);cursor:pointer;">' + o.l + '</button>';
+        return '<button id="ls-outcome-' + o.v + '" onclick="lsSetOutcome(\'' + o.v + '\',\'' + lead.id + '\')" style="background:var(--body-bg);border:1.5px solid var(--divider);border-radius:7px;padding:6px 3px;font-size:10.5px;font-weight:600;color:var(--text-secondary);cursor:pointer;">' + o.l + '</button>';
       }).join('')
     + '</div>'
-    + '<button onclick="lsSaveAndNext(\'' + lead.id + '\')" style="width:100%;background:#10b981;color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;">Save & Next Lead \u2192</button>'
+    + '<button onclick="lsSaveAndNext(\'' + lead.id + '\')" style="width:100%;background:#10b981;color:#fff;border:none;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;">Save & Next Lead \u2192</button>'
     + '</div></div>';
 }
 
@@ -38737,19 +38749,19 @@ function lsRenderScriptStep() {
   var lead = overlay && overlay._leadId ? AN.leads.find(function(l) { return l.id === overlay._leadId; }) : null;
   var bodyText = lsPersonalize(steps[step] ? steps[step].body : '', lead || {});
 
-  card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
-    + '<div style="font-size:13px;font-weight:800;color:var(--text-primary);">\ud83d\udcc4 Script</div>'
-    + '<div style="font-size:11.5px;color:var(--text-muted);">Cold Call Script (built-in)</div>'
+  card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+    + '<div style="font-size:12px;font-weight:800;color:var(--text-primary);">\ud83d\udcc4 Script</div>'
+    + '<div style="font-size:10.5px;color:var(--text-muted);">Cold Call Script (built-in)</div>'
     + '</div>'
-    + '<div style="display:flex;gap:4px;margin-bottom:14px;">'
+    + '<div style="display:flex;gap:4px;margin-bottom:8px;">'
     + steps.map(function(s, i) {
-        return '<div style="flex:1;height:5px;border-radius:3px;background:' + (i <= step ? '#6366f1' : 'var(--divider)') + ';"></div>';
+        return '<div style="flex:1;height:4px;border-radius:3px;background:' + (i <= step ? '#6366f1' : 'var(--divider)') + ';"></div>';
       }).join('')
     + '</div>'
-    + '<div style="background:#eef2ff;border-radius:10px;padding:14px;font-size:13px;color:var(--text-primary);line-height:1.55;margin-bottom:10px;">' + anEsc(bodyText) + '</div>'
+    + '<div style="background:#eef2ff;border-radius:8px;padding:10px;font-size:12px;color:var(--text-primary);line-height:1.45;margin-bottom:8px;">' + anEsc(bodyText) + '</div>'
     + '<div style="display:flex;justify-content:space-between;align-items:center;">'
-    + '<span style="font-size:11.5px;color:var(--text-muted);">Step ' + (step + 1) + ' of ' + steps.length + '</span>'
-    + '<button onclick="lsScriptStep(1)" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12.5px;font-weight:700;cursor:pointer;">' + (step < steps.length - 1 ? 'Next Step \u2192' : 'Restart \u21ba') + '</button>'
+    + '<span style="font-size:10.5px;color:var(--text-muted);">Step ' + (step + 1) + ' of ' + steps.length + '</span>'
+    + '<button onclick="lsScriptStep(1)" style="background:#6366f1;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight:700;cursor:pointer;">' + (step < steps.length - 1 ? 'Next Step \u2192' : 'Restart \u21ba') + '</button>'
     + '</div>';
 }
 
@@ -38766,16 +38778,6 @@ window.lsScriptStep = function(dir) {
 window.lsStartCall = function(leadId) {
   var lead = AN.leads.find(function(l) { return l.id === leadId; });
   if (lead && lead.phone && typeof anTelPhone === 'function') window.location.href = 'tel:' + anTelPhone(lead.phone);
-  var label = document.getElementById('ls-call-timer-label');
-  if (label) label.textContent = 'Call in progress...';
-  if (window._lsCallTimer) clearInterval(window._lsCallTimer);
-  var start = Date.now();
-  window._lsCallTimer = setInterval(function() {
-    var el = document.getElementById('ls-call-timer');
-    if (!el) { clearInterval(window._lsCallTimer); return; }
-    var secs = Math.floor((Date.now() - start) / 1000);
-    el.textContent = String(Math.floor(secs / 60)).padStart(2, '0') + ':' + String(secs % 60).padStart(2, '0');
-  }, 1000);
 };
 
 window.lsSetOutcome = function(outcome, leadId) {
