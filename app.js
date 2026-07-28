@@ -38637,6 +38637,20 @@ window.renderLeadSessionPage = function(leadId) {
         // Session timer intentionally removed from this view
         var timer = document.getElementById('mcm-call-timer') || document.querySelector('#mcm-call-header [id*="timer" i]');
         if (timer) timer.style.display = 'none';
+        // The separate "Lead Profile" side panel (#an-cs-lead-panel) renders with
+        // its own fixed, viewport-relative positioning independent of the panel
+        // we just moved — that's what was causing it to float on top of this
+        // page as a stray overlapping popup. It's redundant with our own left
+        // column anyway, so just keep it fully collapsed/hidden on this page.
+        document.body.classList.add('call-lead-collapsed');
+        var leadPanel = document.getElementById('an-cs-lead-panel');
+        if (leadPanel) leadPanel.remove();
+        var leadToggleBtn = document.getElementById('mcm-lead-toggle');
+        if (leadToggleBtn) leadToggleBtn.style.display = 'none';
+        // Also hide the reused panel's own mini goals widget — it duplicates
+        // our dedicated right-column "Today's Goals" panel.
+        var goalsSlot = document.getElementById('mcm-day-goals-slot');
+        if (goalsSlot) goalsSlot.style.display = 'none';
       }
     }, 30);
   }
