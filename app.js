@@ -14893,6 +14893,15 @@ function anFinishCloudLeadLoad(sb, cb){
     var queued = window._anCloudLeadLoadCallbacks || [];
     window._anCloudLeadLoadCallbacks = [];
     queued.forEach(function(fn) { if (fn) fn(); });
+    // AN.leadsReady can become true from stale local cache alone (see the "fast
+    // path" above in AN.load) — this flag specifically means the real cloud sync
+    // has actually finished, which is what anything showing aggregate totals
+    // (like Team Activity) needs to wait for instead, to avoid showing a stale
+    // number for however long that sync takes to complete.
+    AN.cloudSyncComplete = true;
+    var syncQueued = window._anCloudSyncCallbacks || [];
+    window._anCloudSyncCallbacks = [];
+    syncQueued.forEach(function(fn) { if (fn) fn(); });
   };
 
   anRememberRepUserId(_currentUser);
@@ -19424,16 +19433,17 @@ var _origShowSection_crm = window.showSection;
 window.showSection = function(id, btn){
   if(typeof _origShowSection_crm==='function') _origShowSection_crm(id, btn);
   if(id==='crm'){
-    if (AN.leadsReady && document.getElementById('crm-content')) {
+    if (AN.cloudSyncComplete && document.getElementById('crm-content')) {
       if (typeof renderLeadsTable === 'function') renderLeadsTable();
       return;
     }
-    // Wait for the load (and its dedup pass) to actually finish before building
-    // the stats bar/table — rendering immediately from whatever's in memory at
-    // this exact instant could catch a transient, not-yet-deduplicated snapshot,
-    // which is what was causing status counts to add up to more than the total.
-    if (typeof anEnsureLeadsLoaded === 'function') {
-      anEnsureLeadsLoaded(function() {
+    // Wait for the REAL cloud sync to finish, not just anEnsureLeadsLoaded —
+    // that flag can flip true immediately from stale local cache while the
+    // actual full sync (which can take a while on a large dataset) keeps
+    // running separately in the background, which is what let status counts
+    // add up to more than the total.
+    if (typeof anEnsureCloudSyncComplete === 'function') {
+      anEnsureCloudSyncComplete(function() {
         if (typeof renderCRM === 'function') renderCRM();
       });
     } else {
@@ -26630,14 +26640,21 @@ window.showSection = function(id, btn) {
       });
     }
   }
+  if (id === 'leadsession') {
+    if (typeof anEnsureLeadsLoaded === 'function') {
+      anEnsureLeadsLoaded(function() { if (typeof renderLeadSessionPage === 'function') renderLeadSessionPage(); });
+    } else if (typeof renderLeadSessionPage === 'function') {
+      setTimeout(renderLeadSessionPage, 30);
+    }
+  }
 };
 
 // ── Auto-render when signed in ────────────────────────────────
 var _origOnUserLoggedIn_hd = window.onUserLoggedIn;
 window.onUserLoggedIn = function(user) {
   if (typeof _origOnUserLoggedIn_hd === 'function') _origOnUserLoggedIn_hd(user);
-  if (typeof anEnsureLeadsLoaded === 'function') {
-    anEnsureLeadsLoaded(function() {
+  if (typeof anEnsureCloudSyncComplete === 'function') {
+    anEnsureCloudSyncComplete(function() {
       var homeSec = document.getElementById('section-home');
       if (homeSec && homeSec.classList.contains('active')) hdRender();
     });
@@ -26667,13 +26684,14 @@ document.addEventListener('DOMContentLoaded', function() {
     anAddNavTooltips();
     var homeSec = document.getElementById('section-home');
     if (homeSec && homeSec.classList.contains('active')) {
-      // Don't render immediately here — that was rendering from whatever
-      // partial data happened to be loaded at that exact instant, which is
-      // exactly what caused Team Activity to show a different (wrong) number
-      // on every refresh depending on timing. Wait for the load to actually
-      // finish, then render once from the real, complete data.
-      if (typeof anEnsureLeadsLoaded === 'function') {
-        anEnsureLeadsLoaded(function(){ hdRender(); });
+      // Waiting for leadsReady alone wasn't enough — that flag can flip true
+      // immediately off stale local cache while the real cloud sync (which can
+      // take a while for a large dataset) keeps running separately in the
+      // background. That mismatch was exactly why Team Activity would show a
+      // wrong number that only self-corrected once that background sync
+      // eventually finished. Wait for the real sync instead.
+      if (typeof anEnsureCloudSyncComplete === 'function') {
+        anEnsureCloudSyncComplete(function(){ hdRender(); });
       } else {
         hdRender();
       }
@@ -26685,8 +26703,8 @@ document.addEventListener('DOMContentLoaded', function() {
 setInterval(function() {
   var homeSec = document.getElementById('section-home');
   if (homeSec && homeSec.classList.contains('active')) {
-    if (typeof anEnsureLeadsLoaded === 'function') {
-      anEnsureLeadsLoaded(function(){ hdRender(); });
+    if (typeof anEnsureCloudSyncComplete === 'function') {
+      anEnsureCloudSyncComplete(function(){ hdRender(); });
     } else {
       hdRender();
     }
@@ -28650,6 +28668,32 @@ window.anCountCallableLeads = function(opts) {
   }
   if (opts.phoneOnly) pool = pool.filter(function(l){ return l.phone; });
   return pool.length;
+};
+
+// Use this instead of anEnsureLeadsLoaded for anything that needs accurate
+// totals (like Team Activity) — leadsReady can become true immediately from
+// stale local cache alone, while the real cloud sync keeps running in the
+// background for as long as it takes (which can be several minutes for a
+// large dataset). This waits for that real sync to actually finish instead.
+window.anEnsureCloudSyncComplete = function(cb) {
+  if (typeof AN === 'undefined') { if (cb) cb(); return; }
+  if (AN.cloudSyncComplete) { if (cb) cb(); return; }
+  window._anCloudSyncCallbacks = window._anCloudSyncCallbacks || [];
+  if (cb) window._anCloudSyncCallbacks.push(cb);
+  if (window._anCloudSyncWatchdog) return;
+  // Safety net only — if something goes wrong and the sync never reports back,
+  // don't hang forever. This is intentionally much longer than the leads-ready
+  // watchdog, since a real full sync of a large dataset can legitimately take
+  // a while and shouldn't be mistaken for a stuck/broken state too early.
+  window._anCloudSyncWatchdog = setTimeout(function() {
+    window._anCloudSyncWatchdog = null;
+    if (!AN.cloudSyncComplete) {
+      AN.cloudSyncComplete = true;
+      var q = window._anCloudSyncCallbacks || [];
+      window._anCloudSyncCallbacks = [];
+      q.forEach(function(fn) { try { fn(); } catch(e) {} });
+    }
+  }, 45000);
 };
 
 window.anEnsureLeadsLoaded = function(cb) {
@@ -38364,6 +38408,255 @@ window.anBuildExecutiveReportPDF = function() {
     console.error('[Executive Report] Failed to generate:', err);
     if (typeof showToast === 'function') showToast('Could not generate report: ' + err.message);
   }
+};
+
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// LEAD SESSION PAGE — dedicated full-page tab (not a modal), matching
+// a 3-column layout: lead summary/tags/actions | call+coach+script+notes
+// | goals/progress/activity/intelligence. Reuses the existing call-mode
+// engine for the center panel (AI Coach, script, outcome logging all
+// already work) instead of re-implementing that logic — the panel is
+// built normally then re-parented from its usual modal position into
+// this page's center column. Deliberately has NO session timer.
+// ═══════════════════════════════════════════════════════════════
+(function() {
+
+function lsPickCurrentLeadId() {
+  var q = typeof anGetActiveCallQueue === 'function' ? anGetActiveCallQueue() : null;
+  if (q && q.ids && q.ids.length) {
+    var next = q.ids.find(function(id) { return (q.completed || []).indexOf(id) < 0; });
+    return next || q.ids[0];
+  }
+  var mine = (typeof anMyLeads === 'function' ? anMyLeads() : AN.leads || []).filter(function(l) {
+    return l && l.status !== 'won' && l.status !== 'lost';
+  });
+  return mine.length ? mine[0].id : (AN.leads && AN.leads[0] && AN.leads[0].id);
+}
+
+function lsBuildLeftColumn(lead) {
+  var name = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || lead.company || 'Lead';
+  var initials = (name.match(/\b\w/g) || ['?']).slice(0, 2).join('').toUpperCase();
+  var isNew = lead.status === 'new';
+  var sizeLabel = (typeof AN_SIZES !== 'undefined' ? (AN_SIZES.find(function(s){ return s.id === lead.size; }) || {}).label : '') || 'Independent Agent';
+  var scoreVal = Math.min(95, 40 + ((lead.callLog || []).length * 8) + (lead.email ? 10 : 0) + (lead.phone ? 10 : 0));
+  var scoreLabel = scoreVal >= 70 ? 'Good Fit' : scoreVal >= 45 ? 'Possible Fit' : 'Needs Info';
+  var scoreColor = scoreVal >= 70 ? '#10b981' : scoreVal >= 45 ? '#f59e0b' : '#a1a1aa';
+  var dataPoints = ['firstName','lastName','phone','email','company','state','size'].filter(function(k){ return !!lead[k]; }).length;
+
+  var rows = [
+    { icon: '📞', val: lead.phone ? anFormatPhone(lead.phone) : '', label: '', action: '' },
+    { icon: '✉️', val: lead.email || '', label: 'Email', action: lead.email ? 'window.location.href=\'mailto:'+anEsc(lead.email)+'\'' : '' },
+    { icon: '🕐', val: lead.demoTz || 'Timezone unknown', label: '' },
+    { icon: '🏢', val: lead.company || 'No Company Listed', label: '' },
+    { icon: '🌐', val: lead.website || 'No Website', label: '' }
+  ];
+
+  var tags = [];
+  if (lead.size) tags.push(sizeLabel);
+  if (lead.state) tags.push(lead.state);
+  (lead.tags || []).forEach(function(t){ tags.push(t); });
+
+  return '<div style="display:flex;flex-direction:column;gap:14px;">'
+    + '<div class="ls-card">'
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">'
+    + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Lead Summary</div>'
+    + (isNew ? '<span style="background:#ecfdf5;color:#059669;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;">New Lead</span>' : '')
+    + '</div>'
+    + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">'
+    + '<div style="width:44px;height:44px;border-radius:50%;background:#ede9fe;color:#7c3aed;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0;">' + anEsc(initials) + '</div>'
+    + '<div><div style="font-weight:700;font-size:15px;color:var(--text-primary);">' + anEsc(name) + '</div>'
+    + '<div style="font-size:12px;color:var(--text-muted);">' + anEsc(sizeLabel) + '</div>'
+    + '<div style="font-size:11px;color:var(--text-muted);">📍 ' + anEsc(lead.state || 'Location unknown') + '</div></div>'
+    + '</div>'
+    + rows.map(function(r) {
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-top:1px solid var(--divider);font-size:12.5px;">'
+          + '<span style="color:var(--text-secondary);">' + r.icon + ' ' + (r.val ? anEsc(r.val) : '<span style=\"color:var(--text-muted);\">' + anEsc(r.label || 'Unknown') + '</span>') + '</span>'
+          + (r.label && r.val ? '<button onclick="' + r.action + '" style="background:none;border:none;color:#6366f1;font-size:11px;font-weight:700;cursor:pointer;">' + r.label + '</button>' : '')
+          + '</div>';
+      }).join('')
+    + '</div>'
+
+    + '<div class="ls-card" style="text-align:center;">'
+    + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:10px;text-align:left;">AI Lead Score</div>'
+    + '<div style="width:64px;height:64px;border-radius:50%;border:5px solid ' + scoreColor + ';display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:' + scoreColor + ';margin:0 auto 8px;">' + scoreVal + '</div>'
+    + '<div style="font-weight:700;font-size:13px;color:var(--text-primary);">' + scoreLabel + '</div>'
+    + '<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Based on ' + dataPoints + ' data points</div>'
+    + '<button onclick="if(typeof showToast===\'function\')showToast(\'Full score breakdown coming soon\')" style="background:none;border:none;color:#6366f1;font-size:11.5px;font-weight:700;cursor:pointer;">View Score Details</button>'
+    + '</div>'
+
+    + '<div class="ls-card">'
+    + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:10px;">Tags</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">' + tags.map(function(t) {
+        return '<span style="background:#ecfdf5;color:#059669;font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;">' + anEsc(t) + '</span>';
+      }).join('') + '</div>'
+    + '<button onclick="if(typeof showToast===\'function\')showToast(\'Custom tags coming soon\')" style="background:var(--body-bg);border:1px dashed var(--divider);color:var(--text-secondary);font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:8px;cursor:pointer;">+ Add Tag</button>'
+    + '</div>'
+
+    + '<div class="ls-card">'
+    + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:10px;">Quick Actions</div>'
+    + '<div style="display:flex;flex-direction:column;gap:6px;">'
+    + '<button class="ls-qa-btn" onclick="' + (lead.email ? "window.location.href='mailto:" + anEsc(lead.email) + "'" : "if(typeof showToast==='function')showToast('No email on file for this lead')") + '">✉️ Send Email</button>'
+    + '<button class="ls-qa-btn" onclick="anOpenBookMeeting({name:\'' + anEsc(((lead.firstName||'')+' '+(lead.lastName||'')).trim()) + '\',email:\'' + anEsc(lead.email||'') + '\',leadId:\'' + lead.id + '\'})">📅 Schedule Meeting</button>'
+    + '<button class="ls-qa-btn" onclick="anCreateTask(\'' + lead.id + '\')">✅ Create Task</button>'
+    + '<button class="ls-qa-btn" onclick="if(typeof anOpenLeadPanel===\'function\')anOpenLeadPanel(\'' + lead.id + '\')">📝 Add Note</button>'
+    + '</div></div>'
+    + '</div>';
+}
+
+function lsBuildRightColumn(lead) {
+  var calls = typeof dashGetScopedActivityTotals === 'function' ? dashGetScopedActivityTotals() : { calls: 0, demos: 0, closes: 0 };
+  var callsGoal = typeof getGoalForPeriod === 'function' ? getGoalForPeriod('calls', 'today') || 50 : 50;
+  var demosGoal = typeof getGoalForPeriod === 'function' ? getGoalForPeriod('demos', 'today') || 4 : 4;
+  var closesGoal = typeof getGoalForPeriod === 'function' ? getGoalForPeriod('closes', 'today') || 1 : 1;
+
+  var q = typeof anGetActiveCallQueue === 'function' ? anGetActiveCallQueue() : null;
+  var sessionPos = q && q.completed ? q.completed.length : 0;
+  var sessionTotal = q && q.ids ? q.ids.length : 0;
+  var sessionPct = sessionTotal ? Math.round((sessionPos / sessionTotal) * 100) : 0;
+
+  var todaysActivity = (typeof AN !== 'undefined' && AN.leads ? AN.leads : [])
+    .flatMap(function(l) { return (l.callLog || []).map(function(c) { return { c: c, name: ((l.firstName||'')+' '+(l.lastName||'')).trim() || l.company }; }); })
+    .filter(function(x) { return typeof anCallOnLocalDate === 'function' ? anCallOnLocalDate(x.c, anLocalDateStr()) : false; })
+    .sort(function(a, b) { return (b.c.time || '').localeCompare(a.c.time || ''); })
+    .slice(0, 5);
+
+  var outcomeIcon = { pickup: '📞', noanswer: '📵', voicemail: '📬', demo: '🎯', emailed: '✉️', demo_complete: '✅', callback: '⏰' };
+  var outcomeLabel = { pickup: 'Call — Interested', noanswer: 'Call Attempt — No Answer', voicemail: 'Voicemail Left', demo: 'Demo Scheduled', emailed: 'Email Sent', demo_complete: 'Demo Completed', callback: 'Follow-up Set' };
+
+  var nearbyCount = (typeof _coData !== 'undefined' && Array.isArray(_coData)) ? _coData.filter(function(c) { return c.state === lead.state; }).length : 0;
+
+  return '<div style="display:flex;flex-direction:column;gap:14px;">'
+    + '<div class="ls-card">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
+    + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Today\'s Goals</div>'
+    + '<button onclick="showSection(\'dashboard\',null)" style="background:none;border:none;color:#6366f1;font-size:11px;font-weight:700;cursor:pointer;">Edit Goals</button>'
+    + '</div>'
+    + [['Calls', calls.calls || 0, callsGoal, '#6366f1'], ['Demos', calls.demos || 0, demosGoal, '#8b5cf6'], ['Sales', calls.closes || 0, closesGoal, '#f59e0b']].map(function(g) {
+        var pct = g[2] ? Math.min(100, Math.round((g[1] / g[2]) * 100)) : 0;
+        return '<div style="margin-bottom:10px;">'
+          + '<div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-secondary);margin-bottom:4px;"><span>' + g[0] + '</span><span style="font-weight:700;color:var(--text-primary);">' + g[1] + ' / ' + g[2] + '</span></div>'
+          + '<div style="height:5px;background:var(--body-bg);border-radius:3px;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:' + g[3] + ';"></div></div>'
+          + '</div>';
+      }).join('')
+    + '</div>'
+
+    + (sessionTotal ? '<div class="ls-card">'
+    + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:8px;">Session Progress</div>'
+    + '<div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px;"><span style="color:var(--text-secondary);">' + sessionPos + ' of ' + sessionTotal + '</span><span style="font-weight:700;color:var(--text-primary);">' + sessionPct + '%</span></div>'
+    + '<div style="height:6px;background:var(--body-bg);border-radius:3px;overflow:hidden;"><div style="height:100%;width:' + sessionPct + '%;background:#10b981;"></div></div>'
+    + '</div>' : '')
+
+    + '<div class="ls-card">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+    + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Today\'s Activity</div>'
+    + '<button onclick="showSection(\'dashboard\',null)" style="background:none;border:none;color:#6366f1;font-size:11px;font-weight:700;cursor:pointer;">View All</button>'
+    + '</div>'
+    + (todaysActivity.length ? todaysActivity.map(function(a) {
+        return '<div style="display:flex;gap:8px;padding:6px 0;font-size:11.5px;">'
+          + '<span>' + (outcomeIcon[a.c.outcome] || '📋') + '</span>'
+          + '<div><div style="color:var(--text-primary);font-weight:600;">' + (outcomeLabel[a.c.outcome] || a.c.outcome || 'Activity') + '</div>'
+          + '<div style="color:var(--text-muted);font-size:10.5px;">' + (a.c.time || '') + '</div></div></div>';
+      }).join('') : '<div style="font-size:12px;color:var(--text-muted);">No activity logged yet today.</div>')
+    + '</div>'
+
+    + '<div class="ls-card">'
+    + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:10px;">Lead Intelligence</div>'
+    + [['📍', 'Location', (lead.state || 'Unknown')], ['🎯', 'Likely Market', 'ACA'], ['🕐', 'Time Zone', (lead.demoTz || 'Unknown')], ['🏘️', 'Nearby Agencies', nearbyCount + ' found'], ['📋', 'Carrier Appointments', 'Unknown']].map(function(r) {
+        return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;"><span style="color:var(--text-muted);">' + r[0] + ' ' + r[1] + '</span><span style="color:var(--text-primary);font-weight:600;">' + r[2] + '</span></div>';
+      }).join('')
+    + '<div style="display:flex;gap:8px;margin-top:10px;">'
+    + '<button onclick="window.open(\'https://www.linkedin.com/search/results/all/?keywords=\'+encodeURIComponent(\'' + anEsc((lead.firstName||'')+' '+(lead.lastName||'')) + '\'),\'_blank\')" style="background:var(--body-bg);border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;">🔗</button>'
+    + '<button onclick="if(typeof anRunLeadResearch===\'function\')anRunLeadResearch(\'' + lead.id + '\')" style="flex:1;background:#eef2ff;border:none;border-radius:6px;color:#6366f1;font-size:11.5px;font-weight:700;cursor:pointer;">🔍 Research Lead</button>'
+    + '</div></div>'
+    + '</div>';
+}
+
+window.renderLeadSessionPage = function(leadId) {
+  var root = document.getElementById('leadsession-root');
+  if (!root) return;
+  if (!AN.leads || !AN.leads.length) {
+    if (typeof anEnsureLeadsLoaded === 'function') { anEnsureLeadsLoaded(function(){ renderLeadSessionPage(leadId); }); return; }
+  }
+  leadId = leadId || lsPickCurrentLeadId();
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (!lead) { root.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text-muted);">No lead available to start a session.</div>'; return; }
+
+  var q = typeof anGetActiveCallQueue === 'function' ? anGetActiveCallQueue() : null;
+  var pos = 1, total = 1;
+  if (q && q.ids && q.ids.length) {
+    pos = q.ids.indexOf(leadId) + 1;
+    total = q.ids.length;
+  }
+
+  if (!document.getElementById('ls-styles')) {
+    var style = document.createElement('style');
+    style.id = 'ls-styles';
+    style.textContent = '.ls-card{background:var(--card-bg);border:1px solid var(--divider);border-radius:12px;padding:16px;}'
+      + '.ls-qa-btn{display:flex;align-items:center;gap:8px;background:var(--body-bg);border:1px solid var(--divider);border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:600;color:var(--text-secondary);cursor:pointer;text-align:left;font-family:inherit;}'
+      + '.ls-qa-btn:hover{background:#eef2ff;color:#6366f1;}';
+    document.head.appendChild(style);
+  }
+
+  root.innerHTML =
+    '<div style="padding:20px 32px;border-bottom:1px solid var(--divider);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">'
+    + '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Outreach Session \u2014 Cold Calls</div>'
+    + '<h1 style="margin:2px 0 0;font-size:22px;">Lead Session</h1></div>'
+    + '<div style="display:flex;align-items:center;gap:14px;">'
+    + '<button onclick="lsGoToAdjacent(-1)" style="background:var(--body-bg);border:1px solid var(--divider);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:14px;">\u2039</button>'
+    + '<span style="font-size:13px;color:var(--text-secondary);">Lead <strong style="color:var(--text-primary);">' + pos + '</strong> of ' + total + '</span>'
+    + '<button onclick="lsGoToAdjacent(1)" style="background:var(--body-bg);border:1px solid var(--divider);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:14px;">\u203a</button>'
+    + '</div>'
+    + '<button onclick="lsEndSession()" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;">\u23f9 End Session</button>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:260px 1fr 280px;gap:18px;padding:20px 32px;align-items:start;">'
+    + '<div id="ls-left-col">' + lsBuildLeftColumn(lead) + '</div>'
+    + '<div id="ls-center-col" style="min-height:400px;background:var(--card-bg);border:1px solid var(--divider);border-radius:12px;overflow:hidden;"></div>'
+    + '<div id="ls-right-col">' + lsBuildRightColumn(lead) + '</div>'
+    + '</div>';
+
+  // Reuse the existing call-mode engine for the center panel (AI Coach, script,
+  // outcome logging all already work correctly there) — build it normally, then
+  // move it from its usual full-screen modal position into our center column,
+  // and strip the modal-specific styling/body class so it displays inline.
+  if (typeof openMobileCallMode === 'function') {
+    openMobileCallMode(leadId);
+    setTimeout(function() {
+      var wrap = document.getElementById('mcm-panel-wrap');
+      var center = document.getElementById('ls-center-col');
+      if (wrap && center) {
+        center.appendChild(wrap);
+        wrap.style.position = 'static';
+        wrap.style.width = '100%';
+        wrap.style.height = 'auto';
+        wrap.style.maxWidth = 'none';
+        var overlay = document.getElementById('mcm-overlay');
+        if (overlay) { overlay.style.height = 'auto'; overlay.style.minHeight = '400px'; }
+        document.body.classList.remove('call-panel-open');
+        // Session timer intentionally removed from this view
+        var timer = document.getElementById('mcm-call-timer') || document.querySelector('#mcm-call-header [id*="timer" i]');
+        if (timer) timer.style.display = 'none';
+      }
+    }, 30);
+  }
+};
+
+window.lsGoToAdjacent = function(dir) {
+  var q = typeof anGetActiveCallQueue === 'function' ? anGetActiveCallQueue() : null;
+  if (!q || !q.ids || !q.ids.length) { if (typeof showToast === 'function') showToast('No active session queue'); return; }
+  var overlay = document.getElementById('mcm-overlay');
+  var current = overlay ? overlay._leadId : null;
+  var idx = current ? q.ids.indexOf(current) : 0;
+  var nextIdx = idx + dir;
+  if (nextIdx < 0) nextIdx = q.ids.length - 1;
+  if (nextIdx >= q.ids.length) nextIdx = 0;
+  renderLeadSessionPage(q.ids[nextIdx]);
+};
+
+window.lsEndSession = function() {
+  if (confirm('End call session?') && typeof anEndCallSession === 'function') anEndCallSession();
+  showSection('home', null);
 };
 
 })();
