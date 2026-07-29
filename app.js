@@ -20458,6 +20458,18 @@ window.anRenderTeamMap = function() {
   });
 };
 
+window.anCloseLeadSidePanel = function() {
+  var panel = document.getElementById('an-side-panel');
+  if (!panel) return;
+  panel.style.transform = 'translateX(100%)';
+  var mainEl = document.querySelector('.main');
+  if (mainEl) mainEl.classList.remove('an-panel-push');
+  setTimeout(function() {
+    var p = document.getElementById('an-side-panel');
+    if (p) p.remove();
+  }, 300);
+};
+
 window.anOpenLeadPanel = function(leadId) {
   var lead = AN.leadById(leadId);
   if (!lead) return;
@@ -20469,6 +20481,7 @@ window.anOpenLeadPanel = function(leadId) {
 
   var panel = document.getElementById('an-side-panel');
   var sameLead = panel && window._anPanelLeadId === leadId;
+  var mainEl = document.querySelector('.main');
   if (!panel) {
     panel = document.createElement('div');
     panel.id = 'an-side-panel';
@@ -20480,14 +20493,19 @@ window.anOpenLeadPanel = function(leadId) {
     var panelZ = callSessionOpen ? '19999' : (oppPanelOpen ? '9100' : '8888');
     panel.style.cssText = 'position:fixed;top:0;right:' + rightOffset + ';width:' + panelWidth + ';max-width:100vw;height:100vh;background:var(--card-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.15);z-index:' + panelZ + ';display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);box-sizing:border-box;';
     document.body.appendChild(panel);
+    // Shrink the main content area to make room instead of floating over it —
+    // only do this when there's no call session open (that has its own offset).
+    if (!callSessionOpen && mainEl) mainEl.classList.add('an-panel-push');
     setTimeout(function(){ panel.style.transform = 'translateX(0)'; }, 10);
   } else if (!sameLead) {
     panel.remove();
     panel = document.createElement('div');
     panel.id = 'an-side-panel';
     var oppPanelOpen2 = !!document.getElementById('opp-record-panel');
+    var callSessionOpen2 = document.body.classList.contains('call-panel-open') || !!document.getElementById('mcm-panel-wrap');
     panel.style.cssText = 'position:fixed;top:0;right:0;width:440px;max-width:100vw;height:100vh;background:var(--card-bg);box-shadow:-4px 0 40px rgba(0,0,0,0.15);z-index:' + (oppPanelOpen2 ? '9100' : '8888') + ';display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.26s cubic-bezier(0.16,1,0.3,1);box-sizing:border-box;';
     document.body.appendChild(panel);
+    if (!callSessionOpen2 && mainEl) mainEl.classList.add('an-panel-push');
     setTimeout(function(){ panel.style.transform = 'translateX(0)'; }, 10);
   }
 
@@ -20506,34 +20524,37 @@ window.anOpenLeadPanel = function(leadId) {
     var demosSet = calls.filter(function(c){return c.outcome==='demo';}).length;
 
     panel.innerHTML =
-      // Header
-      '<div style="background:linear-gradient(135deg,#0a0a14,#1a1640);padding:18px 20px;flex-shrink:0;">'
-      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">'
-      +'<div>'
-      +'<div style="font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.4px;">'+anEsc((lead.firstName||'')+' '+(lead.lastName||''))+'</div>'
-      +(lead.title?'<div style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:2px;">'+anEsc(lead.title)+'</div>':'')
+      // Header — clean light style matching the Lead Session page, not the old dark gradient
+      '<div style="background:var(--card-bg);border-bottom:1px solid var(--divider);padding:18px 20px;flex-shrink:0;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">'
+      +'<div style="display:flex;align-items:center;gap:10px;min-width:0;">'
+      +'<div style="width:40px;height:40px;border-radius:50%;background:#ede9fe;color:#7c3aed;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;">'+anEsc((((lead.firstName||'')+' '+(lead.lastName||'')).match(/\b\w/g)||['?']).slice(0,2).join('').toUpperCase())+'</div>'
+      +'<div style="min-width:0;">'
+      +'<div style="font-size:16px;font-weight:800;color:var(--text-primary);letter-spacing:-0.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+anEsc((lead.firstName||'')+' '+(lead.lastName||''))+'</div>'
+      +(lead.title?'<div style="font-size:11.5px;color:var(--text-muted);margin-top:1px;">'+anEsc(lead.title)+'</div>':'')
       +((lead.company && (document.body.classList.contains('call-panel-open') || document.getElementById('mcm-panel-wrap')) && typeof anBuildClickableCompanyHtml === 'function')
-        ? '<div data-panel-company style="font-size:13px;margin-top:2px;color:rgba(255,255,255,0.5);">'+anBuildClickableCompanyHtml(lead.company, 'color:rgba(255,255,255,0.5);')+'</div>'
-        : '<div data-panel-company style="font-size:13px;margin-top:2px;color:'+(lead.company?'rgba(255,255,255,0.5)':'#fcd34d')+';">'+anEsc(lead.company||'No company — add below')+'</div>')
-      +'</div>'
-      +'<div style="display:flex;gap:7px;align-items:center;">'
-      +'<span style="background:'+st.color+'28;color:'+st.color+';border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;">'+st.label+'</span>'
-      +'<button onclick="document.getElementById(\'an-side-panel\').style.transform=\'translateX(100%)\';setTimeout(function(){document.getElementById(\'an-side-panel\').remove();},300)" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;">✕</button>'
+        ? '<div data-panel-company style="font-size:12px;margin-top:1px;color:var(--text-muted);">'+anBuildClickableCompanyHtml(lead.company, 'color:var(--text-muted);')+'</div>'
+        : '<div data-panel-company style="font-size:12px;margin-top:1px;color:'+(lead.company?'var(--text-muted)':'#b45309')+';">'+anEsc(lead.company||'No company — add below')+'</div>')
+      +'</div></div>'
+      +'<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">'
+      +'<span style="background:'+st.color+'18;color:'+st.color+';border-radius:20px;padding:4px 11px;font-size:10.5px;font-weight:700;white-space:nowrap;">'+st.label+'</span>'
+      +'<button onclick="if(typeof renderLeadFullView===\'function\')renderLeadFullView(\''+lead.id+'\')" title="Open full view" style="background:var(--body-bg);border:1px solid var(--divider);color:var(--text-secondary);padding:0 9px;height:26px;border-radius:7px;cursor:pointer;font-size:10.5px;font-weight:700;white-space:nowrap;">\u2922</button>'
+      +'<button onclick="anCloseLeadSidePanel()" style="background:var(--body-bg);border:1px solid var(--divider);color:var(--text-secondary);width:26px;height:26px;border-radius:7px;cursor:pointer;font-size:13px;">✕</button>'
       +'</div></div>'
 
-      // Quick stats
+      // Quick stats — light card style
       +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'
-      +['<div style="background:rgba(255,255,255,0.06);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#fff;">'+totalCalls+'</div><div style="font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.1em;">Calls</div></div>',
-        '<div style="background:rgba(255,255,255,0.06);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#10b981;">'+pickups+'</div><div style="font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.1em;">Pickups</div></div>',
-        '<div style="background:rgba(255,255,255,0.06);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#f59e0b;">'+demosSet+'</div><div style="font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.1em;">Demos</div></div>'
+      +['<div style="background:var(--body-bg);border:1px solid var(--divider);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:17px;font-weight:800;color:var(--text-primary);">'+totalCalls+'</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">Calls</div></div>',
+        '<div style="background:var(--body-bg);border:1px solid var(--divider);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:17px;font-weight:800;color:#10b981;">'+pickups+'</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">Pickups</div></div>',
+        '<div style="background:var(--body-bg);border:1px solid var(--divider);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:17px;font-weight:800;color:#f59e0b;">'+demosSet+'</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">Demos</div></div>'
       ].join('')+'</div>'
-      +'<div data-call-again style="margin-top:10px;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;gap:10px;">'
-      +'<span id="sp-call-counter-'+lead.id+'" style="font-size:12px;color:rgba(255,255,255,0.55);white-space:nowrap;">'
+      +'<div data-call-again style="margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--body-bg);border:1px solid var(--divider);display:flex;align-items:center;justify-content:space-between;gap:10px;">'
+      +'<span id="sp-call-counter-'+lead.id+'" style="font-size:11.5px;color:var(--text-muted);white-space:nowrap;">'
       +(todayCalls > 0 ? todayCalls + ' call attempt' + (todayCalls !== 1 ? 's' : '') + ' today' : 'No calls logged today')
       +'</span>'
       +(lead.phone
-        ? '<button type="button" onclick="anCallAgain(\''+lead.id+'\')" style="flex-shrink:0;background:rgba(16,185,129,0.18);border:1px solid rgba(16,185,129,0.35);border-radius:7px;padding:6px 12px;font-size:12px;font-weight:700;color:#6ee7b7;cursor:pointer;font-family:var(--sans);white-space:nowrap;">📞 Call Again</button>'
-        : '<button type="button" onclick="openMobileCallMode(\''+lead.id+'\')" style="flex-shrink:0;background:rgba(99,102,241,0.18);border:1px solid rgba(99,102,241,0.35);border-radius:7px;padding:6px 12px;font-size:12px;font-weight:700;color:#c7d2fe;cursor:pointer;font-family:var(--sans);white-space:nowrap;">📞 Start Call</button>')
+        ? '<button type="button" onclick="anCallAgain(\''+lead.id+'\')" style="flex-shrink:0;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;color:#059669;cursor:pointer;font-family:var(--sans);white-space:nowrap;">📞 Call Again</button>'
+        : '<button type="button" onclick="openMobileCallMode(\''+lead.id+'\')" style="flex-shrink:0;background:#eef2ff;border:1px solid #c7d2fe;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;color:#6366f1;cursor:pointer;font-family:var(--sans);white-space:nowrap;">📞 Start Call</button>')
       +'</div></div>'
 
       // Action buttons
@@ -20549,7 +20570,7 @@ window.anOpenLeadPanel = function(leadId) {
       + (typeof anBuildLeadOwnerCardHtml === 'function' ? anBuildLeadOwnerCardHtml(lead) : '')
 
       // Contact details card
-      +'<div style="background:var(--body-bg);border-radius:10px;padding:14px;margin-bottom:14px;min-width:0;">'
+      +'<div class="ls-card" style="margin-bottom:14px;min-width:0;">'
       +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:10px;">Contact Details</div>'
       +'<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--divider);">'
       +'<div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">🏢 Company / Agency</div>'
@@ -20585,19 +20606,19 @@ window.anOpenLeadPanel = function(leadId) {
       + anBuildLeadIntelSection(lead)
 
       // Notes
-      +(lead.notes?'<div style="background:var(--body-bg);border-radius:10px;padding:14px;margin-bottom:14px;">'
+      +(lead.notes?'<div class="ls-card" style="margin-bottom:14px;">'
         +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Notes</div>'
         +'<div style="font-size:13px;color:var(--text-secondary);line-height:1.7;">'+anEsc(lead.notes)+'</div>'
         +'</div>':'')
 
       // Call timeline
-      +'<div style="margin-bottom:14px;">'
+      +'<div class="ls-card" style="margin-bottom:14px;">'
       +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:10px;">Activity Timeline</div>'
       +(calls.length ? calls.slice(0,10).map(function(c){
         var col = callColors[c.outcome]||'#a1a1aa';
-        return '<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--divider);">'
+        return '<div style="display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--divider);">'
           +'<div style="width:28px;height:28px;border-radius:50%;background:'+col+'18;border:1.5px solid '+col+'44;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">'+(callIcons[c.outcome]||'📞')+'</div>'
-          +'<div style="flex:1;"><div style="font-size:12.5px;font-weight:700;color:var(--text-primary);">'+(c.outcome||'Call')+'</div>'
+          +'<div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:700;color:var(--text-primary);">'+(c.outcome||'Call')+'</div>'
           +'<div style="font-size:11px;color:var(--text-muted);">'+anDate(c.date)+(c.time?' · '+c.time:'')+(c.duration?' · '+c.duration+'m':'')+'</div>'
           +(c.notes?'<div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">'+anEsc(c.notes)+'</div>':'')
           +'</div></div>';
@@ -39045,6 +39066,65 @@ window.lsSaveAndNext = function(leadId) {
   var hiddenNotes = document.getElementById('mcm-note');
   if (notesEl && hiddenNotes) hiddenNotes.value = notesEl.value;
   if (typeof mcmSaveAndNext === 'function') mcmSaveAndNext(leadId);
+};
+
+window.renderLeadFullView = function(leadId) {
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (!lead) return;
+
+  var sec = document.getElementById('section-leadfullview');
+  if (!sec) {
+    sec = document.createElement('div');
+    sec.className = 'section';
+    sec.id = 'section-leadfullview';
+    sec.innerHTML = '<div id="leadfullview-root"></div>';
+    var mainEl = document.querySelector('.main');
+    (mainEl || document.body).appendChild(sec);
+  }
+  document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+  sec.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+
+  var root = document.getElementById('leadfullview-root');
+  var name = ((lead.firstName || '') + ' ' + (lead.lastName || '')).trim() || lead.company || 'Lead';
+  var calls = (lead.callLog || []).slice().sort(function(a, b) { return (b.date + (b.time||'')).localeCompare(a.date + (a.time||'')); });
+  var outcomeIcon = { pickup: '📞', noanswer: '📵', voicemail: '📬', demo: '🎯', emailed: '✉️', demo_complete: '✅', callback: '⏰' };
+  var outcomeLabel = { pickup: 'Picked Up', noanswer: 'No Answer', voicemail: 'Voicemail', demo: 'Demo Booked', emailed: 'Email Sent', demo_complete: 'Demo Completed', callback: 'Follow-up Set' };
+
+  root.innerHTML = '<div style="padding:20px 32px;border-bottom:1px solid var(--divider);display:flex;justify-content:space-between;align-items:center;">'
+    + '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Full Lead View</div>'
+    + '<h1 style="margin:2px 0 0;font-size:22px;">' + anEsc(name) + '</h1></div>'
+    + '<button onclick="showSection(\'crm\',null)" style="background:var(--body-bg);border:1px solid var(--divider);border-radius:8px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;">\u2190 Back to Lead Pipeline</button>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:260px 1fr 280px;gap:18px;padding:20px 32px;align-items:start;">'
+    + '<div>' + lsBuildLeftColumn(lead) + '</div>'
+    + '<div style="display:flex;flex-direction:column;gap:16px;">'
+    + '<div class="ls-card">'
+    + '<div style="font-size:12px;font-weight:800;color:var(--text-primary);margin-bottom:10px;">📋 Notes</div>'
+    + '<textarea id="lfv-notes-input" placeholder="Type your notes here..." style="width:100%;min-height:110px;border:1px solid var(--divider);border-radius:8px;padding:10px;font-size:12.5px;font-family:inherit;resize:vertical;background:var(--body-bg);color:var(--text-primary);" onblur="lfvSaveNotes(\'' + lead.id + '\',this)">' + anEsc(lead.notes || '') + '</textarea>'
+    + '</div>'
+    + '<div class="ls-card">'
+    + '<div style="font-size:12px;font-weight:800;color:var(--text-primary);margin-bottom:10px;">📞 Full Activity History</div>'
+    + (calls.length ? calls.map(function(c) {
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--divider);font-size:12.5px;">'
+          + '<span>' + (outcomeIcon[c.outcome] || '📋') + ' ' + (outcomeLabel[c.outcome] || c.outcome || 'Activity') + (c.notes ? ' — ' + anEsc(c.notes) : '') + '</span>'
+          + '<span style="color:var(--text-muted);font-size:11px;flex-shrink:0;">' + anEsc(c.date || '') + ' ' + anEsc(c.time || '') + '</span>'
+          + '</div>';
+      }).join('') : '<div style="font-size:12.5px;color:var(--text-muted);">No activity logged yet.</div>')
+    + '</div>'
+    + '</div>'
+    + '<div>' + lsBuildRightColumn(lead) + '</div>'
+    + '</div>';
+};
+
+window.lfvSaveNotes = function(leadId, el) {
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (!lead) return;
+  lead.notes = el.value;
+  lead.updated = new Date().toISOString();
+  if (typeof AN.invalidateLeadCaches === 'function') AN.invalidateLeadCaches();
+  if (typeof AN.save === 'function') AN.save();
+  if (typeof showToast === 'function') showToast('Notes saved');
 };
 
 window.lsGoToAdjacent = function(dir) {
