@@ -35421,7 +35421,7 @@ function spBuildPanelHTML(s) {
     + '<div style="font-size:13px;font-weight:800;color:var(--text-primary);">Activity Log</div>'
     + '<div style="display:flex;gap:6px;">'
     + '<button onclick="anOpenSendEmail({name:\''+spEsc((contacts[0]&&contacts[0].name)||s.company||'')+'\',email:\''+spEsc((contacts[0]&&contacts[0].email)||'')+'\',spId:\''+s.id+'\',company:\''+spEsc(s.company||'')+'\'})" style="padding:6px 11px;border:1.5px solid #ddd6fe;border-radius:7px;background:#f5f3ff;font-size:12px;font-weight:700;cursor:pointer;color:#8b5cf6;font-family:inherit;">📧 Email</button>'
-    + '<button onclick="anOpenBookMeeting({name:\''+spEsc((contacts[0]&&contacts[0].name)||s.company||'')+'\',email:\''+spEsc((contacts[0]&&contacts[0].email)||'')+'\',company:\''+spEsc(s.company||'')+'\'})" style="padding:6px 11px;border:1.5px solid #fed7aa;border-radius:7px;background:#fff7ed;font-size:12px;font-weight:700;cursor:pointer;color:#ea580c;font-family:inherit;">📅 Meeting</button>'
+    + '<button onclick="anOpenBookMeeting({name:\''+spEsc((contacts[0]&&contacts[0].name)||s.company||'')+'\',email:\''+spEsc((contacts[0]&&contacts[0].email)||'')+'\',company:\''+spEsc(s.company||'')+'\',meetingTitle:\'ACA Health Summit — Meeting with '+spEsc((contacts[0]&&contacts[0].name)||s.company||'')+'\',notes:\'Discussion of ACA Health Summit sponsorship opportunity.\'})" style="padding:6px 11px;border:1.5px solid #fed7aa;border-radius:7px;background:#fff7ed;font-size:12px;font-weight:700;cursor:pointer;color:#ea580c;font-family:inherit;">📅 Meeting</button>'
     + '<button onclick="spExportPDF(\''+s.id+'\')" style="padding:6px 11px;border:1.5px solid var(--divider);border-radius:7px;background:var(--card-bg);font-size:12px;font-weight:700;cursor:pointer;color:var(--text-secondary);font-family:inherit;">📄 PDF</button>'
     + '</div></div>'
     // Quick log buttons
@@ -36529,7 +36529,7 @@ window.anOpenBookMeeting = function(opts) {
     + '<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Creates a Google Calendar event and opens it so you can invite the contact.</div>'
     // Title
     + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:4px;">Meeting Title</div>'
-    + '<input id="an-mtg-title" type="text" value="'+(opts.company||opts.name ? 'ACA Health Summit — Meeting with '+(opts.company||opts.name) : 'ACA Health Summit Meeting')+'" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;background:var(--card-bg);color:var(--text-primary);margin-bottom:10px;">'
+    + '<input id="an-mtg-title" type="text" value="'+(opts.meetingTitle || (opts.company||opts.name ? 'Meeting with '+(opts.company||opts.name) : 'Meeting'))+'" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;background:var(--card-bg);color:var(--text-primary);margin-bottom:10px;">'
     // Date + Time
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
     + '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:4px;">Date</div>'
@@ -36547,7 +36547,7 @@ window.anOpenBookMeeting = function(opts) {
     + '<input id="an-mtg-guest" type="email" value="'+(opts.email||'')+'" placeholder="their@email.com" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;background:var(--card-bg);color:var(--text-primary);margin-bottom:10px;">'
     // Notes
     + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:4px;">Notes / Agenda</div>'
-    + '<textarea id="an-mtg-notes" rows="3" placeholder="What will you discuss? What do they need to prepare?" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;resize:none;background:var(--card-bg);color:var(--text-primary);margin-bottom:14px;">Discussion of ACA Health Summit sponsorship opportunity.</textarea>'
+    + '<textarea id="an-mtg-notes" rows="3" placeholder="What will you discuss? What do they need to prepare?" style="width:100%;border:1.5px solid var(--divider);border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;resize:none;background:var(--card-bg);color:var(--text-primary);margin-bottom:14px;">'+anEsc(opts.notes||'')+'</textarea>'
     + '<div style="display:flex;gap:8px;">'
     + '<button onclick="document.getElementById(\'an-meeting-modal\').remove()" style="flex:1;padding:10px;border:1.5px solid var(--divider);border-radius:8px;background:var(--card-bg);color:var(--text-muted);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Cancel</button>'
     + '<button onclick="anCreateCalendarEvent('+JSON.stringify(opts)+')" style="flex:2;padding:10px;border:none;border-radius:8px;background:#ea4335;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">📅 Open in Google Calendar →</button>'
@@ -38597,7 +38597,12 @@ function lsBuildLeftColumn(lead) {
     + '</div>';
 }
 
-function lsBuildRightColumn(lead) {
+function lsBuildRightColumn(lead, opts) {
+  opts = opts || {};
+  var TZ_LABELS_RIGHT = { EST:'Eastern Time (ET)', CST:'Central Time (CT)', MST:'Mountain Time (MT)', PST:'Pacific Time (PT)', AKT:'Alaska Time (AKT)', HST:'Hawaii Time (HT)' };
+  var tzCodeRight = lead.demoTz || (typeof anTzFromState === 'function' ? anTzFromState(lead.state) : null);
+  var tzLabelRight = tzCodeRight ? (TZ_LABELS_RIGHT[tzCodeRight] || tzCodeRight) : 'Unknown';
+
   var calls = typeof dashGetScopedActivityTotals === 'function' ? dashGetScopedActivityTotals() : { calls: 0, demos: 0, closes: 0 };
   var callsGoal = typeof getGoalForPeriod === 'function' ? getGoalForPeriod('calls', 'today') || 50 : 50;
   var demosGoal = typeof getGoalForPeriod === 'function' ? getGoalForPeriod('demos', 'today') || 4 : 4;
@@ -38620,7 +38625,7 @@ function lsBuildRightColumn(lead) {
   var nearbyCount = (typeof _coData !== 'undefined' && Array.isArray(_coData)) ? _coData.filter(function(c) { return c.state === lead.state; }).length : 0;
 
   return '<div style="display:flex;flex-direction:column;gap:10px;">'
-    + '<div class="ls-card">'
+    + (opts.hideGoals ? '' : '<div class="ls-card">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
     + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);">Today\'s Goals</div>'
     + '<button onclick="showSection(\'dashboard\',null)" style="background:none;border:none;color:#6366f1;font-size:11px;font-weight:700;cursor:pointer;">Edit Goals</button>'
@@ -38632,13 +38637,13 @@ function lsBuildRightColumn(lead) {
           + '<div style="height:5px;background:var(--body-bg);border-radius:3px;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:' + g[3] + ';"></div></div>'
           + '</div>';
       }).join('')
-    + '</div>'
+    + '</div>')
 
-    + (sessionTotal ? '<div class="ls-card">'
+    + (opts.hideGoals ? '' : (sessionTotal ? '<div class="ls-card">'
     + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:8px;">Session Progress</div>'
     + '<div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px;"><span style="color:var(--text-secondary);">' + sessionPos + ' of ' + sessionTotal + '</span><span style="font-weight:700;color:var(--text-primary);">' + sessionPct + '%</span></div>'
     + '<div style="height:6px;background:var(--body-bg);border-radius:3px;overflow:hidden;"><div style="height:100%;width:' + sessionPct + '%;background:#10b981;"></div></div>'
-    + '</div>' : '')
+    + '</div>' : ''))
 
     + '<div class="ls-card">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
@@ -38655,7 +38660,7 @@ function lsBuildRightColumn(lead) {
 
     + '<div class="ls-card">'
     + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:10px;">Lead Intelligence</div>'
-    + [['📍', 'Location', (lead.state || 'Unknown')], ['🎯', 'Likely Market', 'ACA'], ['🕐', 'Time Zone', (lead.demoTz || 'Unknown')], ['🏘️', 'Nearby Agencies', nearbyCount + ' found'], ['📋', 'Carrier Appointments', 'Unknown']].map(function(r) {
+    + [['📍', 'Location', (lead.state || 'Unknown')], ['🎯', 'Likely Market', 'ACA'], ['🕐', 'Time Zone', tzLabelRight], ['🏘️', 'Nearby Agencies', nearbyCount + ' found']].map(function(r) {
         return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;"><span style="color:var(--text-muted);">' + r[0] + ' ' + r[1] + '</span><span style="color:var(--text-primary);font-weight:600;">' + r[2] + '</span></div>';
       }).join('')
     + '<div style="display:flex;gap:8px;margin-top:10px;">'
@@ -39113,7 +39118,7 @@ window.renderLeadFullView = function(leadId) {
       }).join('') : '<div style="font-size:12.5px;color:var(--text-muted);">No activity logged yet.</div>')
     + '</div>'
     + '</div>'
-    + '<div>' + lsBuildRightColumn(lead) + '</div>'
+    + '<div>' + lsBuildRightColumn(lead, { hideGoals: true }) + '</div>'
     + '</div>';
 };
 
