@@ -20600,16 +20600,18 @@ window.anOpenLeadPanel = function(leadId) {
       + anBuildLeadDetailRowHtml('📆 Created', anDate(lead.created))
       +'</div>'
 
-      + anBuildCompanyContactsSection(lead)
+      // Notes — always visible and directly editable, saves automatically and
+      // syncs through the same cloud pipeline as everything else, so it shows
+      // up correctly on any other computer or device signed into the account.
+      +'<div class="ls-card" style="margin-bottom:14px;">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Notes</div>'
+      +'<textarea id="sp-notes-'+lead.id+'" placeholder="Type notes here — saves automatically..." onblur="anSavePanelNotes(\''+lead.id+'\',this)" style="width:100%;min-height:80px;border:1.5px solid var(--divider);border-radius:8px;padding:10px;font-size:12.5px;font-family:inherit;resize:vertical;background:var(--body-bg);color:var(--text-primary);box-sizing:border-box;">'+anEsc(lead.notes||'')+'</textarea>'
+      +'</div>'
+
       + anBuildQuickLogSection(lead)
+      + anBuildCompanyContactsSection(lead)
       + anBuildNameSoundSection(lead)
       + anBuildLeadIntelSection(lead)
-
-      // Notes
-      +(lead.notes?'<div class="ls-card" style="margin-bottom:14px;">'
-        +'<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;">Notes</div>'
-        +'<div style="font-size:13px;color:var(--text-secondary);line-height:1.7;">'+anEsc(lead.notes)+'</div>'
-        +'</div>':'')
 
       // Call timeline
       +'<div class="ls-card" style="margin-bottom:14px;">'
@@ -20813,6 +20815,21 @@ window.anBuildQuickLogSection = function(lead) {
     + '</div>'
     + '<div style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.4;">Logs activity on this lead without advancing the queue. Use the call panel for full outcomes + demo booking.</div>'
     + '</div>';
+};
+
+window.anSavePanelNotes = function(leadId, textareaEl) {
+  var lead = AN.leads.find(function(l) { return l.id === leadId; });
+  if (!lead || !textareaEl) return;
+  var newVal = textareaEl.value;
+  if ((lead.notes || '') === newVal) return; // no change
+  lead.notes = newVal;
+  lead.updated = new Date().toISOString();
+  // Same cloud save pipeline as the rest of the app — this is what makes notes
+  // show up correctly on any other computer or device signed into the account,
+  // not just locally in this browser.
+  if (typeof AN.invalidateLeadCaches === 'function') AN.invalidateLeadCaches();
+  if (typeof AN.save === 'function') AN.save();
+  if (typeof showToast === 'function') showToast('Notes saved');
 };
 
 window.anQuickLogActivity = function(leadId, outcome, noteArg) {
