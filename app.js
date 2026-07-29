@@ -38547,6 +38547,7 @@ function lsBuildLeftColumn(lead) {
     + '</div></div>'
     + '</div>'
     + lsBuildBusinessInfoCard(lead)
+    + (typeof anBuildNameSoundSection === 'function' ? anBuildNameSoundSection(lead) : '')
 
     + '<div class="ls-card" style="text-align:center;">'
     + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:10px;text-align:left;">AI Lead Score</div>'
