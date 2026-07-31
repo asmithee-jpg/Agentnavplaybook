@@ -10584,20 +10584,12 @@ window.anSaveCall = window.anSaveActivity = function(leadId) {
   lead.updated = new Date().toISOString();
   AN.save();
 
-  // Sync to dashboard hotzone only (totals now read from AN.leads directly)
-  if (typeof _dash !== 'undefined') {
-    var _today2 = new Date().toISOString().split('T')[0];
-    if (!_dash.activityLog) _dash.activityLog = [];
-    var _todayEntry = _dash.activityLog.find(function(e){ return e.date === _today2; });
-    if (!_todayEntry) { _todayEntry = {date:_today2,calls:0,demos:0,closes:0,calls_by_hour:{},pickups_by_hour:{},demos_by_hour:{}}; _dash.activityLog.push(_todayEntry); }
-    var _hr = new Date().getHours();
-    if (!_todayEntry.calls_by_hour) _todayEntry.calls_by_hour = {};
-    _todayEntry.calls_by_hour[_hr] = (_todayEntry.calls_by_hour[_hr]||0) + 1;
-    if (outcome==='pickup'||outcome==='demo') { if (!_todayEntry.pickups_by_hour) _todayEntry.pickups_by_hour={}; _todayEntry.pickups_by_hour[_hr]=(_todayEntry.pickups_by_hour[_hr]||0)+1; }
-    if (outcome==='demo') { if (!_todayEntry.demos_by_hour) _todayEntry.demos_by_hour={}; _todayEntry.demos_by_hour[_hr]=(_todayEntry.demos_by_hour[_hr]||0)+1; }
-    if (typeof dashSave === 'function') dashSave();
+  // Sync to dashboard
+  if (typeof syncActivityFromCRM === 'function') {
+    syncActivityFromCRM('calls', 1);
+    if (outcome==='demo') syncActivityFromCRM('demos', 1);
+    if (outcome==='won')  syncActivityFromCRM('closes', 1);
   }
-
   // Close modal
   var modal = document.getElementById('an-activity-modal');
   if (modal) modal.remove();
@@ -13058,43 +13050,29 @@ function renderCellContent(td, field, lead) {
 
 // ── 2. SYNC CRM → SALES DASHBOARD ────────────────────────────
 function syncActivityFromCRM(key, count) {
-  // NOTE: totals (calls/demos/closes) are now read directly from AN.leads callLog
-  // by hdGetTodayDashStats — so we no longer accumulate them here (prevents double-counting).
-  // We still track calls_by_hour / pickups_by_hour / demos_by_hour for the hotzone heatmap.
   if (typeof _dash === 'undefined') return;
+  if (!_dash.activity) _dash.activity = { calls:0, demos:0, closes:0 };
+  _dash.activity[key] = (_dash.activity[key]||0) + count;
+
+  // Log to activityLog for today
   var today = new Date().toISOString().split('T')[0];
-  var hr = new Date().getHours();
   if (!_dash.activityLog) _dash.activityLog = [];
   var entry = _dash.activityLog.find(function(e){ return e.date === today; });
   if (!entry) { entry = {date:today,calls:0,demos:0,closes:0,calls_by_hour:{},pickups_by_hour:{},demos_by_hour:{}}; _dash.activityLog.push(entry); }
-  // Only track hourly buckets (for heatmap) — do NOT increment daily totals
-  if (key === 'calls') {
-    if (!entry.calls_by_hour) entry.calls_by_hour = {};
-    entry.calls_by_hour[hr] = (entry.calls_by_hour[hr]||0) + count;
-  }
-  if (key === 'demos') {
-    if (!entry.demos_by_hour) entry.demos_by_hour = {};
-    entry.demos_by_hour[hr] = (entry.demos_by_hour[hr]||0) + count;
-  }
+  entry[key] = (entry[key]||0) + count;
+
+  // Track hour for hotzone heatmap
+  var hr = new Date().getHours();
+  if (key === 'calls') { if (!entry.calls_by_hour) entry.calls_by_hour={}; entry.calls_by_hour[hr]=(entry.calls_by_hour[hr]||0)+count; }
+  if (key === 'demos') { if (!entry.demos_by_hour) entry.demos_by_hour={}; entry.demos_by_hour[hr]=(entry.demos_by_hour[hr]||0)+count; }
+
   if (typeof dashSave === 'function') dashSave();
-  // Update goals display if visible
+
   var inp = document.getElementById('gact-'+key);
-  if (inp) {
-    // Recalculate from leads instead of incrementing
-    var todayStr = today;
-    var myEmail = (typeof AN !== 'undefined' && AN.currentRepEmail) || '';
-    var leads2 = (typeof AN !== 'undefined' && AN.leads) ? AN.leads : [];
-    var myLeads2 = (typeof AN !== 'undefined' && AN.isAdmin) ? leads2 : leads2.filter(function(l){ return !l._repEmail || l._repEmail.toLowerCase()===myEmail.toLowerCase(); });
-    var cnt = 0;
-    myLeads2.forEach(function(l){ (l.callLog||[]).forEach(function(c){
-      if (c.date!==todayStr) return;
-      if (key==='calls') cnt++;
-      if (key==='demos' && (c.outcome==='demo'||c.outcome==='booked_demo')) cnt++;
-    }); });
-    inp.value = cnt;
-  }
+  if (inp) inp.value = parseInt(inp.value||0) + count;
   if (typeof updateGB === 'function') updateGB(key);
 }
+
 
 
 // Override anSaveCall to also sync dashboard
