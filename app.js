@@ -13806,8 +13806,8 @@ window.anBuildDailyLeaderboard = function(extraRows, opts) {
       // level rather than trying to prevent every possible way that can happen.
       var d = (ev.demoDate && ev.demoDate.length >= 10) ? ev.demoDate.slice(0, 10) : (ev.date || String(ev.at || '').slice(0, 10));
       if (d !== today) return;
-      if (ev.type === 'booked') bump(owner, 'demos', 1);
-      if (ev.type === 'completed') bump(owner, 'showed', 1);
+      if (ev.type === 'booked') bump(ev.rep || owner, 'demos', 1);
+      if (ev.type === 'completed') bump(ev.rep || owner, 'showed', 1);
     });
   });
   (extraRows || []).forEach(function(row) {
@@ -13968,7 +13968,8 @@ window.anRecordDemoLifecycleEvent = function(lead, type, opts) {
     demoDate: lead.demoDate || opts.demoDate || '',
     demoTime: lead.demoTime || opts.demoTime || '',
     source: opts.source || '',
-    notes: opts.notes || ''
+    notes: opts.notes || '',
+    rep: opts.rep || (typeof AN !== 'undefined' && AN.currentRepEmail) || (typeof anActiveRepEmail === 'function' ? anActiveRepEmail() : '') || (lead && lead._repEmail) || ''
   };
   lead.demoLifecycle.push(ev);
   if (type === 'booked') {
@@ -19760,8 +19761,8 @@ function syncActivityFromCRM(key, count) {
   if (!_dash.activityLog) _dash.activityLog = [];
   var entry = _dash.activityLog.find(function(e){ return e.date === today; });
   if (!entry) { entry = {date:today,calls:0,demos:0,closes:0}; _dash.activityLog.push(entry); }
-  entry[key] = (entry[key]||0) + count;
-
+  // Do NOT increment totals here — anBuildDailyLeaderboard reads from leads directly
+  // Only track hourly buckets for the heatmap
   if (typeof dashSave === 'function') dashSave();
   if (typeof anPushTeamActivityCloud === 'function') {
     var delta = {};
