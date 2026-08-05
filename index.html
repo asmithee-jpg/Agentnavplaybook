@@ -55,6 +55,7 @@
     <button class="nav-item" data-section="scriptlibrary" onclick="showSection('scriptlibrary',this)"><span class="nav-icon">📚</span><span class="nav-label">Script Library</span></button>
     <button class="nav-item" data-section="demorecap" onclick="showSection('demorecap',this)"><span class="nav-icon">📝</span><span class="nav-label">Demo Recap</span></button>
     <button class="nav-item" data-section="ai-assistant" onclick="showSection('ai-assistant',this)" style="background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.1));border:1px solid rgba(99,102,241,0.2);color:#c7d2fe;"><span class="nav-icon">🤖</span><span class="nav-label">AI Assistant</span></button>
+    <button class="nav-item" data-section="ct-scorecard" onclick="showSection('ct-scorecard',this)"><span class="nav-icon">📊</span><span class="nav-label">Scorecard</span></button>
   </div>
 </div>/div></button><div class="sidebar-auth" id="sidebar-auth-area"><button onclick="openAuthModal()" class="sidebar-auth-btn" id="sidebar-signin-btn"><span>&#128100;</span> Sign In</button></div><div id="nav-commission-wrap" style="display:none;padding:0 10px 6px;"><button class="nav-item" data-section="commission" onclick="showSection('commission',this)" style="width:100%;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);color:#6ee7b7;"><span class="nav-icon">💰</span>Commission Plan</button></div><div id="nav-admin-wrap" style="display:none;padding:0 10px 6px;"><button class="nav-item" data-section="admin" onclick="showSection('admin',this)" style="width:100%;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#fca5a5;"><span class="nav-icon">&#9881;&#65039;</span>Admin Panel</button></div><div class="sidebar-footer">
     AgentNav Internal — 2026
@@ -130,9 +131,9 @@
 </div>
 <div class="section" id="section-ai-assistant" style="padding:0;height:100%;overflow:hidden;">
 </div><div class="section" id="section-crm" style="padding:0;overflow:hidden;min-height:100vh;"></div>
-<div class="section" id="section-leadsession" style="padding:0;min-height:100vh;"></div>
-<div class="section" id="section-scorecard" style="padding:0;min-height:100vh;"></div>
-<div class="section" id="section-fieldinsights" style="padding:0;min-height:100vh;"></div>
+<div class="section" id="section-leadsession" style="padding:0;min-height:100vh;"><div id="leadsession-root" style="height:100%;"></div></div>
+<div class="section" id="section-scorecard" style="padding:0;min-height:100vh;"><div id="scorecard-root" style="height:100%;padding:24px;"></div></div>
+<div class="section" id="section-fieldinsights" style="padding:0;min-height:100vh;"><div id="field-insights-root" style="padding:24px;min-height:100%;"></div></div>
 <div class="section" id="section-companies" style="padding:0;overflow:hidden;height:calc(100vh - 60px);width:100%;box-sizing:border-box;"></div>
 <div class="section" id="section-schedule" style="padding:0;min-height:100vh;"></div>
 <div class="section" id="section-opportunities" style="min-height:100vh;"></div>
@@ -1660,6 +1661,288 @@ console.log('[OWNERSHIP + DEMO AUTO] Loaded.');
 </script>
 <script>
 // Handled by app.js
+</script>
+<script>
+// ============================================================
+// CONTRACTING SCORECARD — Full JS
+// Week navigation, data entry, WoW comparison, export
+// ============================================================
+
+(function() {
+  // ── Data store ──────────────────────────────────────────────
+  var SC_KEY = 'compass-ct-scorecard';
+  var _scOffset = 0; // 0 = current week, -1 = last week, etc.
+
+  function scLoad() {
+    try { return JSON.parse(localStorage.getItem(SC_KEY) || '{}'); } catch(e) { return {}; }
+  }
+  function scSave(data) {
+    try { localStorage.setItem(SC_KEY, JSON.stringify(data)); } catch(e) {}
+  }
+  function scWeekKey(offset) {
+    var d = new Date();
+    var day = d.getDay(); // 0=Sun
+    var mon = new Date(d);
+    mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1) + (offset * 7));
+    return mon.getFullYear() + '-' + String(mon.getMonth()+1).padStart(2,'0') + '-' + String(mon.getDate()).padStart(2,'0');
+  }
+  function scWeekLabel(offset) {
+    var mon = new Date(scWeekKey(offset) + 'T12:00');
+    var fri = new Date(mon); fri.setDate(mon.getDate() + 4);
+    var fmt = function(d) { return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); };
+    return 'Week of ' + fmt(mon) + ' – ' + fmt(fri) + (offset === 0 ? ' (Current)' : offset === -1 ? ' (Last Week)' : '');
+  }
+
+  // ── Render ──────────────────────────────────────────────────
+  function scRender() {
+    var key   = scWeekKey(_scOffset);
+    var prevKey = scWeekKey(_scOffset - 1);
+    var data  = scLoad();
+    var week  = data[key]  || { counts: {}, appts: [], step2: [], complete: [] };
+    var prev  = data[prevKey] || { counts: {}, appts: [], step2: [], complete: [] };
+    if (!data[key]) { data[key] = week; scSave(data); }
+
+    var lbl = document.getElementById('sc-week-label');
+    var sht = document.getElementById('sc-week-short');
+    if (lbl) lbl.textContent = scWeekLabel(_scOffset);
+    if (sht) {
+      var mon = new Date(key + 'T12:00');
+      sht.textContent = mon.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    }
+
+    scRenderCounts(week, prev, key);
+    scRenderAppts(week, key);
+    scRenderStep2(week, key);
+    scRenderComplete(week, key);
+  }
+
+  // ── Weekly counts grid ──────────────────────────────────────
+  var COUNT_ROWS = [
+    { id:'new_requests',   label:'New Requests',    color:'#f59e0b' },
+    { id:'appts_set',      label:'Appts Set',        color:'#6366f1' },
+    { id:'step2_done',     label:'2nd Step Done',    color:'#10b981' },
+    { id:'completed',      label:'Completed',         color:'#06b6d4' },
+    { id:'transferred',    label:'Transferred Out',  color:'#8b5cf6' },
+  ];
+  var DAYS = ['mon','tue','wed','thu','fri'];
+
+  function scRenderCounts(week, prev, key) {
+    var body = document.getElementById('sc-counts-body');
+    if (!body) return;
+
+    // Week-over-week totals from prev week
+    var prevTotals = {};
+    COUNT_ROWS.forEach(function(r) {
+      prevTotals[r.id] = DAYS.reduce(function(s,d){ return s + (parseInt((prev.counts[r.id+'_'+d])||0)); },0);
+    });
+
+    body.innerHTML = COUNT_ROWS.map(function(row) {
+      var total = 0;
+      var cells = DAYS.map(function(day) {
+        var cellKey = row.id + '_' + day;
+        var val = week.counts[cellKey] || '';
+        total += parseInt(val) || 0;
+        return '<div style="text-align:center;padding:4px 2px;">'
+          + '<input type="number" min="0" value="' + (val||'') + '" '
+          + 'style="width:100%;border:1px solid #e4e4e7;border-radius:4px;padding:3px;font-size:12px;text-align:center;outline:none;font-family:inherit;" '
+          + 'oninput="scUpdateCount(\'' + key + '\',\'' + row.id + '_' + day + '\',this.value)" '
+          + 'onfocus="this.style.borderColor=\'#6366f1\'" onblur="this.style.borderColor=\'#e4e4e7\'">'
+          + '</div>';
+      }).join('');
+
+      // Week-over-week delta
+      var prevTotal = prevTotals[row.id];
+      var delta = total - prevTotal;
+      var deltaHtml = prevTotal > 0
+        ? '<span style="font-size:9px;margin-left:4px;color:' + (delta>=0?'#10b981':'#ef4444') + ';">'
+          + (delta>=0?'↑':'↓') + Math.abs(delta) + '</span>'
+        : '';
+
+      return '<div style="border-bottom:1px solid #f3f4f6;">'
+        + '<div style="padding:4px 10px;font-size:10px;font-weight:700;color:' + row.color + ';text-transform:uppercase;letter-spacing:0.08em;background:#fafafa;">'
+        + row.label + '</div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 60px;padding:2px 10px;">'
+        + cells
+        + '<div style="display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#09090b;">'
+        + total + deltaHtml + '</div>'
+        + '</div></div>';
+    }).join('');
+  }
+
+  window.scUpdateCount = function(weekKey, cellKey, val) {
+    var data = scLoad();
+    if (!data[weekKey]) data[weekKey] = { counts:{}, appts:[], step2:[], complete:[] };
+    data[weekKey].counts[cellKey] = parseInt(val) || 0;
+    scSave(data);
+    // Re-render just totals (don't full re-render to avoid losing focus)
+    var week = data[weekKey];
+    var prevKey = weekKey; // compute properly
+    var d = new Date(weekKey + 'T12:00'); d.setDate(d.getDate()-7);
+    var pk = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    var prev = data[pk] || { counts:{} };
+    scRenderCounts(week, prev, weekKey);
+  };
+
+  // ── Appointment requests ────────────────────────────────────
+  function scRenderAppts(week, key) {
+    var body = document.getElementById('sc-appt-body');
+    if (!body) return;
+    var appts = week.appts || [];
+    if (!appts.length) {
+      body.innerHTML = '<div style="padding:20px;text-align:center;color:#a1a1aa;font-size:12px;">No appointments this week</div>';
+      return;
+    }
+    body.innerHTML = appts.map(function(a, i) {
+      return '<div style="display:grid;grid-template-columns:1.4fr 0.8fr 0.8fr 0.8fr;gap:4px;padding:6px 10px;border-bottom:1px solid #f3f4f6;align-items:center;">'
+        + '<div style="font-size:12px;font-weight:600;color:#09090b;">' + anEsc(a.agent||'') + '</div>'
+        + '<div><span style="background:' + (a.status==='approved'?'#dcfce7':a.status==='pending'?'#fef9c3':'#fee2e2') + ';color:' + (a.status==='approved'?'#166534':a.status==='pending'?'#854d0e':'#991b1b') + ';padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;">' + (a.status||'pending') + '</span></div>'
+        + '<div style="font-size:12px;color:#71717a;">' + anEsc(a.type||'') + '</div>'
+        + '<div style="font-size:11px;color:#a1a1aa;">' + anEsc(a.date||'') + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  window.addScAppt = function() {
+    var agent = prompt('Agent name:'); if (!agent) return;
+    var type  = prompt('Type (e.g. Medicare, ACA, Life):') || '';
+    var status = 'pending';
+    var date  = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    var key   = scWeekKey(_scOffset);
+    var data  = scLoad();
+    if (!data[key]) data[key] = { counts:{}, appts:[], step2:[], complete:[] };
+    data[key].appts = data[key].appts || [];
+    data[key].appts.push({ agent:agent, type:type, status:status, date:date });
+    scSave(data);
+    scRender();
+    if (typeof showToast==='function') showToast('Appointment added');
+  };
+
+  // ── 2nd Step processed ──────────────────────────────────────
+  function scRenderStep2(week, key) {
+    var body = document.getElementById('sc-step2-body');
+    if (!body) return;
+    var items = week.step2 || [];
+    if (!items.length) {
+      body.innerHTML = '<div style="padding:20px;text-align:center;color:#a1a1aa;font-size:12px;">No 2nd steps this week</div>';
+      return;
+    }
+    body.innerHTML = items.map(function(s) {
+      return '<div style="display:grid;grid-template-columns:1.4fr 1fr 0.8fr;gap:4px;padding:6px 10px;border-bottom:1px solid #f3f4f6;align-items:center;">'
+        + '<div style="font-size:12px;font-weight:600;color:#09090b;">' + anEsc(s.agent||'') + '</div>'
+        + '<div style="font-size:12px;color:#71717a;">' + anEsc(s.carrier||'') + '</div>'
+        + '<div style="font-size:11px;color:#a1a1aa;">' + anEsc(s.step||'') + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  window.addScStep2 = function() {
+    var agent   = prompt('Agent name:'); if (!agent) return;
+    var carrier = prompt('Carrier:') || '';
+    var step    = prompt('Step (e.g. Interview, Background):') || '';
+    var key = scWeekKey(_scOffset);
+    var data = scLoad();
+    if (!data[key]) data[key] = { counts:{}, appts:[], step2:[], complete:[] };
+    data[key].step2 = data[key].step2 || [];
+    data[key].step2.push({ agent:agent, carrier:carrier, step:step });
+    scSave(data);
+    scRender();
+    if (typeof showToast==='function') showToast('2nd Step added');
+  };
+
+  // ── Completions ─────────────────────────────────────────────
+  function scRenderComplete(week, key) {
+    var body = document.getElementById('sc-complete-body');
+    if (!body) return;
+    var items = week.complete || [];
+    if (!items.length) {
+      body.innerHTML = '<div style="padding:20px;text-align:center;color:#a1a1aa;font-size:12px;">No completions this week</div>';
+      return;
+    }
+    body.innerHTML = items.map(function(c) {
+      return '<div style="display:grid;grid-template-columns:1.4fr 1fr 0.8fr 0.8fr;gap:4px;padding:6px 10px;border-bottom:1px solid #f3f4f6;align-items:center;">'
+        + '<div style="font-size:12px;font-weight:600;color:#09090b;">' + anEsc(c.agent||'') + '</div>'
+        + '<div style="font-size:12px;color:#71717a;">' + anEsc(c.carrier||'') + '</div>'
+        + '<div style="font-size:12px;color:#10b981;font-weight:700;">' + anEsc(c.premium||'') + '</div>'
+        + '<div style="font-size:11px;color:#a1a1aa;">' + anEsc(c.type||'') + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  window.addScComplete = function() {
+    var agent   = prompt('Agent name:'); if (!agent) return;
+    var carrier = prompt('Carrier:') || '';
+    var premium = prompt('Annual Premium (e.g. $1,200):') || '';
+    var type    = prompt('Product type (e.g. Medicare Supp):') || '';
+    var key = scWeekKey(_scOffset);
+    var data = scLoad();
+    if (!data[key]) data[key] = { counts:{}, appts:[], step2:[], complete:[] };
+    data[key].complete = data[key].complete || [];
+    data[key].complete.push({ agent:agent, carrier:carrier, premium:premium, type:type });
+    scSave(data);
+    scRender();
+    if (typeof showToast==='function') showToast('Completion added');
+  };
+
+  // ── Week navigation ─────────────────────────────────────────
+  window.shiftScWeek = function(dir) {
+    _scOffset += dir;
+    scRender();
+  };
+
+  // ── Export to CSV ───────────────────────────────────────────
+  window.exportScorecard = function() {
+    var key  = scWeekKey(_scOffset);
+    var data = scLoad();
+    var week = data[key] || { counts:{}, appts:[], step2:[], complete:[] };
+    var label = scWeekLabel(_scOffset);
+
+    var rows = ['Contracting Scorecard — ' + label, ''];
+    rows.push('WEEKLY COUNTS');
+    rows.push('Metric,Mon,Tue,Wed,Thu,Fri,Total');
+    COUNT_ROWS.forEach(function(r) {
+      var vals = DAYS.map(function(d){ return week.counts[r.id+'_'+d] || 0; });
+      var tot  = vals.reduce(function(a,b){return a+b;},0);
+      rows.push([r.label].concat(vals).concat([tot]).join(','));
+    });
+
+    rows.push('');
+    rows.push('APPOINTMENT REQUESTS');
+    rows.push('Agent,Status,Type,Date');
+    (week.appts||[]).forEach(function(a){ rows.push([a.agent,a.status,a.type,a.date].join(',')); });
+
+    rows.push('');
+    rows.push('2ND STEP PROCESSED');
+    rows.push('Agent,Carrier,Step');
+    (week.step2||[]).forEach(function(s){ rows.push([s.agent,s.carrier,s.step].join(',')); });
+
+    rows.push('');
+    rows.push('COMPLETIONS');
+    rows.push('Agent,Carrier,Premium,Type');
+    (week.complete||[]).forEach(function(c){ rows.push([c.agent,c.carrier,c.premium,c.type].join(',')); });
+
+    var blob = new Blob([rows.join('\n')], {type:'text/csv'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'scorecard-' + key + '.csv';
+    a.click();
+    if (typeof showToast==='function') showToast('Scorecard exported');
+  };
+
+  // ── Auto-render when section becomes active ─────────────────
+  var _origSS_sc = window.showSection;
+  window.showSection = function(id, btn) {
+    if (typeof _origSS_sc === 'function') _origSS_sc(id, btn);
+    if (id === 'ct-scorecard') setTimeout(scRender, 50);
+  };
+
+  // Helper
+  function anEsc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  console.log('[SCORECARD] Contracting Scorecard JS loaded.');
+})();
+
 </script>
 </body>
 </html>
