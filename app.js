@@ -32884,9 +32884,9 @@ window.showDemoAutomationPanel = function(lead) {
   var confirmEmail = 'Hi ' + name + ',\n\nGreat speaking with you! I\'m looking forward to showing you AgentNav'
     + (demoTime ? ' on ' + defaultDateTime : '') + '.\n\n'
     + 'In our demo I\'ll show you:\n'
-    + '• ACA & STM quoting built for health brokers\n'
-    + '• Full CRM with SMS and renewal autopilot\n'
-    + '• HubSpot integration and pipeline tracking\n\n'
+    + '• How AgentNav streamlines your quoting and CRM workflow\n'
+    + '• Renewal Autopilot and SMS tools built for brokers\n'
+    + '• Pipeline tracking and team performance reporting\n\n'
     + 'The demo takes about 15-20 minutes. If anything comes up, feel free to reach out.\n\n'
     + 'Looking forward to it!\n'
     + ((typeof anGetRepName === 'function' && AN.currentRepEmail) ? anGetRepName(AN.currentRepEmail) : (AN.currentRep || 'Your AgentNav Rep'));
@@ -39168,3 +39168,29 @@ window.lsEndSession = function() {
 };
 
 })();
+
+window.openDemoGoogleCalendar = function(leadId) {
+  var lead = AN.leads.find(function(l){ return l.id===leadId; });
+  if (!lead) return;
+  var dateEl = document.getElementById('demo-date');
+  var timeEl = document.getElementById('demo-time');
+  var demoDate = (dateEl ? dateEl.value : null) || lead.demoDate || '';
+  var demoTime = (timeEl ? timeEl.value : null) || lead.demoTime || '10:00';
+  if (!demoDate) { if (typeof showToast==='function') showToast('Please set a demo date first'); return; }
+  var startDt = demoDate.replace(/-/g,'') + 'T' + demoTime.replace(':','') + '00';
+  var endDate = new Date(demoDate + 'T' + demoTime);
+  endDate.setMinutes(endDate.getMinutes() + 30);
+  var endDt = endDate.getFullYear().toString()
+    + String(endDate.getMonth()+1).padStart(2,'0')
+    + String(endDate.getDate()).padStart(2,'0')
+    + 'T' + String(endDate.getHours()).padStart(2,'0')
+    + String(endDate.getMinutes()).padStart(2,'0') + '00';
+  var name = ((lead.firstName||'')+' '+(lead.lastName||'')).trim();
+  var company = lead.company || '';
+  var title = encodeURIComponent('AgentNav Demo' + (name?' — '+name:'') + (company?' ('+company+')':''));
+  var details = encodeURIComponent('AgentNav demo call.' + (lead.phone?'\nPhone: '+lead.phone:'') + (lead.email?'\nEmail: '+lead.email:''));
+  var guests = lead.email ? '&add=' + encodeURIComponent(lead.email) : '';
+  var url = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+title+'&dates='+startDt+'/'+endDt+'&details='+details+guests;
+  window.open(url, '_blank');
+};
+
