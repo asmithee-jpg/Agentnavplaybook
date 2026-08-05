@@ -2293,67 +2293,7 @@ console.log('[PATCH 5] Multi-language scripts loaded.');
 <script>
 // ── UNIFIED showSection — single override replacing all patches ──
 (function() {
-  var _base = window.showSection;
-  window.showSection = function(id, btn) {
-    _base(id, btn);
-    // Always scroll main content to top on section change
-    var mainEl = document.querySelector('.main');
-    if (mainEl) mainEl.scrollTop = 0;
-    window.scrollTo(0, 0);
-
-    if (id === 'scriptlibrary') {
-      setTimeout(function() {
-        if (typeof renderScriptLibrary === 'function') renderScriptLibrary();
-      }, 50);
-    }
-
-    if (id === 'ai-assistant') {
-      setTimeout(function() {
-        var sec = document.getElementById('section-ai-assistant');
-        if (sec && typeof renderAIAssistant === 'function') {
-          if (!sec.querySelector('#ai-main')) renderAIAssistant();
-        }
-      }, 50);
-    }
-    if (id === 'dashboard') {
-      setTimeout(function() {
-        if (typeof renderSalesDashboard === 'function') renderSalesDashboard();
-      }, 50);
-    }
-    if (id === 'competition') {
-      setTimeout(function() {
-        if (typeof renderCompetitionSection === 'function') renderCompetitionSection();
-      }, 50);
-    }
-    if (id === 'commission') {
-      setTimeout(function() {
-        var sec = document.getElementById('section-commission');
-        if (sec && typeof buildCommissionHTML === 'function') {
-          sec.innerHTML = buildCommissionHTML();
-        }
-        if (typeof loadRates === 'function') loadRates();
-        if (typeof calcCommission === 'function') calcCommission();
-        if (typeof calcGoal === 'function') calcGoal();
-      }, 50);
-    }
-    if (id === 'admin') {
-      setTimeout(function() {
-        if (typeof switchAdminTab === 'function') switchAdminTab('scripts');
-      }, 50);
-    }
-    if (id === 'pricing') {
-      setTimeout(function() {
-        if (typeof calcUniversal === 'function') calcUniversal();
-      }, 50);
-    }
-    var scriptSections = ['pitches','coldcall','discovery','demo','closing','onboarding','objections','battlecards','talktracks'];
-    if (scriptSections.indexOf(id) >= 0) {
-      setTimeout(function() {
-        if (typeof loadMyScript === 'function') loadMyScript(id);
-      }, 50);
-    }
-  };
-})();
+  })();
 </script>
 <script>
 // ============================================================
@@ -7384,21 +7324,6 @@ window.updateGoalPlanner = function() {
 };
 
 // Inject goal planner into Sales Dashboard Overview pane
-var _origSSP = window.showSection;
-window.showSection = function(id, btn) {
-  if (typeof _origSSP === 'function') _origSSP(id, btn);
-  if (id === 'commission') {
-    setTimeout(function() {
-      var sec = document.getElementById('section-commission');
-      if (sec && typeof buildCommissionHTML === 'function') {
-        sec.innerHTML = buildCommissionHTML();
-        if (typeof loadRates === 'function') loadRates();
-        setTimeout(renderPlanner, 100);
-      }
-    }, 50);
-  }
-};
-
 console.log('[PLANNER] Commission planner + Goal planner + Nav hide loaded.');
 
 </script>
@@ -12895,17 +12820,6 @@ function anBindCRMEvents(){
 }
 
 // ── Wire into showSection ─────────────────────────────────────
-var _origShowSection_crm = window.showSection;
-window.showSection = function(id, btn){
-  if(typeof _origShowSection_crm==='function') _origShowSection_crm(id, btn);
-  if(id==='crm'){
-    setTimeout(function(){
-      var sec=document.getElementById('section-crm');
-      if(sec && typeof renderCRM==='function') renderCRM();
-    }, 50);
-  }
-};
-
 // ── Load on login ─────────────────────────────────────────────
 var _origLogin_crm = window.onUserLoggedIn;
 window.onUserLoggedIn = function(user){
@@ -13494,16 +13408,6 @@ window.anConvertToOpportunity = function(leadId) {
 };
 
 // ── 5. WIRE showSection for opportunities ─────────────────────
-var _origShowSection_opp = window.showSection;
-window.showSection = function(id, btn) {
-  _origShowSection_opp(id, btn);
-  if (id === 'opportunities') {
-    setTimeout(function(){
-      if (typeof renderOpportunities === 'function') renderOpportunities();
-    }, 50);
-  }
-};
-
 // ── 6. PATCH renderLeadsTable to add data-field attrs ─────────
 // Override to add data-lead-id on tr and data-field on editable tds
 var _origRLT2 = window.renderLeadsTable;
@@ -14317,20 +14221,6 @@ window.anSaveLead = function(id) {
 // v2 side-panel innerHTML patch removed — caused flicker; base panel already shows rep + activity
 
 // ── 7. Ensure nav label says "Lead Pipeline" on render ────────
-var _origShowSection_lpfix = window.showSection;
-window.showSection = function(id, btn) {
-  _origShowSection_lpfix && _origShowSection_lpfix(id, btn);
-  if (id === 'crm') {
-    setTimeout(function() {
-      // Fix h1 title
-      var h1 = document.querySelector('#section-crm h1, #crm-content h1');
-      if (h1 && (h1.textContent.trim() === 'CRM' || h1.textContent.trim() === '')) {
-        h1.textContent = 'Lead Pipeline';
-      }
-    }, 100);
-  }
-};
-
 console.log('[CRM FIX PATCH] Lead Pipeline rename, name dblclick edit, rep full name, last activity icon, post-save actions loaded.');
 </script>
 
@@ -15166,14 +15056,6 @@ function scBindEvents() {
 }
 
 // ── Wire into showSection ─────────────────────────────────────
-var _origShowSection_schedule = window.showSection;
-window.showSection = function(id, btn) {
-  if (typeof _origShowSection_schedule === 'function') _origShowSection_schedule(id, btn);
-  if (id === 'schedule') {
-    setTimeout(function() { renderScheduleSection(SC.leadId); }, 50);
-  }
-};
-
 // ── Allow booking directly from lead side panel / lead table ──
 // Adds "📅 Schedule Demo" button that opens the scheduler pre-linked to the lead
 window.scOpenForLead = function(leadId) {
@@ -16518,18 +16400,6 @@ function hdStatTile(num, label, color) {
 function hdEsc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ── Wire into showSection ─────────────────────────────────────
-var _origShowSection_hd = window.showSection;
-window.showSection = function(id, btn) {
-  if (typeof _origShowSection_hd === 'function') _origShowSection_hd(id, btn);
-  if (id === 'home') {
-    if (typeof anEnsureLeadsLoaded === 'function') {
-      anEnsureLeadsLoaded(function(){ setTimeout(hdRender, 60); });
-    } else {
-      setTimeout(hdRender, 60);
-    }
-  }
-};
-
 // ── Auto-render when signed in ────────────────────────────────
 var _origOnUserLoggedIn_hd = window.onUserLoggedIn;
 window.onUserLoggedIn = function(user) {
@@ -17912,18 +17782,6 @@ window.coDeleteCompany = function(coId, skipConfirm) {
 };
 
 // Wire Companies into showSection — load leads from Supabase first
-var _origShowSection_co = window.showSection;
-window.showSection = function(id, btn) {
-  if (typeof _origShowSection_co === 'function') _origShowSection_co(id, btn);
-  if (id === 'companies') {
-    setTimeout(function() {
-      var renderCo = function() { coInvalidateStatsCache(); coRender(); };
-      if (typeof AN !== 'undefined' && typeof AN.load === 'function') AN.load(renderCo);
-      else renderCo();
-    }, 60);
-  }
-};
-
 // Add title field to lead modal — needed for DM detection
 var _origAnOpenLeadModal_title = window.anOpenLeadModal;
 window.anOpenLeadModal = function(id) {
@@ -19865,11 +19723,7 @@ console.log('[CRM PERF] Debounced render + side panel stability patch loaded.');
 
   var _origShow = window.showSection;
   if (!_origShow || !window.showSection._seV2) {
-    window.showSection = function(id, btn) {
-      if (typeof _origShow === 'function') _origShow(id, btn);
-      if (id === 'scripteditor') setTimeout(seInitEditorUI, 100);
-    };
-    window.showSection._seV2 = true;
+        window.showSection._seV2 = true;
   }
 
   console.log('[SCRIPT EDITOR v2] Document mode + collapsed library loaded.');
@@ -19903,14 +19757,7 @@ body.an-section-crm .coach-fab{bottom:78px;right:32px;}
 
   var _prevShow = window.showSection;
   if(!window.showSection || !window.showSection._persistSection){
-    window.showSection = function(id, btn){
-      if(typeof _prevShow === 'function') _prevShow(id, btn);
-      anSyncSectionBodyClass(id);
-      try {
-        if(id && VALID.indexOf(id) >= 0) localStorage.setItem(KEY, id);
-      } catch(e){}
-    };
-    window.showSection._persistSection = true;
+        window.showSection._persistSection = true;
     try {
       var cur = localStorage.getItem(KEY);
       if(cur) anSyncSectionBodyClass(cur);
@@ -20799,33 +20646,6 @@ window.confirmAssignLeads = function(repEmail) {
 
 // ── INJECT INTO ADMIN PANEL ───────────────────────────────────
 // Override the admin panel renderer to include rep management
-var _origShowSection_repMgmt = window.showSection;
-window.showSection = function(id, btn) {
-  if (typeof _origShowSection_repMgmt === 'function') _origShowSection_repMgmt(id, btn);
-  if (id === 'admin') {
-    setTimeout(function() {
-      if (!_currentUser || _currentUser.email !== AN_ADMIN_EMAIL) return;
-      var sec = document.getElementById('section-admin');
-      if (!sec) return;
-
-      // Remove old rep view panel if present, rebuild cleanly
-      var old = document.getElementById('rep-view-panel');
-      if (old) old.remove();
-      var old2 = document.getElementById('rep-mgmt-panel');
-      if (old2) old2.remove();
-
-      var panel = document.createElement('div');
-      panel.id = 'rep-view-panel';
-      panel.style.cssText = 'padding:0 44px 32px;';
-      panel.innerHTML = buildRepManagementPanel();
-      sec.appendChild(panel);
-    }, 250);
-  }
-};
-
-
-
-
 console.log('[REP MGMT] Invite flow, lead assignment, set-password loaded.');
 
 </script>
