@@ -607,15 +607,6 @@ if (typeof window._dash === 'undefined') {
 // Sidebar already handles Sign In display — no floating button needed
 window.showAuthNavBtn = function() { /* no-op — sidebar handles auth */ };
 // Also guard against userBar being appended to home section
-var _origOnUserLoggedIn_auth = window.onUserLoggedIn;
-window.onUserLoggedIn = function(user) {
-  if (typeof _origOnUserLoggedIn_auth === 'function') _origOnUserLoggedIn_auth(user);
-  // Remove any stray authNavBtn or userBar that got appended to home section
-  var stray = document.getElementById('authNavBtn');
-  if (stray) stray.remove();
-  var userBar = document.getElementById('userBar');
-  if (userBar && userBar.closest('#section-home')) userBar.remove();
-};
 </script>
 <script>
 // ============================================================
@@ -1314,11 +1305,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Re-check on auth changes
 var _origOnLogin_comm = typeof onUserLoggedIn !== 'undefined' ? onUserLoggedIn : function(){};
-onUserLoggedIn = function(user) {
-  if (typeof _origOnLogin_comm === 'function') _origOnLogin_comm(user);
-  checkCommissionAccess();
-};
-
 function buildCommissionHTML() {
   return (
     '\n' +
@@ -2864,13 +2850,6 @@ window.renderScriptLibrary = function() {
 // ── FIX 2: Commission auth — reliable check on login ────────
 // Supabase fires onAuthStateChange which calls onUserLoggedIn.
 // We patch onUserLoggedIn to always checkCommissionAccess.
-var _origOnUserLoggedIn_p8 = window.onUserLoggedIn;
-window.onUserLoggedIn = function(user) {
-  if (typeof _origOnUserLoggedIn_p8 === 'function') _origOnUserLoggedIn_p8(user);
-  if (typeof checkCommissionAccess === 'function') checkCommissionAccess();
-  if (typeof checkAdminAccess === 'function') checkAdminAccess();
-};
-
 // Also poll on DOMContentLoaded with longer window for Supabase to resolve
 document.addEventListener('DOMContentLoaded', function() {
   var tries = 0;
@@ -3732,20 +3711,6 @@ window.dashSave = function(cb) {
 };
 
 // ── Load dashboard on login ──────────────────────────────────
-var _origOnUserLoggedIn_dash = window.onUserLoggedIn;
-window.onUserLoggedIn = function(user) {
-  if (typeof _origOnUserLoggedIn_dash === 'function') _origOnUserLoggedIn_dash(user);
-  // Load dashboard data from Supabase after login
-  setTimeout(function() {
-    dashLoad(function() {
-      var sec = document.getElementById('section-dashboard');
-      if (sec && sec.classList.contains('active')) {
-        if (typeof renderSalesDashboard === 'function') renderSalesDashboard();
-      }
-    });
-  }, 500);
-};
-
 // ── REPLACE dashAddDeal with inline modal form ───────────────
 window.dashAddDeal = function(editIdx) {
   var isEdit = typeof editIdx === 'number';
@@ -4634,17 +4599,6 @@ function buildMiniActivity(actLog) {
 }
 
 // ── Load admin content on login ───────────────────────────────
-var _origOnUserLoggedIn_admin = window.onUserLoggedIn;
-window.onUserLoggedIn = function(user) {
-  if (typeof _origOnUserLoggedIn_admin === 'function') _origOnUserLoggedIn_admin(user);
-  setTimeout(function() {
-    var sec = document.getElementById('section-admin');
-    if (sec && sec.classList.contains('active')) {
-      loadAdminContentFromSupabase();
-    }
-  }, 600);
-};
-
 // ── Auto-load content when admin section opens ────────────────
 // Handled by unified showSection which calls switchAdminTab('scripts')
 
@@ -8363,15 +8317,6 @@ function applyRepView(email) {
 }
 
 // Override onUserLoggedIn to apply view after login
-var _origOnLogin_repview = window.onUserLoggedIn;
-window.onUserLoggedIn = function(user) {
-  if (typeof _origOnLogin_repview === 'function') _origOnLogin_repview(user);
-  loadRepViews();
-  setTimeout(function() {
-    if (user && user.email) applyRepView(user.email);
-  }, 500);
-};
-
 // ── Rep View Control UI (injected into Admin Panel) ───────────
 function buildRepViewPanel() {
   return '<div style="margin-top:28px;">'
@@ -12821,23 +12766,6 @@ function anBindCRMEvents(){
 
 // ── Wire into showSection ─────────────────────────────────────
 // ── Load on login ─────────────────────────────────────────────
-var _origLogin_crm = window.onUserLoggedIn;
-window.onUserLoggedIn = function(user){
-  if(typeof _origLogin_crm==='function') _origLogin_crm(user);
-  if(user){
-    if(typeof anRememberRepUserId === 'function') anRememberRepUserId(user);
-    AN.currentRepEmail = user.email;
-    AN.isAdmin = user.email === AN_CRM_ADMIN_EMAIL;
-    AN.currentRep = (user.user_metadata&&user.user_metadata.full_name)||user.email.split('@')[0];
-    if (typeof AN.load === 'function') {
-      AN.load(function(){
-        var homeSec = document.getElementById('section-home');
-        if (homeSec && homeSec.classList.contains('active') && typeof hdRender === 'function') hdRender();
-      });
-    }
-  }
-};
-
 console.log('[AN CRM] Native CRM loaded.');
 
 </script>
@@ -16401,20 +16329,6 @@ function hdEsc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').re
 
 // ── Wire into showSection ─────────────────────────────────────
 // ── Auto-render when signed in ────────────────────────────────
-var _origOnUserLoggedIn_hd = window.onUserLoggedIn;
-window.onUserLoggedIn = function(user) {
-  if (typeof _origOnUserLoggedIn_hd === 'function') _origOnUserLoggedIn_hd(user);
-  if (typeof anEnsureLeadsLoaded === 'function') {
-    anEnsureLeadsLoaded(function() {
-      var homeSec = document.getElementById('section-home');
-      if (homeSec && homeSec.classList.contains('active')) hdRender();
-    });
-  } else {
-    var homeSec = document.getElementById('section-home');
-    if (homeSec && homeSec.classList.contains('active')) setTimeout(hdRender, 300);
-  }
-};
-
 // ── Add tooltips to nav items ─────────────────────────────────
 function anAddNavTooltips() {
   document.querySelectorAll('.nav-item[data-section]').forEach(function(btn) {
@@ -16677,13 +16591,6 @@ window.anSkipOnboarding = function() {
 };
 
 // Hook into login
-var _origOULI_onboard = window.onUserLoggedIn;
-window.onUserLoggedIn = function(user) {
-  if (typeof _origOULI_onboard === 'function') _origOULI_onboard(user);
-  // Show onboarding if first time
-  setTimeout(function() { anShowOnboardingModal(user); }, 800);
-};
-
 // ============================================================
 // 3. TIME-AWARE GREETING — clock + 2-hour message blocks
 // ============================================================
@@ -19768,11 +19675,7 @@ body.an-section-crm .coach-fab{bottom:78px;right:32px;}
     setTimeout(window.anRestoreLastSection, 1200);
   });
 
-  var _prevLogin = window.onUserLoggedIn;
-  window.onUserLoggedIn = function(user){
-    if(typeof _prevLogin === 'function') _prevLogin(user);
-    if(user) setTimeout(window.anRestoreLastSection, 500);
-  };
+  
 })();
 </script>
 <script>
